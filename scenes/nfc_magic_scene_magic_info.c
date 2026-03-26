@@ -84,6 +84,9 @@ bool nfc_magic_scene_magic_info_on_event(void* context, SceneManagerEvent event)
             } else if(instance->protocol == NfcMagicProtocolClassic) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMfClassicMenu);
                 consumed = true;
+            } else if(instance->protocol == NfcMagicProtocolSlix) {
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlix);
+                consumed = true;
             }
         }
     } else if(event.type == SceneManagerEventTypeBack) {

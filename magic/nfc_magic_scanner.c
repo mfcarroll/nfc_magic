@@ -32,7 +32,6 @@ struct NfcMagicScanner {
 
 static const NfcProtocol nfc_magic_scanner_not_magic_protocols[] = {
     NfcProtocolIso14443_3b,
-    NfcProtocolIso15693_3,
     NfcProtocolFelica,
 };
 
@@ -90,6 +89,13 @@ static int32_t nfc_magic_scanner_worker(void* context) {
             } else if(instance->current_protocol == NfcMagicProtocolGen2) {
                 Gen2PollerError error = gen2_poller_detect(instance->nfc);
                 instance->magic_protocol_detected = (error == Gen2PollerErrorNone);
+                if(instance->magic_protocol_detected) {
+                    break;
+                }
+            } else if(instance->current_protocol == NfcMagicProtocolSlix) {
+                NfcPoller* poller = nfc_poller_alloc(instance->nfc, NfcProtocolIso15693_3);
+                instance->magic_protocol_detected = nfc_poller_detect(poller);
+                nfc_poller_free(poller);
                 if(instance->magic_protocol_detected) {
                     break;
                 }

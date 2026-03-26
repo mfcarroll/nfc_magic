@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "nfc_magic_slix.h": "c",
+        "nfc_magic_scene.h": "c",
+        "nfc_magic_app_i.h": "c"
+    }
+}

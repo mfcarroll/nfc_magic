@@ -6,6 +6,7 @@ static const char* nfc_magic_protocol_names[NfcMagicProtocolNum] = {
     [NfcMagicProtocolGen1] = "Gen1A/B",
     [NfcMagicProtocolGen2] = "Gen2",
     [NfcMagicProtocolClassic] = "MIFARE Classic",
+    [NfcMagicProtocolSlix] = "ISO15693 (SLIX)",
     [NfcMagicProtocolGen4] = "Gen4 GTU",
 };
 

@@ -35,7 +35,13 @@ bool nfc_magic_scene_check_on_event(void* context, SceneManagerEvent event) {
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == NfcMagicCustomEventWorkerSuccess) {
-            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMagicInfo);
+            if(instance->protocol == NfcMagicProtocolSlix) {
+                // This is our new SLIX card, go to the SLIX action menu.
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlix);
+            } else {
+                // For all other cards, use the original destination.
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMagicInfo);
+            }
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerFail) {
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneNotMagic);

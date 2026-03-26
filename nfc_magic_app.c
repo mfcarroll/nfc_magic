@@ -109,7 +109,12 @@ NfcMagicApp* nfc_magic_app_alloc() {
     view_dispatcher_add_view(
         instance->view_dispatcher, NfcMagicAppViewWidget, widget_get_view(instance->widget));
 
+    instance->nfc = nfc_alloc();
+    instance->gen4_poller = gen4_poller_alloc(instance->nfc);
+    instance->slix_poller = slix_poller_alloc(instance->nfc);
+
     instance->gen4_data = gen4_alloc();
+    instance->slix_data = slix_data_alloc();
 
     // Dict attack
     instance->dict_attack = dict_attack_alloc();
@@ -125,7 +130,6 @@ NfcMagicApp* nfc_magic_app_alloc() {
         NfcMagicAppViewWriteProblems,
         write_problems_get_view(instance->write_problems));
 
-    instance->nfc = nfc_alloc();
     instance->scanner = nfc_magic_scanner_alloc(instance->nfc);
 
     return instance;
@@ -199,7 +203,11 @@ void nfc_magic_app_free(NfcMagicApp* instance) {
     furi_record_close(RECORD_STORAGE);
     instance->storage = NULL;
 
+    gen4_poller_free(instance->gen4_poller);
+    slix_poller_free(instance->slix_poller);
+
     gen4_free(instance->gen4_data);
+    slix_data_free(instance->slix_data);
 
     nfc_magic_scanner_free(instance->scanner);
     nfc_free(instance->nfc);
