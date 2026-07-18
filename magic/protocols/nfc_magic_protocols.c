@@ -3,11 +3,12 @@
 #include <furi/furi.h>
 
 static const char* nfc_magic_protocol_names[NfcMagicProtocolNum] = {
-    [NfcMagicProtocolGen1] = "Gen1A/B",
-    [NfcMagicProtocolGen2] = "Gen2",
+    [NfcMagicProtocolGen1] = "Gen 1A/B",
+    [NfcMagicProtocolGen2] = "Gen 2",
     [NfcMagicProtocolClassic] = "MIFARE Classic",
-    [NfcMagicProtocolSlix] = "ISO15693 (SLIX)",
-    [NfcMagicProtocolGen4] = "Gen4 GTU",
+    [NfcMagicProtocolGen4] = "Gen 4 GTU",
+    [NfcMagicProtocolUscuidUl] = "USCUID-UL",
+    [NfcMagicProtocolUscuidUlNotDetected] = "Ultralight (?)",
 };
 
 const char* nfc_magic_protocols_get_name(NfcMagicProtocol protocol) {

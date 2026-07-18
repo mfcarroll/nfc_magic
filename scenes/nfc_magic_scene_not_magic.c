@@ -22,7 +22,7 @@ void nfc_magic_scene_not_magic_on_enter(void* context) {
         AlignLeft,
         AlignTop,
         FontSecondary,
-        "Not magic or unsupported\ncard. Only Gen1, Gen2 and \nGen4 UMC cards supported.");
+        "Not magic or unsupported\ncard. Supports Gen 1/2 MFC,\nGen 4 UMC and USCUID-UL.");
     widget_add_button_element(
         widget, GuiButtonTypeLeft, "Retry", nfc_magic_scene_not_magic_widget_callback, instance);
 

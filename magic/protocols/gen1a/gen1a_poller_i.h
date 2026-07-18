@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 #define GEN1A_POLLER_MAX_BUFFER_SIZE (64U)
-#define GEN1A_POLLER_MAX_FWT (60000U)
+#define GEN1A_POLLER_MAX_FWT         (60000U)
 
 typedef enum {
     Gen1aPollerErrorNone,
@@ -45,6 +45,7 @@ struct Gen1aPoller {
     Gen1aPollerSessionState session_state;
 
     uint16_t current_block;
+    uint8_t uid_len; // Target UID length (4 or 7); selects the wipe block-0 layout
     NfcDevice* mfc_device;
 
     BitBuffer* tx_buffer;

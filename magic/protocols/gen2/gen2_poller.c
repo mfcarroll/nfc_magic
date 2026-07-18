@@ -28,13 +28,16 @@ const uint8_t GEN2_ATS[3][16] = {
     {0x09, 0x78, 0x00, 0x91, 0x02, 0xDA, 0xBC, 0x19, 0x10, 0xF0, 0x05},
     {0x0D, 0x78, 0x00, 0x71, 0x02, 0x88, 0x49, 0xA1, 0x30, 0x20, 0x15, 0x06, 0x08, 0x56, 0x3D}};
 
+// Wiped block 0 (1K base): all-zero UID matching the Gen1a + USCUID-UL wipes; BCC stays 0x00
+// (0^0^0^0). SAK/ATQA below are the 1K values -- the wipe handler overrides them for 4K/Mini so a
+// wiped card keeps announcing its real type.
 static const MfClassicBlock gen2_poller_default_block_0 = {
     .data =
         {0x00,
-         0x01,
-         0x02,
-         0x03,
-         0x00, // BCC - IMPORTANT
+         0x00,
+         0x00,
+         0x00,
+         0x00, // BCC = UID0^UID1^UID2^UID3 = 0
          0x08, // SAK
          0x04, // ATQA0
          0x00, // ATQA1
@@ -96,7 +99,7 @@ const char* const gen2_problem_strings[] = {
     "The selected file is incomplete",
 };
 
-Gen2Poller* gen2_poller_alloc(Nfc* nfc) {
+static Gen2Poller* gen2_poller_alloc_internal(Nfc* nfc, bool with_write_ctx) {
     Gen2Poller* instance = malloc(sizeof(Gen2Poller));
     instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_3a);
     instance->data = mf_classic_alloc();
@@ -106,15 +109,29 @@ Gen2Poller* gen2_poller_alloc(Nfc* nfc) {
     instance->rx_plain_buffer = bit_buffer_alloc(GEN2_POLLER_MAX_BUFFER_SIZE);
     instance->rx_encrypted_buffer = bit_buffer_alloc(GEN2_POLLER_MAX_BUFFER_SIZE);
     instance->card_state = Gen2CardStateLost;
+    // malloc'd above, so the dispatch state isn't zeroed for us: start the machine at Idle.
+    instance->state = Gen2PollerStateIdle;
 
     instance->gen2_event.data = &instance->gen2_event_data;
 
-    instance->mode_ctx.write_ctx.mfc_data_source = malloc(sizeof(MfClassicData));
-    instance->mode_ctx.write_ctx.mfc_data_target = malloc(sizeof(MfClassicData));
+    // The two ~4 KB write/wipe data buffers are only used by the write path. Detection
+    // sessions skip them and leave the pointers NULL (gen2_poller_free's free(NULL) is
+    // a no-op), since gen2_poller_alloc runs up to 5 times per detection.
+    if(with_write_ctx) {
+        instance->mode_ctx.write_ctx.mfc_data_source = malloc(sizeof(MfClassicData));
+        instance->mode_ctx.write_ctx.mfc_data_target = malloc(sizeof(MfClassicData));
+    } else {
+        instance->mode_ctx.write_ctx.mfc_data_source = NULL;
+        instance->mode_ctx.write_ctx.mfc_data_target = NULL;
+    }
 
     instance->mode_ctx.write_ctx.need_halt_before_write = true;
 
     return instance;
+}
+
+Gen2Poller* gen2_poller_alloc(Nfc* nfc) {
+    return gen2_poller_alloc_internal(nfc, true);
 }
 
 void gen2_poller_free(Gen2Poller* instance) {
@@ -216,12 +233,199 @@ Gen2PollerError gen2_poller_detect(Nfc* nfc) {
     return detect_ctx.error;
 }
 
+// --- Gen2 sub-type classification (CUID write probe + static-nonce detection) ---
+
+#define GEN2_STATIC_NONCE_SAMPLES (3)
+
+// Default sector-0 keys tried for the CUID write probe. Blank/fresh magic cards
+// (and blank normal cards) use FF..FF; matching Proxmark3 we try B then A.
+typedef struct {
+    MfClassicKeyType key_type;
+    MfClassicKey key;
+} Gen2ProbeKey;
+
+static const Gen2ProbeKey gen2_cuid_probe_keys[] = {
+    {MfClassicKeyTypeB, {.data = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}}},
+    {MfClassicKeyTypeA, {.data = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}}},
+};
+
+typedef struct {
+    Gen2Poller* poller;
+    FuriThreadId thread_id;
+    MfClassicKey key;
+    MfClassicKeyType key_type;
+    bool cuid_writable;
+    MfClassicNt nt;
+    bool nt_valid;
+} Gen2DetectContext;
+
+static NfcCommand gen2_poller_cuid_probe_callback(NfcGenericEvent event, void* context) {
+    furi_assert(context);
+    furi_assert(event.event_data);
+    furi_assert(event.instance);
+
+    Gen2DetectContext* ctx = context;
+    Gen2Poller* instance = ctx->poller;
+    Iso14443_3aPollerEvent* iso3_event = event.event_data;
+    instance->iso3_poller = event.instance;
+    instance->auth_state = Gen2AuthStateIdle;
+
+    if(iso3_event->type == Iso14443_3aPollerEventTypeReady) {
+        Gen2PollerError error = gen2_poller_auth(instance, 0, &ctx->key, ctx->key_type, NULL);
+        if(error == Gen2PollerErrorNone) {
+            // The probe sends only the first write phase and reads the ACK/NAK.
+            // We never send the data phase: returning Stop below drops the field,
+            // so block 0 cannot be written whether the card ACKed or NAKed.
+            Gen2PollerError probe_error =
+                gen2_poller_probe_block0_writable(instance, &ctx->cuid_writable);
+            if(probe_error != Gen2PollerErrorNone) {
+                FURI_LOG_D(TAG, "Block 0 write probe did not complete: %d", probe_error);
+            }
+        }
+    }
+
+    furi_thread_flags_set(ctx->thread_id, GEN2_POLLER_THREAD_FLAG_DETECTED);
+    return NfcCommandStop;
+}
+
+static NfcCommand gen2_poller_nt_probe_callback(NfcGenericEvent event, void* context) {
+    furi_assert(context);
+    furi_assert(event.event_data);
+    furi_assert(event.instance);
+
+    Gen2DetectContext* ctx = context;
+    Gen2Poller* instance = ctx->poller;
+    Iso14443_3aPollerEvent* iso3_event = event.event_data;
+    instance->iso3_poller = event.instance;
+    ctx->nt_valid = false;
+
+    if(iso3_event->type == Iso14443_3aPollerEventTypeReady) {
+        // Plain auth step 1 only: read the tag nonce, never complete the handshake.
+        // No key needed.
+        Gen2PollerError error = gen2_poller_get_nt(instance, 0, MfClassicKeyTypeA, &ctx->nt);
+        ctx->nt_valid = (error == Gen2PollerErrorNone);
+    }
+
+    furi_thread_flags_set(ctx->thread_id, GEN2_POLLER_THREAD_FLAG_DETECTED);
+    return NfcCommandStop;
+}
+
+// Runs one detection session in its own freshly-allocated Gen2Poller, so each call
+// starts from a fresh RF field (the reset static-nonce detection relies on). A fresh
+// poller per session is mandatory, not just convenient: an NfcPoller can be started
+// only once. Stopping a session resets the shared Nfc config_state to Idle, and only
+// nfc_poller_alloc (via iso14443_3a_poller_alloc -> nfc_config) sets it back to Done,
+// so restarting the same poller would trip nfc_start's config_state check.
+static void
+    gen2_poller_run_detect_session(Nfc* nfc, NfcGenericCallback callback, Gen2DetectContext* ctx) {
+    ctx->poller = gen2_poller_alloc_internal(nfc, false);
+    ctx->thread_id = furi_thread_get_current_id();
+    nfc_poller_start(ctx->poller->poller, callback, ctx);
+    furi_thread_flags_wait(GEN2_POLLER_THREAD_FLAG_DETECTED, FuriFlagWaitAny, FuriWaitForever);
+    furi_thread_flags_clear(GEN2_POLLER_THREAD_FLAG_DETECTED);
+    nfc_poller_stop(ctx->poller->poller);
+    gen2_poller_free(ctx->poller);
+    ctx->poller = NULL;
+}
+
+static bool gen2_poller_probe_cuid(Nfc* nfc) {
+    for(size_t i = 0; i < COUNT_OF(gen2_cuid_probe_keys); i++) {
+        Gen2DetectContext ctx = {
+            .key = gen2_cuid_probe_keys[i].key,
+            .key_type = gen2_cuid_probe_keys[i].key_type,
+            .cuid_writable = false,
+        };
+        gen2_poller_run_detect_session(nfc, gen2_poller_cuid_probe_callback, &ctx);
+        if(ctx.cuid_writable) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool gen2_poller_probe_static_nonce(Nfc* nfc) {
+    MfClassicNt nonces[GEN2_STATIC_NONCE_SAMPLES];
+    size_t valid = 0;
+
+    for(size_t i = 0; i < GEN2_STATIC_NONCE_SAMPLES; i++) {
+        Gen2DetectContext ctx = {
+            .nt_valid = false,
+        };
+        gen2_poller_run_detect_session(nfc, gen2_poller_nt_probe_callback, &ctx);
+        if(ctx.nt_valid) {
+            nonces[valid++] = ctx.nt;
+        }
+    }
+
+    // Need at least two readings to decide. A 32-bit random/PRNG nonce repeating
+    // across fresh activations is effectively impossible, so any repeat means the
+    // card emits a static nonce.
+    if(valid < 2) {
+        // Inconclusive (card removed / unstable RF): report not-static, but log it
+        // so a missed static-nonce classification can be diagnosed.
+        FURI_LOG_D(
+            TAG,
+            "Static-nonce check inconclusive: %u/%u valid samples",
+            (unsigned)valid,
+            GEN2_STATIC_NONCE_SAMPLES);
+        return false;
+    }
+    for(size_t i = 0; i < valid; i++) {
+        for(size_t j = i + 1; j < valid; j++) {
+            if(memcmp(nonces[i].data, nonces[j].data, sizeof(MfClassicNt)) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+Gen2PollerError gen2_poller_detect_type(Nfc* nfc, Gen2Type* type) {
+    furi_assert(nfc);
+    furi_assert(type);
+
+    *type = Gen2TypeUnknown;
+
+    // 1. Known-ATS fingerprint: cheap, no auth, identifies a recognisable subset.
+    if(gen2_poller_detect(nfc) == Gen2PollerErrorNone) {
+        *type = Gen2TypeAts;
+        return Gen2PollerErrorNone;
+    }
+
+    // 2. Behavioural CUID confirmation, then static-nonce classification. Each probe
+    // runs in its own poller session (allocated per session in run_detect_session).
+    if(gen2_poller_probe_cuid(nfc)) {
+        *type = gen2_poller_probe_static_nonce(nfc) ? Gen2TypeCuidStaticNonce : Gen2TypeCuid;
+    }
+
+    return (*type != Gen2TypeUnknown) ? Gen2PollerErrorNone : Gen2PollerErrorNotPresent;
+}
+
+const char* gen2_type_get_detail(Gen2Type type) {
+    switch(type) {
+    case Gen2TypeCuid:
+        return "CUID";
+    case Gen2TypeCuidStaticNonce:
+        return "CUID. Static nonce";
+    case Gen2TypeAts:
+        return "CUID. ATS";
+    case Gen2TypeUnknown:
+    default:
+        return NULL;
+    }
+}
+
 NfcCommand gen2_poller_idle_handler(Gen2Poller* instance) {
     furi_assert(instance);
 
     NfcCommand command = NfcCommandContinue;
 
     instance->mode_ctx.write_ctx.current_block = 0;
+    instance->mode_ctx.write_ctx.failed_block_count = 0;
+    memset(
+        instance->mode_ctx.write_ctx.failed_block_bitmap,
+        0,
+        sizeof(instance->mode_ctx.write_ctx.failed_block_bitmap));
     instance->gen2_event.type = Gen2PollerEventTypeDetected;
     command = instance->callback(instance->gen2_event, instance->context);
     instance->state = Gen2PollerStateRequestMode;
@@ -280,7 +484,7 @@ NfcCommand gen2_poller_write_target_data_request_handler(Gen2Poller* instance) {
 
 Gen2PollerError gen2_poller_write_block_handler(
     Gen2Poller* instance,
-    uint8_t block_num,
+    uint16_t block_num,
     const MfClassicBlock* block) {
     furi_assert(instance);
 
@@ -289,8 +493,10 @@ Gen2PollerError gen2_poller_write_block_handler(
     MfClassicKey auth_key = write_ctx->auth_key;
 
     do {
-        // Compare the target and source data
-        if(memcmp(block->data, write_ctx->mfc_data_target->block[block_num].data, 16) == 0) {
+        // Skip only a block we actually read that already matches. An unread block's buffer is
+        // zero, which can falsely equal the default/source -- write it rather than trust it.
+        if(mf_classic_is_block_read(write_ctx->mfc_data_target, block_num) &&
+           memcmp(block->data, write_ctx->mfc_data_target->block[block_num].data, 16) == 0) {
             FURI_LOG_D(TAG, "Block %d is the same, skipping", block_num);
             break;
         }
@@ -323,7 +529,8 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
     NfcCommand command = NfcCommandContinue;
     Gen2PollerError error = Gen2PollerErrorNone;
     Gen2PollerWriteContext* write_ctx = &instance->mode_ctx.write_ctx;
-    uint8_t block_num = write_ctx->current_block;
+    uint16_t block_num = write_ctx->current_block;
+    bool block_failed = false;
 
     do {
         // Check whether the ACs for that block are known in target data
@@ -331,6 +538,7 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
                write_ctx->mfc_data_target,
                mf_classic_get_sector_trailer_num_by_block(block_num))) {
             FURI_LOG_E(TAG, "Sector trailer for block %d not present in target data", block_num);
+            block_failed = true;
             break;
         }
 
@@ -338,6 +546,7 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
         if(!gen2_poller_can_write_block(write_ctx->mfc_data_target, block_num)) {
             if(!gen2_can_reset_access_conditions(write_ctx->mfc_data_target, block_num)) {
                 FURI_LOG_E(TAG, "Block %d cannot be written", block_num);
+                block_failed = true;
                 break;
             } else {
                 FURI_LOG_D(TAG, "Resetting ACs for block %d", block_num);
@@ -350,6 +559,7 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
                 error = gen2_poller_write_block_handler(instance, block_num, &block);
                 if(error != Gen2PollerErrorNone) {
                     FURI_LOG_E(TAG, "Failed to reset ACs for block %d", block_num);
+                    block_failed = true;
                     break;
                 } else {
                     FURI_LOG_D(TAG, "ACs for block %d reset", block_num);
@@ -373,8 +583,17 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
 
         // Write the default block depending on the block type
         if(block_num == 0) {
-            error =
-                gen2_poller_write_block_handler(instance, block_num, &gen2_poller_default_block_0);
+            // Block 0 announces the card via SAK/ATQA. Preserve what the card actually reported at
+            // activation rather than deriving from the detected MfClassicType: a magic CUID card
+            // that answers 4K-only blocks gets mis-detected as 4K (the firmware type probe auths
+            // block 254), but its real SAK still says 1K -- deriving from type would stamp a 1K
+            // card as 4K. Preserving also keeps the card's real ATQA and the ISO14443-4/ATS bit.
+            MfClassicBlock block_0 = gen2_poller_default_block_0;
+            const Iso14443_3aData* iso3 = write_ctx->mfc_data_target->iso14443_3a_data;
+            block_0.data[5] = iso3->sak;
+            block_0.data[6] = iso3->atqa[0];
+            block_0.data[7] = iso3->atqa[1];
+            error = gen2_poller_write_block_handler(instance, block_num, &block_0);
         } else if(mf_classic_is_sector_trailer(block_num)) {
             error = gen2_poller_write_block_handler(
                 instance, block_num, &gen2_poller_default_sector_trailer_block);
@@ -384,18 +603,30 @@ NfcCommand gen2_poller_wipe_handler(Gen2Poller* instance) {
         }
         if(error != Gen2PollerErrorNone) {
             FURI_LOG_E(TAG, "Couldn't write block %d", block_num);
+            block_failed = true;
         }
     } while(false);
 
-    write_ctx->current_block++;
-
-    if(error != Gen2PollerErrorNone) {
-        FURI_LOG_D(TAG, "Error occurred: %d", error);
+    // Each block is visited once, so just record the ones that failed -- a partial wipe then lists
+    // exactly which blocks stayed untouched (e.g. only block 0 of a genuine MFC).
+    if(block_failed) {
+        furi_assert(block_num < GEN2_POLLER_MAX_BLOCKS);
+        write_ctx->failed_block_bitmap[block_num >> 3] |= (1u << (block_num & 7u));
+        write_ctx->failed_block_count++;
     }
 
-    if(write_ctx->current_block ==
-       mf_classic_get_total_block_num(write_ctx->mfc_data_target->type)) {
-        instance->state = Gen2PollerStateSuccess;
+    write_ctx->current_block++;
+
+    uint16_t total_blocks = mf_classic_get_total_block_num(write_ctx->mfc_data_target->type);
+    if(write_ctx->current_block == total_blocks) {
+        if(write_ctx->failed_block_count == 0) {
+            instance->state = Gen2PollerStateSuccess;
+        } else if(write_ctx->failed_block_count >= total_blocks) {
+            // Every block failed -> nothing was wiped: hard fail, offer a retry.
+            instance->state = Gen2PollerStateFail;
+        } else {
+            instance->state = Gen2PollerStatePartial;
+        }
     }
 
     return command;
@@ -405,20 +636,24 @@ NfcCommand gen2_poller_write_handler(Gen2Poller* instance) {
     NfcCommand command = NfcCommandContinue;
     Gen2PollerError error = Gen2PollerErrorNone;
     Gen2PollerWriteContext* write_ctx = &instance->mode_ctx.write_ctx;
-    uint8_t block_num = write_ctx->current_block;
+    uint16_t block_num = write_ctx->current_block;
+    bool block_failed = false;
 
     do {
-        // Check whether the block is present in the source data
+        // Nothing to write here -> benign skip, not a failure.
         if(!mf_classic_is_block_read(write_ctx->mfc_data_source, block_num)) {
             // FURI_LOG_E(TAG, "Block %d not present in source data", block_num);
             break;
         }
 
-        // Check whether the ACs for that block are known in target data
+        // Source has data for this block but the dict attack found no key for its sector -> we
+        // can't auth, so it can't be written. Count it as a failure rather than skipping silently,
+        // so a clone that wrote nothing reports Fail (was masked as Success).
         if(!mf_classic_is_block_read(
                write_ctx->mfc_data_target,
                mf_classic_get_sector_trailer_num_by_block(block_num))) {
             FURI_LOG_E(TAG, "Sector trailer for block %d not present in target data", block_num);
+            block_failed = true;
             break;
         }
 
@@ -426,6 +661,7 @@ NfcCommand gen2_poller_write_handler(Gen2Poller* instance) {
         if(!gen2_poller_can_write_block(write_ctx->mfc_data_target, block_num)) {
             if(!gen2_can_reset_access_conditions(write_ctx->mfc_data_target, block_num)) {
                 FURI_LOG_E(TAG, "Block %d cannot be written", block_num);
+                block_failed = true;
                 break;
             } else {
                 FURI_LOG_D(TAG, "Resetting ACs for block %d", block_num);
@@ -438,6 +674,7 @@ NfcCommand gen2_poller_write_handler(Gen2Poller* instance) {
                 error = gen2_poller_write_block_handler(instance, block_num, &block);
                 if(error != Gen2PollerErrorNone) {
                     FURI_LOG_E(TAG, "Failed to reset ACs for block %d", block_num);
+                    block_failed = true;
                     break;
                 } else {
                     FURI_LOG_D(TAG, "ACs for block %d reset", block_num);
@@ -464,16 +701,34 @@ NfcCommand gen2_poller_write_handler(Gen2Poller* instance) {
             instance, block_num, &write_ctx->mfc_data_source->block[block_num]);
         if(error != Gen2PollerErrorNone) {
             FURI_LOG_E(TAG, "Couldn't write block %d", block_num);
+            block_failed = true;
         }
     } while(false);
+
+    // Each block is visited once, so just record the ones that failed -> a partial write lists
+    // exactly which blocks it couldn't write (mirrors the wipe handler).
+    if(block_failed) {
+        furi_assert(block_num < GEN2_POLLER_MAX_BLOCKS);
+        write_ctx->failed_block_bitmap[block_num >> 3] |= (1u << (block_num & 7u));
+        write_ctx->failed_block_count++;
+    }
+
     write_ctx->current_block++;
 
-    if(error != Gen2PollerErrorNone) {
-        FURI_LOG_D(TAG, "Error occurred: %d", error);
-    } else if(
-        write_ctx->current_block ==
-        mf_classic_get_total_block_num(write_ctx->mfc_data_source->type)) {
-        instance->state = Gen2PollerStateSuccess;
+    // Always evaluate the terminal condition (current_block is post-incremented, so returning
+    // early on the last block would overshoot total -> the poller would spin in Write forever).
+    uint16_t total_blocks = mf_classic_get_total_block_num(write_ctx->mfc_data_source->type);
+    if(write_ctx->current_block == total_blocks) {
+        if(write_ctx->failed_block_count == 0) {
+            instance->state = Gen2PollerStateSuccess;
+        } else if(write_ctx->failed_block_count >= total_blocks) {
+            // Every block in the dump failed (e.g. no keys found) -> hard fail, offer a retry. (A
+            // sparse source can't reach this -- its absent blocks aren't counted -- so a clone that
+            // couldn't write any of its present blocks surfaces as Partial instead.)
+            instance->state = Gen2PollerStateFail;
+        } else {
+            instance->state = Gen2PollerStatePartial;
+        }
     }
 
     return command;
@@ -485,6 +740,31 @@ NfcCommand gen2_poller_success_handler(Gen2Poller* instance) {
     NfcCommand command = NfcCommandContinue;
 
     instance->gen2_event.type = Gen2PollerEventTypeSuccess;
+    command = instance->callback(instance->gen2_event, instance->context);
+    instance->state = Gen2PollerStateIdle;
+
+    return command;
+}
+
+NfcCommand gen2_poller_partial_handler(Gen2Poller* instance) {
+    furi_assert(instance);
+
+    NfcCommand command = NfcCommandContinue;
+    Gen2PollerWriteContext* write_ctx = &instance->mode_ctx.write_ctx;
+
+    // Blocks total comes from whichever dump drove the iteration: the card (wipe) or the source
+    // dump (write) -- they can differ (e.g. a 1K dump written onto a 4K-detected card).
+    const MfClassicData* ref = (instance->mode == Gen2PollerModeWipe) ?
+                                   write_ctx->mfc_data_target :
+                                   write_ctx->mfc_data_source;
+
+    instance->gen2_event.type = Gen2PollerEventTypePartial;
+    instance->gen2_event_data.partial.blocks_total = mf_classic_get_total_block_num(ref->type);
+    instance->gen2_event_data.partial.failed_count = write_ctx->failed_block_count;
+    memcpy(
+        instance->gen2_event_data.partial.failed_bitmap,
+        write_ctx->failed_block_bitmap,
+        sizeof(instance->gen2_event_data.partial.failed_bitmap));
     command = instance->callback(instance->gen2_event, instance->context);
     instance->state = Gen2PollerStateIdle;
 
@@ -511,6 +791,7 @@ static const Gen2PollerStateHandler gen2_poller_state_handlers[Gen2PollerStateNu
     [Gen2PollerStateWriteTargetDataRequest] = gen2_poller_write_target_data_request_handler,
     [Gen2PollerStateWrite] = gen2_poller_write_handler,
     [Gen2PollerStateSuccess] = gen2_poller_success_handler,
+    [Gen2PollerStatePartial] = gen2_poller_partial_handler,
     [Gen2PollerStateFail] = gen2_poller_fail_handler,
 };
 

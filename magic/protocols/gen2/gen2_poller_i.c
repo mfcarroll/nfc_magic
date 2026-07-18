@@ -118,8 +118,13 @@ static Gen2PollerError gen2_poller_get_nt_common(
                 instance->tx_plain_buffer,
                 instance->rx_plain_buffer,
                 GEN2_POLLER_MAX_FWT);
+            // A bare tag nonce carries no CRC, so WrongCrc is the expected
+            // "success" here. Anything else - including a CRC-valid (None) frame,
+            // which is not a nonce - means no nonce was read; report it as an error
+            // so callers never treat an unwritten nt as valid.
             if(error != Iso14443_3aErrorWrongCrc) {
-                ret = mf_classic_process_error(error);
+                ret = (error == Iso14443_3aErrorNone) ? MfClassicErrorProtocol :
+                                                        mf_classic_process_error(error);
                 break;
             }
         }
@@ -343,13 +348,60 @@ Gen2PollerError
     return ret;
 }
 
+Gen2PollerError gen2_poller_probe_block0_writable(Gen2Poller* instance, bool* writable) {
+    furi_assert(instance);
+    furi_assert(writable);
+
+    Gen2PollerError ret = Gen2PollerErrorNone;
+    Iso14443_3aError error = Iso14443_3aErrorNone;
+    *writable = false;
+
+    // Non-destructive CUID probe: this sends ONLY the first phase of the two-phase
+    // MIFARE write to block 0. A directly-writable block 0 (Gen2/CUID) ACKs it, while
+    // a normal Classic NAKs its read-only manufacturer block. The 16-byte data phase is
+    // never transmitted, so block 0 is never modified. The caller MUST drop the field
+    // immediately afterwards (do not send any further frame) so nothing can be written.
+    do {
+        uint8_t write_block_cmd[2] = {MF_CLASSIC_CMD_WRITE_BLOCK, 0};
+        bit_buffer_copy_bytes(instance->tx_plain_buffer, write_block_cmd, sizeof(write_block_cmd));
+        iso14443_crc_append(Iso14443CrcTypeA, instance->tx_plain_buffer);
+
+        crypto1_encrypt(
+            instance->crypto, NULL, instance->tx_plain_buffer, instance->tx_encrypted_buffer);
+
+        error = iso14443_3a_poller_txrx_custom_parity(
+            instance->iso3_poller,
+            instance->tx_encrypted_buffer,
+            instance->rx_encrypted_buffer,
+            GEN2_POLLER_MAX_FWT);
+        if(error != Iso14443_3aErrorNone) {
+            ret = gen2_poller_process_iso3_error(error);
+            break;
+        }
+        if(bit_buffer_get_size(instance->rx_encrypted_buffer) != 4) {
+            ret = Gen2PollerErrorProtocol;
+            break;
+        }
+
+        crypto1_decrypt(
+            instance->crypto, instance->rx_encrypted_buffer, instance->rx_plain_buffer);
+
+        *writable = (bit_buffer_get_byte(instance->rx_plain_buffer, 0) == MF_CLASSIC_CMD_ACK);
+    } while(false);
+
+    return ret;
+}
+
 bool gen2_poller_can_write_block(const MfClassicData* target_data, uint8_t block_num) {
     furi_assert(target_data);
 
     bool can_write = true;
 
     if(block_num == 0 && target_data->iso14443_3a_data->uid_len == 7) {
-        // 7-byte UID gen2 cards are not supported yet, need further testing
+        // 7-byte UID gen2 cards are not supported yet, need further testing. Keep this guard:
+        // the wipe's block-0 default (gen2_poller.c) hard-codes SAK/ATQA at the 4-byte-UID offsets
+        // (bytes 5-7); a 7-byte UID puts them at 7-9, so writing block 0 would corrupt it. When
+        // adding 7-byte support, derive the offsets from uid_len (or use nfc_generate_mf_classic_block_0).
         can_write = false;
     }
 
@@ -384,12 +436,17 @@ Gen2PollerWriteProblems
     if(!has_key_a && !has_key_b) {
         can_write.missing_target_keys = true;
     }
-    if(!gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeA, MfClassicActionDataWrite) &&
-       !gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeB, MfClassicActionDataWrite)) {
-        if(!gen2_can_reset_access_conditions(target_data, block_num)) {
-            can_write.locked_access_bits = true;
+    // Access conditions live in the sector trailer; only judge "locked" if we actually read it.
+    // An unread trailer is all-zero, which decodes as locked -- that's really just a missing key.
+    if(mf_classic_is_block_read(
+           target_data, mf_classic_get_sector_trailer_num_by_block(block_num))) {
+        if(!gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeA, MfClassicActionDataWrite) &&
+           !gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeB, MfClassicActionDataWrite)) {
+            if(!gen2_can_reset_access_conditions(target_data, block_num)) {
+                can_write.locked_access_bits = true;
+            }
         }
     }
 
@@ -422,24 +479,31 @@ Gen2PollerWriteProblems
     if(!has_key_a && !has_key_b) {
         can_write.missing_target_keys = true;
     }
-    if(!gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeA, MfClassicActionKeyAWrite) &&
-       !gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeB, MfClassicActionKeyAWrite)) {
-        if(!gen2_can_reset_access_conditions(target_data, block_num)) {
+    // Access conditions live in the trailer; only judge "locked" if we actually read it. An unread
+    // trailer is all-zero, which decodes as locked -- that's really just the missing key above.
+    if(mf_classic_is_block_read(
+           target_data, mf_classic_get_sector_trailer_num_by_block(block_num))) {
+        if(!gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeA, MfClassicActionKeyAWrite) &&
+           !gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeB, MfClassicActionKeyAWrite)) {
+            if(!gen2_can_reset_access_conditions(target_data, block_num)) {
+                can_write.locked_access_bits = true;
+            }
+        }
+        if(!gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeA, MfClassicActionACWrite) &&
+           !gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeB, MfClassicActionACWrite)) {
             can_write.locked_access_bits = true;
         }
-    }
-    if(!gen2_is_allowed_access(target_data, block_num, MfClassicKeyTypeA, MfClassicActionACWrite) &&
-       !gen2_is_allowed_access(target_data, block_num, MfClassicKeyTypeB, MfClassicActionACWrite)) {
-        can_write.locked_access_bits = true;
-    }
-    if(!gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeA, MfClassicActionKeyBWrite) &&
-       !gen2_is_allowed_access(
-           target_data, block_num, MfClassicKeyTypeB, MfClassicActionKeyBWrite)) {
-        if(!gen2_can_reset_access_conditions(target_data, block_num)) {
-            can_write.locked_access_bits = true;
+        if(!gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeA, MfClassicActionKeyBWrite) &&
+           !gen2_is_allowed_access(
+               target_data, block_num, MfClassicKeyTypeB, MfClassicActionKeyBWrite)) {
+            if(!gen2_can_reset_access_conditions(target_data, block_num)) {
+                can_write.locked_access_bits = true;
+            }
         }
     }
 

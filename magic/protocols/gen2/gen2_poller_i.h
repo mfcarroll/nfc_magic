@@ -10,12 +10,12 @@ extern "C" {
 #endif
 
 #define GEN2_CMD_READ_ATS (0xE0)
-#define GEN2_FSDI_256 (0x8U)
+#define GEN2_FSDI_256     (0x8U)
 
 #define GEN2_POLLER_BLOCK_SIZE (16)
 
 #define GEN2_POLLER_MAX_BUFFER_SIZE (64U)
-#define GEN2_POLLER_MAX_FWT (150000U)
+#define GEN2_POLLER_MAX_FWT         (150000U)
 
 typedef enum {
     Gen2PollerStateIdle,
@@ -25,6 +25,7 @@ typedef enum {
     Gen2PollerStateWriteTargetDataRequest,
     Gen2PollerStateWrite,
     Gen2PollerStateSuccess,
+    Gen2PollerStatePartial,
     Gen2PollerStateFail,
 
     Gen2PollerStateNum,
@@ -48,6 +49,8 @@ typedef struct {
     MfClassicKeyType write_key;
     uint16_t current_block;
     bool need_halt_before_write;
+    uint16_t failed_block_count; // wipe/clone: blocks that couldn't be written
+    uint8_t failed_block_bitmap[GEN2_POLLER_BLOCK_BITMAP_SIZE]; // bit N = block N not written
 } Gen2PollerWriteContext;
 
 typedef union {
@@ -111,6 +114,16 @@ Gen2PollerError gen2_poller_auth(
     MfClassicAuthContext* data);
 
 Gen2PollerError gen2_poller_halt(Gen2Poller* instance);
+
+Gen2PollerError gen2_poller_get_nt(
+    Gen2Poller* instance,
+    uint8_t block_num,
+    MfClassicKeyType key_type,
+    MfClassicNt* nt);
+
+// Non-destructive probe: sends only the first phase of a write to block 0 and
+// reports whether the card ACKs it (block 0 directly writable => Gen2/CUID).
+Gen2PollerError gen2_poller_probe_block0_writable(Gen2Poller* instance, bool* writable);
 
 Gen2PollerError
     gen2_poller_write_block(Gen2Poller* instance, uint8_t block_num, const MfClassicBlock* data);

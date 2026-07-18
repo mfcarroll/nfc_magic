@@ -22,14 +22,50 @@ void nfc_magic_scene_magic_info_on_enter(void* context) {
 
     if(instance->protocol == NfcMagicProtocolClassic) {
         widget_add_string_element(
-            widget, 0, 0, AlignLeft, AlignTop, FontPrimary, "It Might Be a Magic Card");
-        furi_string_printf(message, "You can make sure the card is\nmagic by writing to it\n");
+            widget, 0, 0, AlignLeft, AlignTop, FontPrimary, "Magic Not Confirmed");
+        // Hand-wrapped: the text box breaks mid-word, so keep each line short.
+        furi_string_printf(
+            message,
+            "Not a magic tag, or\nsector 0 key is non-standard.\nTry writing to confirm.");
+    } else if(instance->protocol == NfcMagicProtocolUscuidUlNotDetected) {
+        widget_add_string_element(
+            widget, 0, 0, AlignLeft, AlignTop, FontPrimary, "Magic Not Detected");
+        // Hand-wrapped: the text box breaks mid-word, so keep each line short.
+        furi_string_printf(
+            message, "Not a magic Ultralight,\nor an unsupported type.\nTry writing to confirm.");
     } else {
         widget_add_string_element(
             widget, 0, 0, AlignLeft, AlignTop, FontPrimary, "Magic card detected!");
+        furi_string_printf(
+            message, "Magic Type: %s", nfc_magic_protocols_get_name(instance->protocol));
+
+        const char* detail = NULL;
+        if(instance->protocol == NfcMagicProtocolGen2) {
+            detail = gen2_type_get_detail(instance->gen2_type);
+        } else if(instance->protocol == NfcMagicProtocolGen1) {
+            if(instance->gen1_uid_len == 4) {
+                detail = "4-byte UID";
+            } else if(instance->gen1_uid_len == 7) {
+                detail = "7-byte UID";
+            }
+        } else if(instance->protocol == NfcMagicProtocolUscuidUl) {
+            detail = uscuid_ul_get_variant_name(&instance->uscuid_ul_data);
+        }
+        if(detail) {
+            furi_string_cat_printf(message, "\n%s", detail);
+        }
+        // Detection route on its own line for a confirmed USCUID-UL.
+        if(instance->protocol == NfcMagicProtocolUscuidUl &&
+           instance->uscuid_ul_data.is_uscuid_ul) {
+            const char* detection = "ATS";
+            if(instance->uscuid_ul_data.wakeup == UscuidUlWakeupA) {
+                detection = "Backdoor (0x40)";
+            } else if(instance->uscuid_ul_data.wakeup == UscuidUlWakeupB) {
+                detection = "Backdoor (0x20)";
+            }
+            furi_string_cat_printf(message, "\nDetection: %s", detection);
+        }
     }
-    furi_string_cat_printf(
-        message, "Magic Type: %s", nfc_magic_protocols_get_name(instance->protocol));
     widget_add_text_box_element(
         widget, 0, 10, 128, 54, AlignLeft, AlignTop, furi_string_get_cstr(message), false);
 
@@ -56,8 +92,23 @@ void nfc_magic_scene_magic_info_on_enter(void* context) {
 
     widget_add_button_element(
         widget, GuiButtonTypeLeft, "Retry", nfc_magic_scene_magic_info_widget_callback, instance);
-    widget_add_button_element(
-        widget, GuiButtonTypeRight, "More", nfc_magic_scene_magic_info_widget_callback, instance);
+
+    // "More" -> Write menu (writable), or the raw-config view (confirmed but unrecognised
+    // preset). UL-C and not-confirmed hide it. NotDetected keeps the default (write-anyway).
+    bool show_more = true;
+    if(instance->protocol == NfcMagicProtocolUscuidUl) {
+        show_more =
+            uscuid_ul_data_is_writable(&instance->uscuid_ul_data) ||
+            (instance->uscuid_ul_data.is_uscuid_ul && !instance->uscuid_ul_data.type_known);
+    }
+    if(show_more) {
+        widget_add_button_element(
+            widget,
+            GuiButtonTypeRight,
+            "More",
+            nfc_magic_scene_magic_info_widget_callback,
+            instance);
+    }
 
     furi_string_free(message);
 
@@ -81,11 +132,19 @@ bool nfc_magic_scene_magic_info_on_event(void* context, SceneManagerEvent event)
             } else if(instance->protocol == NfcMagicProtocolGen2) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneGen2Menu);
                 consumed = true;
+            } else if(instance->protocol == NfcMagicProtocolUscuidUl) {
+                if(uscuid_ul_data_is_writable(&instance->uscuid_ul_data)) {
+                    scene_manager_next_scene(instance->scene_manager, NfcMagicSceneUscuidUlMenu);
+                } else {
+                    // Confirmed but unrecognised preset -> show the raw config.
+                    scene_manager_next_scene(instance->scene_manager, NfcMagicSceneUscuidUlCfg);
+                }
+                consumed = true;
+            } else if(instance->protocol == NfcMagicProtocolUscuidUlNotDetected) {
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneUscuidUlMenu);
+                consumed = true;
             } else if(instance->protocol == NfcMagicProtocolClassic) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMfClassicMenu);
-                consumed = true;
-            } else if(instance->protocol == NfcMagicProtocolSlix) {
-                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlix);
                 consumed = true;
             }
         }
