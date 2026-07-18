@@ -141,7 +141,11 @@ struct NfcMagicApp {
 
     Gen4Poller* gen4_poller;
     UscuidUlPoller* uscuid_ul_poller;
+    // Allocated per-scene (in the SLIX get-info / write scenes), NOT at app startup:
+    // slix_poller_alloc -> nfc_poller_alloc(Iso15693_3) calls nfc_config() on the shared Nfc,
+    // and holding that config would make the scanner's first nfc_config() furi_check-fail.
     SlixPoller* slix_poller;
+    SlixData* slix_data; // last read result, kept so the info scene survives the poller free
     uint8_t slix_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic SLIX card
 
     Gen4* gen4_data;

@@ -12,8 +12,10 @@ void nfc_magic_scene_slix_write_input_on_enter(void* context) {
 
     // Seed the editor with the card's current UID if it has already been read (via "Info"),
     // otherwise start from a valid E0-prefixed template.
-    const SlixData* data = slix_poller_get_data(instance->slix_poller);
-    memcpy(instance->slix_target_uid, data->iso15693_3_data->uid, ISO15693_3_UID_SIZE);
+    memcpy(
+        instance->slix_target_uid,
+        instance->slix_data->iso15693_3_data->uid,
+        ISO15693_3_UID_SIZE);
     if(instance->slix_target_uid[0] != 0xE0) {
         memset(instance->slix_target_uid, 0, ISO15693_3_UID_SIZE);
         instance->slix_target_uid[0] = 0xE0;

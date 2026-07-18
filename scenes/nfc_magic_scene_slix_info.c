@@ -6,8 +6,7 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
     NfcMagicApp* instance = context;
     widget_reset(instance->widget);
 
-    SlixData* data = slix_poller_get_data(instance->slix_poller);
-    const Iso15693_3Data* iso_data = data->iso15693_3_data;
+    const Iso15693_3Data* iso_data = instance->slix_data->iso15693_3_data;
     const Iso15693_3SystemInfo* sys_info = &iso_data->system_info;
 
     FuriString* temp_str = furi_string_alloc();

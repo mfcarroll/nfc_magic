@@ -22,6 +22,8 @@ void nfc_magic_scene_slix_write_on_enter(void* context) {
     popup_set_icon(popup, 0, 8, &I_NFC_manual_60x50);
     view_dispatcher_switch_to_view(instance->view_dispatcher, NfcMagicAppViewPopup);
 
+    // Allocate the poller here (not at app startup); freed in on_exit.
+    instance->slix_poller = slix_poller_alloc(instance->nfc);
     slix_poller_start_write_uid(
         instance->slix_poller,
         instance->slix_target_uid,
@@ -50,6 +52,8 @@ bool nfc_magic_scene_slix_write_on_event(void* context, SceneManagerEvent event)
 void nfc_magic_scene_slix_write_on_exit(void* context) {
     NfcMagicApp* instance = context;
     slix_poller_stop(instance->slix_poller);
+    slix_poller_free(instance->slix_poller);
+    instance->slix_poller = NULL;
     nfc_magic_app_blink_stop(instance);
     popup_reset(instance->popup);
 }
