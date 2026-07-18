@@ -3,6 +3,7 @@
 
 enum SubmenuIndex {
     SubmenuIndexSlixInfo,
+    SubmenuIndexSlixWriteUid,
 };
 
 void nfc_magic_scene_slix_submenu_callback(void* context, uint32_t index) {
@@ -22,6 +23,13 @@ void nfc_magic_scene_slix_on_enter(void* context) {
         nfc_magic_scene_slix_submenu_callback,
         app);
 
+    submenu_add_item(
+        submenu,
+        "Write UID",
+        SubmenuIndexSlixWriteUid,
+        nfc_magic_scene_slix_submenu_callback,
+        app);
+
     submenu_set_header(submenu, "ISO15693 (SLIX)");
 
     view_dispatcher_switch_to_view(app->view_dispatcher, NfcMagicAppViewMenu);
@@ -34,6 +42,9 @@ bool nfc_magic_scene_slix_on_event(void* context, SceneManagerEvent event) {
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == SubmenuIndexSlixInfo) {
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixGetInfo);
+            consumed = true;
+        } else if(event.event == SubmenuIndexSlixWriteUid) {
+            scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixWriteInput);
             consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeBack) {

@@ -142,6 +142,7 @@ struct NfcMagicApp {
     Gen4Poller* gen4_poller;
     UscuidUlPoller* uscuid_ul_poller;
     SlixPoller* slix_poller;
+    uint8_t slix_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic SLIX card
 
     Gen4* gen4_data;
 

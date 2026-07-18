@@ -2,118 +2,176 @@
 #include <furi.h>
 #include <nfc/nfc_poller.h>
 #include <lib/nfc/protocols/iso15693_3/iso15693_3_poller.h>
+#include <toolbox/bit_buffer.h>
 
-typedef enum {
-    SlixPollerStateIdle,
-    SlixPollerStateDetecting,
-    SlixPollerStateStopped,
-} SlixPollerState;
+// Magic ISO15693 ("gen1" Chinese magic) backdoor UID write, ported from proxmark3
+// SetTag15693Uid (armsrc/iso15693.c). Four unaddressed WRITE BLOCK frames are sent to
+// hidden backdoor block addresses; the CRC is appended by iso15693_3_poller_send_frame.
+#define SLIX_MAGIC_FLAGS      (0x02U) // high data rate, unaddressed (ISO15693_REQ_DATARATE_HIGH)
+#define SLIX_MAGIC_CMD_WRITE  (0x21U) // ISO15693 WRITE BLOCK
+#define SLIX_MAGIC_BLK_UNLOCK (0x3EU) // written as 0
+#define SLIX_MAGIC_BLK_COMMIT (0x3FU) // written as 0x6996 (arms the UID change)
+#define SLIX_MAGIC_BLK_UID_LO (0x38U) // uid[7..4]
+#define SLIX_MAGIC_BLK_UID_HI (0x39U) // uid[3..0]
+
+#define SLIX_POLLER_BUF_SIZE (32U)
 
 struct SlixPoller {
     NfcPoller* poller;
     SlixData* data;
+    SlixPollerMode mode;
+    uint8_t target_uid[ISO15693_3_UID_SIZE];
     SlixPollerCallback callback;
     void* context;
-    FuriThread* thread;
-    SlixPollerState state;
+    bool running;
 };
 
-// This is the callback passed to the low-level nfc_poller.
-// It must return NfcCommand to control the poller's state.
+static void slix_poller_build_backdoor_frame(
+    BitBuffer* tx,
+    uint8_t block,
+    uint8_t d0,
+    uint8_t d1,
+    uint8_t d2,
+    uint8_t d3) {
+    bit_buffer_reset(tx);
+    bit_buffer_append_byte(tx, SLIX_MAGIC_FLAGS);
+    bit_buffer_append_byte(tx, SLIX_MAGIC_CMD_WRITE);
+    bit_buffer_append_byte(tx, block);
+    bit_buffer_append_byte(tx, d0);
+    bit_buffer_append_byte(tx, d1);
+    bit_buffer_append_byte(tx, d2);
+    bit_buffer_append_byte(tx, d3);
+}
+
+// Send the four gen1 backdoor frames. Magic cards may not answer these writes, so per-frame
+// transceive results are intentionally ignored; the UID read-back is the real check.
+static void slix_poller_send_backdoor_uid(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
+    BitBuffer* tx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
+    BitBuffer* rx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
+
+    slix_poller_build_backdoor_frame(tx, SLIX_MAGIC_BLK_UNLOCK, 0x00, 0x00, 0x00, 0x00);
+    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+
+    slix_poller_build_backdoor_frame(tx, SLIX_MAGIC_BLK_COMMIT, 0x69, 0x96, 0x00, 0x00);
+    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+
+    slix_poller_build_backdoor_frame(tx, SLIX_MAGIC_BLK_UID_LO, uid[7], uid[6], uid[5], uid[4]);
+    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+
+    slix_poller_build_backdoor_frame(tx, SLIX_MAGIC_BLK_UID_HI, uid[3], uid[2], uid[1], uid[0]);
+    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+
+    bit_buffer_free(tx);
+    bit_buffer_free(rx);
+}
+
+static bool slix_poller_verify_uid(Iso15693_3Poller* iso_poller, const uint8_t* expected_uid) {
+    uint8_t readback[ISO15693_3_UID_SIZE] = {0};
+    Iso15693_3Error error = iso15693_3_poller_inventory(iso_poller, readback);
+    if(error != Iso15693_3ErrorNone) {
+        return false;
+    }
+    return memcmp(readback, expected_uid, ISO15693_3_UID_SIZE) == 0;
+}
+
+// Runs on the Nfc worker thread. Returns NfcCommand to control the poller.
 static NfcCommand slix_poller_nfc_callback(NfcGenericEvent event, void* context) {
     SlixPoller* instance = context;
     furi_assert(instance);
 
-    // We are only interested in ISO15693-3 events.
     if(event.protocol != NfcProtocolIso15693_3) {
         return NfcCommandContinue;
     }
 
-    // The event_data for an ISO15693-3 poller is an Iso15693_3PollerEvent.
     Iso15693_3PollerEvent* iso_event = event.event_data;
 
     if(iso_event->type == Iso15693_3PollerEventTypeReady) {
-        // The underlying poller has successfully activated the card. Its data (UID, system
-        // info and blocks, filled during activation) is an Iso15693_3Data, so copy it
-        // straight into our wrapper's iso15693_3_data -- NOT via slix_data_copy, which
-        // expects a SlixData source.
+        if(instance->mode == SlixPollerModeWriteUid) {
+            // event.instance is the concrete Iso15693_3Poller; raw frames must be sent here.
+            Iso15693_3Poller* iso_poller = event.instance;
+            slix_poller_send_backdoor_uid(iso_poller, instance->target_uid);
+            bool ok = slix_poller_verify_uid(iso_poller, instance->target_uid);
+            if(instance->callback) {
+                instance->callback(
+                    ok ? SlixPollerEventSuccess : SlixPollerEventFail, instance->context);
+            }
+            return NfcCommandStop;
+        }
+
+        // Info mode: the poller filled Iso15693_3Data (UID + system info) during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
         iso15693_3_copy(instance->data->iso15693_3_data, poller_data);
-
-        // Notify the high-level listener (the scene) of success.
         if(instance->callback) {
             instance->callback(SlixPollerEventSuccess, instance->context);
         }
-        // Tell the poller to stop, as we have found what we're looking for.
-        return NfcCommandStop;
-    } else if(iso_event->type == Iso15693_3PollerEventTypeError) {
-        // An error occurred during activation.
-        if(instance->callback) {
-            instance->callback(SlixPollerEventFail, instance->context);
-        }
         return NfcCommandStop;
     }
 
-    // For any other event type, just continue polling.
+    // Any other event (e.g. activation error because no card is in the field yet) just means
+    // "keep polling" -- wait for a card to appear rather than bailing out. The owning scene
+    // cancels by calling slix_poller_stop() on exit.
     return NfcCommandContinue;
-}
-
-// This thread runs the poller.
-static int32_t slix_poller_thread(void* context) {
-    SlixPoller* instance = context;
-
-    // The nfc_poller_start function is blocking and runs the polling loop.
-    // It will only return when its callback returns NfcCommandStop or
-    // when nfc_poller_stop() is called from another thread.
-    if(instance->state == SlixPollerStateDetecting) {
-        slix_data_reset(instance->data);
-        nfc_poller_start(instance->poller, slix_poller_nfc_callback, instance);
-    }
-
-    // The poller has stopped, so we can set our state to idle.
-    instance->state = SlixPollerStateIdle;
-
-    return 0;
 }
 
 SlixPoller* slix_poller_alloc(Nfc* nfc) {
     SlixPoller* instance = malloc(sizeof(SlixPoller));
-    // Allocate a generic poller configured for the ISO15693-3 protocol.
     instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso15693_3);
     instance->data = slix_data_alloc();
-    instance->thread = furi_thread_alloc_ex("SlixPoller", 1024, slix_poller_thread, instance);
-    instance->state = SlixPollerStateIdle;
+    instance->mode = SlixPollerModeInfo;
+    instance->callback = NULL;
+    instance->context = NULL;
+    instance->running = false;
     return instance;
 }
 
 void slix_poller_free(SlixPoller* instance) {
     furi_assert(instance);
-    // Ensure the thread is stopped before freeing resources.
-    if(instance->state != SlixPollerStateIdle) {
+    if(instance->running) {
         slix_poller_stop(instance);
     }
-    furi_thread_free(instance->thread);
     nfc_poller_free(instance->poller);
     slix_data_free(instance->data);
     free(instance);
 }
 
-void slix_poller_start(SlixPoller* instance, SlixPollerCallback callback, void* context) {
+// nfc_poller_start is non-blocking: the callback fires on the Nfc worker thread and returns
+// NfcCommandStop when finished. The owning scene must still call slix_poller_stop() on exit
+// so the NfcPoller session state is reset before the next start.
+static void slix_poller_start_internal(
+    SlixPoller* instance,
+    SlixPollerMode mode,
+    SlixPollerCallback callback,
+    void* context) {
     furi_assert(instance);
+    furi_assert(!instance->running);
+    instance->mode = mode;
     instance->callback = callback;
     instance->context = context;
-    instance->state = SlixPollerStateDetecting;
-    furi_thread_start(instance->thread);
+    slix_data_reset(instance->data);
+    instance->running = true;
+    nfc_poller_start(instance->poller, slix_poller_nfc_callback, instance);
+}
+
+void slix_poller_start(SlixPoller* instance, SlixPollerCallback callback, void* context) {
+    slix_poller_start_internal(instance, SlixPollerModeInfo, callback, context);
+}
+
+void slix_poller_start_write_uid(
+    SlixPoller* instance,
+    const uint8_t* uid,
+    SlixPollerCallback callback,
+    void* context) {
+    furi_assert(instance);
+    furi_assert(uid);
+    memcpy(instance->target_uid, uid, ISO15693_3_UID_SIZE);
+    slix_poller_start_internal(instance, SlixPollerModeWriteUid, callback, context);
 }
 
 void slix_poller_stop(SlixPoller* instance) {
     furi_assert(instance);
-    if(instance->state != SlixPollerStateIdle) {
-        instance->state = SlixPollerStateStopped;
-        // This call will interrupt the blocking nfc_poller_start() in the thread.
+    if(instance->running) {
         nfc_poller_stop(instance->poller);
-        // Wait for the thread to finish its execution.
-        furi_thread_join(instance->thread);
+        instance->running = false;
     }
 }
 
