@@ -126,6 +126,7 @@ NfcMagicApp* nfc_magic_app_alloc() {
         write_problems_get_view(instance->write_problems));
 
     instance->nfc = nfc_alloc();
+    instance->slix_poller = slix_poller_alloc(instance->nfc);
     instance->scanner = nfc_magic_scanner_alloc(instance->nfc);
 
     return instance;
@@ -201,6 +202,7 @@ void nfc_magic_app_free(NfcMagicApp* instance) {
 
     gen4_free(instance->gen4_data);
 
+    slix_poller_free(instance->slix_poller);
     nfc_magic_scanner_free(instance->scanner);
     nfc_free(instance->nfc);
 

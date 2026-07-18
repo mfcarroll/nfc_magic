@@ -1,6 +1,6 @@
 App(
-    appid="nfc_magic",
-    name="NFC Magic",
+    appid="nfc_magic_dev",
+    name="NFC Magic SLIX",
     apptype=FlipperAppType.EXTERNAL,
     targets=["f7"],
     entry_point="nfc_magic_app",

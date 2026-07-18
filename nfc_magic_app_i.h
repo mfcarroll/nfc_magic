@@ -27,7 +27,7 @@
 #include <lib/toolbox/path.h>
 #include <dolphin/dolphin.h>
 
-#include "nfc_magic_icons.h"
+#include "nfc_magic_dev_icons.h"
 
 #include <nfc/nfc.h>
 #include <nfc/nfc_device.h>
@@ -39,6 +39,7 @@
 #include "magic/protocols/gen1a/gen1a_poller.h"
 #include "magic/protocols/gen2/gen2_poller.h"
 #include "magic/protocols/gen4/gen4_poller.h"
+#include "magic/protocols/slix/slix_poller.h"
 
 #include "lib/nfc/protocols/mf_classic/mf_classic_poller.h"
 
@@ -70,6 +71,8 @@ enum NfcMagicAppCustomEvent {
     NfcMagicAppCustomEventDictAttackComplete,
     NfcMagicAppCustomEventDictAttackSkip,
     NfcMagicCustomEventTextInputDone,
+    NfcMagicCustomEventSlixCardDetected,
+    NfcMagicCustomEventSlixCardDetectFailed,
 };
 
 typedef struct {
@@ -138,6 +141,7 @@ struct NfcMagicApp {
 
     Gen4Poller* gen4_poller;
     UscuidUlPoller* uscuid_ul_poller;
+    SlixPoller* slix_poller;
 
     Gen4* gen4_data;
 

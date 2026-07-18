@@ -46,7 +46,12 @@ bool nfc_magic_scene_check_on_event(void* context, SceneManagerEvent event) {
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == NfcMagicCustomEventWorkerSuccess) {
-            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMagicInfo);
+            if(instance->protocol == NfcMagicProtocolSlix) {
+                // ISO15693 (SLIX) has its own action menu; skip the generic magic-info screen.
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlix);
+            } else {
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMagicInfo);
+            }
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerFail) {
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneNotMagic);
