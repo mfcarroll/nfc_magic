@@ -2,10 +2,12 @@
 
 #include <lib/nfc/protocols/iso15693_3/iso15693_3.h>
 
+// Thin wrapper around the SDK's Iso15693_3Data. The ISO15693-3 poller already fills in
+// system_info (block count/size, DSFID, AFI, IC ref) and the block data during activation,
+// so there is nothing to duplicate here -- everything the SLIX scenes need lives inside
+// iso15693_3_data.
 typedef struct {
     Iso15693_3Data* iso15693_3_data;
-    Iso15693_3SystemInfo system_info;
-    bool system_info_ok;
 } SlixData;
 
 SlixData* slix_data_alloc();

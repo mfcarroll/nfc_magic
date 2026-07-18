@@ -33,15 +33,12 @@ static NfcCommand slix_poller_nfc_callback(NfcGenericEvent event, void* context)
     Iso15693_3PollerEvent* iso_event = event.event_data;
 
     if(iso_event->type == Iso15693_3PollerEventTypeReady) {
-        // The underlying poller has successfully activated the card.
-        // The card's data, including system info, is now available.
+        // The underlying poller has successfully activated the card. Its data (UID, system
+        // info and blocks, filled during activation) is an Iso15693_3Data, so copy it
+        // straight into our wrapper's iso15693_3_data -- NOT via slix_data_copy, which
+        // expects a SlixData source.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
-
-        // The poller has already populated the data structure it owns.
-        // We need to copy that data into our own application-managed structure.
-        // The `slix_data_copy` function is designed for `SlixData` to `SlixData` copies.
-        // Here, we copy the underlying `Iso15693_3Data` from the poller into our `SlixData` wrapper.
-        slix_data_copy(instance->data, (const SlixData*)poller_data);
+        iso15693_3_copy(instance->data->iso15693_3_data, poller_data);
 
         // Notify the high-level listener (the scene) of success.
         if(instance->callback) {
