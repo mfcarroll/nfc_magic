@@ -152,12 +152,14 @@ static NfcCommand slix_poller_nfc_callback(NfcGenericEvent event, void* context)
         if(instance->mode == SlixPollerModeWriteUid) {
             // event.instance is the concrete Iso15693_3Poller; raw frames must be sent here.
             Iso15693_3Poller* iso_poller = event.instance;
-            // Try gen1 first; if the UID didn't take, try gen2. Sending the wrong
-            // generation's frames to a card is a harmless no-op.
-            slix_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
+            // Try gen2 first, then gen1. gen2's 0xE0 command is a harmless no-op on a gen1
+            // card, but gen1's standard WRITE BLOCK targets blocks 0x38/0x39/0x3E/0x3F which
+            // are real data blocks on a larger (e.g. 64-block) gen2 card -- so gen1 must only
+            // run once gen2 has been ruled out, to avoid clobbering user data.
+            slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
             bool ok = slix_poller_verify_uid(iso_poller, instance->target_uid);
             if(!ok) {
-                slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
+                slix_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
                 ok = slix_poller_verify_uid(iso_poller, instance->target_uid);
             }
             if(instance->callback) {
