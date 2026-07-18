@@ -58,9 +58,17 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
 }
 
 bool nfc_magic_scene_slix_info_on_event(void* context, SceneManagerEvent event) {
-    UNUSED(context);
-    UNUSED(event);
-    return false;
+    NfcMagicApp* instance = context;
+    bool consumed = false;
+
+    if(event.type == SceneManagerEventTypeBack) {
+        // Skip the transient "detecting" scene; go straight back to the SLIX menu so Back
+        // doesn't kick off another detection with a half-drawn popup.
+        consumed = scene_manager_search_and_switch_to_previous_scene(
+            instance->scene_manager, NfcMagicSceneSlix);
+    }
+
+    return consumed;
 }
 
 void nfc_magic_scene_slix_info_on_exit(void* context) {
