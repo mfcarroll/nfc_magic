@@ -66,6 +66,12 @@ struct SlixPoller {
     uint8_t original_uid[ISO15693_3_UID_SIZE]; // UID before the write, to gate the gen1 fallback
     SlixWriteState write_state;
     uint32_t activation_errors; // consecutive activation failures (no card) -> timeout
+    // Clone mode: the source image (kept separate from `data` so start_internal's reset can't wipe
+    // it) and per-block write results.
+    Iso15693_3Data* clone_source;
+    uint16_t clone_blocks_total;
+    uint16_t clone_failed_count;
+    uint8_t clone_failed_bitmap[SLIX_POLLER_BLOCK_BITMAP_SIZE];
     SlixPollerCallback callback;
     void* context;
     bool running;
@@ -162,6 +168,42 @@ static void slix_poller_report(SlixPoller* instance, SlixPollerEvent event) {
     }
 }
 
+// Clone mode: write every writable data block from the source image with the standard ISO15693 WRITE
+// BLOCK. Locked blocks are skipped (they'd reject the write); real write errors are counted into the
+// failure bitmap for Partial reporting. Runs synchronously on the Nfc worker thread.
+static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poller* iso_poller) {
+    const Iso15693_3Data* source = instance->clone_source;
+    const uint16_t block_count = iso15693_3_get_block_count(source);
+    const uint8_t block_size = iso15693_3_get_block_size(source);
+
+    instance->clone_blocks_total = block_count;
+    instance->clone_failed_count = 0;
+    memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
+
+    if(block_count == 0 || block_size == 0) return;
+
+    // block_number is a uint8_t on the wire, so 256 blocks is the ceiling.
+    for(uint16_t block = 0; block < block_count && block < 256; block++) {
+        if(iso15693_3_is_block_locked(source, block)) continue;
+        const uint8_t* block_data = iso15693_3_get_block_data(source, block);
+        Iso15693_3Error error =
+            iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
+        if(error != Iso15693_3ErrorNone) {
+            instance->clone_failed_count++;
+            instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
+        }
+    }
+}
+
+// The terminal outcome once the UID read-back matches: a clone with block failures is Partial,
+// everything else (incl. a bare UID write) is Success.
+static SlixPollerEvent slix_poller_success_or_partial(SlixPoller* instance) {
+    if(instance->mode == SlixPollerModeClone && instance->clone_failed_count > 0) {
+        return SlixPollerEventPartial;
+    }
+    return SlixPollerEventSuccess;
+}
+
 // Read the UID back for verification, retrying a few times so a momentary miss right after the field
 // power-cycle isn't mistaken for a removed card. Runs on the Nfc worker thread (furi_delay_ms is the
 // same primitive the SDK poller uses between activation attempts).
@@ -187,6 +229,11 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
         // card untouched. The poller read the UID into its data during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
         memcpy(instance->original_uid, poller_data->uid, ISO15693_3_UID_SIZE);
+        // Clone: write the data blocks first (standard WRITE BLOCK), then the UID backdoor last, so
+        // the UID/commit isn't overwritten by a data-block write.
+        if(instance->mode == SlixPollerModeClone) {
+            slix_poller_write_source_blocks(instance, iso_poller);
+        }
         slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
         instance->write_state = SlixWriteStateVerifyGen2;
         return NfcCommandReset;
@@ -198,7 +245,7 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
             return NfcCommandStop;
         }
         if(memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0) {
-            slix_poller_report(instance, SlixPollerEventSuccess);
+            slix_poller_report(instance, slix_poller_success_or_partial(instance));
             return NfcCommandStop;
         }
         if(memcmp(readback, instance->original_uid, ISO15693_3_UID_SIZE) == 0) {
@@ -220,7 +267,8 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
             return NfcCommandStop;
         }
         const bool ok = memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0;
-        slix_poller_report(instance, ok ? SlixPollerEventSuccess : SlixPollerEventFail);
+        slix_poller_report(
+            instance, ok ? slix_poller_success_or_partial(instance) : SlixPollerEventFail);
         return NfcCommandStop;
     }
     }
@@ -269,9 +317,13 @@ SlixPoller* slix_poller_alloc(Nfc* nfc) {
     SlixPoller* instance = malloc(sizeof(SlixPoller));
     instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso15693_3);
     instance->data = slix_data_alloc();
+    instance->clone_source = iso15693_3_alloc();
     instance->mode = SlixPollerModeInfo;
     instance->write_state = SlixWriteStateStart;
     instance->activation_errors = 0;
+    instance->clone_blocks_total = 0;
+    instance->clone_failed_count = 0;
+    memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     instance->callback = NULL;
     instance->context = NULL;
     instance->running = false;
@@ -285,6 +337,7 @@ void slix_poller_free(SlixPoller* instance) {
     }
     nfc_poller_free(instance->poller);
     slix_data_free(instance->data);
+    iso15693_3_free(instance->clone_source);
     free(instance);
 }
 
@@ -303,6 +356,9 @@ static void slix_poller_start_internal(
     instance->context = context;
     instance->write_state = SlixWriteStateStart;
     instance->activation_errors = 0;
+    instance->clone_blocks_total = 0;
+    instance->clone_failed_count = 0;
+    memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     slix_data_reset(instance->data);
     instance->running = true;
     nfc_poller_start(instance->poller, slix_poller_nfc_callback, instance);
@@ -321,6 +377,32 @@ void slix_poller_start_write_uid(
     furi_assert(uid);
     memcpy(instance->target_uid, uid, ISO15693_3_UID_SIZE);
     slix_poller_start_internal(instance, SlixPollerModeWriteUid, callback, context);
+}
+
+void slix_poller_start_clone(
+    SlixPoller* instance,
+    const Iso15693_3Data* source,
+    SlixPollerCallback callback,
+    void* context) {
+    furi_assert(instance);
+    furi_assert(source);
+    // Hold our own copy of the source so it survives the async write; target UID = the source's UID.
+    iso15693_3_copy(instance->clone_source, source);
+    memcpy(instance->target_uid, source->uid, ISO15693_3_UID_SIZE);
+    slix_poller_start_internal(instance, SlixPollerModeClone, callback, context);
+}
+
+void slix_poller_get_clone_result(
+    SlixPoller* instance,
+    uint16_t* blocks_total,
+    uint16_t* failed_count,
+    uint8_t* failed_bitmap) {
+    furi_assert(instance);
+    if(blocks_total) *blocks_total = instance->clone_blocks_total;
+    if(failed_count) *failed_count = instance->clone_failed_count;
+    if(failed_bitmap) {
+        memcpy(failed_bitmap, instance->clone_failed_bitmap, SLIX_POLLER_BLOCK_BITMAP_SIZE);
+    }
 }
 
 void slix_poller_stop(SlixPoller* instance) {
