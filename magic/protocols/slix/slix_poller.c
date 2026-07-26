@@ -4,10 +4,17 @@
 #include <lib/nfc/protocols/iso15693_3/iso15693_3_poller.h>
 #include <toolbox/bit_buffer.h>
 
+// ISO15693_3_FDT_WRITE_POLL_FC is defined by the Momentum-slix SDK fork. Provide a fallback so this
+// FAP also builds against a stock SDK that only ships ISO15693_3_FDT_POLL_FC (271200 carrier cycles
+// ~= 20ms, the value the fork uses for a WRITE frame's response timeout).
+#ifndef ISO15693_3_FDT_WRITE_POLL_FC
+#define ISO15693_3_FDT_WRITE_POLL_FC (271200U)
+#endif
+
 // Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3
 // SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Unaddressed frames are sent to
 // hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card
-// generations exist and the write tries gen1 then gen2 (the wrong generation is a no-op).
+// generations exist and the write tries gen2 then (only if untouched) gen1.
 #define SLIX_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
 // gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each.
@@ -33,11 +40,26 @@
 
 #define SLIX_POLLER_BUF_SIZE (32U)
 
+// Give up after this many consecutive activation failures so neither the detect popup nor the write
+// popup can hang forever with no card. Each failed activation adds a ~100ms delay in the SDK poller,
+// so this is roughly a 5-7 second timeout.
+#define SLIX_POLLER_MAX_ACTIVATION_ERRORS (40U)
+
+// Write-mode state machine. Each verify runs after a NfcCommandReset field power-cycle.
+typedef enum {
+    SlixWriteStateStart, // read the current UID, send gen2, request a field reset
+    SlixWriteStateVerifyGen2, // verify gen2; if the UID is untouched, send gen1 + reset
+    SlixWriteStateVerifyGen1, // verify gen1
+} SlixWriteState;
+
 struct SlixPoller {
     NfcPoller* poller;
     SlixData* data;
     SlixPollerMode mode;
     uint8_t target_uid[ISO15693_3_UID_SIZE];
+    uint8_t original_uid[ISO15693_3_UID_SIZE]; // UID before the write, to gate the gen1 fallback
+    SlixWriteState write_state;
+    uint32_t activation_errors; // consecutive activation failures (no card) -> timeout
     SlixPollerCallback callback;
     void* context;
     bool running;
@@ -128,13 +150,61 @@ static void slix_poller_send_backdoor_uid_gen2(Iso15693_3Poller* iso_poller, con
     bit_buffer_free(rx);
 }
 
-static bool slix_poller_verify_uid(Iso15693_3Poller* iso_poller, const uint8_t* expected_uid) {
-    uint8_t readback[ISO15693_3_UID_SIZE] = {0};
-    Iso15693_3Error error = iso15693_3_poller_inventory(iso_poller, readback);
-    if(error != Iso15693_3ErrorNone) {
-        return false;
+static void slix_poller_report(SlixPoller* instance, SlixPollerEvent event) {
+    if(instance->callback) {
+        instance->callback(event, instance->context);
     }
-    return memcmp(readback, expected_uid, ISO15693_3_UID_SIZE) == 0;
+}
+
+// Drives one write-mode step. Runs on the Nfc worker thread with the field active. Returns the
+// NfcCommand for the poller: Reset power-cycles the field (so the next Ready verifies a freshly
+// re-powered card), Stop ends the operation.
+static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller* iso_poller) {
+    uint8_t readback[ISO15693_3_UID_SIZE] = {0};
+
+    switch(instance->write_state) {
+    case SlixWriteStateStart: {
+        // Remember the current UID so the destructive gen1 fallback only runs if gen2 left the
+        // card untouched. The poller read the UID into its data during activation.
+        const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
+        memcpy(instance->original_uid, poller_data->uid, ISO15693_3_UID_SIZE);
+        slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
+        instance->write_state = SlixWriteStateVerifyGen2;
+        return NfcCommandReset;
+    }
+
+    case SlixWriteStateVerifyGen2: {
+        if(iso15693_3_poller_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
+            slix_poller_report(instance, SlixPollerEventCardLost);
+            return NfcCommandStop;
+        }
+        if(memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0) {
+            slix_poller_report(instance, SlixPollerEventSuccess);
+            return NfcCommandStop;
+        }
+        if(memcmp(readback, instance->original_uid, ISO15693_3_UID_SIZE) == 0) {
+            // gen2 changed nothing: a gen1 card, or a non-magic tag. Try the gen1 sequence. This is
+            // a standard (destructive) WRITE BLOCK, so the write is gated behind a user confirm.
+            slix_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
+            instance->write_state = SlixWriteStateVerifyGen1;
+            return NfcCommandReset;
+        }
+        // gen2 changed the UID but not to the target: stop rather than compound it with gen1.
+        slix_poller_report(instance, SlixPollerEventFail);
+        return NfcCommandStop;
+    }
+
+    case SlixWriteStateVerifyGen1:
+    default: {
+        if(iso15693_3_poller_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
+            slix_poller_report(instance, SlixPollerEventCardLost);
+            return NfcCommandStop;
+        }
+        const bool ok = memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0;
+        slix_poller_report(instance, ok ? SlixPollerEventSuccess : SlixPollerEventFail);
+        return NfcCommandStop;
+    }
+    }
 }
 
 // Runs on the Nfc worker thread. Returns NfcCommand to control the poller.
@@ -148,40 +218,32 @@ static NfcCommand slix_poller_nfc_callback(NfcGenericEvent event, void* context)
 
     Iso15693_3PollerEvent* iso_event = event.event_data;
 
-    if(iso_event->type == Iso15693_3PollerEventTypeReady) {
-        if(instance->mode == SlixPollerModeWriteUid) {
-            // event.instance is the concrete Iso15693_3Poller; raw frames must be sent here.
-            Iso15693_3Poller* iso_poller = event.instance;
-            // Try gen2 first, then gen1. gen2's 0xE0 command is a harmless no-op on a gen1
-            // card, but gen1's standard WRITE BLOCK targets blocks 0x38/0x39/0x3E/0x3F which
-            // are real data blocks on a larger (e.g. 64-block) gen2 card -- so gen1 must only
-            // run once gen2 has been ruled out, to avoid clobbering user data.
-            slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
-            bool ok = slix_poller_verify_uid(iso_poller, instance->target_uid);
-            if(!ok) {
-                slix_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
-                ok = slix_poller_verify_uid(iso_poller, instance->target_uid);
-            }
-            if(instance->callback) {
-                instance->callback(
-                    ok ? SlixPollerEventSuccess : SlixPollerEventFail, instance->context);
-            }
+    // Activation error => no card in the field (or removed). Retry a bounded number of times so the
+    // popup can't hang forever, then report CardLost.
+    if(iso_event->type == Iso15693_3PollerEventTypeError) {
+        if(++instance->activation_errors >= SLIX_POLLER_MAX_ACTIVATION_ERRORS) {
+            slix_poller_report(instance, SlixPollerEventCardLost);
             return NfcCommandStop;
         }
+        return NfcCommandContinue;
+    }
 
-        // Info mode: the poller filled Iso15693_3Data (UID + system info) during activation.
+    if(iso_event->type != Iso15693_3PollerEventTypeReady) {
+        return NfcCommandContinue;
+    }
+
+    instance->activation_errors = 0;
+
+    if(instance->mode == SlixPollerModeInfo) {
+        // The poller filled Iso15693_3Data (UID + system info) during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
         iso15693_3_copy(instance->data->iso15693_3_data, poller_data);
-        if(instance->callback) {
-            instance->callback(SlixPollerEventSuccess, instance->context);
-        }
+        slix_poller_report(instance, SlixPollerEventSuccess);
         return NfcCommandStop;
     }
 
-    // Any other event (e.g. activation error because no card is in the field yet) just means
-    // "keep polling" -- wait for a card to appear rather than bailing out. The owning scene
-    // cancels by calling slix_poller_stop() on exit.
-    return NfcCommandContinue;
+    // Write mode. event.instance is the concrete Iso15693_3Poller; raw frames must be sent there.
+    return slix_poller_write_step(instance, event.instance);
 }
 
 SlixPoller* slix_poller_alloc(Nfc* nfc) {
@@ -189,6 +251,8 @@ SlixPoller* slix_poller_alloc(Nfc* nfc) {
     instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso15693_3);
     instance->data = slix_data_alloc();
     instance->mode = SlixPollerModeInfo;
+    instance->write_state = SlixWriteStateStart;
+    instance->activation_errors = 0;
     instance->callback = NULL;
     instance->context = NULL;
     instance->running = false;
@@ -218,6 +282,8 @@ static void slix_poller_start_internal(
     instance->mode = mode;
     instance->callback = callback;
     instance->context = context;
+    instance->write_state = SlixWriteStateStart;
+    instance->activation_errors = 0;
     slix_data_reset(instance->data);
     instance->running = true;
     nfc_poller_start(instance->poller, slix_poller_nfc_callback, instance);
