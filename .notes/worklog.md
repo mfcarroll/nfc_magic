@@ -112,8 +112,22 @@ stock app). Integrated SLIX the same way (builds clean; on-hardware test = hardw
       read over-reported the block count). **Wipe** (zero every writable block, UID untouched, like
       proxmark `hf 15 wipe`) added as a SLIX menu item.
 
-Deferred: routing SLIX through the **magic_info** hub (consistency polish). Roadmap extras (AFI/DSFID
-write, V3) remain in capability-matrix.md.
+- [x] **magic_info hub routing** — a detected ISO15693 tag now goes through the shared "Magic card
+      detected" screen (More → SLIX menu), matching the other types.
+
+### Field validation (2026-07-26, real hardware)
+Clone and Wipe both confirmed working: cloned an EM ISO15693 source onto a 64-block magic target
+(UID + data blocks verified), wipe zeroed all blocks (re-read = all zeros).
+
+Resolved the "66 vs 64 blocks" puzzle — **not a Flipper bug.** The SDK computes `block_count = byte + 1`
+(spec-correct). Two different cards had been conflated: the *original* is an EM Microelectronic tag
+(uid `E0 16 3C…`, IC ref `0F`) that genuinely reports **66 blocks** with data only in blocks 0-1; the
+proxmark JSON (IC `8B`, 64 blocks, gen1 backdoor artifacts in 56/57/63) was the *magic target*. So the
+"2 beyond capacity" tail is real 66→64 shortfall, and those 2 blocks are zeros — clone is faithful.
+Caveat on record: the gen2 clone stamps IC ref `8B` / 64-block geometry (fixed CFG), so a clone won't
+match a reader that checks IC ref or exact block count (see capability-matrix H3).
+
+Roadmap extras (AFI/DSFID write, V3, deriving gen2 CFG from the source) remain in capability-matrix.md.
 
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
