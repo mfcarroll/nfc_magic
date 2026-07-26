@@ -242,12 +242,18 @@ void nfc_magic_scene_write_on_enter(void* context) {
         uscuid_ul_poller_start(
             instance->uscuid_ul_poller, nfc_magic_scene_write_uscuid_ul_poller_callback, instance);
     } else if(instance->protocol == NfcMagicProtocolSlix) {
-        // Clone the loaded ISO15693 image (UID + writable blocks) onto the magic card.
         instance->slix_poller = slix_poller_alloc(instance->nfc);
-        const Iso15693_3Data* source =
-            nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
-        slix_poller_start_clone(
-            instance->slix_poller, source, nfc_magic_scene_write_slix_poller_callback, instance);
+        if(instance->slix_is_wipe_mode) {
+            // Zero every data block on the card (no source file).
+            slix_poller_start_wipe(
+                instance->slix_poller, nfc_magic_scene_write_slix_poller_callback, instance);
+        } else {
+            // Clone the loaded ISO15693 image (UID + writable blocks) onto the magic card.
+            const Iso15693_3Data* source =
+                nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
+            slix_poller_start_clone(
+                instance->slix_poller, source, nfc_magic_scene_write_slix_poller_callback, instance);
+        }
     } else {
         instance->gen4_poller = gen4_poller_alloc(instance->nfc);
         gen4_poller_set_password(instance->gen4_poller, instance->gen4_password);

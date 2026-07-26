@@ -3,6 +3,7 @@
 
 enum SubmenuIndex {
     SubmenuIndexSlixWrite, // clone a saved .nfc onto the card (like the other magic types)
+    SubmenuIndexSlixWipe, // zero every data block
     SubmenuIndexSlixWriteUid, // enter a UID by hand (magic-only bonus)
     SubmenuIndexSlixInfo, // read + show the card in front of you
 };
@@ -19,6 +20,9 @@ void nfc_magic_scene_slix_on_enter(void* context) {
 
     submenu_add_item(
         submenu, "Write", SubmenuIndexSlixWrite, nfc_magic_scene_slix_submenu_callback, app);
+
+    submenu_add_item(
+        submenu, "Wipe", SubmenuIndexSlixWipe, nfc_magic_scene_slix_submenu_callback, app);
 
     submenu_add_item(
         submenu,
@@ -43,7 +47,13 @@ bool nfc_magic_scene_slix_on_event(void* context, SceneManagerEvent event) {
         if(event.event == SubmenuIndexSlixWrite) {
             // Clone a saved ISO15693 .nfc onto the magic card, via the shared file-select + write
             // flow (same as Gen1/Gen2/USCUID-UL).
+            app->slix_is_wipe_mode = false;
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneFileSelect);
+            consumed = true;
+        } else if(event.event == SubmenuIndexSlixWipe) {
+            // Zero every data block (no source file, UID untouched) via the shared write scene.
+            app->slix_is_wipe_mode = true;
+            scene_manager_next_scene(app->scene_manager, NfcMagicSceneWriteConfirm);
             consumed = true;
         } else if(event.event == SubmenuIndexSlixWriteUid) {
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixWriteInput);

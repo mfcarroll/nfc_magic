@@ -28,7 +28,7 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
         // (locked/protected blocks, named individually) from an over-capacity source (its tail
         // blocks don't fit the smaller target -- often just phantom blocks a card over-reports).
         FuriString* text = furi_string_alloc();
-        furi_string_cat_str(text, "UID cloned.\n");
+        furi_string_cat_str(text, instance->slix_is_wipe_mode ? "Wiped.\n" : "UID cloned.\n");
         if(instance->slix_clone_failed_count > 0) {
             furi_string_cat_printf(text, "%u block(s) failed: ", instance->slix_clone_failed_count);
             uint16_t shown = 0;
@@ -53,7 +53,14 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
                 instance->slix_clone_over_capacity,
                 target_capacity);
         }
-        widget_add_string_element(widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Clone partial");
+        widget_add_string_element(
+            widget,
+            3,
+            0,
+            AlignLeft,
+            AlignTop,
+            FontPrimary,
+            instance->slix_is_wipe_mode ? "Wipe partial" : "Clone partial");
         widget_add_text_box_element(
             widget, 0, 14, 128, 38, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
         furi_string_free(text);

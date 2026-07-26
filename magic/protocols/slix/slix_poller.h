@@ -12,6 +12,7 @@ typedef enum {
     SlixPollerModeInfo, // detect + read UID / system info
     SlixPollerModeWriteUid, // magic backdoor UID write (gen2 first, then gen1 if untouched)
     SlixPollerModeClone, // write UID + all writable data blocks from a source image
+    SlixPollerModeWipe, // zero every writable data block (UID left unchanged)
 } SlixPollerMode;
 
 typedef enum {
@@ -64,6 +65,11 @@ void slix_poller_get_clone_result(
     uint16_t* failed_count,
     uint16_t* over_capacity,
     uint8_t* failed_bitmap);
+
+// Wipe: write zeros to every writable data block on the card (UID left unchanged, like proxmark's
+// 'hf 15 wipe'). Reports Success / Partial (some blocks failed) / Fail (nothing writable) /
+// CardLost. Per-block detail is available via slix_poller_get_clone_result().
+void slix_poller_start_wipe(SlixPoller* instance, SlixPollerCallback callback, void* context);
 
 void slix_poller_stop(SlixPoller* instance);
 

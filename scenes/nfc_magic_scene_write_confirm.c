@@ -15,26 +15,23 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
+    const bool slix_wipe =
+        (instance->protocol == NfcMagicProtocolSlix) && instance->slix_is_wipe_mode;
+    const bool is_wipe = instance->uscuid_ul_is_wipe_mode || slix_wipe;
+
+    const char* text;
+    if(slix_wipe) {
+        text = "Zeroes every data block on this card. The UID is left unchanged.";
+    } else if(instance->uscuid_ul_is_wipe_mode) {
+        text = "Blank factory dump: config &\npassword cleared, UID zeroed.";
+    } else {
+        text =
+            "Writing to this card will change manufacturer block. On some cards it may not be rewritten";
+    }
+
     widget_add_string_element(
-        widget,
-        3,
-        0,
-        AlignLeft,
-        AlignTop,
-        FontPrimary,
-        instance->uscuid_ul_is_wipe_mode ? "Wipe card?" : "Risky operation");
-    widget_add_text_box_element(
-        widget,
-        0,
-        13,
-        128,
-        54,
-        AlignLeft,
-        AlignTop,
-        instance->uscuid_ul_is_wipe_mode ?
-            "Blank factory dump: config &\npassword cleared, UID zeroed." :
-            "Writing to this card will change manufacturer block. On some cards it may not be rewritten",
-        false);
+        widget, 3, 0, AlignLeft, AlignTop, FontPrimary, is_wipe ? "Wipe card?" : "Risky operation");
+    widget_add_text_box_element(widget, 0, 13, 128, 54, AlignLeft, AlignTop, text, false);
     widget_add_button_element(
         widget,
         GuiButtonTypeCenter,

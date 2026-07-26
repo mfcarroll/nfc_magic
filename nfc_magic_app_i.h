@@ -154,6 +154,7 @@ struct NfcMagicApp {
     SlixPoller* slix_poller;
     SlixData* slix_data; // last read result, kept so the info scene survives the poller free
     uint8_t slix_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic SLIX card
+    bool slix_is_wipe_mode; // SLIX write scene: wipe (zero blocks) vs clone (from a file)
     uint16_t slix_clone_blocks_total; // SLIX clone: data blocks on the source image
     uint16_t slix_clone_failed_count; // SLIX clone: in-range blocks that couldn't be written
     uint16_t slix_clone_over_capacity; // SLIX clone: source blocks past the target's capacity

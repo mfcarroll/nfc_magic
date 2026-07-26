@@ -209,11 +209,37 @@ static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poll
     }
 }
 
-// The terminal outcome once the UID read-back matches: a clone with block failures is Partial,
-// everything else (incl. a bare UID write) is Success.
+// Wipe mode: write zeros to every writable data block on the card itself (UID untouched). Uses the
+// target's own reported geometry and lock bits.
+static void slix_poller_wipe_blocks(SlixPoller* instance, Iso15693_3Poller* iso_poller) {
+    const Iso15693_3Data* target = nfc_poller_get_data(instance->poller);
+    const uint16_t block_count = iso15693_3_get_block_count(target);
+    const uint8_t block_size = iso15693_3_get_block_size(target);
+
+    instance->clone_blocks_total = block_count;
+    instance->clone_failed_count = 0;
+    instance->clone_over_capacity = 0;
+    memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
+
+    if(block_count == 0 || block_size == 0) return;
+
+    uint8_t zeros[32] = {0};
+    const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
+    for(uint16_t block = 0; block < block_count && block < 256; block++) {
+        if(iso15693_3_is_block_locked(target, block)) continue;
+        Iso15693_3Error error =
+            iso15693_3_poller_write_block(iso_poller, zeros, (uint8_t)block, size);
+        if(error != Iso15693_3ErrorNone) {
+            instance->clone_failed_count++;
+            instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
+        }
+    }
+}
+
+// The terminal outcome once a write finishes: any block that failed to write, or a source that
+// overran the target, makes it Partial; otherwise Success. (A bare UID write sets neither.)
 static SlixPollerEvent slix_poller_success_or_partial(SlixPoller* instance) {
-    if(instance->mode == SlixPollerModeClone &&
-       (instance->clone_failed_count > 0 || instance->clone_over_capacity > 0)) {
+    if(instance->clone_failed_count > 0 || instance->clone_over_capacity > 0) {
         return SlixPollerEventPartial;
     }
     return SlixPollerEventSuccess;
@@ -240,6 +266,20 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
 
     switch(instance->write_state) {
     case SlixWriteStateStart: {
+        // Wipe zeros the card's own blocks and never touches the UID, so it's a single pass with no
+        // backdoor write or field reset.
+        if(instance->mode == SlixPollerModeWipe) {
+            slix_poller_wipe_blocks(instance, iso_poller);
+            SlixPollerEvent outcome;
+            if(instance->clone_blocks_total > 0 &&
+               instance->clone_failed_count >= instance->clone_blocks_total) {
+                outcome = SlixPollerEventFail; // nothing could be wiped (read-only / not writable)
+            } else {
+                outcome = slix_poller_success_or_partial(instance);
+            }
+            slix_poller_report(instance, outcome);
+            return NfcCommandStop;
+        }
         // Remember the current UID so the destructive gen1 fallback only runs if gen2 left the
         // card untouched. The poller read the UID into its data during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
@@ -407,6 +447,11 @@ void slix_poller_start_clone(
     iso15693_3_copy(instance->clone_source, source);
     memcpy(instance->target_uid, source->uid, ISO15693_3_UID_SIZE);
     slix_poller_start_internal(instance, SlixPollerModeClone, callback, context);
+}
+
+void slix_poller_start_wipe(SlixPoller* instance, SlixPollerCallback callback, void* context) {
+    furi_assert(instance);
+    slix_poller_start_internal(instance, SlixPollerModeWipe, callback, context);
 }
 
 void slix_poller_get_clone_result(
