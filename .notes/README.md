@@ -8,6 +8,7 @@ docs. Written 2026-07-26.
 | [analysis.md](analysis.md) | State-of-project review: what works, what's verified, the ranked issue list. |
 | [protocol-reference.md](protocol-reference.md) | Byte-level mapping of the magic backdoor write frames vs. the local proxmark3 reference. The offline ground truth. |
 | [hardware-plan.md](hardware-plan.md) | The test plan for the work that can only be finished with a real magic ISO15693 card. |
+| [clone-feasibility.md](clone-feasibility.md) | Scoping for expanding to data-block writes / full clone: the Flipper-SDK-vs-magic-backdoor split, the cryptographic boundary, and a phased plan. |
 | [worklog.md](worklog.md) | Running log of the offline changes actually made, commit by commit. |
 
 ## One-paragraph status
