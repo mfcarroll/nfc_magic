@@ -168,7 +168,7 @@ static void nfc_magic_scene_write_slix_poller_callback(SlixPollerEvent event, vo
             instance->slix_poller,
             &instance->slix_clone_blocks_total,
             &instance->slix_clone_failed_count,
-            NULL);
+            instance->slix_clone_failed_bitmap);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerPartial);
     } else if(event == SlixPollerEventCardLost) {

@@ -23,26 +23,39 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
     // Partial is a soft outcome (UID cloned, some data blocks didn't take); the rest are errors.
     notification_message(instance->notifications, partial ? &sequence_success : &sequence_error);
 
-    const char* title = partial ? "Clone partial" : "Write failed";
-    const char* message;
     if(partial) {
-        snprintf(
-            instance->text_store,
-            sizeof(instance->text_store),
-            "UID cloned, but\n%u of %u blocks\ncould not be written.",
+        // Full-width text box (no icon) so the failing block list can wrap; naming the blocks tells
+        // a size mismatch (a tail like "64 65") from scattered locked/protected blocks.
+        FuriString* text = furi_string_alloc();
+        furi_string_printf(
+            text,
+            "UID cloned. %u of %u blocks not written:\n",
             instance->slix_clone_failed_count,
             instance->slix_clone_blocks_total);
-        message = instance->text_store;
-    } else if(card_lost) {
-        message = "Card removed\nbefore the write\ncould finish.";
+        uint16_t shown = 0;
+        for(uint16_t block = 0; block < 256; block++) {
+            if(instance->slix_clone_failed_bitmap[block / 8] & (1u << (block % 8))) {
+                if(shown >= 24) {
+                    furi_string_cat_str(text, "...");
+                    break;
+                }
+                furi_string_cat_printf(text, "%u ", block);
+                shown++;
+            }
+        }
+        widget_add_string_element(widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Clone partial");
+        widget_add_text_box_element(
+            widget, 0, 14, 128, 38, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
+        furi_string_free(text);
     } else {
-        message = "Not a magic tag.\nThis card doesn't\nsupport UID write.";
+        const char* message = card_lost ? "Card removed\nbefore the write\ncould finish." :
+                                          "Not a magic tag.\nThis card doesn't\nsupport UID write.";
+        widget_add_icon_element(widget, 83, 22, &I_WarningDolphinFlip_45x42);
+        widget_add_string_element(
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Write failed");
+        widget_add_string_multiline_element(
+            widget, 0, 13, AlignLeft, AlignTop, FontSecondary, message);
     }
-
-    widget_add_icon_element(widget, 83, 22, &I_WarningDolphinFlip_45x42);
-    widget_add_string_element(widget, 64, 0, AlignCenter, AlignTop, FontPrimary, title);
-    widget_add_string_multiline_element(
-        widget, 0, 13, AlignLeft, AlignTop, FontSecondary, message);
 
     // Only a lost card is worth retrying; a rejected/partial write would just repeat.
     if(card_lost) {
