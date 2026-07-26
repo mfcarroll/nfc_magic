@@ -127,7 +127,17 @@ proxmark JSON (IC `8B`, 64 blocks, gen1 backdoor artifacts in 56/57/63) was the 
 Caveat on record: the gen2 clone stamps IC ref `8B` / 64-block geometry (fixed CFG), so a clone won't
 match a reader that checks IC ref or exact block count (see capability-matrix H3).
 
-Roadmap extras (AFI/DSFID write, V3, deriving gen2 CFG from the source) remain in capability-matrix.md.
+- [x] **Identity clone** (`b2f7440`) — a clone now advertises the source's chip identity, not the fixed
+      magic default: gen2 CFG carries the source's IC ref + block count/size (the card parrots these in
+      Get System Info), and AFI/DSFID are set via standard WRITE AFI (0x27) / WRITE DSFID (0x29).
+      Best-effort (UID + data are the core); gen1 fallback has no geometry block; a source larger than
+      the target's physical memory is still reported as "N beyond capacity". This is the fake-flash
+      trick — the card can report a bigger/different size than it physically has, and works as long as
+      a reader doesn't touch the non-existent blocks. **Needs hardware confirmation** that the card
+      accepts an arbitrary IC ref / geometry (re-read the clone with proxmark and diff vs the source).
+
+Roadmap extras (repeatable V3 magic; full field-by-field mismatch verification after write) remain in
+capability-matrix.md.
 
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
