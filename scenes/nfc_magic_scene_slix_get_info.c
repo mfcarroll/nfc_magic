@@ -39,16 +39,10 @@ bool nfc_magic_scene_slix_get_info_on_event(void* context, SceneManagerEvent eve
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == NfcMagicCustomEventSlixCardDetected) {
-            // Keep the read result in the app so the next scene still has it after the
+            // Keep the read result in the app so the info scene still has it after the
             // poller is freed in on_exit.
             slix_data_copy(app->slix_data, slix_poller_get_data(app->slix_poller));
-            // Info shows the card; Save writes it to a .nfc file. Intent set by the SLIX menu.
-            const uint32_t intent =
-                scene_manager_get_scene_state(app->scene_manager, NfcMagicSceneSlixGetInfo);
-            scene_manager_next_scene(
-                app->scene_manager,
-                (intent == NfcMagicSlixReadIntentSave) ? NfcMagicSceneSlixSaveName :
-                                                         NfcMagicSceneSlixInfo);
+            scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixInfo);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventSlixCardDetectFailed) {
             // Failed to detect, go back to the previous scene (the SLIX menu)

@@ -2,9 +2,9 @@
 #include "nfc_magic_scene.h"
 
 enum SubmenuIndex {
-    SubmenuIndexSlixInfo,
-    SubmenuIndexSlixSave,
-    SubmenuIndexSlixWriteUid,
+    SubmenuIndexSlixWrite, // clone a saved .nfc onto the card (like the other magic types)
+    SubmenuIndexSlixWriteUid, // enter a UID by hand (magic-only bonus)
+    SubmenuIndexSlixInfo, // read + show the card in front of you
 };
 
 void nfc_magic_scene_slix_submenu_callback(void* context, uint32_t index) {
@@ -18,18 +18,7 @@ void nfc_magic_scene_slix_on_enter(void* context) {
     Submenu* submenu = app->submenu;
 
     submenu_add_item(
-        submenu,
-        "Info",
-        SubmenuIndexSlixInfo,
-        nfc_magic_scene_slix_submenu_callback,
-        app);
-
-    submenu_add_item(
-        submenu,
-        "Save to file",
-        SubmenuIndexSlixSave,
-        nfc_magic_scene_slix_submenu_callback,
-        app);
+        submenu, "Write", SubmenuIndexSlixWrite, nfc_magic_scene_slix_submenu_callback, app);
 
     submenu_add_item(
         submenu,
@@ -37,6 +26,9 @@ void nfc_magic_scene_slix_on_enter(void* context) {
         SubmenuIndexSlixWriteUid,
         nfc_magic_scene_slix_submenu_callback,
         app);
+
+    submenu_add_item(
+        submenu, "Info", SubmenuIndexSlixInfo, nfc_magic_scene_slix_submenu_callback, app);
 
     submenu_set_header(submenu, "ISO15693 / NfcV");
 
@@ -48,17 +40,16 @@ bool nfc_magic_scene_slix_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == SubmenuIndexSlixInfo || event.event == SubmenuIndexSlixSave) {
-            // Both Info and Save read the card first; the read scene branches on this intent.
-            const uint32_t intent = (event.event == SubmenuIndexSlixSave) ?
-                                        NfcMagicSlixReadIntentSave :
-                                        NfcMagicSlixReadIntentInfo;
-            scene_manager_set_scene_state(
-                app->scene_manager, NfcMagicSceneSlixGetInfo, intent);
-            scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixGetInfo);
+        if(event.event == SubmenuIndexSlixWrite) {
+            // Clone a saved ISO15693 .nfc onto the magic card, via the shared file-select + write
+            // flow (same as Gen1/Gen2/USCUID-UL).
+            scene_manager_next_scene(app->scene_manager, NfcMagicSceneFileSelect);
             consumed = true;
         } else if(event.event == SubmenuIndexSlixWriteUid) {
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixWriteInput);
+            consumed = true;
+        } else if(event.event == SubmenuIndexSlixInfo) {
+            scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixGetInfo);
             consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeBack) {

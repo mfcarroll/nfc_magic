@@ -15,21 +15,36 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
-    notification_message(instance->notifications, &sequence_error);
-
     const uint32_t reason =
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneSlixWriteFail);
     const bool card_lost = (reason == NfcMagicSlixWriteFailReasonCardLost);
-    const char* message = card_lost ? "Card removed\nbefore the write\ncould finish." :
-                                      "Not a magic tag.\nThis card doesn't\nsupport UID write.";
+    const bool partial = (reason == NfcMagicSlixWriteFailReasonPartial);
+
+    // Partial is a soft outcome (UID cloned, some data blocks didn't take); the rest are errors.
+    notification_message(instance->notifications, partial ? &sequence_success : &sequence_error);
+
+    const char* title = partial ? "Clone partial" : "Write failed";
+    const char* message;
+    if(partial) {
+        snprintf(
+            instance->text_store,
+            sizeof(instance->text_store),
+            "UID cloned, but\n%u of %u blocks\ncould not be written.",
+            instance->slix_clone_failed_count,
+            instance->slix_clone_blocks_total);
+        message = instance->text_store;
+    } else if(card_lost) {
+        message = "Card removed\nbefore the write\ncould finish.";
+    } else {
+        message = "Not a magic tag.\nThis card doesn't\nsupport UID write.";
+    }
 
     widget_add_icon_element(widget, 83, 22, &I_WarningDolphinFlip_45x42);
-    widget_add_string_element(
-        widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Write failed");
+    widget_add_string_element(widget, 64, 0, AlignCenter, AlignTop, FontPrimary, title);
     widget_add_string_multiline_element(
         widget, 0, 13, AlignLeft, AlignTop, FontSecondary, message);
 
-    // Only a lost card is worth retrying; a rejected backdoor write would just fail again.
+    // Only a lost card is worth retrying; a rejected/partial write would just repeat.
     if(card_lost) {
         widget_add_button_element(
             widget,

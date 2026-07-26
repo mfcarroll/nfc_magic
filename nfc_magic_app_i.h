@@ -101,17 +101,12 @@ typedef enum {
     NfcMagicWipeFailReasonNoKeys, // no sector keys found, so the wipe never started
 } NfcMagicWipeFailReason;
 
-// Reason passed to the SlixWriteFail scene via its scene state so it can explain the failure.
+// Reason passed to the SlixWriteFail scene via its scene state so it can explain the outcome.
 typedef enum {
     NfcMagicSlixWriteFailReasonNotMagic, // card present, but the backdoor write was not accepted
     NfcMagicSlixWriteFailReasonCardLost, // no card in the field / card removed mid-write
+    NfcMagicSlixWriteFailReasonPartial, // clone: UID written but some data blocks failed
 } NfcMagicSlixWriteFailReason;
-
-// What to do after the SLIX read (get-info) scene succeeds, passed via its scene state.
-typedef enum {
-    NfcMagicSlixReadIntentInfo, // show the Info screen (default)
-    NfcMagicSlixReadIntentSave, // save the read card to a .nfc file
-} NfcMagicSlixReadIntent;
 
 struct NfcMagicApp {
     ViewDispatcher* view_dispatcher;
@@ -159,6 +154,8 @@ struct NfcMagicApp {
     SlixPoller* slix_poller;
     SlixData* slix_data; // last read result, kept so the info scene survives the poller free
     uint8_t slix_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic SLIX card
+    uint16_t slix_clone_blocks_total; // SLIX clone: data blocks on the source image
+    uint16_t slix_clone_failed_count; // SLIX clone: blocks that couldn't be written (partial)
 
     Gen4* gen4_data;
 
