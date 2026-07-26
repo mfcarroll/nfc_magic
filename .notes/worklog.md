@@ -132,9 +132,15 @@ match a reader that checks IC ref or exact block count (see capability-matrix H3
       Get System Info), and AFI/DSFID are set via standard WRITE AFI (0x27) / WRITE DSFID (0x29).
       Best-effort (UID + data are the core); gen1 fallback has no geometry block; a source larger than
       the target's physical memory is still reported as "N beyond capacity". This is the fake-flash
-      trick — the card can report a bigger/different size than it physically has, and works as long as
-      a reader doesn't touch the non-existent blocks. **Needs hardware confirmation** that the card
-      accepts an arbitrary IC ref / geometry (re-read the clone with proxmark and diff vs the source).
+      trick — the card can report a bigger/different size than it physically has.
+
+Field-verified 2026-07-27 (proxmark, on the identity-cloned 64-block card that now reports 66): IC ref
+/ geometry / AFI / DSFID / UID / data all match the source byte-for-byte. Blocks 64/65 are **phantom**
+— reads FAIL (no response) and writes FAIL; they do NOT return zeros. (An earlier note wrongly said
+"read back as zeros" — that was the Flipper zero-filling an unreadable block in its `.nfc`, not the
+card answering.) No aliasing: writing block 64 left block 0 intact. So over-reporting a larger size
+works for any reader that doesn't deep-read the phantom tail; a reader that reads blocks 64/65 gets a
+failure on the clone (and likely on the original too, if it is also over-reporting).
 
 Roadmap extras (repeatable V3 magic; full field-by-field mismatch verification after write) remain in
 capability-matrix.md.

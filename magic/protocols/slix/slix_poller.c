@@ -226,8 +226,9 @@ static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poll
     const uint16_t target_count = iso15693_3_get_block_count(target);
     uint16_t write_count = source_count;
     if(target_count > 0 && target_count < write_count) {
-        // Count only NON-EMPTY blocks past the target's capacity as a real shortfall: empty tail
-        // blocks read back as zeros on the smaller card anyway, so the clone still matches exactly.
+        // Count only NON-EMPTY blocks past the target's capacity as a real shortfall: an empty tail
+        // means no source data is lost. (The target physically can't represent those blocks -- reads
+        // and writes to them fail -- but the source had nothing there to clone.)
         for(uint16_t block = target_count; block < source_count && block < 256; block++) {
             const uint8_t* block_data = iso15693_3_get_block_data(source, block);
             for(uint8_t i = 0; i < block_size; i++) {
