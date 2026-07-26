@@ -162,6 +162,12 @@ static const ChipInfo chip_id_mapping[] = {
     {0x02, 0x1C, 0xFC, "SRI4K"},
     {0x02, 0x30, 0xFC, "SRT512"},
 
+    // 0x02 = ST — ST25TV product-authentication series (IC id from proxmark uidmapping). The 0x08/
+    // 0x23-C variants are omitted: their IC ids collide with LRI2K / other ST parts.
+    {0x02, 0x23, 0xFF, "ST25TV02K / ST25TV512"},
+    {0x02, 0x35, 0xFF, "ST25TV04K-P"},
+    {0x02, 0x48, 0xFF, "ST25TV16K / ST25TV64K"},
+
     // 0x04 = Philips/NXP
     //I-Code SLI SL2 ICS20 [IC id = 01]
     //I-Code SLI-S         [IC id = 02]
@@ -206,6 +212,7 @@ static const ChipInfo chip_id_mapping[] = {
     {0x16, 0x9c, 0xFF, "EM4133 [IC id = 39] 95pF (Read/Write)"},
     {0x16, 0xA8, 0xFF, "EM4233 SLIC [IC id = 42] 97pF"},
     {0x16, 0xBC, 0xFF, "EM4237 [IC id = 47] 97pF"},
+    {0x16, 0x78, 0xFF, "EM4425 Echo V (dual tech)"},
 
     {0x00, 0x00, 0x00, "no tag-info available"} // must be the last entry
 };
@@ -248,6 +255,9 @@ char* slix_info_get_chip_info_ex(const uint8_t* uid) {
         const uint8_t type_bits = uid[3] & 0x18;
         switch(chip_id) {
         case 0x01: // SL2 ICS20/ICS21 family
+            // ICODE 3 uses uid[3] & 0x78 == 0x20 (proxmark mask 0xFFFFFF78); check it before the
+            // 0x18 type bits, since 0x20 & 0x18 == 0 would otherwise decode as plain SLI.
+            if((uid[3] & 0x78) == 0x20) return "ICODE 3";
             if(type_bits == 0x10) return "ICODE SLIX (SL2 ICS2002/2102)";
             if(type_bits == 0x08) return "ICODE SLIX2 (SL2 ICS2602)";
             if(type_bits == 0x18) return "ICODE DNA / NTAG 5";
