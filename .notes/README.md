@@ -10,6 +10,7 @@ docs. Written 2026-07-26.
 | [hardware-plan.md](hardware-plan.md) | The test plan for the work that can only be finished with a real magic ISO15693 card. |
 | [clone-feasibility.md](clone-feasibility.md) | Scoping for expanding to data-block writes / full clone: the Flipper-SDK-vs-magic-backdoor split, the cryptographic boundary, and a phased plan. |
 | [iso15693-primer.md](iso15693-primer.md) | Background: SLIX vs ISO15693, chip families, standard vs custom commands, the magic variants (gen1/gen2/V3), and how this app maps onto it. |
+| [capability-matrix.md](capability-matrix.md) | 3-way capability comparison (our app / stock Flipper NFC / proxmark) + a prioritized port roadmap. Key finding: adopt the SDK slix poller — most features are already written. |
 | [worklog.md](worklog.md) | Running log of the offline changes actually made, commit by commit. |
 
 ## One-paragraph status
