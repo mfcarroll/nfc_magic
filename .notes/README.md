@@ -9,6 +9,7 @@ docs. Written 2026-07-26.
 | [protocol-reference.md](protocol-reference.md) | Byte-level mapping of the magic backdoor write frames vs. the local proxmark3 reference. The offline ground truth. |
 | [hardware-plan.md](hardware-plan.md) | The test plan for the work that can only be finished with a real magic ISO15693 card. |
 | [clone-feasibility.md](clone-feasibility.md) | Scoping for expanding to data-block writes / full clone: the Flipper-SDK-vs-magic-backdoor split, the cryptographic boundary, and a phased plan. |
+| [iso15693-primer.md](iso15693-primer.md) | Background: SLIX vs ISO15693, chip families, standard vs custom commands, the magic variants (gen1/gen2/V3), and how this app maps onto it. |
 | [worklog.md](worklog.md) | Running log of the offline changes actually made, commit by commit. |
 
 ## One-paragraph status
