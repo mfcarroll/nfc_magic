@@ -20,7 +20,7 @@ void nfc_magic_scene_slix_get_info_on_enter(void* context) {
     Popup* popup = app->popup;
 
     // Setup the popup view to instruct the user
-    popup_set_header(popup, "Detecting SLIX card", 68, 19, AlignCenter, AlignBottom);
+    popup_set_header(popup, "Detecting ISO15693", 68, 19, AlignCenter, AlignBottom);
     popup_set_text(popup, "Approach card to the back of Flipper", 68, 21, AlignCenter, AlignTop);
     popup_set_icon(popup, 0, 8, &I_NFC_manual_60x50);
 
