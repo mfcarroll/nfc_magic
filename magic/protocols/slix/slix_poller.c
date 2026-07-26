@@ -19,6 +19,10 @@
 
 // gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each.
 #define SLIX_MAGIC_CMD_WRITE  (0x21U) // ISO15693 WRITE BLOCK
+
+// Standard ISO15693 identity writes, used to make a clone match the source's AFI / DSFID.
+#define SLIX_MAGIC_CMD_WRITE_AFI   (0x27U) // ISO15693 WRITE AFI
+#define SLIX_MAGIC_CMD_WRITE_DSFID (0x29U) // ISO15693 WRITE DSFID
 #define SLIX_MAGIC_BLK_UNLOCK (0x3EU) // written as 0
 #define SLIX_MAGIC_BLK_COMMIT (0x3FU) // written as 0x6996 (arms the UID change)
 #define SLIX_MAGIC_BLK_UID_LO (0x38U) // uid[7..4]
@@ -137,17 +141,20 @@ static void slix_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, con
     bit_buffer_free(rx);
 }
 
-static void slix_poller_send_backdoor_uid_gen2(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
+// The gen2 CFG block also programs what the card *reports* for system-info geometry / IC ref. For a
+// clone these are the source's values (so the copy advertises the same chip identity); otherwise the
+// fixed magic defaults.
+static void slix_poller_send_backdoor_uid_gen2(
+    Iso15693_3Poller* iso_poller,
+    const uint8_t* uid,
+    uint8_t cfg_maxblock,
+    uint8_t cfg_blocksize,
+    uint8_t cfg_icref) {
     BitBuffer* tx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
     BitBuffer* rx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
 
     slix_poller_build_gen2_frame(
-        tx,
-        SLIX_MAGIC_V2_BLK_CFG,
-        SLIX_MAGIC_V2_CFG_MAXBLOCK,
-        SLIX_MAGIC_V2_CFG_BLOCKSIZE,
-        SLIX_MAGIC_V2_CFG_IC_REF,
-        0x00);
+        tx, SLIX_MAGIC_V2_BLK_CFG, cfg_maxblock, cfg_blocksize, cfg_icref, 0x00);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     slix_poller_build_gen2_frame(tx, SLIX_MAGIC_V2_BLK_CFG2, 0x00, 0x00, 0x00, 0x00);
@@ -158,6 +165,33 @@ static void slix_poller_send_backdoor_uid_gen2(Iso15693_3Poller* iso_poller, con
 
     slix_poller_build_gen2_frame(tx, SLIX_MAGIC_V2_BLK_UID_LO, uid[3], uid[2], uid[1], uid[0]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+
+    bit_buffer_free(tx);
+    bit_buffer_free(rx);
+}
+
+// Best-effort: make the clone match the source's AFI / DSFID via the standard ISO15693 WRITE AFI /
+// WRITE DSFID commands (only for fields the source actually reported). Frames: 02 27 <afi> and
+// 02 29 <dsfid> (+CRC). Failures are ignored -- these are identity extras, not the core clone.
+static void slix_poller_write_identity(Iso15693_3Poller* iso_poller, const Iso15693_3Data* source) {
+    const Iso15693_3SystemInfo* sys = &source->system_info;
+    BitBuffer* tx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
+    BitBuffer* rx = bit_buffer_alloc(SLIX_POLLER_BUF_SIZE);
+
+    if(sys->flags & ISO15693_3_SYSINFO_FLAG_DSFID) {
+        bit_buffer_reset(tx);
+        bit_buffer_append_byte(tx, SLIX_MAGIC_FLAGS);
+        bit_buffer_append_byte(tx, SLIX_MAGIC_CMD_WRITE_DSFID);
+        bit_buffer_append_byte(tx, sys->dsfid);
+        iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+    }
+    if(sys->flags & ISO15693_3_SYSINFO_FLAG_AFI) {
+        bit_buffer_reset(tx);
+        bit_buffer_append_byte(tx, SLIX_MAGIC_FLAGS);
+        bit_buffer_append_byte(tx, SLIX_MAGIC_CMD_WRITE_AFI);
+        bit_buffer_append_byte(tx, sys->afi);
+        iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+    }
 
     bit_buffer_free(tx);
     bit_buffer_free(rx);
@@ -284,12 +318,30 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
         // card untouched. The poller read the UID into its data during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
         memcpy(instance->original_uid, poller_data->uid, ISO15693_3_UID_SIZE);
-        // Clone: write the data blocks first (standard WRITE BLOCK), then the UID backdoor last, so
-        // the UID/commit isn't overwritten by a data-block write.
+
+        // The gen2 CFG block programs what the card reports for geometry / IC ref. For a clone, use
+        // the source's values so the copy advertises the same chip identity; otherwise the fixed
+        // magic default. (gen1 has no geometry block, so a gen1 fallback keeps the card's own.)
+        uint8_t cfg_maxblock = SLIX_MAGIC_V2_CFG_MAXBLOCK;
+        uint8_t cfg_blocksize = SLIX_MAGIC_V2_CFG_BLOCKSIZE;
+        uint8_t cfg_icref = SLIX_MAGIC_V2_CFG_IC_REF;
+
         if(instance->mode == SlixPollerModeClone) {
+            const Iso15693_3SystemInfo* sys = &instance->clone_source->system_info;
+            if(sys->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) {
+                if(sys->block_count > 0) cfg_maxblock = (uint8_t)(sys->block_count - 1);
+                if(sys->block_size > 0) cfg_blocksize = (uint8_t)(sys->block_size - 1);
+            }
+            if(sys->flags & ISO15693_3_SYSINFO_FLAG_IC_REF) cfg_icref = sys->ic_ref;
+
+            // Match AFI/DSFID, then write the data blocks. The UID + geometry go last (below), so a
+            // data-block write can't overwrite the UID/commit.
+            slix_poller_write_identity(iso_poller, instance->clone_source);
             slix_poller_write_source_blocks(instance, iso_poller);
         }
-        slix_poller_send_backdoor_uid_gen2(iso_poller, instance->target_uid);
+
+        slix_poller_send_backdoor_uid_gen2(
+            iso_poller, instance->target_uid, cfg_maxblock, cfg_blocksize, cfg_icref);
         instance->write_state = SlixWriteStateVerifyGen2;
         return NfcCommandReset;
     }
