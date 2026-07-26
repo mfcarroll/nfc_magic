@@ -107,8 +107,13 @@ stock app). Integrated SLIX the same way (builds clean; on-hardware test = hardw
       `source_dev`; FileSelect accepts an ISO15693 `.nfc`; SLIX menu = Write (file) / Write UID
       (manual) / Info. Retired the off-model "Save to file" + its scaffolding.
 
-Deferred: **Wipe** (needs a factory-image generator) and routing SLIX through the **magic_info** hub
-(consistency polish). Roadmap extras (AFI/DSFID write, V3) remain in capability-matrix.md.
+- [x] **Capacity-aware clone + Wipe** — the clone caps writes at the target's block count and reports
+      "N beyond target" distinctly from real failures (fixes the "2 of 66" on a card whose Flipper
+      read over-reported the block count). **Wipe** (zero every writable block, UID untouched, like
+      proxmark `hf 15 wipe`) added as a SLIX menu item.
+
+Deferred: routing SLIX through the **magic_info** hub (consistency polish). Roadmap extras (AFI/DSFID
+write, V3) remain in capability-matrix.md.
 
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real

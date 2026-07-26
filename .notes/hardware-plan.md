@@ -71,6 +71,10 @@ a saved ISO15693 `.nfc`) → Confirm → clone (data blocks via WRITE BLOCK, the
       56/57/62/63 may hold UID/commit bytes (gen1 backdoor overlaps those addresses). Check whether
       this happens in practice; if so, prefer gen2-only or reorder.
 - [ ] **Manual UID** (bonus, unchanged) and **Info** still work.
+- [ ] **Capacity cap** (verified 2026-07-26): a 64-block target cloned from a source the Flipper
+      over-read as 66 now reports "2 block(s) beyond the 64-block target" instead of a failure.
+- [ ] **Wipe**: SLIX menu → Wipe → confirm → expect all data blocks zeroed (re-read to confirm),
+      UID unchanged. Partial names any block that wouldn't zero.
 
 ## Possible follow-ups (decide after hardware)
 - If step 2 shows normal tags get clobbered by the consented gen1 step, split the flow into explicit
