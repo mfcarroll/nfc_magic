@@ -57,6 +57,21 @@ This single result settles findings #2 and #3 together.
 - [ ] Edge cases: a card that doesn't report memory geometry (no block list, save still works with
       UID + system info); a large (64-block) card (long scroll, save size OK).
 
+## 7. Full clone from a saved .nfc (built; the main flow to validate)
+The SLIX feature now matches the other magic types: Check → SLIX menu → **Write** → FileSelect (pick
+a saved ISO15693 `.nfc`) → Confirm → clone (data blocks via WRITE BLOCK, then UID via the backdoor).
+- [ ] **Capture a source**: read a SLIX/ISO15693 card with the **stock** NFC app → Save to `.nfc`.
+- [ ] **Clone**: NFC Magic → Check Magic Tag → tap the **magic target** → Write → pick the saved
+      `.nfc` → Confirm → expect **Success** (or **Partial** with an N/M block count).
+- [ ] **Verify**: re-read the target with the stock app → UID + block data match the source
+      (cross-check with proxmark `hf 15 dump` if available).
+- [ ] **Partial path**: on a target with locked/short memory, confirm the "Clone partial — N of M
+      blocks" screen is accurate (locked blocks are skipped, not counted as failures).
+- [ ] **gen1-on-large-card caveat**: if a ≥64-block card falls to the gen1 UID fallback, blocks
+      56/57/62/63 may hold UID/commit bytes (gen1 backdoor overlaps those addresses). Check whether
+      this happens in practice; if so, prefer gen2-only or reorder.
+- [ ] **Manual UID** (bonus, unchanged) and **Info** still work.
+
 ## Possible follow-ups (decide after hardware)
 - If step 2 shows normal tags get clobbered by the consented gen1 step, split the flow into explicit
   **gen2-only (safe)** and **gen1 (destructive)** actions instead of an auto-fallback — matches

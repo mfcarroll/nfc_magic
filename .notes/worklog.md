@@ -96,6 +96,20 @@ Deferred/hardware-gated from the audit: full symbol rename (churn, low value); b
 and the V3 variant (draftable but need a card) — technical specifics captured in
 [clone-feasibility.md](clone-feasibility.md).
 
+## Full clone integration (matches the app's model)
+Confirmed the app's model: it's a **writer/cloner** — Check → detected → per-type menu → Write →
+FileSelect (a saved `.nfc` from the stock app) → write to the card. Not a reader/emulator (that's the
+stock app). Integrated SLIX the same way (builds clean; on-hardware test = hardware-plan.md §7):
+
+- [x] **Clone engine** (`fc9ed08`) — `slix_poller_start_clone(source)`: writes writable data blocks
+      (WRITE BLOCK, skip locked, count failures) then the UID backdoor; Success/Partial/Fail/CardLost.
+- [x] **Shared write flow** (`d3a0a91`) — SLIX branch in the shared `Write` dispatcher clones from
+      `source_dev`; FileSelect accepts an ISO15693 `.nfc`; SLIX menu = Write (file) / Write UID
+      (manual) / Info. Retired the off-model "Save to file" + its scaffolding.
+
+Deferred: **Wipe** (needs a factory-image generator) and routing SLIX through the **magic_info** hub
+(consistency polish). Roadmap extras (AFI/DSFID write, V3) remain in capability-matrix.md.
+
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
 magic card (settles whether the power-cycle fix is sufficient and whether the gen1 gate fully
