@@ -49,6 +49,26 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
         furi_string_cat_printf(temp_str, "IC ref: %02X\n", sys_info->ic_ref);
     }
 
+    // Full memory contents, read during activation (the view scrolls, so listing every block is
+    // fine). "*" after a row marks a locked block. Only shown when the card reported its geometry.
+    if((sys_info->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) &&
+       iso15693_3_get_block_count(iso_data) > 0) {
+        const uint16_t block_count = iso15693_3_get_block_count(iso_data);
+        const uint8_t block_size = iso15693_3_get_block_size(iso_data);
+        furi_string_cat_printf(temp_str, "Blocks (%u x %u):\n", block_count, block_size);
+        for(uint16_t block = 0; block < block_count; ++block) {
+            const uint8_t* block_data = iso15693_3_get_block_data(iso_data, block);
+            furi_string_cat_printf(temp_str, "%02u:", block);
+            for(uint8_t i = 0; i < block_size; ++i) {
+                furi_string_cat_printf(temp_str, " %02X", block_data[i]);
+            }
+            if(iso15693_3_is_block_locked(iso_data, block)) {
+                furi_string_cat_str(temp_str, " *");
+            }
+            furi_string_push_back(temp_str, '\n');
+        }
+    }
+
     widget_add_text_scroll_element(
         instance->widget, 0, 0, 128, 64, furi_string_get_cstr(temp_str));
 
