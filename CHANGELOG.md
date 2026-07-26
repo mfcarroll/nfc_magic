@@ -25,8 +25,8 @@ analysis, the byte-level protocol reference, and the on-hardware validation plan
 - Detect / Info / write popups now **time out** instead of hanging forever when no card is present.
 - Scenes are labelled generically **"ISO15693 / NfcV"** (a non-NXP or non-magic tag is no longer
   mislabelled "SLIX").
-- Builds against a **stock SDK** too (fallback `#define` for the fork-only
-  `ISO15693_3_FDT_WRITE_POLL_FC`).
+- Harmless `#ifndef` fallback for `ISO15693_3_FDT_WRITE_POLL_FC` as belt-and-braces for an SDK that
+  might lack it (it is present in the Momentum SDKs this app targets).
 
 ### Fixed
 - A non-magic ISO15693 tag (the common case) now shows a dedicated **"Not a magic tag"** message

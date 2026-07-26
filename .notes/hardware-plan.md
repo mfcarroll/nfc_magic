@@ -4,8 +4,11 @@ Everything below is blocked on physical cards + a `ufbt` build. Ordered so the f
 the most. Record results inline (date / card / outcome) as they come in.
 
 ## 0. Build + smoke test (needs toolchain, not a card)
-- [ ] `ufbt` build of `nfc_magic_dev` against the Momentum-slix SDK — confirm it compiles + packages.
-- [ ] Launch on a Flipper; open **Check Magic Tag** with no card → no crash, popup behaves.
+- [x] Build of `nfc_magic_dev` — DONE 2026-07-26 via `cd ../Momentum-Firmware && FBT_NO_SYNC=1
+      ./fbt fap_nfc_magic_dev`. Clean compile (`-Werror`, no warnings), links, `APPCHK` passes,
+      `nfc_magic_dev.fap` ~134 KB. (`ufbt` not needed; app is symlinked into `applications_user/`.)
+- [ ] Deploy to a Flipper (`./fbt launch APPSRC=applications_user/nfc_magic_dev`, or copy the .fap)
+      and open **Check Magic Tag** with no card → no crash, popup behaves, detect times out to menu.
 - [ ] Confirm the new SLIX **Info-mode timeout** returns to the menu (no infinite hang) with no card
       present. Tune `SLIX_POLLER_MAX_ACTIVATION_ERRORS` in `slix_poller.c` if the timeout feels
       too fast/slow.

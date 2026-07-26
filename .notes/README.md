@@ -26,9 +26,11 @@ safe-by-consent and gives honest feedback; the remaining correctness unknowns ar
 - The app builds on the **raw `iso15693_3`** SDK layer, *not* the SDK's richer `slix` protocol
   (`../Momentum-Firmware-slix/lib/nfc/protocols/slix/`), which already models privacy/passwords/EAS/
   signature. That richer layer is unused — see the feature gaps in [analysis.md](analysis.md).
-- We **cannot build here** (`ufbt` is not installed). Every change is matched to the SDK API and
-  existing app patterns by inspection. A `ufbt` build + on-hardware pass is still required.
+- **Builds with `fbt`**, not `ufbt` (which isn't installed). The app is symlinked into
+  `applications_user/` of the local firmware checkouts, so:
+  `cd ../Momentum-Firmware && FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev` (builds offline; toolchain is
+  already downloaded). Confirmed clean 2026-07-26. On-hardware validation is the only step left.
 - The neighbouring `../Momentum-Firmware-slix` firmware fork is **identical to stock Momentum** in
-  the ISO15693 code — the SLIX feature is entirely app-side. The one coupling is the macro
-  `ISO15693_3_FDT_WRITE_POLL_FC` (fork-only); the app now defines a fallback so it builds against
-  stock SDK too.
+  the ISO15693 code — the SLIX feature is entirely app-side, and builds against either. Note
+  `ISO15693_3_FDT_WRITE_POLL_FC` exists in **both** Momentum SDKs (it is not fork-only); the app also
+  defines an `#ifndef` fallback purely as belt-and-braces for an SDK that might lack it.

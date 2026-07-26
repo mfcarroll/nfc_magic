@@ -54,7 +54,7 @@ Legend: **[offline]** fixable without a card · **[hw]** needs a card to fully s
 | 5 | MED | Chip decode can't tell SLI / SLIX / SLIX2 apart; drops SLIX2. **[offline]** | FIXED — decodes `uid[3]` type indicator (bits 3-4), matching the SDK's `slix_get_type` / proxmark masks. |
 | 6 | LOW | Every ISO15693 tag labelled "ISO15693 (SLIX)" even ST/TI/EM tags. **[offline]** | FIXED — generic "ISO15693 / NfcV" titles. |
 | 7 | LOW | Info mode can never emit Fail → dead branch, popup hangs silently with no card. **[offline]** | FIXED — activation-error timeout emits Fail; the (previously dead) detect-failed path is now live. |
-| 8 | LOW | Build depends on fork-only macro `ISO15693_3_FDT_WRITE_POLL_FC`; stale header docs; dead `SlixPollerError` enum. **[offline]** | FIXED — fallback `#define`, updated docs, removed dead enum, `CardLost` now used. |
+| 8 | LOW | Stale header docs; dead `SlixPollerError` enum. (The `ISO15693_3_FDT_WRITE_POLL_FC` "fork-only" concern was **wrong** — it's in stock Momentum too.) **[offline]** | FIXED — updated docs, removed dead enum, `CardLost` now used, harmless `#ifndef` fallback kept. |
 | — | — | Groundwork: no confirm before the irreversible write. **[offline]** | ADDED — `slix_write_confirm` scene. |
 
 ### Cosmetic / accepted (not changed this pass)

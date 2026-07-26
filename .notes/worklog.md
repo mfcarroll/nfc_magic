@@ -51,5 +51,18 @@ step — if hardware confirms it, split into explicit gen2-only / gen1 actions. 
 (privacy/password, EAS, AFI/DSFID/block-clone, gen3/V3, save-load) remain out of scope.
 
 ## Build note
-Not built here (`ufbt` unavailable). Every change was matched to the SDK API and existing app
-patterns by inspection; `ufbt` build + on-hardware pass still required (hardware-plan.md step 0).
+**Builds clean.** `ufbt` isn't installed, but the app is symlinked into `applications_user/` of the
+local firmware checkouts, so it builds with that tree's `fbt`:
+
+```
+cd ../Momentum-Firmware && FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev
+```
+
+2026-07-26: full build OK (exit 0), all SLIX translation units compile with **no warnings** under
+`-Werror`, links, and `APPCHK` passes → `build/f7-firmware-C/.extapps/nfc_magic_dev.fap` (~134 KB).
+(`FBT_NO_SYNC=1` skips the submodule sync so it works offline; the toolchain was already downloaded.)
+
+Correction to earlier finding #8: `ISO15693_3_FDT_WRITE_POLL_FC` is **not** fork-only — it exists in
+stock Momentum-Firmware too (the two SDKs' iso15693_3 dirs are identical). The `#ifndef` fallback is
+harmless (never triggers against a Momentum SDK) and still useful for a hypothetical SDK that lacks
+the macro, so it stays. On-hardware validation (hardware-plan.md) is the only remaining step.
