@@ -91,7 +91,29 @@ of a clone and is useful on its own. On-hardware round-trip check is in hardware
 **Phase 2 — write-back clone of plain/unlocked cards (moderate).**
 Load a source dump (or read live) → on a magic target: UID via our backdoor + all data blocks via
 `WRITE BLOCK` + restore AFI/DSFID. Add per-block **Success / Partial / Fail** reporting, mirroring the
-existing Gen2/USCUID clone paths. Adopt the SDK `slix` protocol for the data path here.
+existing Gen2/USCUID clone paths.
+
+Technical notes for the block-write path (from the genericness audit — all offline-codeable, but
+latching is hardware-gated):
+- Reuse the SDK's `iso15693_3_poller_write_block(s)` (WRITE BLOCK `0x21`), sized by
+  `system_info.block_size` — already generic, no per-family constants for the data area.
+- **Gate writes on the per-block lock bit** from Get Block Security (`0x2C`) — we already read
+  `block_security` during activation; skip locked blocks instead of hammering them (a locked block
+  rejects `0x21` with error `0x12` BLOCK_LOCKED).
+- **TI Tag-it needs the ISO15693 request OPTION flag (bit 6)** on writes. The SDK write path only
+  emits `SUBCARRIER_1 | DATA_RATE_HI` and never sets OPTION; proxmark force-enables it for TI
+  (`uid[1]==0x07`) and documents it as `-o (needed for TI)`. Add an OPTION-flag write variant keyed
+  off the manufacturer byte.
+- A magic clone lets you write **data** blocks with the *standard* WRITE BLOCK on any writable tag —
+  it's not magic-specific. The magic backdoor is only for the UID.
+
+**V3 magic variant (a separate H2 item).** proxmark supports a third variant the app lacks: V3 sets
+the UID via standard WRITE BLOCK to config blocks `0x10`/`0x11` (UID **reversed** — do NOT reuse gen1
+ordering), is **repeatable**, and is locked permanently by a separate finalize writing sig blocks
+`0x14`=`A5 2B 44 2C` / `0x15`=`69 E2 5D 00` (irreversible). Uniquely, an un-finalized V3 tag is
+**non-destructively detectable**: read `0x14`/`0x15` with the OPTION flag and match
+`{A5 2B 44 2C}` / `{21 AE 93 00}`. Worth adding as a third write mode + an explicit user-gated
+finalize; the read-probe could name "Magic ISO15693 V3 (un-finalized, repeatable)" in detection.
 
 **Phase 3 — passwords (harder, access-control not crypto).**
 Privacy-unlock a locked source to read it (GET RANDOM NUMBER + SET PASSWORD, default + user-supplied

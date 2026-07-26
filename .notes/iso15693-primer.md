@@ -43,8 +43,8 @@ Every ISO15693 UID is 8 bytes, MSB-first: `uid[0]=0xE0` (fixed), `uid[1]=manufac
 Our decoder ([slix_info.c](../magic/protocols/slix/slix_info.c)) is already multi-vendor: a full
 manufacturer table plus a chip table covering ST/TI/EM/Infineon/NXP. The NXP SLI/SLIX/SLIX2 refinement
 (via the `uid[3]` type bits) is correctly gated behind `if(vendor_id == 0x04)` and falls back to the
-generic table for every other vendor. Known decode gaps vs proxmark: ST ST25TV/ST25DV, EM4425, NXP
-ICODE 3.
+generic table for every other vendor. ST ST25TV, EM4425, and NXP ICODE 3 are now decoded too
+(`fce00c3`).
 
 ## 3. Standard vs custom commands
 

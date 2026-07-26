@@ -79,6 +79,23 @@ shape is straightforward (`iso15693_3_poller_write_block(s)` + per-block partial
 Gen2/USCUID paths), but it must be written and tested with a real tag in hand. Phase 3 (passwords)
 likewise needs hardware.
 
+## Genericness pass (offline) — the feature is generic ISO15693, not SLIX
+A multi-agent audit (app / ISO15693 landscape / magic variants) confirmed the read/info/save/UID-write
+pipeline is **already generic ISO15693** — it runs entirely on the SDK's `NfcProtocolIso15693_3` layer
+and never sends an NXP-specific command. "SLIX" was a naming legacy. Actioned the safe offline items:
+
+- [x] **Primer** (`1abfaa3`) — `.notes/iso15693-primer.md`: SLIX vs ISO15693, chip families, standard
+      vs custom commands, magic variants, and how each app feature maps.
+- [x] **De-SLIX user-facing strings** (`12cfb96`) — app title → "NFC Magic ISO15693", detect popup →
+      "Detecting ISO15693", protocol name → "ISO15693 / NfcV". Internal `slix_*` symbols left as-is
+      (cosmetic; rename opportunistically, not a dedicated pass).
+- [x] **Broader chip decode** (`fce00c3`) — ST ST25TV, EM4425, NXP ICODE 3 (the last previously
+      mis-decoded as SLI). Static-table edit, verified against proxmark's uidmapping.
+
+Deferred/hardware-gated from the audit: full symbol rename (churn, low value); block-data write-back
+and the V3 variant (draftable but need a card) — technical specifics captured in
+[clone-feasibility.md](clone-feasibility.md).
+
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
 magic card (settles whether the power-cycle fix is sufficient and whether the gen1 gate fully
