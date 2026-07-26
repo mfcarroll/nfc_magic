@@ -7,7 +7,9 @@ static void nfc_magic_scene_slix_write_poller_callback(SlixPollerEvent event, vo
     if(event == SlixPollerEventSuccess) {
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerSuccess);
-    } else {
+    } else if(event == SlixPollerEventCardLost) {
+        view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventCardLost);
+    } else { // SlixPollerEventFail: card present but backdoor write not accepted (not magic)
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerFail);
     }
@@ -40,8 +42,17 @@ bool nfc_magic_scene_slix_write_on_event(void* context, SceneManagerEvent event)
         if(event.event == NfcMagicCustomEventWorkerSuccess) {
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSuccess);
             consumed = true;
-        } else if(event.event == NfcMagicCustomEventWorkerFail) {
-            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWriteFail);
+        } else if(
+            event.event == NfcMagicCustomEventWorkerFail ||
+            event.event == NfcMagicCustomEventCardLost) {
+            // SLIX has its own fail scene with a reason, instead of the generic write-fail: a
+            // rejected backdoor write means "not a magic tag", not a transient error.
+            const uint32_t reason = (event.event == NfcMagicCustomEventCardLost) ?
+                                        NfcMagicSlixWriteFailReasonCardLost :
+                                        NfcMagicSlixWriteFailReasonNotMagic;
+            scene_manager_set_scene_state(
+                instance->scene_manager, NfcMagicSceneSlixWriteFail, reason);
+            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlixWriteFail);
             consumed = true;
         }
     }

@@ -101,6 +101,12 @@ typedef enum {
     NfcMagicWipeFailReasonNoKeys, // no sector keys found, so the wipe never started
 } NfcMagicWipeFailReason;
 
+// Reason passed to the SlixWriteFail scene via its scene state so it can explain the failure.
+typedef enum {
+    NfcMagicSlixWriteFailReasonNotMagic, // card present, but the backdoor write was not accepted
+    NfcMagicSlixWriteFailReasonCardLost, // no card in the field / card removed mid-write
+} NfcMagicSlixWriteFailReason;
+
 struct NfcMagicApp {
     ViewDispatcher* view_dispatcher;
     Gui* gui;
