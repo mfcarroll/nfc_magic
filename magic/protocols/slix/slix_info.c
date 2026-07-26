@@ -233,3 +233,33 @@ char* slix_info_get_chip_info(uint8_t vendor_id, uint8_t chip_id) {
 
     return chip_id_mapping[i].desc;
 }
+
+// NXP manufacturer byte (ISO15693 UID uid[1]).
+#define SLIX_INFO_NXP_MANUFACTURER (0x04U)
+
+// NXP I-Code SLI/SLIX/SLIX2 refinement. uid[2] is the IC family and uid[3] carries a 2-bit type
+// indicator at bits 3-4 (mask 0x18): 0x10 => SLIX, 0x08 => SLIX2, 0x00 => plain SLI. This mirrors
+// the SDK's slix_get_type() (SlixUidLayout.type_indicator) and proxmark3's masked UID table.
+char* slix_info_get_chip_info_ex(const uint8_t* uid) {
+    const uint8_t vendor_id = uid[1];
+    const uint8_t chip_id = uid[2];
+
+    if(vendor_id == SLIX_INFO_NXP_MANUFACTURER) {
+        const uint8_t type_bits = uid[3] & 0x18;
+        switch(chip_id) {
+        case 0x01: // SL2 ICS20/ICS21 family
+            if(type_bits == 0x10) return "ICODE SLIX (SL2 ICS2002/2102)";
+            if(type_bits == 0x08) return "ICODE SLIX2 (SL2 ICS2602)";
+            if(type_bits == 0x18) return "ICODE DNA / NTAG 5";
+            return "ICODE SLI (SL2 ICS20/21)";
+        case 0x02: // SL2 ICS53/ICS54 family
+            return (uid[3] & 0x10) ? "ICODE SLIX-S (ICS5302/5402)" : "ICODE SLI-S (SL2 ICS53/54)";
+        case 0x03: // SL2 ICS50/ICS51 family
+            return (uid[3] & 0x10) ? "ICODE SLIX-L (ICS5002/5102)" : "ICODE SLI-L (SL2 ICS50/51)";
+        default:
+            break;
+        }
+    }
+
+    return slix_info_get_chip_info(vendor_id, chip_id);
+}

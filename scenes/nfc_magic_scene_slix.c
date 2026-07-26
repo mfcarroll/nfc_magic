@@ -30,7 +30,7 @@ void nfc_magic_scene_slix_on_enter(void* context) {
         nfc_magic_scene_slix_submenu_callback,
         app);
 
-    submenu_set_header(submenu, "ISO15693 (SLIX)");
+    submenu_set_header(submenu, "ISO15693 / NfcV");
 
     view_dispatcher_switch_to_view(app->view_dispatcher, NfcMagicAppViewMenu);
 }

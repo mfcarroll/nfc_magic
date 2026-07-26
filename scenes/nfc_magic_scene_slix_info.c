@@ -11,7 +11,7 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
 
     FuriString* temp_str = furi_string_alloc();
 
-    furi_string_cat_str(temp_str, "ISO15693 (SLIX)\n");
+    furi_string_cat_str(temp_str, "ISO15693 / NfcV\n");
 
     // UID (stored MSB-first: uid[0] == 0xE0, uid[1] == manufacturer, uid[2] == IC id)
     furi_string_cat_str(temp_str, "UID:");
@@ -20,13 +20,13 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
     }
     furi_string_push_back(temp_str, '\n');
 
-    // Manufacturer + chip type, decoded from the UID.
+    // Manufacturer + chip type, decoded from the UID. The chip decode inspects the full UID so
+    // it can tell NXP SLI / SLIX / SLIX2 apart via the type-indicator bits of uid[3].
     const uint8_t manufacturer_id = iso15693_3_get_manufacturer_id(iso_data);
-    const uint8_t chip_id = iso_data->uid[2];
     furi_string_cat_printf(
         temp_str, "Mfr: %s\n", slix_info_get_manufacturer_name(manufacturer_id));
     furi_string_cat_printf(
-        temp_str, "Chip: %s\n", slix_info_get_chip_info(manufacturer_id, chip_id));
+        temp_str, "Chip: %s\n", slix_info_get_chip_info_ex(iso_data->uid));
 
     // Memory geometry from GET SYSTEM INFO (only valid when the flag bit is set).
     if(sys_info->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) {
