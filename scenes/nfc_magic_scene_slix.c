@@ -3,6 +3,7 @@
 
 enum SubmenuIndex {
     SubmenuIndexSlixInfo,
+    SubmenuIndexSlixSave,
     SubmenuIndexSlixWriteUid,
 };
 
@@ -25,6 +26,13 @@ void nfc_magic_scene_slix_on_enter(void* context) {
 
     submenu_add_item(
         submenu,
+        "Save to file",
+        SubmenuIndexSlixSave,
+        nfc_magic_scene_slix_submenu_callback,
+        app);
+
+    submenu_add_item(
+        submenu,
         "Write UID",
         SubmenuIndexSlixWriteUid,
         nfc_magic_scene_slix_submenu_callback,
@@ -40,7 +48,13 @@ bool nfc_magic_scene_slix_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == SubmenuIndexSlixInfo) {
+        if(event.event == SubmenuIndexSlixInfo || event.event == SubmenuIndexSlixSave) {
+            // Both Info and Save read the card first; the read scene branches on this intent.
+            const uint32_t intent = (event.event == SubmenuIndexSlixSave) ?
+                                        NfcMagicSlixReadIntentSave :
+                                        NfcMagicSlixReadIntentInfo;
+            scene_manager_set_scene_state(
+                app->scene_manager, NfcMagicSceneSlixGetInfo, intent);
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneSlixGetInfo);
             consumed = true;
         } else if(event.event == SubmenuIndexSlixWriteUid) {

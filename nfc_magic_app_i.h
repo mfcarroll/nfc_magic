@@ -107,6 +107,12 @@ typedef enum {
     NfcMagicSlixWriteFailReasonCardLost, // no card in the field / card removed mid-write
 } NfcMagicSlixWriteFailReason;
 
+// What to do after the SLIX read (get-info) scene succeeds, passed via its scene state.
+typedef enum {
+    NfcMagicSlixReadIntentInfo, // show the Info screen (default)
+    NfcMagicSlixReadIntentSave, // save the read card to a .nfc file
+} NfcMagicSlixReadIntent;
+
 struct NfcMagicApp {
     ViewDispatcher* view_dispatcher;
     Gui* gui;
