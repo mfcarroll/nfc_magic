@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased — SLIX (magic ISO15693) `slix-v2`
+
+Adds magic **ISO15693 / SLIX (NfcV)** support: detect an ISO15693 tag, show Info (UID /
+manufacturer / chip / system info), and perform a magic **backdoor UID write** (gen1 or gen2),
+verified by read-back. The write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` /
+`SetTag15693Uid_v2`. This is a **UID-only writer**, not a full card cloner. See `.notes/` for the
+analysis, the byte-level protocol reference, and the on-hardware validation plan.
+
+### Added
+- **SLIX Info** — UID, manufacturer, chip type, and GET SYSTEM INFO (memory / DSFID / AFI / IC ref).
+  Chip decode now tells **SLI / SLIX / SLIX2** (and the -S / -L variants) apart via the UID
+  type-indicator bits, matching the SDK's `slix_get_type` and proxmark's UID table.
+- **SLIX Write UID** — magic backdoor UID write with a **confirmation screen** (shows the new UID and
+  warns that the gen1 step can overwrite data on a non-magic tag) before the irreversible write.
+
+### Changed / hardened
+- The write **verifies after an RF field power-cycle** (`NfcCommandReset`), like proxmark's
+  `switch_off()` + `getUID`, so a card that only latches the new UID after a reset is not misreported
+  as a failure.
+- The destructive **gen1 fallback only runs if the gen2 write left the card's UID unchanged**, so a
+  partially-written gen2 card is not clobbered.
+- The entered UID is **forced to start with `0xE0`** (a valid ISO15693 UID) before writing.
+- Detect / Info / write popups now **time out** instead of hanging forever when no card is present.
+- Scenes are labelled generically **"ISO15693 / NfcV"** (a non-NXP or non-magic tag is no longer
+  mislabelled "SLIX").
+- Builds against a **stock SDK** too (fallback `#define` for the fork-only
+  `ISO15693_3_FDT_WRITE_POLL_FC`).
+
+### Fixed
+- A non-magic ISO15693 tag (the common case) now shows a dedicated **"Not a magic tag"** message
+  instead of a generic write error with a Retry that looped forever; a removed card shows a distinct
+  **"Card removed"** message.
+
 ## 2.0
 
 Major release. Adds magic **Ultralight / NTAG (USCUID-UL)** support, and reworks the magic
