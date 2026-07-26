@@ -54,13 +54,15 @@ void slix_poller_start_clone(
     SlixPollerCallback callback,
     void* context);
 
-// After a clone, the per-block write result: total blocks, how many failed, and a bitmap (bit N =
-// block N failed). Any out param may be NULL. `failed_bitmap` must hold SLIX_POLLER_BLOCK_BITMAP_SIZE
-// bytes.
+// After a clone, the per-block write result: source block count, in-range blocks that failed to
+// write (locked/protected), source blocks past the target's capacity (couldn't fit), and a bitmap
+// (bit N = block N failed). Any out param may be NULL. `failed_bitmap` must hold
+// SLIX_POLLER_BLOCK_BITMAP_SIZE bytes.
 void slix_poller_get_clone_result(
     SlixPoller* instance,
     uint16_t* blocks_total,
     uint16_t* failed_count,
+    uint16_t* over_capacity,
     uint8_t* failed_bitmap);
 
 void slix_poller_stop(SlixPoller* instance);

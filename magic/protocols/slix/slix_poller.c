@@ -69,8 +69,9 @@ struct SlixPoller {
     // Clone mode: the source image (kept separate from `data` so start_internal's reset can't wipe
     // it) and per-block write results.
     Iso15693_3Data* clone_source;
-    uint16_t clone_blocks_total;
-    uint16_t clone_failed_count;
+    uint16_t clone_blocks_total; // blocks on the source image
+    uint16_t clone_failed_count; // in-range blocks that errored on write (locked/protected)
+    uint16_t clone_over_capacity; // source blocks past the target's capacity (couldn't fit)
     uint8_t clone_failed_bitmap[SLIX_POLLER_BLOCK_BITMAP_SIZE];
     SlixPollerCallback callback;
     void* context;
@@ -173,17 +174,30 @@ static void slix_poller_report(SlixPoller* instance, SlixPollerEvent event) {
 // failure bitmap for Partial reporting. Runs synchronously on the Nfc worker thread.
 static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3Data* source = instance->clone_source;
-    const uint16_t block_count = iso15693_3_get_block_count(source);
+    const uint16_t source_count = iso15693_3_get_block_count(source);
     const uint8_t block_size = iso15693_3_get_block_size(source);
 
-    instance->clone_blocks_total = block_count;
+    instance->clone_blocks_total = source_count;
     instance->clone_failed_count = 0;
+    instance->clone_over_capacity = 0;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
 
-    if(block_count == 0 || block_size == 0) return;
+    if(source_count == 0 || block_size == 0) return;
+
+    // Don't write past the target's own capacity. A source read from a card that over-reports its
+    // block count (or a genuinely larger card) would otherwise fail the out-of-range tail. Cap at
+    // the target's reported block count when it's known and smaller, and report the shortfall as
+    // "over capacity" rather than a write failure.
+    const Iso15693_3Data* target = nfc_poller_get_data(instance->poller);
+    const uint16_t target_count = iso15693_3_get_block_count(target);
+    uint16_t write_count = source_count;
+    if(target_count > 0 && target_count < write_count) {
+        instance->clone_over_capacity = write_count - target_count;
+        write_count = target_count;
+    }
 
     // block_number is a uint8_t on the wire, so 256 blocks is the ceiling.
-    for(uint16_t block = 0; block < block_count && block < 256; block++) {
+    for(uint16_t block = 0; block < write_count && block < 256; block++) {
         if(iso15693_3_is_block_locked(source, block)) continue;
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
         Iso15693_3Error error =
@@ -198,7 +212,8 @@ static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poll
 // The terminal outcome once the UID read-back matches: a clone with block failures is Partial,
 // everything else (incl. a bare UID write) is Success.
 static SlixPollerEvent slix_poller_success_or_partial(SlixPoller* instance) {
-    if(instance->mode == SlixPollerModeClone && instance->clone_failed_count > 0) {
+    if(instance->mode == SlixPollerModeClone &&
+       (instance->clone_failed_count > 0 || instance->clone_over_capacity > 0)) {
         return SlixPollerEventPartial;
     }
     return SlixPollerEventSuccess;
@@ -323,6 +338,7 @@ SlixPoller* slix_poller_alloc(Nfc* nfc) {
     instance->activation_errors = 0;
     instance->clone_blocks_total = 0;
     instance->clone_failed_count = 0;
+    instance->clone_over_capacity = 0;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     instance->callback = NULL;
     instance->context = NULL;
@@ -358,6 +374,7 @@ static void slix_poller_start_internal(
     instance->activation_errors = 0;
     instance->clone_blocks_total = 0;
     instance->clone_failed_count = 0;
+    instance->clone_over_capacity = 0;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     slix_data_reset(instance->data);
     instance->running = true;
@@ -396,10 +413,12 @@ void slix_poller_get_clone_result(
     SlixPoller* instance,
     uint16_t* blocks_total,
     uint16_t* failed_count,
+    uint16_t* over_capacity,
     uint8_t* failed_bitmap) {
     furi_assert(instance);
     if(blocks_total) *blocks_total = instance->clone_blocks_total;
     if(failed_count) *failed_count = instance->clone_failed_count;
+    if(over_capacity) *over_capacity = instance->clone_over_capacity;
     if(failed_bitmap) {
         memcpy(failed_bitmap, instance->clone_failed_bitmap, SLIX_POLLER_BLOCK_BITMAP_SIZE);
     }
