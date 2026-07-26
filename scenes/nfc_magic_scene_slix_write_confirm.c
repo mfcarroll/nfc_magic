@@ -16,13 +16,16 @@ void nfc_magic_scene_slix_write_confirm_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
+    // 8 spaced bytes overflow the 128px width and wrap, which would push the warning off-screen, so
+    // show the UID compactly (two 4-byte groups) on one line and keep each warning line short. The
+    // text box fits ~4 lines at FontSecondary; every line below stays within the width.
     FuriString* temp_str = furi_string_alloc();
-    furi_string_cat_str(temp_str, "UID:");
     for(size_t i = 0; i < ISO15693_3_UID_SIZE; ++i) {
-        furi_string_cat_printf(temp_str, " %02X", instance->slix_target_uid[i]);
+        furi_string_cat_printf(temp_str, "%02X", instance->slix_target_uid[i]);
+        if(i == 3) furi_string_push_back(temp_str, ' ');
     }
     furi_string_cat_str(
-        temp_str, "\nMagic ISO15693 only. gen1 may\noverwrite data on a non-magic\ntag.");
+        temp_str, "\nOnly magic ISO15693.\ngen1 can overwrite\ndata on normal tags.");
 
     widget_add_string_element(widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Write UID?");
     widget_add_text_box_element(

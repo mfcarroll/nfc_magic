@@ -45,6 +45,12 @@
 // so this is roughly a 5-7 second timeout.
 #define SLIX_POLLER_MAX_ACTIVATION_ERRORS (40U)
 
+// The verify read-back runs right after an RF field power-cycle, so retry the inventory a few times:
+// a card that is momentarily slow to answer must not be misreported as removed (a false CardLost on
+// an otherwise-successful write).
+#define SLIX_POLLER_VERIFY_ATTEMPTS (3U)
+#define SLIX_POLLER_VERIFY_RETRY_MS (5U)
+
 // Write-mode state machine. Each verify runs after a NfcCommandReset field power-cycle.
 typedef enum {
     SlixWriteStateStart, // read the current UID, send gen2, request a field reset
@@ -156,6 +162,19 @@ static void slix_poller_report(SlixPoller* instance, SlixPollerEvent event) {
     }
 }
 
+// Read the UID back for verification, retrying a few times so a momentary miss right after the field
+// power-cycle isn't mistaken for a removed card. Runs on the Nfc worker thread (furi_delay_ms is the
+// same primitive the SDK poller uses between activation attempts).
+static Iso15693_3Error slix_poller_verify_inventory(Iso15693_3Poller* iso_poller, uint8_t* uid) {
+    Iso15693_3Error error = Iso15693_3ErrorNone;
+    for(uint32_t attempt = 0; attempt < SLIX_POLLER_VERIFY_ATTEMPTS; attempt++) {
+        error = iso15693_3_poller_inventory(iso_poller, uid);
+        if(error == Iso15693_3ErrorNone) break;
+        furi_delay_ms(SLIX_POLLER_VERIFY_RETRY_MS);
+    }
+    return error;
+}
+
 // Drives one write-mode step. Runs on the Nfc worker thread with the field active. Returns the
 // NfcCommand for the poller: Reset power-cycles the field (so the next Ready verifies a freshly
 // re-powered card), Stop ends the operation.
@@ -174,7 +193,7 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
     }
 
     case SlixWriteStateVerifyGen2: {
-        if(iso15693_3_poller_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
+        if(slix_poller_verify_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
             slix_poller_report(instance, SlixPollerEventCardLost);
             return NfcCommandStop;
         }
@@ -196,7 +215,7 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
 
     case SlixWriteStateVerifyGen1:
     default: {
-        if(iso15693_3_poller_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
+        if(slix_poller_verify_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
             slix_poller_report(instance, SlixPollerEventCardLost);
             return NfcCommandStop;
         }

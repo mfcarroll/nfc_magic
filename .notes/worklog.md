@@ -43,6 +43,22 @@ Grouped into buildable commits (each keeps the app self-consistent):
       `scenes/nfc_magic_scene_config.h`, `nfc_magic_app_i.h` (reason enum).
 - [x] **docs** — CHANGELOG "Unreleased — SLIX" section; this worklog.
 
+## Post-review follow-ups (offline, verified by build)
+An adversarial diff review (compile / logic / flow) returned **GO** — no build-breakers, no
+correctness bugs (the clean `-Werror` build confirms the compile dimension empirically). Two `LOW`
+robustness/UX items it raised were worth fixing offline because they de-risk the hardware test:
+
+- **Verify inventory retry** (`slix_poller.c`) — the read-back after the field power-cycle now
+  retries up to `SLIX_POLLER_VERIFY_ATTEMPTS` (3) with a short delay, so a card momentarily slow to
+  answer post-reset isn't misreported as `CardLost` on an otherwise-successful write.
+- **Confirm-screen layout** (`slix_write_confirm.c`) — the 8 spaced UID bytes always overflowed
+  128px and wrapped, pushing the data-loss warning to a 5th line the box dropped. Now the UID is a
+  compact two-group line and the warning is three short lines, so nothing clips.
+
+The one remaining review note is INFO/by-design: the gated gen1 fallback can still reach a gen2 card
+whose gen2 write silently failed (readback == original) — documented, user-gated at the confirm
+screen, and covered by hardware-plan.md step 2.
+
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
 magic card (settles whether the power-cycle fix is sufficient and whether the gen1 gate fully
