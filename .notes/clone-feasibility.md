@@ -83,9 +83,10 @@ cannot reproduce.
 
 ## Phased plan
 
-**Phase 1 — surface what we already read (low effort).**
-Display block data in the Info scene and add **save-to-`.nfc`** (reuse the SDK's `slix` save). No
-writing, no magic. Gets the read/dump half of a clone done and useful on its own.
+**Phase 1 — surface what we already read (low effort). ✅ DONE (offline, builds clean).**
+Block data now shows in the Info scene (`fa51633`) and "Save to file" writes a plain ISO15693-3
+`.nfc` via `nfc_device_save` (`a8bb65a`). No writing to the tag, no magic. This is the read/dump half
+of a clone and is useful on its own. On-hardware round-trip check is in hardware-plan.md §6.
 
 **Phase 2 — write-back clone of plain/unlocked cards (moderate).**
 Load a source dump (or read live) → on a magic target: UID via our backdoor + all data blocks via

@@ -48,6 +48,15 @@ This single result settles findings #2 and #3 together.
 - [ ] Confirm the gen2 CFG geometry (`3F/03/8B`) matches the user's actual gen2 cards; a mismatch
       could fail the gen2 write and (pre-gate) would have triggered the gen1 clobber.
 
+## 6. Clone Phase 1 — read / display / save (built offline; verify on hardware)
+- [ ] **Block display** — scan a card via Info → the "Blocks (N x M)" list matches the card's real
+      memory (cross-check with proxmark `hf 15 dump`); locked blocks show `*`.
+- [ ] **Save round-trip** — SLIX menu → "Save to file" → name it → confirm a `.nfc` is written under
+      `nfc/`. Then **load it in the stock NFC app** and confirm it reads back as an ISO15693 card with
+      the same UID / blocks. (Saved as `NfcProtocolIso15693_3`; the NFC app may re-detect it as SLIX.)
+- [ ] Edge cases: a card that doesn't report memory geometry (no block list, save still works with
+      UID + system info); a large (64-block) card (long scroll, save size OK).
+
 ## Possible follow-ups (decide after hardware)
 - If step 2 shows normal tags get clobbered by the consented gen1 step, split the flow into explicit
   **gen2-only (safe)** and **gen1 (destructive)** actions instead of an auto-fallback — matches

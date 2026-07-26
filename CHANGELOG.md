@@ -9,9 +9,12 @@ verified by read-back. The write frames are a byte-for-byte port of proxmark3's 
 analysis, the byte-level protocol reference, and the on-hardware validation plan.
 
 ### Added
-- **SLIX Info** — UID, manufacturer, chip type, and GET SYSTEM INFO (memory / DSFID / AFI / IC ref).
+- **SLIX Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and
+  the **full block data** the poller reads during activation (scrollable, `*` marks a locked block).
   Chip decode now tells **SLI / SLIX / SLIX2** (and the -S / -L variants) apart via the UID
   type-indicator bits, matching the SDK's `slix_get_type` and proxmark's UID table.
+- **SLIX Save to file** — read a card and save it to a plain ISO15693-3 `.nfc` (UID + system info +
+  blocks); the read/dump half of a full clone.
 - **SLIX Write UID** — magic backdoor UID write with a **confirmation screen** (shows the new UID and
   warns that the gen1 step can overwrite data on a non-magic tag) before the irreversible write.
 

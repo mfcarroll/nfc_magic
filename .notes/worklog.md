@@ -59,12 +59,33 @@ The one remaining review note is INFO/by-design: the gated gen1 fallback can sti
 whose gen2 write silently failed (readback == original) — documented, user-gated at the confirm
 screen, and covered by hardware-plan.md step 2.
 
+## Clone — Phase 1 (offline, the read/dump half)
+Per [clone-feasibility.md](clone-feasibility.md). Both build clean under `-Werror`; behaviour still
+needs on-hardware confirmation (hardware-plan.md).
+
+- [x] **Phase 1a — block display** (`fa51633`) — the Info screen now lists the full block data the
+      poller already reads during activation (scrollable, `*` marks a locked block). Read-only
+      display of data we already hold; no protocol change.
+- [x] **Phase 1b — save to `.nfc`** (`a8bb65a`) — new "Save to file" SLIX menu item reads the card
+      (get-info scene branched on a read-intent scene state) → `nfc_device_set_data(source_dev,
+      NfcProtocolIso15693_3, ...)` → `nfc_device_save()` via a name-input scene mirroring
+      `gen1_save_name`. Produces a plain ISO15693-3 `.nfc` (UID + system info + blocks). File
+      round-trip (does it re-load correctly?) is a hardware-plan item.
+
+**Deliberately NOT built offline: Phase 2 (write-back clone).** Writing data blocks is destructive
+(standard `WRITE BLOCK` to real user blocks) and correctness can't be verified without a card, so
+building it blind risks shipping card-corrupting logic. Left for the hardware session — the code
+shape is straightforward (`iso15693_3_poller_write_block(s)` + per-block partial reporting like the
+Gen2/USCUID paths), but it must be written and tested with a real tag in hand. Phase 3 (passwords)
+likewise needs hardware.
+
 ## Not done (needs hardware / out of scope)
 See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
 magic card (settles whether the power-cycle fix is sufficient and whether the gen1 gate fully
 protects data). Also: the residual clobber-of-a-normal-tag risk when a user consents to the gen1
-step — if hardware confirms it, split into explicit gen2-only / gen1 actions. Feature gaps
-(privacy/password, EAS, AFI/DSFID/block-clone, gen3/V3, save-load) remain out of scope.
+step — if hardware confirms it, split into explicit gen2-only / gen1 actions. Clone Phase 2/3
+(block write-back, passwords) and the deeper feature gaps (privacy/EAS, AFI/DSFID, gen3/V3) remain
+for the hardware session / out of scope.
 
 ## Build note
 **Builds clean.** `ufbt` isn't installed, but the app is symlinked into `applications_user/` of the
