@@ -77,6 +77,10 @@ struct SlixPoller {
     uint16_t clone_failed_count; // in-range blocks that errored on write (locked/protected)
     uint16_t clone_over_capacity; // source blocks past the target's capacity (couldn't fit)
     uint8_t clone_failed_bitmap[SLIX_POLLER_BLOCK_BITMAP_SIZE];
+    // Set when the gen1 fallback (not gen2) actually set the UID. gen1 stamps the UID/commit into
+    // data blocks 56/57/62/63, so a clone that fell back to gen1 can't be byte-identical there.
+    // NOTE: the gen1 path is NOT hardware-validated -- we only have a gen2 test card. See the PR note.
+    bool clone_used_gen1;
     SlixPollerCallback callback;
     void* context;
     bool running;
@@ -283,12 +287,16 @@ static void slix_poller_wipe_blocks(SlixPoller* instance, Iso15693_3Poller* iso_
     }
 }
 
-// The terminal outcome once a write finishes: only a NON-EMPTY block we couldn't write means the
-// clone is incomplete (real data was lost) -> Partial. Empty blocks that wouldn't take are past the
-// card's real capacity but lose nothing -- the card reports them as zero anyway, so the clone still
-// matches the source -> clean Success. (A bare UID write sets neither counter.)
+// The terminal outcome once a write finishes:
+//  - a NON-EMPTY block we couldn't write means real data was lost -> Partial. Empty blocks that
+//    wouldn't take are past the card's real capacity but lose nothing (the card reports them as zero
+//    anyway), so the clone still matches -> clean Success.
+//  - a CLONE that fell back to gen1 -> Partial: gen1 stamps the UID/commit into data blocks
+//    56/57/62/63, so those no longer match the source. (A bare Write-UID has no source data to
+//    disturb, so gen1 there is still a clean Success.)
 static SlixPollerEvent slix_poller_success_or_partial(SlixPoller* instance) {
-    if(instance->clone_failed_count > 0) {
+    const bool gen1_clone = (instance->mode == SlixPollerModeClone) && instance->clone_used_gen1;
+    if(instance->clone_failed_count > 0 || gen1_clone) {
         return SlixPollerEventPartial;
     }
     return SlixPollerEventSuccess;
@@ -389,6 +397,9 @@ static NfcCommand slix_poller_write_step(SlixPoller* instance, Iso15693_3Poller*
             return NfcCommandStop;
         }
         const bool ok = memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0;
+        // gen1 set the UID (NOTE: gen1 path is not hardware-validated). Record it so a clone reports
+        // Partial and flags that blocks 56/57/62/63 now hold UID/commit bytes, not the source's data.
+        if(ok) instance->clone_used_gen1 = true;
         slix_poller_report(
             instance, ok ? slix_poller_success_or_partial(instance) : SlixPollerEventFail);
         return NfcCommandStop;
@@ -482,6 +493,7 @@ static void slix_poller_start_internal(
     instance->clone_blocks_total = 0;
     instance->clone_failed_count = 0;
     instance->clone_over_capacity = 0;
+    instance->clone_used_gen1 = false;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     slix_data_reset(instance->data);
     instance->running = true;
@@ -526,7 +538,8 @@ void slix_poller_get_clone_result(
     uint16_t* blocks_total,
     uint16_t* failed_count,
     uint16_t* over_capacity,
-    uint8_t* failed_bitmap) {
+    uint8_t* failed_bitmap,
+    bool* used_gen1) {
     furi_assert(instance);
     if(blocks_total) *blocks_total = instance->clone_blocks_total;
     if(failed_count) *failed_count = instance->clone_failed_count;
@@ -534,6 +547,29 @@ void slix_poller_get_clone_result(
     if(failed_bitmap) {
         memcpy(failed_bitmap, instance->clone_failed_bitmap, SLIX_POLLER_BLOCK_BITMAP_SIZE);
     }
+    if(used_gen1) *used_gen1 = instance->clone_used_gen1;
+}
+
+// True if the source image has non-empty data in any of the gen1 backdoor blocks (56/57/62/63) that
+// actually exist within its block count. A gen1 fallback overwrites those blocks with UID/commit
+// bytes, so it can't reproduce a source that stores real data there -- callers warn about this up
+// front. (Purely a source inspection; touches no hardware.)
+bool slix_poller_source_uses_gen1_blocks(const Iso15693_3Data* source) {
+    if(!source) return false;
+    const uint16_t block_count = iso15693_3_get_block_count(source);
+    const uint8_t block_size = iso15693_3_get_block_size(source);
+    if(block_size == 0) return false;
+    const uint8_t gen1_blocks[] = {
+        SLIX_MAGIC_BLK_UID_LO, SLIX_MAGIC_BLK_UID_HI, SLIX_MAGIC_BLK_UNLOCK, SLIX_MAGIC_BLK_COMMIT};
+    for(size_t i = 0; i < sizeof(gen1_blocks); i++) {
+        const uint16_t block = gen1_blocks[i];
+        if(block >= block_count) continue;
+        const uint8_t* data = iso15693_3_get_block_data(source, block);
+        for(uint8_t j = 0; j < block_size; j++) {
+            if(data[j] != 0) return true;
+        }
+    }
+    return false;
 }
 
 void slix_poller_stop(SlixPoller* instance) {

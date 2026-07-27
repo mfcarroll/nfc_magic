@@ -159,6 +159,7 @@ struct NfcMagicApp {
     uint16_t slix_clone_failed_count; // SLIX clone: in-range blocks that couldn't be written
     uint16_t slix_clone_over_capacity; // SLIX clone: source blocks past the target's capacity
     uint8_t slix_clone_failed_bitmap[SLIX_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
+    bool slix_clone_used_gen1; // SLIX clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
 
     Gen4* gen4_data;
 

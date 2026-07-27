@@ -56,15 +56,21 @@ void slix_poller_start_clone(
     void* context);
 
 // After a clone, the per-block write result: source block count, in-range blocks that failed to
-// write (locked/protected), source blocks past the target's capacity (couldn't fit), and a bitmap
-// (bit N = block N failed). Any out param may be NULL. `failed_bitmap` must hold
-// SLIX_POLLER_BLOCK_BITMAP_SIZE bytes.
+// write (locked/protected), source blocks past the target's capacity (couldn't fit), a bitmap
+// (bit N = block N failed), and whether the gen1 fallback set the UID (which overwrites blocks
+// 56/57/62/63). Any out param may be NULL. `failed_bitmap` must hold SLIX_POLLER_BLOCK_BITMAP_SIZE
+// bytes.
 void slix_poller_get_clone_result(
     SlixPoller* instance,
     uint16_t* blocks_total,
     uint16_t* failed_count,
     uint16_t* over_capacity,
-    uint8_t* failed_bitmap);
+    uint8_t* failed_bitmap,
+    bool* used_gen1);
+
+// True if the source stores real data in a gen1 backdoor block (56/57/62/63) that a gen1 fallback
+// would overwrite -- so the write flow can warn before a possible gen1 clone. Source inspection only.
+bool slix_poller_source_uses_gen1_blocks(const Iso15693_3Data* source);
 
 // Wipe: write zeros to every writable data block on the card (UID left unchanged, like proxmark's
 // 'hf 15 wipe'). Reports Success / Partial (some blocks failed) / Fail (nothing writable) /

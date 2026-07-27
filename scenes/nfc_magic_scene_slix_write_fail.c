@@ -49,6 +49,12 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
             }
             furi_string_push_back(text, '\n');
         }
+        if(instance->slix_clone_used_gen1) {
+            // The clone fell back to the gen1 method, which stamps the UID/commit into blocks
+            // 56/57/62/63 -- so those no longer match the source. (gen1 is not hardware-validated.)
+            furi_string_cat_str(
+                text, "gen1 method: blocks 56/57/62/63 hold the UID, not your file's data.");
+        }
         widget_add_string_element(
             widget,
             3,
