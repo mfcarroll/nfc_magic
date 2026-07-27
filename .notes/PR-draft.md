@@ -21,7 +21,6 @@ The magic write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` 
   by the write (the same "write to confirm" model the app already uses for Classic / USCUID-UL).
 - **Info** — UID, manufacturer, chip type (NXP **SLI / SLIX / SLIX2** and -S/-L variants),
   GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and the full block data (scrollable, `*` = locked).
-  Can save the read to a plain ISO15693-3 `.nfc`.
 - **Clone from a saved `.nfc`** — writes UID (magic backdoor) + all data blocks + identity
   (IC ref / block geometry / AFI / DSFID) so the copy advertises the same chip.
 - **Wipe** (zero data blocks, UID untouched) and **manual Write UID**.

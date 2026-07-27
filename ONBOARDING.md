@@ -37,8 +37,8 @@ builds on the raw SDK `iso15693_3` layer.
 
 - **Detection** of any ISO15693 tag as a magic candidate, routed to a dedicated menu (Write / Wipe /
   Write UID / Info).
-- **Info** — UID / manufacturer / GET-SYSTEM-INFO / full block data, with NXP **SLI / SLIX / SLIX2**
-  decode; save to `.nfc`.
+- **Info** — UID / manufacturer / GET-SYSTEM-INFO / full block data (scrollable, `*` = locked), with
+  NXP **SLI / SLIX / SLIX2** decode. (Saving a read to `.nfc` is the stock NFC app's job, not this one.)
 - **Full clone from a saved `.nfc`** — UID (magic backdoor) + all data blocks + identity. Writes
   **every** source block and reports only real data loss (non-empty blocks that won't fit → Partial;
   empty over-capacity → clean Success). Impersonates larger/other geometries where the card allows.

@@ -12,8 +12,7 @@ The magic write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` 
   dedicated menu (Write / Wipe / Write UID / Info), mirroring the other magic types.
 - **Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and the
   full block data (scrollable, `*` marks a locked block). Chip decode tells NXP **SLI / SLIX / SLIX2**
-  (and the -S / -L variants) apart via the UID type-indicator bits. Can save the read to a plain
-  ISO15693-3 `.nfc`.
+  (and the -S / -L variants) apart via the UID type-indicator bits.
 - **Clone from a saved `.nfc`** — writes the UID (magic backdoor), all data blocks, and the source's
   identity (IC ref / block geometry / AFI / DSFID) so the copy advertises the same chip. gen2 sets
   UID + geometry via the `0xE0` magic command; a gen1 card falls back to the block-write backdoor.
