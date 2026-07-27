@@ -220,6 +220,28 @@ Proof it's ordering: `oversize_empty_70`, written next when the card already adv
   recursive `*.c*` was sweeping in `tools/` (venv + `__pycache__` `.cpython-*.pyc` match `*.c*`), which
   broke the link. `tools/` is dev-only; excluded like the firmware excludes `lib/`.
 
+### gen1 backdoor-block warning + honest gen1 reporting (`c9d3bfd`, 2026-07-27)
+The gen1 UID fallback writes the UID/unlock/commit into **data blocks 56/57/62/63** (`0x38/0x39/0x3E/
+0x3F`), so a clone that falls back to gen1 can't reproduce a source that stores data there. We surveyed
+how the app's other magic types handle "might write to a wrong/non-magic card": gen1a/gen4/USCUID-UL-
+backdoor confirm magic non-destructively first; gen2/Classic and USCUID-UL-direct are "write-to-confirm"
+(standard writes land on any writable same-family card, behind the confirm) — SLIX is in that second
+group, and its clone already writes all data via standard `0x21` before the backdoor. We looked at #5
+(a non-destructive gen2 probe): **not available** — proxmark's gen2 (`SetTag15693Uid_v2`) is write-only,
+ignores responses, and confirms by write-then-verify; only V3 has a read-based detector. A theoretical
+"idempotent gen2 write + inspect ACK" probe is unproven and we have no non-magic ISO15693 card to test
+it, so we did **not** rely on it. Chosen fix (lean, low-risk, keeps the auto-fallback behind the confirm):
+- **Pre-write:** `slix_poller_source_uses_gen1_blocks()` — if the source has data in 56/57/62/63, the
+  write-confirm shows a **specific** warning ("If this card is gen1 (not gen2), gen1 puts the UID in
+  those blocks, so they can't be cloned"). Shown only when actually relevant.
+- **Post-write:** track gen2-vs-gen1 (`clone_used_gen1`). A **clone that used gen1 → Partial**, and the
+  result screen flags "blocks 56/57/62/63 hold the UID, not your file's data." A bare **Write-UID via
+  gen1 stays a clean Success** (no source data to disturb).
+- ⚠️ **The gen1 path is NOT hardware-validated** — only a gen2 magic card is on hand; no gen1 or non-magic
+  ISO15693 tag to test with. Flagged in code comments (`slix_poller.c`) and **must be called out in the
+  upstream PR**. Deferred: the just-in-time "pause before gen1 fallback" confirm (needs a gen1 card to
+  test the flow) and buying a non-magic/gen1 ISO15693 tag to validate.
+
 ### Immediate next steps (in priority order)
 The write-every-block change is validated (above) — the SLIX/ISO15693 clone feature is now
 functionally complete and hardware-proven end-to-end. Remaining:
@@ -227,10 +249,13 @@ functionally complete and hardware-proven end-to-end. Remaining:
    whether the reader is UID-only or checks block data / an anti-clone signature). This is the last
    real-world unknown for the original use case.
 2. **Re-clone both test cards** from their `.nfc` — the probe runs left them at 28/56 geometry and 64/0x8B.
-3. **Upstream polish** (if pursuing a PR): the feature builds clean and behaves correctly; a pass for
-   naming/comments/consistency-with-other-magic-types, then decide scope (gen1 clobber split? keep V3
-   out?). See capability-matrix.md for what's intentionally deferred.
-4. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
+3. **Upstream polish** (if pursuing a PR): builds clean and behaves correctly; a pass for
+   naming/comments/consistency-with-other-magic-types. **PR must state the gen1 path is untested on
+   hardware** (only gen2 validated). Decide scope (keep V3 out; the just-in-time gen1 pause deferred).
+   See capability-matrix.md for what's intentionally deferred.
+4. **Buy a non-magic and/or gen1 ISO15693 tag** to (a) validate the gen1 write path and (b) test the
+   `0xE0`-is-inert-on-non-magic assumption — which would unlock the confirm-before-clobber reorder.
+5. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
 
 ### Deferred / out of scope (unchanged)
 Repeatable **V3** magic variant (blocks 0x10/0x11 + finalize; needs a V3 card — screen with
