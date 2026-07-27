@@ -37,7 +37,7 @@ struct NfcMagicScanner {
 
 static const NfcProtocol nfc_magic_scanner_not_magic_protocols[] = {
     NfcProtocolIso14443_3b,
-    // NfcProtocolIso15693_3 is intentionally absent: ISO15693 (NfcV) tags are handled as
+    // NfcProtocolIso15693_3 is intentionally absent. ISO15693 (NfcV) tags are handled as
     // magic ISO15693 candidates in nfc_magic_scanner_detect_pass().
     NfcProtocolFelica,
 };

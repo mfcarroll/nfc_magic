@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased — magic ISO15693 (NfcV) support
+## 2.1
 
-Adds a new magic tag family: **ISO15693 / NfcV**. Detect an ISO15693 tag, show its Info, and
-**clone / write / wipe** a magic ISO15693 card the same way the app handles its other magic types.
-The magic write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` (gen1) and
-`SetTag15693Uid_v2` (gen2), verified by a power-cycled read-back.
+Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, and
+**clone / wipe** a magic ISO15693 card the same way the app handles its other magic types.
+
+The magic write frames are an exact port of proxmark3's `SetTag15693Uid` (gen1) and
+`SetTag15693Uid_v2` (gen2).
 
 ### Added
 - **Detection** — any ISO15693 tag that activates is treated as a magic candidate and routed to a
@@ -27,11 +28,12 @@ The magic write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` 
   larger geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
 - **gen1 fidelity is surfaced.** The gen1 backdoor stores the UID in data blocks 56/57/62/63, so a
   gen1 clone can't reproduce a source that uses them. If the source has data there, the confirm warns
-  before the write; if the clone actually fell back to gen1, it reports Partial and flags those blocks.
+  before the write; if the clone actually fell back to gen1, it reports the Partial clone status and
+  flags those blocks.
 - **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
   UID after a reset is not misreported as a failure.
-- The destructive **gen1 fallback only runs if the gen2 write left the UID unchanged**, so a
-  gen2 card is never clobbered by gen1; it is gated behind the write confirmation.
+- The potentially destructive **gen1 fallback only runs if the gen2 write left the UID unchanged**,
+  so a gen2 card is never clobbered by gen1.
 - Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
   instead of a generic error, and detect / write popups **time out** instead of hanging.
 

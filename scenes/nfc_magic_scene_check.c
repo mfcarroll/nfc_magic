@@ -46,7 +46,6 @@ bool nfc_magic_scene_check_on_event(void* context, SceneManagerEvent event) {
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == NfcMagicCustomEventWorkerSuccess) {
-            // Every detected type goes through the shared "Magic card detected" hub (More -> menu).
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMagicInfo);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerFail) {

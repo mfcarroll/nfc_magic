@@ -11,7 +11,7 @@
 #define ISO15693_3_FDT_WRITE_POLL_FC (271200U)
 #endif
 
-// Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3
+// Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3 (GPLv3)
 // SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Unaddressed frames are sent to
 // hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card
 // generations exist and the write tries gen2 then (only if untouched) gen1.
@@ -124,7 +124,7 @@ static void iso15693_poller_build_gen2_frame(
 }
 
 // Magic cards may not answer these writes, so per-frame transceive results are intentionally
-// ignored; the UID read-back is the real check.
+// ignored. (The UID read-back is the real check.)
 static void iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
     BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
     BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
@@ -226,7 +226,7 @@ static void iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso156
     // cap at the target's advertised block count. On these magic cards WRITE BLOCK is gated by
     // physical memory, not by the reported count (verified on hardware: writes succeed well past the
     // advertised count, and a card's high blocks don't even read until they've been written -- so a
-    // pre-write read under-reports true capacity). Capping at the advertised count would also leave
+    // pre-write read may under-report true capacity). Capping at the advertised count would also leave
     // stale data in the reachable gap when re-cloning onto a card that currently advertises fewer
     // blocks. The only reliable capacity test is to write the block and see if it takes.
     //
