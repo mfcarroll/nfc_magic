@@ -38,7 +38,7 @@ struct NfcMagicScanner {
 static const NfcProtocol nfc_magic_scanner_not_magic_protocols[] = {
     NfcProtocolIso14443_3b,
     // NfcProtocolIso15693_3 is intentionally absent: ISO15693 (NfcV) tags are handled as
-    // magic SLIX candidates in nfc_magic_scanner_detect_pass().
+    // magic ISO15693 candidates in nfc_magic_scanner_detect_pass().
     NfcProtocolFelica,
 };
 
@@ -122,10 +122,10 @@ static bool nfc_magic_scanner_detect_mf_classic(Nfc* nfc) {
     return detected;
 }
 
-static bool nfc_magic_scanner_detect_slix(Nfc* nfc) {
+static bool nfc_magic_scanner_detect_iso15693(Nfc* nfc) {
     // ISO15693 (NfcV) is a different RF technology from ISO14443-3A, so it gets its own
     // activation probe. There is no reliable non-destructive backdoor probe for a magic
-    // ISO15693 tag, so any ISO15693 tag that activates is treated as a SLIX *candidate* --
+    // ISO15693 tag, so any ISO15693 tag that activates is treated as a ISO15693 *candidate* --
     // magic-ness is proven at write time via a UID read-back. This mirrors how a generic
     // MIFARE Classic is reported as an unconfirmed candidate.
     NfcPoller* poller = nfc_poller_alloc(nfc, NfcProtocolIso15693_3);
@@ -159,10 +159,10 @@ static bool nfc_magic_scanner_detect_pass(NfcMagicScanner* instance, NfcMagicPro
         return true;
     }
 
-    // ISO15693 (SLIX) magic candidate. Different RF tech, so it does not depend on the
+    // ISO15693 magic candidate. Different RF tech, so it does not depend on the
     // ISO14443-3A identity read above.
-    if(nfc_magic_scanner_detect_slix(instance->nfc)) {
-        *protocol = NfcMagicProtocolSlix;
+    if(nfc_magic_scanner_detect_iso15693(instance->nfc)) {
+        *protocol = NfcMagicProtocolIso15693;
         return true;
     }
 

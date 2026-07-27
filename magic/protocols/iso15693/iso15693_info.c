@@ -1,4 +1,4 @@
-#include "slix_info.h"
+#include "iso15693_info.h"
 
 #include <stdint.h>
 
@@ -124,7 +124,7 @@ static const ManufacturerName manufacturer_mapping[] = {
     {0x00, "Unknown"} // must be the last entry
 };
 
-char* slix_info_get_manufacturer_name(uint8_t vendor_id) {
+char* iso15693_info_get_manufacturer_name(uint8_t vendor_id) {
     int i;
     // The Flipper Zero C standard doesn't allow variable-length arrays on the stack,
     // so we use sizeof() to get the length of the array at compile time.
@@ -217,7 +217,7 @@ static const ChipInfo chip_id_mapping[] = {
     {0x00, 0x00, 0x00, "no tag-info available"} // must be the last entry
 };
 
-char* slix_info_get_chip_info(uint8_t vendor_id, uint8_t chip_id) {
+char* iso15693_info_get_chip_info(uint8_t vendor_id, uint8_t chip_id) {
     int i = 0;
     int best = -1;
     while(chip_id_mapping[i].mask > 0) {
@@ -242,16 +242,16 @@ char* slix_info_get_chip_info(uint8_t vendor_id, uint8_t chip_id) {
 }
 
 // NXP manufacturer byte (ISO15693 UID uid[1]).
-#define SLIX_INFO_NXP_MANUFACTURER (0x04U)
+#define ISO15693_INFO_NXP_MANUFACTURER (0x04U)
 
 // NXP I-Code SLI/SLIX/SLIX2 refinement. uid[2] is the IC family and uid[3] carries a 2-bit type
 // indicator at bits 3-4 (mask 0x18): 0x10 => SLIX, 0x08 => SLIX2, 0x00 => plain SLI. This mirrors
-// the SDK's slix_get_type() (SlixUidLayout.type_indicator) and proxmark3's masked UID table.
-char* slix_info_get_chip_info_ex(const uint8_t* uid) {
+// the SDK's iso15693_get_type() (Iso15693UidLayout.type_indicator) and proxmark3's masked UID table.
+char* iso15693_info_get_chip_info_ex(const uint8_t* uid) {
     const uint8_t vendor_id = uid[1];
     const uint8_t chip_id = uid[2];
 
-    if(vendor_id == SLIX_INFO_NXP_MANUFACTURER) {
+    if(vendor_id == ISO15693_INFO_NXP_MANUFACTURER) {
         const uint8_t type_bits = uid[3] & 0x18;
         switch(chip_id) {
         case 0x01: // SL2 ICS20/ICS21 family
@@ -271,5 +271,5 @@ char* slix_info_get_chip_info_ex(const uint8_t* uid) {
         }
     }
 
-    return slix_info_get_chip_info(vendor_id, chip_id);
+    return iso15693_info_get_chip_info(vendor_id, chip_id);
 }

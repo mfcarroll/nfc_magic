@@ -1,12 +1,12 @@
 #include "../nfc_magic_app_i.h"
-#include "../magic/protocols/slix/slix_poller.h"
-#include "../magic/protocols/slix/slix_info.h"
+#include "../magic/protocols/iso15693/iso15693_poller.h"
+#include "../magic/protocols/iso15693/iso15693_info.h"
 
-void nfc_magic_scene_slix_info_on_enter(void* context) {
+void nfc_magic_scene_iso15693_info_on_enter(void* context) {
     NfcMagicApp* instance = context;
     widget_reset(instance->widget);
 
-    const Iso15693_3Data* iso_data = instance->slix_data->iso15693_3_data;
+    const Iso15693_3Data* iso_data = instance->iso15693_data->iso15693_3_data;
     const Iso15693_3SystemInfo* sys_info = &iso_data->system_info;
 
     FuriString* temp_str = furi_string_alloc();
@@ -24,9 +24,9 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
     // it can tell NXP SLI / SLIX / SLIX2 apart via the type-indicator bits of uid[3].
     const uint8_t manufacturer_id = iso15693_3_get_manufacturer_id(iso_data);
     furi_string_cat_printf(
-        temp_str, "Mfr: %s\n", slix_info_get_manufacturer_name(manufacturer_id));
+        temp_str, "Mfr: %s\n", iso15693_info_get_manufacturer_name(manufacturer_id));
     furi_string_cat_printf(
-        temp_str, "Chip: %s\n", slix_info_get_chip_info_ex(iso_data->uid));
+        temp_str, "Chip: %s\n", iso15693_info_get_chip_info_ex(iso_data->uid));
 
     // Memory geometry from GET SYSTEM INFO (only valid when the flag bit is set).
     if(sys_info->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) {
@@ -77,21 +77,21 @@ void nfc_magic_scene_slix_info_on_enter(void* context) {
     view_dispatcher_switch_to_view(instance->view_dispatcher, NfcMagicAppViewWidget);
 }
 
-bool nfc_magic_scene_slix_info_on_event(void* context, SceneManagerEvent event) {
+bool nfc_magic_scene_iso15693_info_on_event(void* context, SceneManagerEvent event) {
     NfcMagicApp* instance = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeBack) {
-        // Skip the transient "detecting" scene; go straight back to the SLIX menu so Back
+        // Skip the transient "detecting" scene; go straight back to the ISO15693 menu so Back
         // doesn't kick off another detection with a half-drawn popup.
         consumed = scene_manager_search_and_switch_to_previous_scene(
-            instance->scene_manager, NfcMagicSceneSlix);
+            instance->scene_manager, NfcMagicSceneIso15693);
     }
 
     return consumed;
 }
 
-void nfc_magic_scene_slix_info_on_exit(void* context) {
+void nfc_magic_scene_iso15693_info_on_exit(void* context) {
     NfcMagicApp* instance = context;
     widget_reset(instance->widget);
 }

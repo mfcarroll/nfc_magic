@@ -33,7 +33,7 @@ void nfc_magic_scene_magic_info_on_enter(void* context) {
         // Hand-wrapped: the text box breaks mid-word, so keep each line short.
         furi_string_printf(
             message, "Not a magic Ultralight,\nor an unsupported type.\nTry writing to confirm.");
-    } else if(instance->protocol == NfcMagicProtocolSlix) {
+    } else if(instance->protocol == NfcMagicProtocolIso15693) {
         // Any ISO15693 tag reads here; magic-ness is only proven at write time.
         widget_add_string_element(
             widget, 0, 0, AlignLeft, AlignTop, FontPrimary, "ISO15693 / NfcV");
@@ -151,8 +151,8 @@ bool nfc_magic_scene_magic_info_on_event(void* context, SceneManagerEvent event)
             } else if(instance->protocol == NfcMagicProtocolClassic) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneMfClassicMenu);
                 consumed = true;
-            } else if(instance->protocol == NfcMagicProtocolSlix) {
-                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlix);
+            } else if(instance->protocol == NfcMagicProtocolIso15693) {
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693);
                 consumed = true;
             }
         }

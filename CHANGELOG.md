@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — SLIX (magic ISO15693) `slix-v2`
+## Unreleased — SLIX (magic ISO15693) `iso15693-v2`
 
 Adds magic **ISO15693 / SLIX (NfcV)** support: detect an ISO15693 tag, show Info (UID /
 manufacturer / chip / system info), and perform a magic **backdoor UID write** (gen1 or gen2),
@@ -12,7 +12,7 @@ analysis, the byte-level protocol reference, and the on-hardware validation plan
 - **SLIX Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and
   the **full block data** the poller reads during activation (scrollable, `*` marks a locked block).
   Chip decode now tells **SLI / SLIX / SLIX2** (and the -S / -L variants) apart via the UID
-  type-indicator bits, matching the SDK's `slix_get_type` and proxmark's UID table.
+  type-indicator bits, matching the SDK's `iso15693_get_type` and proxmark's UID table.
 - **SLIX Save to file** — read a card and save it to a plain ISO15693-3 `.nfc` (UID + system info +
   blocks); the read/dump half of a full clone.
 - **SLIX Write UID** — magic backdoor UID write with a **confirmation screen** (shows the new UID and

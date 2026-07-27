@@ -15,18 +15,18 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
-    const bool slix_wipe =
-        (instance->protocol == NfcMagicProtocolSlix) && instance->slix_is_wipe_mode;
-    const bool is_wipe = instance->uscuid_ul_is_wipe_mode || slix_wipe;
+    const bool iso15693_wipe =
+        (instance->protocol == NfcMagicProtocolIso15693) && instance->iso15693_is_wipe_mode;
+    const bool is_wipe = instance->uscuid_ul_is_wipe_mode || iso15693_wipe;
 
     const char* text;
-    if(slix_wipe) {
+    if(iso15693_wipe) {
         text = "Zeroes every data block on this card. The UID is left unchanged.";
     } else if(instance->uscuid_ul_is_wipe_mode) {
         text = "Blank factory dump: config &\npassword cleared, UID zeroed.";
     } else if(
-        instance->protocol == NfcMagicProtocolSlix &&
-        slix_poller_source_uses_gen1_blocks(
+        instance->protocol == NfcMagicProtocolIso15693 &&
+        iso15693_poller_source_uses_gen1_blocks(
             nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3))) {
         // The source stores data in the gen1 backdoor blocks (56/57/62/63). A gen1 card would have
         // those overwritten with the UID, so warn specifically before the write.

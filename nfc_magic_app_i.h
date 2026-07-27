@@ -39,7 +39,7 @@
 #include "magic/protocols/gen1a/gen1a_poller.h"
 #include "magic/protocols/gen2/gen2_poller.h"
 #include "magic/protocols/gen4/gen4_poller.h"
-#include "magic/protocols/slix/slix_poller.h"
+#include "magic/protocols/iso15693/iso15693_poller.h"
 
 #include "lib/nfc/protocols/mf_classic/mf_classic_poller.h"
 
@@ -71,8 +71,8 @@ enum NfcMagicAppCustomEvent {
     NfcMagicAppCustomEventDictAttackComplete,
     NfcMagicAppCustomEventDictAttackSkip,
     NfcMagicCustomEventTextInputDone,
-    NfcMagicCustomEventSlixCardDetected,
-    NfcMagicCustomEventSlixCardDetectFailed,
+    NfcMagicCustomEventIso15693CardDetected,
+    NfcMagicCustomEventIso15693CardDetectFailed,
 };
 
 typedef struct {
@@ -101,12 +101,12 @@ typedef enum {
     NfcMagicWipeFailReasonNoKeys, // no sector keys found, so the wipe never started
 } NfcMagicWipeFailReason;
 
-// Reason passed to the SlixWriteFail scene via its scene state so it can explain the outcome.
+// Reason passed to the Iso15693WriteFail scene via its scene state so it can explain the outcome.
 typedef enum {
-    NfcMagicSlixWriteFailReasonNotMagic, // card present, but the backdoor write was not accepted
-    NfcMagicSlixWriteFailReasonCardLost, // no card in the field / card removed mid-write
-    NfcMagicSlixWriteFailReasonPartial, // clone: UID written but some data blocks failed
-} NfcMagicSlixWriteFailReason;
+    NfcMagicIso15693WriteFailReasonNotMagic, // card present, but the backdoor write was not accepted
+    NfcMagicIso15693WriteFailReasonCardLost, // no card in the field / card removed mid-write
+    NfcMagicIso15693WriteFailReasonPartial, // clone: UID written but some data blocks failed
+} NfcMagicIso15693WriteFailReason;
 
 struct NfcMagicApp {
     ViewDispatcher* view_dispatcher;
@@ -148,18 +148,18 @@ struct NfcMagicApp {
 
     Gen4Poller* gen4_poller;
     UscuidUlPoller* uscuid_ul_poller;
-    // Allocated per-scene (in the SLIX get-info / write scenes), NOT at app startup:
-    // slix_poller_alloc -> nfc_poller_alloc(Iso15693_3) calls nfc_config() on the shared Nfc,
+    // Allocated per-scene (in the ISO15693 get-info / write scenes), NOT at app startup:
+    // iso15693_poller_alloc -> nfc_poller_alloc(Iso15693_3) calls nfc_config() on the shared Nfc,
     // and holding that config would make the scanner's first nfc_config() furi_check-fail.
-    SlixPoller* slix_poller;
-    SlixData* slix_data; // last read result, kept so the info scene survives the poller free
-    uint8_t slix_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic SLIX card
-    bool slix_is_wipe_mode; // SLIX write scene: wipe (zero blocks) vs clone (from a file)
-    uint16_t slix_clone_blocks_total; // SLIX clone: data blocks on the source image
-    uint16_t slix_clone_failed_count; // SLIX clone: in-range blocks that couldn't be written
-    uint16_t slix_clone_over_capacity; // SLIX clone: source blocks past the target's capacity
-    uint8_t slix_clone_failed_bitmap[SLIX_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
-    bool slix_clone_used_gen1; // SLIX clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
+    Iso15693Poller* iso15693_poller;
+    Iso15693Data* iso15693_data; // last read result, kept so the info scene survives the poller free
+    uint8_t iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
+    bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)
+    uint16_t iso15693_clone_blocks_total; // ISO15693 clone: data blocks on the source image
+    uint16_t iso15693_clone_failed_count; // ISO15693 clone: in-range blocks that couldn't be written
+    uint16_t iso15693_clone_over_capacity; // ISO15693 clone: source blocks past the target's capacity
+    uint8_t iso15693_clone_failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
+    bool iso15693_clone_used_gen1; // ISO15693 clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
 
     Gen4* gen4_data;
 

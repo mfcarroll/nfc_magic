@@ -154,28 +154,28 @@ NfcCommand
     return command;
 }
 
-// SLIX/ISO15693 clone: our slix poller uses a simpler event callback than the SDK-style pollers
+// ISO15693 clone: our iso15693 poller uses a simpler event callback than the SDK-style pollers
 // above. Map its outcome onto the shared write events; the per-block partial stats are stashed for
 // the fail/partial screen.
-static void nfc_magic_scene_write_slix_poller_callback(SlixPollerEvent event, void* context) {
+static void nfc_magic_scene_write_iso15693_poller_callback(Iso15693PollerEvent event, void* context) {
     NfcMagicApp* instance = context;
 
-    if(event == SlixPollerEventSuccess) {
+    if(event == Iso15693PollerEventSuccess) {
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerSuccess);
-    } else if(event == SlixPollerEventPartial) {
-        slix_poller_get_clone_result(
-            instance->slix_poller,
-            &instance->slix_clone_blocks_total,
-            &instance->slix_clone_failed_count,
-            &instance->slix_clone_over_capacity,
-            instance->slix_clone_failed_bitmap,
-            &instance->slix_clone_used_gen1);
+    } else if(event == Iso15693PollerEventPartial) {
+        iso15693_poller_get_clone_result(
+            instance->iso15693_poller,
+            &instance->iso15693_clone_blocks_total,
+            &instance->iso15693_clone_failed_count,
+            &instance->iso15693_clone_over_capacity,
+            instance->iso15693_clone_failed_bitmap,
+            &instance->iso15693_clone_used_gen1);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerPartial);
-    } else if(event == SlixPollerEventCardLost) {
+    } else if(event == Iso15693PollerEventCardLost) {
         view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventCardLost);
-    } else { // SlixPollerEventFail: backdoor write not accepted (not a magic tag)
+    } else { // Iso15693PollerEventFail: backdoor write not accepted (not a magic tag)
         view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventWorkerFail);
     }
 }
@@ -242,18 +242,18 @@ void nfc_magic_scene_write_on_enter(void* context) {
         }
         uscuid_ul_poller_start(
             instance->uscuid_ul_poller, nfc_magic_scene_write_uscuid_ul_poller_callback, instance);
-    } else if(instance->protocol == NfcMagicProtocolSlix) {
-        instance->slix_poller = slix_poller_alloc(instance->nfc);
-        if(instance->slix_is_wipe_mode) {
+    } else if(instance->protocol == NfcMagicProtocolIso15693) {
+        instance->iso15693_poller = iso15693_poller_alloc(instance->nfc);
+        if(instance->iso15693_is_wipe_mode) {
             // Zero every data block on the card (no source file).
-            slix_poller_start_wipe(
-                instance->slix_poller, nfc_magic_scene_write_slix_poller_callback, instance);
+            iso15693_poller_start_wipe(
+                instance->iso15693_poller, nfc_magic_scene_write_iso15693_poller_callback, instance);
         } else {
             // Clone the loaded ISO15693 image (UID + writable blocks) onto the magic card.
             const Iso15693_3Data* source =
                 nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
-            slix_poller_start_clone(
-                instance->slix_poller, source, nfc_magic_scene_write_slix_poller_callback, instance);
+            iso15693_poller_start_clone(
+                instance->iso15693_poller, source, nfc_magic_scene_write_iso15693_poller_callback, instance);
         }
     } else {
         instance->gen4_poller = gen4_poller_alloc(instance->nfc);
@@ -274,13 +274,13 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             nfc_magic_scene_write_setup_view(instance);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventCardLost) {
-            if(instance->protocol == NfcMagicProtocolSlix) {
-                // SLIX clone treats card-lost as terminal (not a resumable search).
+            if(instance->protocol == NfcMagicProtocolIso15693) {
+                // ISO15693 clone treats card-lost as terminal (not a resumable search).
                 scene_manager_set_scene_state(
                     instance->scene_manager,
-                    NfcMagicSceneSlixWriteFail,
-                    NfcMagicSlixWriteFailReasonCardLost);
-                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlixWriteFail);
+                    NfcMagicSceneIso15693WriteFail,
+                    NfcMagicIso15693WriteFailReasonCardLost);
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {
                 scene_manager_set_scene_state(
                     instance->scene_manager, NfcMagicSceneWrite, NfcMagicSceneWriteStateCardSearch);
@@ -303,17 +303,17 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSuccess);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerPartial) {
-            // Gen2/Classic clone uses the shared per-block partial screen; USCUID-UL and SLIX have
+            // Gen2/Classic clone uses the shared per-block partial screen; USCUID-UL and ISO15693 have
             // their own.
             if(instance->protocol == NfcMagicProtocolGen2 ||
                instance->protocol == NfcMagicProtocolClassic) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneGen2WipePartial);
-            } else if(instance->protocol == NfcMagicProtocolSlix) {
+            } else if(instance->protocol == NfcMagicProtocolIso15693) {
                 scene_manager_set_scene_state(
                     instance->scene_manager,
-                    NfcMagicSceneSlixWriteFail,
-                    NfcMagicSlixWriteFailReasonPartial);
-                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlixWriteFail);
+                    NfcMagicSceneIso15693WriteFail,
+                    NfcMagicIso15693WriteFailReasonPartial);
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneUscuidUlPartial);
             }
@@ -322,12 +322,12 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneUscuidUlAuthFail);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerFail) {
-            if(instance->protocol == NfcMagicProtocolSlix) {
+            if(instance->protocol == NfcMagicProtocolIso15693) {
                 scene_manager_set_scene_state(
                     instance->scene_manager,
-                    NfcMagicSceneSlixWriteFail,
-                    NfcMagicSlixWriteFailReasonNotMagic);
-                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSlixWriteFail);
+                    NfcMagicSceneIso15693WriteFail,
+                    NfcMagicIso15693WriteFailReasonNotMagic);
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWriteFail);
             }
@@ -357,10 +357,10 @@ void nfc_magic_scene_write_on_exit(void* context) {
         instance->protocol == NfcMagicProtocolUscuidUlNotDetected) {
         uscuid_ul_poller_stop(instance->uscuid_ul_poller);
         uscuid_ul_poller_free(instance->uscuid_ul_poller);
-    } else if(instance->protocol == NfcMagicProtocolSlix) {
-        slix_poller_stop(instance->slix_poller);
-        slix_poller_free(instance->slix_poller);
-        instance->slix_poller = NULL;
+    } else if(instance->protocol == NfcMagicProtocolIso15693) {
+        iso15693_poller_stop(instance->iso15693_poller);
+        iso15693_poller_free(instance->iso15693_poller);
+        instance->iso15693_poller = NULL;
     }
     scene_manager_set_scene_state(
         instance->scene_manager, NfcMagicSceneWrite, NfcMagicSceneWriteStateCardSearch);
