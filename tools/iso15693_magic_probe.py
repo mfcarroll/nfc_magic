@@ -160,6 +160,10 @@ def parse_info(text):
 
 
 _BLOCK_ROW = re.compile(r"([0-9A-Fa-f]{2}(?:\s[0-9A-Fa-f]{2}){3})\s*\|\s*(\d)\s*\|")
+# `hf 15 dump` rows look like:  " 63/0x3F | 00 00 00 00 | 0 | ...."
+_DUMP_ROW = re.compile(
+    r"(?m)^\s*(?:\[[=+!\-]\]\s*)?(\d+)/0x[0-9A-Fa-f]+\s*\|\s*"
+    r"((?:[0-9A-Fa-f]{2}\s+)+[0-9A-Fa-f]{2})\s*\|")
 
 
 def parse_rdbl(text):
@@ -168,6 +172,14 @@ def parse_rdbl(text):
     if not m:
         return False, None, None
     return True, re.sub(r"\s+", " ", m.group(1).upper()), (m.group(2) == "1")
+
+
+def parse_dump(text):
+    """Parse `hf 15 dump` -> {block_num: 'AA BB CC DD'} for every row that read."""
+    out = {}
+    for m in _DUMP_ROW.finditer(clean(text)):
+        out[int(m.group(1))] = re.sub(r"\s+", " ", m.group(2).strip().upper())
+    return out
 
 
 def block_is_zero(data_hex):
@@ -180,10 +192,39 @@ def pm15_info(pm3, split):
     return parse_info(raw), raw
 
 
-def pm15_rdbl(pm3, block, split):
-    raw = pm3_exec(pm3, ["hf 15 rdbl -* -b %d" % block], split, timeout=30)
-    ok, data, locked = parse_rdbl(raw)
-    return ok, data, locked, raw
+def pm15_rdbl(pm3, block, split, tries=3):
+    """Read one block, retrying: marginal coupling drops reads at random, so a block that reads even
+    once is real. Returns (ok, data, locked, raw)."""
+    raw_all = ""
+    for _ in range(max(1, tries)):
+        raw = pm3_exec(pm3, ["hf 15 rdbl -* -b %d" % block], split, timeout=30)
+        raw_all += raw + "\n"
+        ok, data, locked = parse_rdbl(raw)
+        if ok:
+            return True, data, locked, raw_all
+    return False, None, None, raw_all
+
+
+def pm15_dump(pm3, split, tries=3):
+    """Read the whole card in ONE field session per attempt (far more reliable than per-block rdbl),
+    merged across `tries` attempts: a block that reads in ANY attempt is real. Returns (blocks, raw)."""
+    merged, raw_all = {}, ""
+    for _ in range(max(1, tries)):
+        raw = pm3_exec(pm3, ["hf 15 dump"], split, timeout=90)
+        raw_all += raw + "\n---- dump attempt ----\n"
+        for b, v in parse_dump(raw).items():
+            merged.setdefault(b, v)  # keep the first successful read of each block
+    return merged, raw_all
+
+
+def pm15_info_retry(pm3, split, tries=3):
+    info, raw_all = {"uid": None}, ""
+    for _ in range(max(1, tries)):
+        info, raw = pm15_info(pm3, split)
+        raw_all += raw + "\n"
+        if info.get("uid"):
+            return info, raw_all
+    return info, raw_all
 
 
 def pm15_wrbl(pm3, block, data_hex, split):
@@ -227,33 +268,32 @@ def probe_info(ctx):
 
 
 def probe_capacity(ctx):
-    info = ctx["state"].get("info") or pm15_info(ctx["pm3"], ctx["split"])[0]
+    info = ctx["state"].get("info") or pm15_info_retry(ctx["pm3"], ctx["split"])[0]
     reported = info.get("block_count") or 0
-    if not reported:
-        print(C("warn", "   no reported block count from info; probing up to --max-probe."))
-    ceiling = min(ctx["max_probe"], (reported + 3) if reported else ctx["max_probe"])
-    print("   probing block reads 0..%d (reported %s)..." % (ceiling, reported or "?"))
-    last_ok, first_fail, results = -1, None, []
-    for b in range(0, ceiling + 1):
-        ok, data, locked, raw = pm15_rdbl(ctx["pm3"], b, ctx["split"])
-        ctx["save_raw"]("capacity_b%03d" % b, raw)
-        results.append({"block": b, "ok": ok, "data": data, "locked": locked})
-        if ok:
-            last_ok = b
-        elif first_fail is None:
-            first_fail = b
-            # stop a few past the first failure (confirm it's a real edge, not a one-off)
-            if b > reported:
-                break
-    physical = last_ok + 1
+    # Read the whole card in one field session, merged over several attempts. A block that reads in
+    # ANY attempt is REAL; one that never reads (across all attempts) is a phantom / doesn't exist.
+    # This is immune to the per-read coupling flakiness that scatters single rdbl failures.
+    merged, raw = pm15_dump(ctx["pm3"], ctx["split"], tries=ctx["dump_tries"])
+    ctx["save_raw"]("capacity_dumps", raw)
+    readable = sorted(merged)
+    physical = (max(readable) + 1) if readable else 0
+    # holes = blocks below the max that still never read (would suggest deeper flakiness, not capacity)
+    holes = [b for b in range(physical) if b not in merged]
     phantom = max(0, reported - physical) if reported else None
-    verdict = C("ok", "matches reported") if (reported and physical == reported) else \
-        C("warn", "OVER-reports by %d (phantom tail)" % phantom) if phantom else C("info", "?")
-    print("   physical blocks (reads OK): %s   first failed read: %s   -> %s"
-          % (physical, first_fail, verdict))
+
+    print("   read %d/%s blocks over %d dump(s); highest readable block = %s -> physical ~= %d"
+          % (len(readable), reported or "?", ctx["dump_tries"], (physical - 1) if physical else None, physical))
+    if holes:
+        print(C("warn", "   unread holes below the max (likely still flaky coupling, reposition): %s"
+                % holes[:16] + (" ..." if len(holes) > 16 else "")))
+    if reported and phantom:
+        print(C("warn", "   card OVER-reports %d block(s): reports %d, only %d are physically readable"
+                % (phantom, reported, physical)))
+    elif reported and physical == reported and not holes:
+        print(C("ok", "   physical matches reported (%d)" % reported))
     ctx["state"]["physical_blocks"] = physical
-    return {"ok": True, "physical_blocks": physical, "reported": reported,
-            "phantom": phantom, "first_fail": first_fail, "blocks": results}
+    return {"ok": True, "physical_blocks": physical, "reported": reported, "phantom": phantom,
+            "readable_count": len(readable), "holes": holes, "blocks": merged}
 
 
 def probe_magictype(ctx):
@@ -267,13 +307,16 @@ def probe_magictype(ctx):
           % (C("ok", "PRESENT (un-finalized V3 card)") if res["v3_config_mode"] else C("dim", "no"),
              ("  [%s / %s]" % (da, db)) if (ok_a and ok_b) else ""))
 
-    # 2) gen1 / gen2 UID-write test (destructive: changes the UID, then restored)
+    # 2) gen1 / gen2 UID-write test (destructive: changes the UID). We ALWAYS restore afterwards,
+    #    trying both methods, because a flaky verify must never leave the card on a test UID.
     if ctx["destructive"]:
-        orig = (ctx["state"].get("info") or {}).get("uid")
+        orig_info, _ = pm15_info_retry(ctx["pm3"], ctx["split"])  # snapshot the real UID reliably
+        orig = orig_info.get("uid")
         orig_compact = orig.replace(" ", "") if orig else None
+        print("   original UID (to restore): %s" % (orig or C("warn", "UNKNOWN -- restore may be impossible")))
         for gen, test_uid in (("gen1", TEST_UID_GEN1), ("gen2", TEST_UID_GEN2)):
-            set_ok, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
-            info2, iraw = pm15_info(ctx["pm3"], ctx["split"])
+            _, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
+            info2, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])  # retried read-back
             ctx["save_raw"]("magictype_%s" % gen, sraw + "\n---info---\n" + iraw)
             got = (info2.get("uid") or "").replace(" ", "").upper()
             worked = got == test_uid.upper()
@@ -282,12 +325,23 @@ def probe_magictype(ctx):
                   % (gen, C("ok", "WORKS") if worked else C("dim", "no"), test_uid, got or "?"))
             if worked and res["magic_method"] is None:
                 res["magic_method"] = gen
-        # restore original UID with whatever worked
-        if orig_compact and res["magic_method"]:
-            rok, rraw = pm15_csetuid(ctx["pm3"], orig_compact, res["magic_method"], ctx["split"])
-            ctx["save_raw"]("magictype_restore", rraw)
-            print("   restored original UID %s via %s: %s"
-                  % (orig, res["magic_method"], C("ok", "ok") if rok else C("warn", "check manually")))
+        # ALWAYS restore -- try every method until the UID reads back as the original.
+        if orig_compact:
+            restored = False
+            for gen in ("gen2", "gen1"):
+                _, rraw = pm15_csetuid(ctx["pm3"], orig_compact, gen, ctx["split"])
+                chk, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
+                ctx["save_raw"]("magictype_restore_%s" % gen, rraw + "\n---info---\n" + iraw)
+                if (chk.get("uid") or "").replace(" ", "").upper() == orig_compact.upper():
+                    restored = True
+                    break
+            res["uid_restored"] = restored
+            print("   restore original UID %s: %s"
+                  % (orig, C("ok", "ok") if restored else
+                     C("err", "FAILED -- re-clone this card from its .nfc to fix the UID")))
+        else:
+            res["uid_restored"] = False
+            print(C("err", "   could not snapshot the original UID -- cannot restore; re-clone the card."))
     else:
         print(C("dim", "   (gen1/gen2 write test skipped -- pass --destructive to try them)"))
     ctx["state"]["magic_method"] = res["magic_method"]
@@ -306,39 +360,47 @@ def probe_edgepages(ctx):
     test = "AA BB CC DD"
     res = {"last_real": last_real, "first_phantom": first_phantom}
 
-    # snapshot block 0 and the last real block so we can detect aliasing / restore
+    # Snapshot block 0 (aliasing check) and the last real block (to restore). Retried reads.
     _, blk0_before, _, _ = pm15_rdbl(ctx["pm3"], 0, ctx["split"])
     ok_lr_read, lr_before, _, _ = pm15_rdbl(ctx["pm3"], last_real, ctx["split"])
+    if not ok_lr_read:
+        print(C("warn", "   couldn't snapshot block %d -- will not be able to restore it; skipping edgepages."
+                % last_real))
+        return {"ok": False, "skipped": "could not snapshot last real block (flaky coupling)"}
 
+    # verdict is by READ-BACK, not the write command's marker (which is unreliable at marginal coupling)
     print("   writing %s to last real block %d..." % (test, last_real))
-    w_ok, wraw = pm15_wrbl(ctx["pm3"], last_real, test, ctx["split"])
+    _, wraw = pm15_wrbl(ctx["pm3"], last_real, test, ctx["split"])
     r_ok, r_data, _, _ = pm15_rdbl(ctx["pm3"], last_real, ctx["split"])
-    res["last_real_write_ok"] = w_ok
     res["last_real_readback"] = r_data
-    res["last_real_real"] = bool(w_ok and r_ok and r_data == test)
-    print("     -> write %s, reads back %s -> %s"
-          % (C("ok", "ok") if w_ok else C("err", "fail"), r_data,
-             C("ok", "REAL, writable") if res["last_real_real"] else C("warn", "unexpected")))
+    res["last_real_real"] = bool(r_ok and r_data == test)
+    print("     -> reads back %s -> %s"
+          % (r_data, C("ok", "REAL, writable") if res["last_real_real"] else C("warn", "did NOT take")))
 
-    print("   writing %s to first phantom block %d..." % (test, first_phantom))
-    pw_ok, pwraw = pm15_wrbl(ctx["pm3"], first_phantom, test, ctx["split"])
+    print("   writing %s to first phantom block %d (expect failure)..." % (test, first_phantom))
+    _, pwraw = pm15_wrbl(ctx["pm3"], first_phantom, test, ctx["split"])
     pr_ok, pr_data, _, _ = pm15_rdbl(ctx["pm3"], first_phantom, ctx["split"])
     _, blk0_after, _, _ = pm15_rdbl(ctx["pm3"], 0, ctx["split"])
     aliased = (blk0_before is not None and blk0_after is not None and blk0_before != blk0_after)
-    res.update({"phantom_write_ok": pw_ok, "phantom_readback": pr_data,
+    res.update({"phantom_readable": pr_ok, "phantom_readback": pr_data,
                 "block0_before": blk0_before, "block0_after": blk0_after, "aliased": aliased})
-    print("     -> write %s, reads back %s%s"
-          % (C("ok", "ok (!)") if pw_ok else C("dim", "fail (expected)"),
-             (pr_data if pr_ok else C("dim", "fail (expected)")),
+    print("     -> phantom block %s%s"
+          % (C("warn", "READ BACK %s (real, not phantom!)" % pr_data) if (pr_ok and pr_data == test)
+             else C("ok", "did not take (phantom, as expected)"),
              C("err", "   ALIASED onto block 0!") if aliased else ""))
-    ctx["save_raw"]("edgepages",
-                    "last_real write:\n%s\nphantom write:\n%s" % (wraw, pwraw))
+    ctx["save_raw"]("edgepages", "last_real write:\n%s\nphantom write:\n%s" % (wraw, pwraw))
 
-    # restore the last real block
-    if ok_lr_read and lr_before is not None:
-        rok, _ = pm15_wrbl(ctx["pm3"], last_real, lr_before, ctx["split"])
-        print("   restored block %d to %s: %s"
-              % (last_real, lr_before, C("ok", "ok") if rok else C("warn", "check manually")))
+    # ALWAYS restore the last real block, verify by read-back.
+    for _ in range(3):
+        pm15_wrbl(ctx["pm3"], last_real, lr_before, ctx["split"])
+        rok, rdata, _, _ = pm15_rdbl(ctx["pm3"], last_real, ctx["split"])
+        if rok and rdata == lr_before:
+            print("   restored block %d to %s: %s" % (last_real, lr_before, C("ok", "ok")))
+            res["restored"] = True
+            break
+    else:
+        print(C("err", "   restore of block %d FAILED -- re-clone the card from its .nfc." % last_real))
+        res["restored"] = False
     return {"ok": True, **res}
 
 
@@ -346,14 +408,17 @@ def probe_impersonate(ctx):
     if not ctx["destructive"]:
         print(C("warn", "   impersonate needs --destructive (it rewrites the config). Skipping."))
         return {"ok": False, "skipped": "needs --destructive"}
-    orig = ctx["state"].get("info") or pm15_info(ctx["pm3"], ctx["split"])[0]
+    orig, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
     orig_bc, orig_bs, orig_ic = orig.get("block_count"), orig.get("block_size"), orig.get("ic_ref")
     print("   original geometry: %s blocks x %s bytes, IC ref %s"
           % (orig_bc, orig_bs, _hx(orig_ic)))
+    print(C("dim", "   NOTE: this sends a STANDALONE gen2 CFG frame; many cards only accept geometry as"))
+    print(C("dim", "         part of the full UID-write sequence. For real impersonation testing, clone a"))
+    print(C("dim", "         synthetic .nfc (make_test_iso15693_nfc.py) with the nfc_magic app instead."))
     tried = []
     for name, blocks, bsize, icref in ctx["impersonate_targets"]:
         raw = pm15_cfg_raw(ctx["pm3"], blocks - 1, bsize - 1, icref, ctx["split"])
-        info2, iraw = pm15_info(ctx["pm3"], ctx["split"])
+        info2, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
         ctx["save_raw"]("impersonate_%s" % name, raw + "\n---info---\n" + iraw)
         got_bc, got_ic = info2.get("block_count"), info2.get("ic_ref")
         accepted = (got_bc == blocks and got_ic == icref)
@@ -416,8 +481,9 @@ def main():
     ap.add_argument("--destructive", action="store_true",
                     help="allow probes that WRITE to the card (magictype UID test, edgepages, impersonate). "
                          "They snapshot + best-effort restore, but use a blank card first.")
-    ap.add_argument("--max-probe", type=int, default=80,
-                    help="capacity: highest block number to probe-read (default 80).")
+    ap.add_argument("--dump-tries", type=int, default=3,
+                    help="capacity/read: number of full-card dump attempts to merge (a block that reads "
+                         "in ANY attempt is real). Higher = more robust to flaky coupling (default 3).")
     ap.add_argument("--flipper-note", action="store_true",
                     help="after the proxmark probes, prompt you to read the card in the Flipper NFC app and "
                          "note what IT reports (captures proxmark-vs-Flipper differences).")
@@ -492,7 +558,8 @@ def main():
             hdr = "CARD '%s'   probes: %s" % (card, ", ".join(probes))
             print("\n" + C("head", "=" * 78 + "\n  " + hdr + "\n" + "=" * 78))
             wlog("\n" + "#" * 78 + "\n# " + hdr + "\n" + "#" * 78)
-            ask(C("pm3", "  [PM3] place card '%s' on the Proxmark3 antenna, then Enter (Ctrl-C aborts)... " % card))
+            if not args.dry_run:
+                ask(C("pm3", "  [PM3] place card '%s' on the Proxmark3 antenna, then Enter (Ctrl-C aborts)... " % card))
 
             state = {}
 
@@ -506,7 +573,7 @@ def main():
                     f.write(text + "\n")
 
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
-                   "destructive": args.destructive, "max_probe": args.max_probe,
+                   "destructive": args.destructive, "dump_tries": args.dump_tries,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
