@@ -208,25 +208,29 @@ Proof it's ordering: `oversize_empty_70`, written next when the card already adv
   **non-empty → Partial** (real loss, named blocks); **empty → stays Success** (card reports it as zero,
   clone still matches). This also removes the stale-tail-on-reuse bug, and turns the old "Clone partial:
   2 of 66 blocks" (empty over-read) into a correct **byte-identical Success**. Fail-scene reworded to
-  "N block(s) didn't fit the card: <list>". Builds clean; FAP links, APPCHK passes. **Needs on-device
-  re-validation** (see next steps).
+  "N block(s) didn't fit the card: <list>". Builds clean; FAP links, APPCHK passes.
+- **VALIDATED on-device 2026-07-27** (rebuilt FAP, full ground-truth sweep, dual-reader confirmation):
+  5/6 **byte-identical PASS**; the physically-64 card advertised 28/56/64/**70** blocks across NXP/ST/TI
+  ICs, confirmed by BOTH the stock NFC read-back AND the `--pm3-crosscheck` proxmark read (UID +
+  block_count + IC all matched the source every time). `oversize_edgedata_70` → **PARTIAL with exactly 6
+  `not-written` blocks (64-69), NO `stale`** — blocks 56-63 are now written, so the reuse-stale bug is
+  gone; on-device the app showed "Clone partial / UID + data cloned. / 6 block(s) didn't fit the card:
+  64 65 66 67 68 69". The same card was reused across all 6 writes with no stale confound.
 - **Build hygiene** (`39b5586`): the FAP manifest now scopes `sources=["*.c*", "!tools"]` — the default
   recursive `*.c*` was sweeping in `tools/` (venv + `__pycache__` `.cpython-*.pyc` match `*.c*`), which
   broke the link. `tools/` is dev-only; excluded like the firmware excludes `lib/`.
 
 ### Immediate next steps (in priority order)
-1. **Deploy the rebuilt FAP** (`build/f7-firmware-C/.extapps/nfc_magic_dev.fap`) to the Flipper and
-   **re-validate the write change on-device**: re-clone the test card, then clone `oversize_edgedata_70`
-   onto it via the app → expect **Clone partial, "6 block(s) didn't fit: 64 65 66 67 68 69"** (blocks
-   56-63 now written, no more `stale` — only the true phantom 64-69). Confirm `oversize_empty_70` and the
-   real 66-block access-pass source both report **Success** (empty over-capacity, byte-identical).
-2. **Re-run the ground-truth sweep** (`tools/.venv/bin/python tools/flipper_ground_truth.py`) on a
-   freshly re-cloned card (or write a ≥64 source first) → all six should now be clean; the mismatch
-   labels (`stale`/`not-written`) make any residue self-diagnosing.
-3. **Re-clone both test cards** from their `.nfc` — the probe runs left them at 64/0x8B with block 63 =
-   `69 96 00 00`.
-4. **Test the real access-pass reader** with the clone (does the door open? — settles UID-only vs more).
-5. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
+The write-every-block change is validated (above) — the SLIX/ISO15693 clone feature is now
+functionally complete and hardware-proven end-to-end. Remaining:
+1. **Test the real access-pass reader** with a clone of the actual pass (does the door open? — settles
+   whether the reader is UID-only or checks block data / an anti-clone signature). This is the last
+   real-world unknown for the original use case.
+2. **Re-clone both test cards** from their `.nfc` — the probe runs left them at 28/56 geometry and 64/0x8B.
+3. **Upstream polish** (if pursuing a PR): the feature builds clean and behaves correctly; a pass for
+   naming/comments/consistency-with-other-magic-types, then decide scope (gen1 clobber split? keep V3
+   out?). See capability-matrix.md for what's intentionally deferred.
+4. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
 
 ### Deferred / out of scope (unchanged)
 Repeatable **V3** magic variant (blocks 0x10/0x11 + finalize; needs a V3 card — screen with
