@@ -167,17 +167,39 @@ confirmed on a real card:
 - Note: gen1's UID write stamps blocks 0x38/0x39/0x3E/0x3F (56/57/62/63); a source with real data in
   those clones faithfully only via **gen2** (which uses separate config refs). Our card takes gen2.
 
+### Harness work (2026-07-27, this session)
+Two test-rig goals: (1) assess the magic cards, (2) write configs and ground-truth the app on-device.
+
+- **Explained the "impersonate → CLAMPED to 64" confusion** — it was a *probe artifact*, not a card
+  clamp. The `magictype` gen2 `csetuid` test (when it succeeds) rewrites the CFG block to proxmark's
+  default geometry (64 blk / IC 0x8B) as a side effect, on both the test write *and* the UID-restore.
+  So `impersonate` then read 64/0x8B as its baseline (contradicting `info`'s 66/0x0F seconds earlier)
+  and mislabelled every *ignored* standalone-CFG write as a clamp. The card CAN advertise 66/0x0F —
+  the app clone (full UID-write sequence) sets it; standalone CFG frames are simply ignored by it.
+- **Fixed the probe** (commit `3e17e2f`): `remember_geometry()` snapshots run-start geometry before any
+  destructive probe; `magictype` reports the CFG side-effect honestly and says to re-clone if it can't
+  restore; `impersonate` distinguishes canonical vs live geometry and drops the bogus "CLAMPED" verdict.
+- **Built the Flipper ground-truth harness** (commit `1806408`) — `flipper_ground_truth.py` +
+  `flipper_bridge.py`. Uploads a source `.nfc` over the Flipper CLI, prompts the on-device NFC Magic
+  Write + stock-app Read/Save, auto-detects the read-back by diffing `nfc/`, downloads it, and compares
+  source vs read-back (identity, block-by-block, over-capacity). Optional pm3 second read. Needs
+  pyserial → runs under `tools/.venv` (gitignored). Verdict logic verified offline; the on-device
+  write/read is the only manual step. See `tools/README.md`.
+- **Card state note:** the probe's destructive runs left both test cards reporting **64 blk / IC 0x8B**
+  (proxmark default) with block 63 = `69 96 00 00` — re-clone from `.nfc` to restore the 66/0x0F identity.
+
 ### Immediate next steps (in priority order)
-1. **Re-clone the destructive-test card** (`my64blk` / the access-pass clone) from its `.nfc` — the
-   probe harness's destructive run left block 63 = `69 96 00 00` (gen1-commit leftover) and possibly
-   a stale UID. Then `hf 15 rdbl -* -b 63` → expect `00 00 00 00` (confirms gen2 clone fidelity).
-2. **Re-run the capacity probe** (`tools/iso15693_magic_probe.py --card my64blk --probes info,capacity,
-   magictype`) → should now cleanly report 66 reported / 64 physical / 2 phantom.
-3. **App-side impersonation sweep** with `tools/test_nfc/*.nfc` (SLIX-28, LRi2K-56, Tag-it-64, the two
-   oversize/edge-data files) → clone each, re-read, confirm the card advertises each identity and that
-   over-capacity edge data is reported correctly.
-4. **Test the real access-pass reader** with the clone (does the door open? — settles whether it's
-   UID-only or checks more).
+1. **Re-clone both test cards** from their `.nfc` (via the app) — the probe's destructive runs reset
+   geometry to 64/0x8B and left block 63 = `69 96 00 00`. After: `hf 15 info` → 66 blk / IC 0x0F, and
+   `hf 15 rdbl -* -b 63` → `00 00 00 00`.
+2. **Run the Flipper ground-truth sweep** over `tools/test_nfc/slixtest_*.nfc`:
+   `tools/.venv/bin/python tools/flipper_ground_truth.py --pm3-crosscheck`. Expected: SLIX-28 /
+   LRi2K-56 / Tag-it-64 / edgedata_64 → PASS; oversize_empty_70 → PASS (empty over-capacity);
+   oversize_edgedata_70 → PARTIAL (6 non-empty blocks the 64-block card can't hold — validates the
+   app's honest-partial reporting).
+3. **Re-run the capacity probe** (`--card my64blk --probes info,capacity`) → 66 reported / 64 physical
+   / 2 phantom, now that magictype won't silently corrupt the baseline.
+4. **Test the real access-pass reader** with the clone (does the door open? — settles UID-only vs more).
 5. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
 
 ### Deferred / out of scope (unchanged)
