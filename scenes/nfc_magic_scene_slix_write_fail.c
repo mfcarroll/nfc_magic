@@ -24,13 +24,18 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
     notification_message(instance->notifications, partial ? &sequence_success : &sequence_error);
 
     if(partial) {
-        // Full-width text box (no icon) so the detail can wrap. Distinguish real write failures
-        // (locked/protected blocks, named individually) from an over-capacity source (its tail
-        // blocks don't fit the smaller target -- often just phantom blocks a card over-reports).
+        // Full-width text box (no icon) so the detail can wrap. Partial means some NON-EMPTY source
+        // blocks wouldn't write -- that data is past the card's real capacity (or the blocks are
+        // locked), so it couldn't be cloned. Name the blocks. (Empty blocks that don't fit lose
+        // nothing and never reach here -- they stay a clean Success.)
         FuriString* text = furi_string_alloc();
-        furi_string_cat_str(text, instance->slix_is_wipe_mode ? "Wiped.\n" : "UID cloned.\n");
+        furi_string_cat_str(text, instance->slix_is_wipe_mode ? "Wiped.\n" : "UID + data cloned.\n");
         if(instance->slix_clone_failed_count > 0) {
-            furi_string_cat_printf(text, "%u block(s) failed: ", instance->slix_clone_failed_count);
+            furi_string_cat_printf(
+                text,
+                instance->slix_is_wipe_mode ? "%u block(s) wouldn't clear: " :
+                                              "%u block(s) didn't fit the card: ",
+                instance->slix_clone_failed_count);
             uint16_t shown = 0;
             for(uint16_t block = 0; block < 256; block++) {
                 if(instance->slix_clone_failed_bitmap[block / 8] & (1u << (block % 8))) {
@@ -43,15 +48,6 @@ void nfc_magic_scene_slix_write_fail_on_enter(void* context) {
                 }
             }
             furi_string_push_back(text, '\n');
-        }
-        if(instance->slix_clone_over_capacity > 0) {
-            const uint16_t target_capacity =
-                instance->slix_clone_blocks_total - instance->slix_clone_over_capacity;
-            furi_string_cat_printf(
-                text,
-                "%u block(s) beyond the %u-block target.",
-                instance->slix_clone_over_capacity,
-                target_capacity);
         }
         widget_add_string_element(
             widget,

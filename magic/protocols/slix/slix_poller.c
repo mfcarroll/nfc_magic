@@ -218,38 +218,40 @@ static void slix_poller_write_source_blocks(SlixPoller* instance, Iso15693_3Poll
 
     if(source_count == 0 || block_size == 0) return;
 
-    // Don't write past the target's own capacity. A source read from a card that over-reports its
-    // block count (or a genuinely larger card) would otherwise fail the out-of-range tail. Cap at
-    // the target's reported block count when it's known and smaller, and report the shortfall as
-    // "over capacity" rather than a write failure.
-    const Iso15693_3Data* target = nfc_poller_get_data(instance->poller);
-    const uint16_t target_count = iso15693_3_get_block_count(target);
-    uint16_t write_count = source_count;
-    if(target_count > 0 && target_count < write_count) {
-        // Count only NON-EMPTY blocks past the target's capacity as a real shortfall: an empty tail
-        // means no source data is lost. (The target physically can't represent those blocks -- reads
-        // and writes to them fail -- but the source had nothing there to clone.)
-        for(uint16_t block = target_count; block < source_count && block < 256; block++) {
-            const uint8_t* block_data = iso15693_3_get_block_data(source, block);
-            for(uint8_t i = 0; i < block_size; i++) {
-                if(block_data[i] != 0) {
-                    instance->clone_over_capacity++;
-                    break;
-                }
-            }
-        }
-        write_count = target_count;
-    }
-
+    // Do our best to reproduce the card EXACTLY: attempt every source block. We deliberately do NOT
+    // cap at the target's advertised block count. On these magic cards WRITE BLOCK is gated by
+    // physical memory, not by the reported count (verified on hardware: writes succeed well past the
+    // advertised count, and a card's high blocks don't even read until they've been written -- so a
+    // pre-write read under-reports true capacity). Capping at the advertised count would also leave
+    // stale data in the reachable gap when re-cloning onto a card that currently advertises fewer
+    // blocks. The only reliable capacity test is to write the block and see if it takes.
+    //
+    // A block that genuinely won't write is the card's real capacity limit. Classify by whether the
+    // source actually had data there:
+    //   - non-empty block that fails -> real shortfall, data lost: clone_failed_count + bitmap (Partial)
+    //   - empty block that fails      -> nothing to clone there, no data lost: clone_over_capacity only
+    //     (the card reports those blocks as zero anyway, so the clone still matches -> stays Success)
+    //
     // block_number is a uint8_t on the wire, so 256 blocks is the ceiling.
-    for(uint16_t block = 0; block < write_count && block < 256; block++) {
+    for(uint16_t block = 0; block < source_count && block < 256; block++) {
         if(iso15693_3_is_block_locked(source, block)) continue;
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
-        if(error != Iso15693_3ErrorNone) {
+        if(error == Iso15693_3ErrorNone) continue;
+
+        bool non_empty = false;
+        for(uint8_t i = 0; i < block_size; i++) {
+            if(block_data[i] != 0) {
+                non_empty = true;
+                break;
+            }
+        }
+        if(non_empty) {
             instance->clone_failed_count++;
             instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
+        } else {
+            instance->clone_over_capacity++;
         }
     }
 }
@@ -281,10 +283,12 @@ static void slix_poller_wipe_blocks(SlixPoller* instance, Iso15693_3Poller* iso_
     }
 }
 
-// The terminal outcome once a write finishes: any block that failed to write, or a source that
-// overran the target, makes it Partial; otherwise Success. (A bare UID write sets neither.)
+// The terminal outcome once a write finishes: only a NON-EMPTY block we couldn't write means the
+// clone is incomplete (real data was lost) -> Partial. Empty blocks that wouldn't take are past the
+// card's real capacity but lose nothing -- the card reports them as zero anyway, so the clone still
+// matches the source -> clean Success. (A bare UID write sets neither counter.)
 static SlixPollerEvent slix_poller_success_or_partial(SlixPoller* instance) {
-    if(instance->clone_failed_count > 0 || instance->clone_over_capacity > 0) {
+    if(instance->clone_failed_count > 0) {
         return SlixPollerEventPartial;
     }
     return SlixPollerEventSuccess;
