@@ -227,6 +227,22 @@ def pm15_info_retry(pm3, split, tries=3):
     return info, raw_all
 
 
+def remember_geometry(ctx, info=None):
+    """Cache the card's reported geometry the FIRST time we see it -- i.e. before any destructive
+    probe rewrites it. `magictype`'s gen2 `csetuid` rewrites the CFG block (to proxmark's default
+    geometry) as a side effect, so probes that run later must compare against this run-start snapshot,
+    not a fresh (possibly already-corrupted) read. Returns {block_count, block_size, ic_ref}."""
+    g = ctx["state"].get("orig_geometry")
+    if g is None:
+        if info is None or info.get("block_count") is None:
+            info, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
+        g = {"block_count": info.get("block_count"),
+             "block_size": info.get("block_size"),
+             "ic_ref": info.get("ic_ref")}
+        ctx["state"]["orig_geometry"] = g
+    return g
+
+
 def pm15_wrbl(pm3, block, data_hex, split):
     d = data_hex.replace(" ", "")
     raw = pm3_exec(pm3, ["hf 15 wrbl -* -b %d -d %s" % (block, d)], split, timeout=30)
@@ -264,6 +280,7 @@ def probe_info(ctx):
     print("   geometry... %s blocks x %s bytes  (reported)"
           % (info["block_count"], info["block_size"]))
     ctx["state"]["info"] = info
+    remember_geometry(ctx, info)  # earliest read wins as the run-start geometry snapshot
     return {"ok": True, "info": info}
 
 
@@ -329,6 +346,7 @@ def probe_magictype(ctx):
         orig_info, _ = pm15_info_retry(ctx["pm3"], ctx["split"])  # snapshot the real UID reliably
         orig = orig_info.get("uid")
         orig_compact = orig.replace(" ", "") if orig else None
+        geo_before = remember_geometry(ctx, orig_info)  # capture geometry BEFORE gen2 clobbers the CFG
         print("   original UID (to restore): %s" % (orig or C("warn", "UNKNOWN -- restore may be impossible")))
         for gen, test_uid in (("gen1", TEST_UID_GEN1), ("gen2", TEST_UID_GEN2)):
             _, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
@@ -358,6 +376,38 @@ def probe_magictype(ctx):
         else:
             res["uid_restored"] = False
             print(C("err", "   could not snapshot the original UID -- cannot restore; re-clone the card."))
+
+        # gen2 `csetuid` writes proxmark's DEFAULT CFG block (geometry) as a side effect, and so does
+        # the UID-restore write above. Detect and report that -- otherwise the card silently advertises
+        # a different block-count / IC ref than it started with, and later probes read the wrong baseline.
+        if geo_before.get("block_count") is not None:
+            after, araw = pm15_info_retry(ctx["pm3"], ctx["split"])
+            ctx["save_raw"]("magictype_geometry", araw)
+            geo_after = {"block_count": after.get("block_count"),
+                         "block_size": after.get("block_size"), "ic_ref": after.get("ic_ref")}
+            dirty = (geo_after["block_count"] != geo_before["block_count"]
+                     or geo_after["ic_ref"] != geo_before["ic_ref"])
+            if dirty and all(geo_before.get(k) is not None for k in ("block_count", "block_size", "ic_ref")):
+                # best-effort standalone-CFG restore (works only on cards that accept standalone CFG)
+                pm15_cfg_raw(ctx["pm3"], geo_before["block_count"] - 1,
+                             geo_before["block_size"] - 1, geo_before["ic_ref"], ctx["split"])
+                after2, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
+                if (after2.get("block_count") == geo_before["block_count"]
+                        and after2.get("ic_ref") == geo_before["ic_ref"]):
+                    dirty = False
+                    geo_after = {"block_count": after2.get("block_count"),
+                                 "block_size": after2.get("block_size"), "ic_ref": after2.get("ic_ref")}
+                    print(C("ok", "   geometry restored -> %s blk / IC %s"
+                            % (geo_after["block_count"], _hx(geo_after["ic_ref"]))))
+            res["geometry_before"] = geo_before
+            res["geometry_after"] = geo_after
+            res["geometry_dirty"] = dirty
+            if dirty:
+                print(C("err", "   ! geometry CHANGED by the gen2 test: %s blk / IC %s  (was %s blk / IC %s)"
+                        % (geo_after["block_count"], _hx(geo_after["ic_ref"]),
+                           geo_before["block_count"], _hx(geo_before["ic_ref"]))))
+                print(C("err", "     proxmark can't restore it -- this card ignores standalone CFG writes;"))
+                print(C("warn", "     re-clone this card from its .nfc via the nfc_magic app to restore its identity."))
     else:
         print(C("dim", "   (gen1/gen2 write test skipped -- pass --destructive to try them)"))
     ctx["state"]["magic_method"] = res["magic_method"]
@@ -424,13 +474,20 @@ def probe_impersonate(ctx):
     if not ctx["destructive"]:
         print(C("warn", "   impersonate needs --destructive (it rewrites the config). Skipping."))
         return {"ok": False, "skipped": "needs --destructive"}
-    orig, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
-    orig_bc, orig_bs, orig_ic = orig.get("block_count"), orig.get("block_size"), orig.get("ic_ref")
-    print("   original geometry: %s blocks x %s bytes, IC ref %s"
-          % (orig_bc, orig_bs, _hx(orig_ic)))
-    print(C("dim", "   NOTE: this sends a STANDALONE gen2 CFG frame; many cards only accept geometry as"))
-    print(C("dim", "         part of the full UID-write sequence. For real impersonation testing, clone a"))
-    print(C("dim", "         synthetic .nfc (make_test_iso15693_nfc.py) with the nfc_magic app instead."))
+    # canonical = the card's geometry at run start (before any destructive probe touched the CFG);
+    # live = what it reports right now (a preceding `magictype` gen2 test may have already rewritten it).
+    canon = remember_geometry(ctx)
+    live, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
+    live_bc, live_ic = live.get("block_count"), live.get("ic_ref")
+    print("   run-start geometry: %s blocks x %s bytes, IC ref %s"
+          % (canon.get("block_count"), canon.get("block_size"), _hx(canon.get("ic_ref"))))
+    if live_bc != canon.get("block_count") or live_ic != canon.get("ic_ref"):
+        print(C("warn", "   card currently reports %s blk / IC %s -- already changed by an earlier probe "
+                        "(the magictype gen2 test)." % (live_bc, _hx(live_ic))))
+    print(C("dim", "   NOTE: this sends a STANDALONE gen2 CFG frame; many cards (incl. this one) only accept"))
+    print(C("dim", "         geometry as part of the FULL UID-write sequence, so standalone frames are ignored."))
+    print(C("dim", "         Real impersonation is tested by cloning a synthetic .nfc with the nfc_magic app"))
+    print(C("dim", "         (make_test_iso15693_nfc.py -> flipper_ground_truth.py), not by this probe."))
     tried = []
     for name, blocks, bsize, icref in ctx["impersonate_targets"]:
         raw = pm15_cfg_raw(ctx["pm3"], blocks - 1, bsize - 1, icref, ctx["split"])
@@ -438,20 +495,26 @@ def probe_impersonate(ctx):
         ctx["save_raw"]("impersonate_%s" % name, raw + "\n---info---\n" + iraw)
         got_bc, got_ic = info2.get("block_count"), info2.get("ic_ref")
         accepted = (got_bc == blocks and got_ic == icref)
-        clamped = (got_bc is not None and got_bc != blocks)
-        verdict = C("ok", "ACCEPTED") if accepted else \
-            (C("warn", "CLAMPED to %s blocks" % got_bc) if clamped else C("err", "no change / rejected"))
+        unchanged = (got_bc == live_bc and got_ic == live_ic)
+        if accepted:
+            verdict, tag = C("ok", "ACCEPTED"), "accepted"
+        elif unchanged:
+            verdict, tag = C("warn", "no change (standalone CFG ignored)"), "ignored"
+        else:
+            verdict, tag = C("err", "unexpected -> %s blk / IC %s" % (got_bc, _hx(got_ic))), "unexpected"
         print("   -> %-14s want %d blk / IC %s : got %s blk / IC %s -> %s"
               % (name, blocks, _hx(icref), got_bc, _hx(got_ic), verdict))
-        tried.append({"name": name, "want_blocks": blocks, "want_ic": icref,
-                      "got_blocks": got_bc, "got_ic": got_ic, "accepted": accepted, "clamped": clamped})
-    # restore original geometry
-    if orig_bc and orig_bs and orig_ic is not None:
-        pm15_cfg_raw(ctx["pm3"], orig_bc - 1, orig_bs - 1, orig_ic, ctx["split"])
+        tried.append({"name": name, "want_blocks": blocks, "want_ic": icref, "got_blocks": got_bc,
+                      "got_ic": got_ic, "accepted": accepted, "result": tag})
+    # restore to how the card was when this probe STARTED (leave-as-found); does nothing on cards that
+    # ignore standalone CFG -- honestly report whatever the card ends up reporting.
+    if live_bc and live.get("block_size") and live_ic is not None:
+        pm15_cfg_raw(ctx["pm3"], live_bc - 1, live.get("block_size") - 1, live_ic, ctx["split"])
         info3, _ = pm15_info(ctx["pm3"], ctx["split"])
-        print("   restored geometry -> %s blocks, IC ref %s"
+        print("   card now reports -> %s blocks, IC ref %s"
               % (info3.get("block_count"), _hx(info3.get("ic_ref"))))
-    return {"ok": True, "targets": tried}
+    return {"ok": True, "run_start": canon, "live_at_start": {"block_count": live_bc, "ic_ref": live_ic},
+            "targets": tried}
 
 
 PROBES = {

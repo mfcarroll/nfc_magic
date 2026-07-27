@@ -1,3 +1,4 @@
 campaigns/
 __pycache__/
 test_nfc/campaigns/
+.venv/
