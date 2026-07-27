@@ -19,11 +19,34 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
     const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
     const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
+    const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
 
-    // Partial is a soft outcome (UID cloned, some data blocks didn't take); the rest are errors.
-    notification_message(instance->notifications, partial ? &sequence_success : &sequence_error);
+    // Partial and over-capacity are soft (successful) outcomes; card-lost / not-magic are errors.
+    notification_message(
+        instance->notifications, (partial || over_capacity) ? &sequence_success : &sequence_error);
 
-    if(partial) {
+    if(over_capacity) {
+        // The clone matched the source, but the card ended up advertising more blocks than it
+        // physically holds (the extra source blocks were empty, so nothing was lost). Success, but
+        // worth flagging: a reader that probes the top blocks sees them error/zero, and you can't
+        // store real data there.
+        const uint16_t advertised = instance->iso15693_clone_blocks_total;
+        const uint16_t extra = instance->iso15693_clone_over_capacity;
+        const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) : advertised;
+        FuriString* text = furi_string_alloc();
+        furi_string_cat_printf(
+            text,
+            "Copy matches source. Card holds %u of %u blocks; the top %u were empty. It now "
+            "advertises more than it physically has.",
+            physical,
+            advertised,
+            extra);
+        widget_add_string_element(
+            widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Clone complete");
+        widget_add_text_box_element(
+            widget, 0, 14, 128, 40, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
+        furi_string_free(text);
+    } else if(partial) {
         // Full-width text box (no icon) so the detail can wrap. Partial means some NON-EMPTY source
         // blocks wouldn't write -- that data is past the card's real capacity (or the blocks are
         // locked), so it couldn't be cloned. Name the blocks. (Empty blocks that don't fit lose

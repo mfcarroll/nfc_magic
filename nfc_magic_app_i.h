@@ -106,6 +106,8 @@ typedef enum {
     NfcMagicIso15693WriteFailReasonNotMagic, // card present, but the backdoor write was not accepted
     NfcMagicIso15693WriteFailReasonCardLost, // no card in the field / card removed mid-write
     NfcMagicIso15693WriteFailReasonPartial, // clone: UID written but some data blocks failed
+    NfcMagicIso15693WriteFailReasonOverCapacity, // clone OK, but the card now advertises more blocks
+        // than it physically holds (the extra were empty, so nothing was lost) -- a success with a note
 } NfcMagicIso15693WriteFailReason;
 
 struct NfcMagicApp {

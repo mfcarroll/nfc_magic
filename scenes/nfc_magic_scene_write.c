@@ -161,6 +161,16 @@ static void nfc_magic_scene_write_iso15693_poller_callback(Iso15693PollerEvent e
     NfcMagicApp* instance = context;
 
     if(event == Iso15693PollerEventSuccess) {
+        // Read the clone stats on success too, so the Success handler can distinguish an exact clone
+        // from one where the card ended up advertising more blocks than it physically holds
+        // (over-capacity with empty tail -- no data lost, but worth a note).
+        iso15693_poller_get_clone_result(
+            instance->iso15693_poller,
+            &instance->iso15693_clone_blocks_total,
+            &instance->iso15693_clone_failed_count,
+            &instance->iso15693_clone_over_capacity,
+            instance->iso15693_clone_failed_bitmap,
+            &instance->iso15693_clone_used_gen1);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerSuccess);
     } else if(event == Iso15693PollerEventPartial) {
@@ -300,7 +310,19 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
                 instance->popup, instance->text_store, 52, 32, AlignLeft, AlignCenter);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerSuccess) {
-            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSuccess);
+            // An ISO15693 clone that succeeded but left the card advertising more blocks than it
+            // physically holds (empty over-capacity, no data lost) gets a distinct "clone complete,
+            // with a note" screen instead of the plain Success.
+            if(instance->protocol == NfcMagicProtocolIso15693 &&
+               instance->iso15693_clone_over_capacity > 0) {
+                scene_manager_set_scene_state(
+                    instance->scene_manager,
+                    NfcMagicSceneIso15693WriteFail,
+                    NfcMagicIso15693WriteFailReasonOverCapacity);
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
+            } else {
+                scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSuccess);
+            }
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerPartial) {
             // Gen2/Classic clone uses the shared per-block partial screen; USCUID-UL and ISO15693 have

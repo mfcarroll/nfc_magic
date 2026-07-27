@@ -24,8 +24,10 @@ The magic write frames are an exact port of proxmark3's `SetTag15693Uid` (gen1) 
 - **Writes every source block and reports only real data loss.** WRITE BLOCK on these cards is gated
   by physical memory, not the advertised block count (verified on hardware), so the clone attempts
   every block: a non-empty block that won't write is reported as **Partial** (named); an empty block
-  past the card's real capacity loses nothing and stays a clean **Success**. A card that advertises a
-  larger geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
+  past the card's real capacity loses nothing, so it stays a **Success** — but one flagged with a
+  note that the card now advertises more blocks than it physically holds (a reader probing the top
+  blocks sees them error/zero, and real data can't be stored there). A card that advertises a larger
+  geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
 - **gen1 fidelity is surfaced.** The gen1 backdoor stores the UID in data blocks 56/57/62/63, so a
   gen1 clone can't reproduce a source that uses them. If the source has data there, the confirm warns
   before the write; if the clone actually fell back to gen1, it reports the Partial clone status and
