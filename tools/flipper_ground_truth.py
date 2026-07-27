@@ -109,7 +109,17 @@ def _is_zero(block_hex):
 def compare(src, read):
     sb, rb = blocks_of(src), blocks_of(read)
     overlap = min(len(sb), len(rb))
-    mism = [{"block": i, "src": sb[i], "read": rb[i]} for i in range(overlap) if sb[i] != rb[i]]
+    mism = []
+    for i in range(overlap):
+        if sb[i] == rb[i]:
+            continue
+        if _is_zero(sb[i]) and not _is_zero(rb[i]):
+            kind = "stale"        # source wanted zero; card kept old data (prior clone leftover)
+        elif _is_zero(rb[i]) and not _is_zero(sb[i]):
+            kind = "not-written"  # source data didn't land (phantom block, or capped write)
+        else:
+            kind = "differs"
+        mism.append({"block": i, "src": sb[i], "read": rb[i], "kind": kind})
     overflow = sb[len(rb):]  # source blocks the card had no room for
     overflow_nonempty = [{"block": len(rb) + i, "src": b} for i, b in enumerate(overflow) if not _is_zero(b)]
     r = {
@@ -316,11 +326,22 @@ def main():
             wlog("   geometry  source %s blk / read %s blk  (overlap %s)"
                  % (cmp["src_blocks"], cmp["read_blocks"], cmp["overlap_blocks"]))
             if cmp["data_mismatches"]:
-                wlog(C("warn", "   %d block mismatch(es):" % len(cmp["data_mismatches"])))
+                kinds = {}
+                for m in cmp["data_mismatches"]:
+                    kinds[m["kind"]] = kinds.get(m["kind"], 0) + 1
+                wlog(C("warn", "   %d block mismatch(es)  [%s]:"
+                       % (len(cmp["data_mismatches"]),
+                          ", ".join("%d %s" % (v, k) for k, v in sorted(kinds.items())))))
                 for m in cmp["data_mismatches"][:8]:
-                    wlog("       block %-3d src[%s] != read[%s]" % (m["block"], m["src"], m["read"]))
+                    wlog("       block %-3d src[%s] != read[%s]  (%s)"
+                         % (m["block"], m["src"], m["read"], m["kind"]))
                 if len(cmp["data_mismatches"]) > 8:
                     wlog("       ... and %d more" % (len(cmp["data_mismatches"]) - 8))
+                if any(m["kind"] == "stale" for m in cmp["data_mismatches"]):
+                    wlog(C("dim", "       note: 'stale' blocks are leftover from an earlier clone on this "
+                                  "card -- the app caps writes at the target's CURRENTLY-advertised block"))
+                    wlog(C("dim", "       count, so a larger source doesn't overwrite them. Clone a full-size"))
+                    wlog(C("dim", "       source first (or test this source on a fresh/known card) to isolate."))
             if cmp["src_overflow_blocks"]:
                 tail = "%d source block(s) beyond the card's %s" % (cmp["src_overflow_blocks"], cmp["read_blocks"])
                 if cmp["src_overflow_nonempty"]:
@@ -338,17 +359,26 @@ def main():
             with open(os.path.join(out_dir, "raw", "diff_%s.txt" % base), "w") as f:
                 f.write(diff)
 
-            # ---- optional proxmark cross-read ----
+            # ---- optional proxmark cross-read (needs the card MOVED to the pm3 antenna) ----
             if args.pm3_crosscheck:
                 try:
-                    pmc = pm3_crosscheck(args.pm3, args.pm3_split, src, raw_saver(base))
-                    rec["pm3"] = pmc
-                    wlog("   pm3 cross-read: UID %s %s   block_count %s %s   IC 0x%s"
-                         % (_mk(pmc["uid_match"]), pmc["uid"], _mk(pmc["block_count_match"]),
-                            pmc["block_count"], format(pmc["ic_ref"], "02X") if isinstance(pmc["ic_ref"], int) else "?"))
-                except Exception as e:
-                    wlog(C("err", "   pm3 cross-read error: %s" % e))
-                    rec["pm3"] = {"error": str(e)}
+                    ans = input(C("flip", "   >> move the card to the Proxmark3 antenna, Enter to read "
+                                          "(or 's' to skip): ")).strip().lower()
+                except (EOFError, KeyboardInterrupt):
+                    ans = "s"
+                if ans == "s":
+                    wlog(C("dim", "   pm3 cross-read skipped."))
+                else:
+                    try:
+                        pmc = pm3_crosscheck(args.pm3, args.pm3_split, src, raw_saver(base))
+                        rec["pm3"] = pmc
+                        wlog("   pm3 cross-read: UID %s %s   block_count %s %s   IC 0x%s"
+                             % (_mk(pmc["uid_match"]), pmc["uid"], _mk(pmc["block_count_match"]),
+                                pmc["block_count"],
+                                format(pmc["ic_ref"], "02X") if isinstance(pmc["ic_ref"], int) else "?"))
+                    except Exception as e:
+                        wlog(C("err", "   pm3 cross-read error: %s" % e))
+                        rec["pm3"] = {"error": str(e)}
 
             if not args.keep_uploaded:
                 try:
@@ -357,6 +387,9 @@ def main():
                     pass
             manifest["results"].append(rec)
             save_manifest()
+        if not args.dry_run:
+            wlog("\n" + C("ok", "Done. Campaign dir: %s" % out_dir))
+            wlog("  campaign.log / manifest.json / raw/*  (readbacks, diffs)")
     except FlipperBridgeError as e:
         print(C("err", "\nFlipper error: %s" % e))
         return 1
@@ -368,10 +401,6 @@ def main():
         save_manifest()
         if log_f:
             log_f.close()
-
-    if not args.dry_run:
-        wlog("\n" + C("ok", "Done. Campaign dir: %s" % out_dir))
-        wlog("  campaign.log / manifest.json / raw/*  (readbacks, diffs)")
     return 0
 
 
