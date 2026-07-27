@@ -546,8 +546,10 @@ def probe_writespan(ctx):
     if not phys:
         phys = probe_capacity(ctx).get("physical_blocks")
 
+    # Only need a small window just past the advertised boundary to decide: a couple of blocks below
+    # (known-good baseline) up to a few above. Walking to the physical top would be many slow PM3 calls.
     lo = max(0, adv - 2)
-    hi = min(255, ctx.get("writespan_max") or (max(adv, phys or adv) + 4))
+    hi = min(255, ctx.get("writespan_max") or (adv + 6))
     print("   advertised %s blocks; physical %s; probing writes to blocks %d..%d"
           % (adv, phys if phys else "?", lo, hi))
     no_gap = bool(phys) and adv >= phys
