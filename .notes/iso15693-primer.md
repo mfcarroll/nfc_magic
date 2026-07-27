@@ -100,4 +100,4 @@ non-destructively identifiable: read `0x14`/`0x15` with the OPTION flag and matc
 info/save/UID-write pipeline is already generic. The real capability gaps are **block-data write-back**
 (a generic WRITE-BLOCK `0x21` loop, gated on `block_security` lock bits, with the OPTION flag for TI)
 and the **V3** variant — both code-draftable but **hardware-gated** to verify. See
-[clone-feasibility.md](clone-feasibility.md) and [hardware-plan.md](hardware-plan.md).
+[capability-matrix.md](capability-matrix.md) and [hardware-plan.md](hardware-plan.md).

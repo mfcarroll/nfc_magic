@@ -5,12 +5,10 @@ docs. Written 2026-07-26.
 
 | File | What's in it |
 |------|--------------|
-| [analysis.md](analysis.md) | State-of-project review: what works, what's verified, the ranked issue list. |
 | [protocol-reference.md](protocol-reference.md) | Byte-level mapping of the magic backdoor write frames vs. the local proxmark3 reference. The offline ground truth. |
-| [hardware-plan.md](hardware-plan.md) | The test plan for the work that can only be finished with a real magic ISO15693 card. |
-| [clone-feasibility.md](clone-feasibility.md) | Scoping for expanding to data-block writes / full clone: the Flipper-SDK-vs-magic-backdoor split, the cryptographic boundary, and a phased plan. |
+| [hardware-plan.md](hardware-plan.md) | The on-hardware test plan (what's done / what still needs a gen1 or non-magic card). |
 | [iso15693-primer.md](iso15693-primer.md) | Background: SLIX vs ISO15693, chip families, standard vs custom commands, the magic variants (gen1/gen2/V3), and how this app maps onto it. |
-| [capability-matrix.md](capability-matrix.md) | 3-way capability comparison (our app / stock Flipper NFC / proxmark) + a prioritized port roadmap. Key finding: adopt the SDK slix poller — most features are already written. |
+| [capability-matrix.md](capability-matrix.md) | 3-way capability comparison (our app / stock Flipper NFC / proxmark) + a prioritized roadmap of deferred features. |
 | [worklog.md](worklog.md) | Running log of the offline changes actually made, commit by commit. |
 
 ## One-paragraph status
@@ -30,7 +28,7 @@ scope — see [capability-matrix.md](capability-matrix.md).
   the app compiles against at `../Momentum-Firmware-slix`.
 - The app builds on the **raw `iso15693_3`** SDK layer, *not* the SDK's richer `slix` protocol
   (`../Momentum-Firmware-slix/lib/nfc/protocols/slix/`), which already models privacy/passwords/EAS/
-  signature. That richer layer is unused — see the feature gaps in [analysis.md](analysis.md).
+  signature. That richer layer is unused — see the feature gaps in [capability-matrix.md](capability-matrix.md).
 - **Builds with `fbt`**, not `ufbt` (which isn't installed). The app is symlinked into
   `applications_user/` of the local firmware checkouts, so:
   `cd ../Momentum-Firmware && FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev` (builds offline; toolchain is

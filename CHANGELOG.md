@@ -1,40 +1,47 @@
 # Changelog
 
-## Unreleased — SLIX (magic ISO15693) `iso15693-v2`
+## Unreleased — magic ISO15693 (NfcV) support
 
-Adds magic **ISO15693 / SLIX (NfcV)** support: detect an ISO15693 tag, show Info (UID /
-manufacturer / chip / system info), and perform a magic **backdoor UID write** (gen1 or gen2),
-verified by read-back. The write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` /
-`SetTag15693Uid_v2`. This is a **UID-only writer**, not a full card cloner. See `.notes/` for the
-analysis, the byte-level protocol reference, and the on-hardware validation plan.
+Adds a new magic tag family: **ISO15693 / NfcV**. Detect an ISO15693 tag, show its Info, and
+**clone / write / wipe** a magic ISO15693 card the same way the app handles its other magic types.
+The magic write frames are a byte-for-byte port of proxmark3's `SetTag15693Uid` (gen1) and
+`SetTag15693Uid_v2` (gen2), verified by a power-cycled read-back.
 
 ### Added
-- **SLIX Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and
-  the **full block data** the poller reads during activation (scrollable, `*` marks a locked block).
-  Chip decode now tells **SLI / SLIX / SLIX2** (and the -S / -L variants) apart via the UID
-  type-indicator bits, matching the SDK's `iso15693_get_type` and proxmark's UID table.
-- **SLIX Save to file** — read a card and save it to a plain ISO15693-3 `.nfc` (UID + system info +
-  blocks); the read/dump half of a full clone.
-- **SLIX Write UID** — magic backdoor UID write with a **confirmation screen** (shows the new UID and
-  warns that the gen1 step can overwrite data on a non-magic tag) before the irreversible write.
+- **Detection** — any ISO15693 tag that activates is treated as a magic candidate and routed to a
+  dedicated menu (Write / Wipe / Write UID / Info), mirroring the other magic types.
+- **Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and the
+  full block data (scrollable, `*` marks a locked block). Chip decode tells NXP **SLI / SLIX / SLIX2**
+  (and the -S / -L variants) apart via the UID type-indicator bits. Can save the read to a plain
+  ISO15693-3 `.nfc`.
+- **Clone from a saved `.nfc`** — writes the UID (magic backdoor), all data blocks, and the source's
+  identity (IC ref / block geometry / AFI / DSFID) so the copy advertises the same chip. gen2 sets
+  UID + geometry via the `0xE0` magic command; a gen1 card falls back to the block-write backdoor.
+- **Wipe** — zero every writable data block; the UID is left unchanged.
+- **Write UID** — manual magic backdoor UID write with a confirmation screen.
 
-### Changed / hardened
-- The write **verifies after an RF field power-cycle** (`NfcCommandReset`), like proxmark's
-  `switch_off()` + `getUID`, so a card that only latches the new UID after a reset is not misreported
-  as a failure.
-- The destructive **gen1 fallback only runs if the gen2 write left the card's UID unchanged**, so a
-  partially-written gen2 card is not clobbered.
-- The entered UID is **forced to start with `0xE0`** (a valid ISO15693 UID) before writing.
-- Detect / Info / write popups now **time out** instead of hanging forever when no card is present.
-- Scenes are labelled generically **"ISO15693 / NfcV"** (a non-NXP or non-magic tag is no longer
-  mislabelled "SLIX").
-- Harmless `#ifndef` fallback for `ISO15693_3_FDT_WRITE_POLL_FC` as belt-and-braces for an SDK that
-  might lack it (it is present in the Momentum SDKs this app targets).
+### Behaviour
+- **Writes every source block and reports only real data loss.** WRITE BLOCK on these cards is gated
+  by physical memory, not the advertised block count (verified on hardware), so the clone attempts
+  every block: a non-empty block that won't write is reported as **Partial** (named); an empty block
+  past the card's real capacity loses nothing and stays a clean **Success**. A card that advertises a
+  larger geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
+- **gen1 fidelity is surfaced.** The gen1 backdoor stores the UID in data blocks 56/57/62/63, so a
+  gen1 clone can't reproduce a source that uses them. If the source has data there, the confirm warns
+  before the write; if the clone actually fell back to gen1, it reports Partial and flags those blocks.
+- **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
+  UID after a reset is not misreported as a failure.
+- The destructive **gen1 fallback only runs if the gen2 write left the UID unchanged**, so a
+  gen2 card is never clobbered by gen1; it is gated behind the write confirmation.
+- Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
+  instead of a generic error, and detect / write popups **time out** instead of hanging.
 
-### Fixed
-- A non-magic ISO15693 tag (the common case) now shows a dedicated **"Not a magic tag"** message
-  instead of a generic write error with a Retry that looped forever; a removed card shows a distinct
-  **"Card removed"** message.
+### Validation
+- The **gen2** path is validated end-to-end on hardware: byte-identical clones across chip types and
+  geometries (28 / 56 / 64 / 70 blocks), confirmed by both the stock NFC read-back and a Proxmark3
+  cross-read; wipe and the honest over-capacity reporting confirmed too.
+- The **gen1** path is a faithful proxmark port but is **not yet hardware-validated** (no gen1 magic
+  ISO15693 card was available to test against).
 
 ## 2.0
 

@@ -1,8 +1,20 @@
-# Worklog — offline hardening pass
+# Worklog
 
-Branch `slix-v2`. Started 2026-07-26. All changes are static-review-only (no `ufbt` build here);
-each is matched to the SDK API + existing patterns by inspection. On-hardware validation is tracked
-in [hardware-plan.md](hardware-plan.md).
+Branch `iso15693-dev` (was `slix-v2`). Started 2026-07-26. Began as a static-review-only offline
+hardening pass; since then the feature was built with `fbt` and **validated on hardware** (gen2 path).
+On-hardware status is tracked in [hardware-plan.md](hardware-plan.md).
+
+## Housekeeping (2026-07-27)
+- Renamed branch `slix-v2` → `iso15693-dev` (the feature is generic magic ISO15693, not SLIX-specific).
+- **Refactor**: renamed the module `slix` → `iso15693` throughout (dir/files/symbols/scenes), matching
+  the app's `gen2_*` / `uscuid_ul_*` convention; kept `SLIX`/`SLI`/`SLIX2` only as chip-decode strings.
+  Builds clean, APPCHK passes. (Commit `refactor: rename ... slix -> iso15693`.)
+- **Tidy**: renamed sample files `slixtest_*` → `iso15693_*`; rewrote CHANGELOG + ONBOARDING to the
+  final feature (full clone, hardware-validated gen2, gen1 caveat); removed superseded research notes
+  (`analysis.md`, `clone-feasibility.md` — that work is done and captured here + in capability-matrix).
+- Backup of the pre-rename tip kept at branch `backup/slix-v2-20260727`.
+- Next: build a fresh PR branch off the v2.0 base with just the core code (no tools/notes), + a draft
+  PR write-up. The gen1 path is NOT hardware-validated — the PR must say so.
 
 ## Planned commits (offline)
 1. docs: add `.notes/` (analysis, protocol reference, hardware plan, worklog).
