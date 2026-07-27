@@ -162,7 +162,7 @@ def parse_info(text):
 _BLOCK_ROW = re.compile(r"([0-9A-Fa-f]{2}(?:\s[0-9A-Fa-f]{2}){3})\s*\|\s*(\d)\s*\|")
 # `hf 15 dump` rows look like:  " 63/0x3F | 00 00 00 00 | 0 | ...."
 _DUMP_ROW = re.compile(
-    r"(?m)^\s*(?:\[[=+!\-]\]\s*)?(\d+)/0x[0-9A-Fa-f]+\s*\|\s*"
+    r"(?m)^\s*(?:\[[=+!\-]\]\s*)?(\d+)(?:/0x[0-9A-Fa-f]+)?\s*\|\s*"
     r"((?:[0-9A-Fa-f]{2}\s+)+[0-9A-Fa-f]{2})\s*\|")
 
 
@@ -270,30 +270,46 @@ def probe_info(ctx):
 def probe_capacity(ctx):
     info = ctx["state"].get("info") or pm15_info_retry(ctx["pm3"], ctx["split"])[0]
     reported = info.get("block_count") or 0
-    # Read the whole card in one field session, merged over several attempts. A block that reads in
-    # ANY attempt is REAL; one that never reads (across all attempts) is a phantom / doesn't exist.
-    # This is immune to the per-read coupling flakiness that scatters single rdbl failures.
-    merged, raw = pm15_dump(ctx["pm3"], ctx["split"], tries=ctx["dump_tries"])
-    ctx["save_raw"]("capacity_dumps", raw)
-    readable = sorted(merged)
-    physical = (max(readable) + 1) if readable else 0
-    # holes = blocks below the max that still never read (would suggest deeper flakiness, not capacity)
-    holes = [b for b in range(physical) if b not in merged]
+    tries = ctx["read_tries"]
+
+    # `hf 15 dump` ZERO-FILLS blocks it can't read (like the Flipper), so it can't find the phantom
+    # boundary. A phantom block instead hard-FAILS every single `rdbl`, while a real block reads
+    # within a few retries. Memory is contiguous from block 0, so binary-search the highest readable
+    # block with retried reads -- robust to the per-read coupling flakiness, and only ~log2(N) probes.
+    if not pm15_rdbl(ctx["pm3"], 0, ctx["split"], tries=tries)[0]:
+        print(C("err", "   block 0 unreadable even with %d retries -- coupling too marginal to probe;"
+                       " reseat the card on the antenna." % tries))
+        return {"ok": False, "skipped": "block 0 unreadable (coupling)"}
+
+    lo, hi, last_ok, probes = 0, ((reported + 2) if reported else 255), 0, 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        ok, _, _, raw = pm15_rdbl(ctx["pm3"], mid, ctx["split"], tries=tries)
+        ctx["save_raw"]("capacity_probe_b%03d" % mid, raw)
+        probes += 1
+        if ok:
+            last_ok, lo = mid, mid + 1
+        else:
+            hi = mid - 1
+    physical = last_ok + 1
     phantom = max(0, reported - physical) if reported else None
 
-    print("   read %d/%s blocks over %d dump(s); highest readable block = %s -> physical ~= %d"
-          % (len(readable), reported or "?", ctx["dump_tries"], (physical - 1) if physical else None, physical))
-    if holes:
-        print(C("warn", "   unread holes below the max (likely still flaky coupling, reposition): %s"
-                % holes[:16] + (" ..." if len(holes) > 16 else "")))
+    # informational only: one dump for the data content (remember it zero-fills any phantom tail)
+    dump, draw = pm15_dump(ctx["pm3"], ctx["split"], tries=1)
+    ctx["save_raw"]("capacity_dump", draw)
+    nonzero = sorted(b for b, v in dump.items() if not block_is_zero(v))
+
+    print("   reported %s blocks; physical boundary via retried reads (%d probes) -> %d real blocks"
+          % (reported or "?", probes, physical))
     if reported and phantom:
-        print(C("warn", "   card OVER-reports %d block(s): reports %d, only %d are physically readable"
-                % (phantom, reported, physical)))
-    elif reported and physical == reported and not holes:
+        print(C("warn", "   OVER-reports %d: blocks %d-%d exist only in Get-System-Info -- rdbl/wrbl FAIL there"
+                % (phantom, physical, reported - 1)))
+    elif reported and physical == reported:
         print(C("ok", "   physical matches reported (%d)" % reported))
+    print("   non-zero data blocks (dump; note dump zero-fills phantom): %s" % (nonzero or "none"))
     ctx["state"]["physical_blocks"] = physical
-    return {"ok": True, "physical_blocks": physical, "reported": reported, "phantom": phantom,
-            "readable_count": len(readable), "holes": holes, "blocks": merged}
+    return {"ok": True, "reported": reported, "physical_blocks": physical, "phantom": phantom,
+            "boundary_probes": probes, "nonzero_blocks": nonzero, "dump": dump}
 
 
 def probe_magictype(ctx):
@@ -481,9 +497,10 @@ def main():
     ap.add_argument("--destructive", action="store_true",
                     help="allow probes that WRITE to the card (magictype UID test, edgepages, impersonate). "
                          "They snapshot + best-effort restore, but use a blank card first.")
-    ap.add_argument("--dump-tries", type=int, default=3,
-                    help="capacity/read: number of full-card dump attempts to merge (a block that reads "
-                         "in ANY attempt is real). Higher = more robust to flaky coupling (default 3).")
+    ap.add_argument("--read-tries", type=int, default=6,
+                    help="retries per single-block read when probing the physical boundary (a real block "
+                         "reads within retries; a phantom hard-fails every time). Higher = more robust to "
+                         "flaky coupling (default 6).")
     ap.add_argument("--flipper-note", action="store_true",
                     help="after the proxmark probes, prompt you to read the card in the Flipper NFC app and "
                          "note what IT reports (captures proxmark-vs-Flipper differences).")
@@ -573,7 +590,7 @@ def main():
                     f.write(text + "\n")
 
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
-                   "destructive": args.destructive, "dump_tries": args.dump_tries,
+                   "destructive": args.destructive, "read_tries": args.read_tries,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
