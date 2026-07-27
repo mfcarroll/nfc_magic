@@ -4,6 +4,10 @@ App(
     apptype=FlipperAppType.EXTERNAL,
     targets=["f7"],
     entry_point="nfc_magic_app",
+    # Default is ["*.c*"], globbed recursively -- that would sweep in the dev-only tools/ dir
+    # (its venv + __pycache__ hold .cpython-*.pyc files that match *.c*, and future deps could ship
+    # .c sources). Exclude it the same way the firmware excludes lib/.
+    sources=["*.c*", "!tools"],
     requires=[
         "storage",
         "gui",
