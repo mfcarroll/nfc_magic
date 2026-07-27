@@ -145,13 +145,46 @@ failure on the clone (and likely on the original too, if it is also over-reporti
 Roadmap extras (repeatable V3 magic; full field-by-field mismatch verification after write) remain in
 capability-matrix.md.
 
-## Not done (needs hardware / out of scope)
-See [hardware-plan.md](hardware-plan.md). Headline: the write→latch→read-back behaviour on a real
-magic card (settles whether the power-cycle fix is sufficient and whether the gen1 gate fully
-protects data). Also: the residual clobber-of-a-normal-tag risk when a user consents to the gen1
-step — if hardware confirms it, split into explicit gen2-only / gen1 actions. Clone Phase 2/3
-(block write-back, passwords) and the deeper feature gaps (privacy/EAS, AFI/DSFID, gen3/V3) remain
-for the hardware session / out of scope.
+## CURRENT STATUS & IMMEDIATE NEXT STEPS (2026-07-27)
+
+**The SLIX/ISO15693 feature is complete and hardware-validated for the core use case.** Works exactly
+like the app's other magic types, builds clean under `-Werror`, and a byte-for-byte identity clone was
+confirmed on a real card:
+- Detect → "Magic card detected: ISO15693 / NfcV" → More → menu (Write / Wipe / Write UID / Info).
+- **Clone from a saved `.nfc`** (UID + data blocks + **identity**: IC ref / geometry / AFI / DSFID) —
+  confirmed byte-identical to the original via proxmark `hf 15 info`/dump.
+- **Wipe** (zero all blocks, UID untouched) — confirmed (re-read = all zeros).
+- Over-capacity handling: empty tail → clean Success; non-empty tail → Partial naming the blocks.
+
+**Direct proxmark validation (2026-07-27), the 64-block target that reports 66:**
+- Physical = **64**, confirmed definitively: block 63 reads, blocks **64/65 fail BOTH `rdbl` and
+  `wrbl`** → genuinely phantom (not empty-real). Physical clone of blocks 0-63 + UID + identity is
+  faithful; the 2 phantom blocks were empty on the source so nothing is lost.
+- **`rdbl` fails clean on a phantom block; `hf 15 dump` PADS zeros up to the reported count** (masks
+  the boundary) — so the probe harness uses retried `rdbl` binary-search, not dump, for capacity.
+- This card **does not support READ MULTIPLE (0x23)** ("command not supported") — single READ BLOCK
+  (0x20) only. Worth recording per card.
+- Note: gen1's UID write stamps blocks 0x38/0x39/0x3E/0x3F (56/57/62/63); a source with real data in
+  those clones faithfully only via **gen2** (which uses separate config refs). Our card takes gen2.
+
+### Immediate next steps (in priority order)
+1. **Re-clone the destructive-test card** (`my64blk` / the access-pass clone) from its `.nfc` — the
+   probe harness's destructive run left block 63 = `69 96 00 00` (gen1-commit leftover) and possibly
+   a stale UID. Then `hf 15 rdbl -* -b 63` → expect `00 00 00 00` (confirms gen2 clone fidelity).
+2. **Re-run the capacity probe** (`tools/iso15693_magic_probe.py --card my64blk --probes info,capacity,
+   magictype`) → should now cleanly report 66 reported / 64 physical / 2 phantom.
+3. **App-side impersonation sweep** with `tools/test_nfc/*.nfc` (SLIX-28, LRi2K-56, Tag-it-64, the two
+   oversize/edge-data files) → clone each, re-read, confirm the card advertises each identity and that
+   over-capacity edge data is reported correctly.
+4. **Test the real access-pass reader** with the clone (does the door open? — settles whether it's
+   UID-only or checks more).
+5. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
+
+### Deferred / out of scope (unchanged)
+Repeatable **V3** magic variant (blocks 0x10/0x11 + finalize; needs a V3 card — screen with
+`hf 15 rdbl -* -b 20/21` for sig `A5 2B 44 2C`/`21 AE 93 00`), full field-by-field mismatch report
+after write, and the SDK-`slix`-only features (privacy/password, EAS, signature). See
+capability-matrix.md.
 
 ## Build note
 **Builds clean.** `ufbt` isn't installed, but the app is symlinked into `applications_user/` of the

@@ -15,12 +15,14 @@ docs. Written 2026-07-26.
 
 ## One-paragraph status
 
-The SLIX feature detects an ISO15693 (NfcV) tag, shows Info (UID / manufacturer / chip / system
-info), and performs a magic **backdoor UID write** (gen1 or gen2), verified by read-back. The core
-write logic is a **byte-for-byte correct port of proxmark3** and the code is thread-/memory-safe.
-It is honestly a **UID-only writer, not a card cloner**. As of the offline hardening pass it is
-safe-by-consent and gives honest feedback; the remaining correctness unknowns are **hardware-gated**
-(see [hardware-plan.md](hardware-plan.md)).
+The SLIX / ISO15693 feature is a **full magic-card clone tool**, integrated the same way as the app's
+other magic types: Check → "Magic card detected" → menu (**Write** a saved `.nfc` = UID + data blocks
++ identity IC/geometry/AFI/DSFID · **Wipe** · **Write UID** manual · **Info**). The magic write is a
+byte-for-byte port of proxmark3, verified by a power-cycled read-back; the code is thread-/memory-safe
+and builds clean under `-Werror`. **Hardware-validated 2026-07-27**: a byte-identical clone and a wipe
+were confirmed on a real 64-block magic card. Current state + what's next: see the top of
+[worklog.md](worklog.md). Deeper feature gaps (V3 variant, passwords/EAS/signature) remain out of
+scope — see [capability-matrix.md](capability-matrix.md).
 
 ## Key context for anyone picking this up
 

@@ -3,6 +3,13 @@
 Everything below is blocked on physical cards + a `ufbt` build. Ordered so the first test unblocks
 the most. Record results inline (date / card / outcome) as they come in.
 
+> **STATUS 2026-07-27 — core validated.** Build OK; clone (UID + data + identity IC/geometry/AFI/DSFID),
+> wipe, and the honest over-capacity reporting all confirmed on a real 64-block magic card (reports 66).
+> Direct proxmark facts on that card: physical = 64 (blocks 64/65 fail `rdbl` **and** `wrbl` = phantom;
+> `rdbl` fails clean while `hf 15 dump` pads zeros to the reported count); card **rejects READ MULTIPLE
+> 0x23**. See worklog.md "CURRENT STATUS & IMMEDIATE NEXT STEPS" for what's next (re-clone the test
+> card, capacity re-run, impersonation sweep with tools/test_nfc/, try the real reader).
+
 ## 0. Build + smoke test (needs toolchain, not a card)
 - [x] Build of `nfc_magic_dev` — DONE 2026-07-26 via `cd ../Momentum-Firmware && FBT_NO_SYNC=1
       ./fbt fap_nfc_magic_dev`. Clean compile (`-Werror`, no warnings), links, `APPCHK` passes,
