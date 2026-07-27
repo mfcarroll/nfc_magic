@@ -18,7 +18,21 @@ python3 tools/iso15693_magic_probe.py --dry-run --card x --probes info,capacity 
 Probes: **info** (identity), **capacity** (physical block count vs reported — finds the phantom
 tail), **magictype** (V3 signature; gen1/gen2 UID-write test), **edgepages** (write/read the last-real
 & first-phantom block, aliasing check), **impersonate** (does the card accept a *standalone* CFG frame
-to report another geometry / IC ref?). The last two write to the card — opt in with `--destructive`.
+to report another geometry / IC ref?), **writespan** (does `WRITE BLOCK` obey the *advertised* block
+count or the *physical* capacity?). The write probes need `--destructive`.
+
+`writespan` settles whether the clone app should cap writes at the target's advertised count. It's
+meaningful only when the card advertises **fewer** blocks than it physically has — clone a small
+source first (e.g. `slix_28` → 28 blocks) onto the physically-64 magic card, then:
+
+```bash
+python3 tools/iso15693_magic_probe.py --card blank1 --probes info,capacity,writespan --destructive
+```
+
+It write-tests a ladder of blocks around the advertised boundary (snapshot + restore each) and reports
+the highest writable block: **> advertised** ⇒ writes follow physical capacity (app should write every
+source block and report only true failures); **== advertised** ⇒ the card gates writes by the
+advertised count (that count is the real limit). Tune the top with `--writespan-max N`.
 
 Note the geometry side-effect: the `magictype` gen2 `csetuid` test rewrites the card's CFG block to
 proxmark's default geometry (64 blk / IC 0x8B) as a side effect. The probe snapshots the run-start

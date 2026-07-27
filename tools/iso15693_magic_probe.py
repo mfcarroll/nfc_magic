@@ -517,12 +517,106 @@ def probe_impersonate(ctx):
             "targets": tried}
 
 
+def probe_writespan(ctx):
+    """Does WRITE BLOCK obey the card's ADVERTISED block count, or its PHYSICAL capacity?
+
+    The clone app currently caps data writes at the target's advertised block count. That's only the
+    right thing to do if the card actually refuses writes beyond that count. This probe settles it.
+
+    Meaningful only when the card advertises FEWER blocks than it physically has -- so there's a gap to
+    probe. Clone a small source first (e.g. slix_28 -> advertises 28) onto a card that is physically
+    larger (our magic target is physically 64). Then this write-tests a ladder of blocks from just
+    below the advertised count up through/just past the physical boundary, snapshotting and restoring
+    each, and reports the highest block that actually accepts a write:
+      - highest writable > advertised  -> writes follow PHYSICAL capacity. The advertised count does
+          NOT gate writes -> the app should attempt every source block and report only true failures.
+      - highest writable == advertised -> the card GATES writes by the advertised count -> that count
+          is the real limit and the app must report it as such.
+    """
+    if not ctx["destructive"]:
+        print(C("warn", "   writespan needs --destructive (it writes to the card). Skipping."))
+        return {"ok": False, "skipped": "needs --destructive"}
+
+    info, _ = pm15_info_retry(ctx["pm3"], ctx["split"])
+    adv = info.get("block_count")
+    if not adv:
+        print(C("err", "   could not read the advertised block count; aborting writespan."))
+        return {"ok": False, "error": "no advertised count"}
+    phys = ctx["state"].get("physical_blocks")
+    if not phys:
+        phys = probe_capacity(ctx).get("physical_blocks")
+
+    lo = max(0, adv - 2)
+    hi = min(255, ctx.get("writespan_max") or (max(adv, phys or adv) + 4))
+    print("   advertised %s blocks; physical %s; probing writes to blocks %d..%d"
+          % (adv, phys if phys else "?", lo, hi))
+    no_gap = bool(phys) and adv >= phys
+    if no_gap:
+        print(C("warn", "   NOTE: advertised (%d) >= physical (%d) -- no advertised<physical gap to test."
+                % (adv, phys)))
+        print(C("warn", "         Clone a SMALL source (e.g. slix_28 -> 28 blocks) with the app first, re-run."))
+
+    ladder = []
+    for b in range(lo, hi + 1):
+        ok_r, orig, _, _ = pm15_rdbl(ctx["pm3"], b, ctx["split"])
+        marker = "5A %02X A5 %02X" % (b & 0xFF, b & 0xFF)
+        pm15_wrbl(ctx["pm3"], b, marker, ctx["split"])
+        ok_rb, rb, _, _ = pm15_rdbl(ctx["pm3"], b, ctx["split"])
+        took = ok_rb and rb == marker
+        restored = None
+        if took:
+            restore_to = orig if ok_r else "00 00 00 00"
+            for _ in range(3):
+                pm15_wrbl(ctx["pm3"], b, restore_to, ctx["split"])
+                rok, rdata, _, _ = pm15_rdbl(ctx["pm3"], b, ctx["split"])
+                if rok and rdata == restore_to:
+                    restored = restore_to
+                    break
+        ladder.append({"block": b, "read_before": orig if ok_r else None,
+                       "write_took": took, "restored": restored})
+        rel = "<adv" if b < adv else ("=adv" if b == adv else ">adv")
+        print("   block %3d (%-4s) %s%s" % (b, rel,
+              C("ok", "WRITE ok") if took else C("dim", "no write"),
+              "" if (restored is not None or not took) else C("err", "  [NOT restored]")))
+
+    took_blocks = [x["block"] for x in ladder if x["write_took"]]
+    highest = max(took_blocks) if took_blocks else None
+    unrestored = [x["block"] for x in ladder if x["write_took"] and x["restored"] is None]
+    res = {"advertised": adv, "physical": phys, "highest_writable": highest,
+           "unrestored": unrestored, "ladder": ladder}
+    ctx["save_raw"]("writespan", json.dumps(res, indent=2))
+
+    if highest is None:
+        res["writes_follow"] = "inconclusive"
+        print(C("err", "   -> no block accepted a write; inconclusive (coupling / wrong card?)."))
+    elif no_gap:
+        res["writes_follow"] = "inconclusive"
+        print(C("warn", "   -> highest writable %d, but advertised==physical so this can't distinguish"
+                % highest))
+        print(C("warn", "      advertised-gating from physical-gating. Re-run with advertised < physical."))
+    elif highest >= adv:
+        res["writes_follow"] = "physical"
+        print(C("ok", "   -> writes SUCCEED past the advertised count (highest writable %d, advertised %d)."
+                % (highest, adv)))
+        print(C("ok", "      Advertised count does NOT gate writes -> app should write ALL source blocks"))
+        print(C("ok", "      and report only the blocks that truly fail (the physical limit)."))
+    else:
+        res["writes_follow"] = "advertised"
+        print(C("warn", "   -> writes STOP at the advertised count (highest writable %d < advertised %d)."
+                % (highest, adv)))
+        print(C("warn", "      The card gates writes by the advertised count -> THAT is the real limit."))
+    if unrestored:
+        print(C("err", "   ! could not restore blocks %s -- re-clone this card from its .nfc." % unrestored))
+    return {"ok": True, **res}
+
+
 PROBES = {
     "info": (probe_info, False, "identity: UID / chip TYPE / IC ref / DSFID / AFI / reported geometry"),
     "capacity": (probe_capacity, False, "physical block count vs reported (finds the phantom tail)"),
     "magictype": (probe_magictype, False, "V3 signature; gen1/gen2 UID-write test (write part needs --destructive)"),
     "edgepages": (probe_edgepages, True, "write/read the last-real & first-phantom block; aliasing check"),
-    "impersonate": (probe_impersonate, True, "make the card report other geometries / IC refs (accept/clamp)"),
+    "impersonate": (probe_impersonate, True, "does the card accept a standalone CFG frame for another geometry?"),
+    "writespan": (probe_writespan, True, "does WRITE BLOCK obey the advertised count or physical capacity?"),
 }
 
 
@@ -560,6 +654,8 @@ def main():
     ap.add_argument("--destructive", action="store_true",
                     help="allow probes that WRITE to the card (magictype UID test, edgepages, impersonate). "
                          "They snapshot + best-effort restore, but use a blank card first.")
+    ap.add_argument("--writespan-max", type=int, default=None,
+                    help="highest block index the writespan probe tries (default: max(advertised,physical)+4).")
     ap.add_argument("--read-tries", type=int, default=6,
                     help="retries per single-block read when probing the physical boundary (a real block "
                          "reads within retries; a phantom hard-fails every time). Higher = more robust to "
@@ -654,6 +750,7 @@ def main():
 
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
                    "destructive": args.destructive, "read_tries": args.read_tries,
+                   "writespan_max": args.writespan_max,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
