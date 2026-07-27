@@ -154,7 +154,9 @@ confirmed on a real card:
 - **Clone from a saved `.nfc`** (UID + data blocks + **identity**: IC ref / geometry / AFI / DSFID) —
   confirmed byte-identical to the original via proxmark `hf 15 info`/dump.
 - **Wipe** (zero all blocks, UID untouched) — confirmed (re-read = all zeros).
-- Over-capacity handling: empty tail → clean Success; non-empty tail → Partial naming the blocks.
+- Write policy (updated 2026-07-27): **attempts every source block** (writes follow physical memory,
+  not the advertised count — see writespan below); reports only *real* data loss. Empty blocks that
+  won't fit → clean Success; non-empty blocks that won't fit → Partial naming the blocks.
 
 **Direct proxmark validation (2026-07-27), the 64-block target that reports 66:**
 - Physical = **64**, confirmed definitively: block 63 reads, blocks **64/65 fail BOTH `rdbl` and
@@ -188,17 +190,41 @@ Two test-rig goals: (1) assess the magic cards, (2) write configs and ground-tru
 - **Card state note:** the probe's destructive runs left both test cards reporting **64 blk / IC 0x8B**
   (proxmark default) with block 63 = `69 96 00 00` — re-clone from `.nfc` to restore the 66/0x0F identity.
 
+### Ground-truth sweep result + the write-cap decision (2026-07-27)
+On-device sweep of `tools/test_nfc/slixtest_*.nfc`: **5/6 byte-identical PASS** (SLIX-28 / LRi2K-56 /
+Tag-it-64 / edgedata_64 / oversize_empty_70 — the physically-64 card impersonated 28/56/64/**70** blocks
+on demand, across NXP/ST/TI ICs). `oversize_edgedata_70` showed 8 block mismatches — traced to a
+**test-ordering artifact**: the app capped writes at the target's *currently-advertised* count (56, left
+by the prior lri2k clone), so blocks 56-63 kept stale data from an earlier clone and 64-69 were phantom.
+Proof it's ordering: `oversize_empty_70`, written next when the card already advertised 70, PASSED.
+
+- **`writespan` probe (new)** settled the cap question on hardware: with the card advertising **28** but
+  physically larger, WRITE BLOCK to blocks **29-34 all succeeded** → **writes are gated by physical
+  memory, not the advertised count.** Bonus finding: high blocks don't even *read* until *written* (a
+  pre-write read under-reports capacity) — so the only reliable capacity test is to write and check.
+- **App change (commits `39b5586`, `c1f9d33`)** — per the goal "write the exact card; tell the user only
+  when data truly can't fit": `slix_poller_write_source_blocks` now **attempts every source block** (no
+  advertised-count cap). A block that won't take is classified by whether the source had data there —
+  **non-empty → Partial** (real loss, named blocks); **empty → stays Success** (card reports it as zero,
+  clone still matches). This also removes the stale-tail-on-reuse bug, and turns the old "Clone partial:
+  2 of 66 blocks" (empty over-read) into a correct **byte-identical Success**. Fail-scene reworded to
+  "N block(s) didn't fit the card: <list>". Builds clean; FAP links, APPCHK passes. **Needs on-device
+  re-validation** (see next steps).
+- **Build hygiene** (`39b5586`): the FAP manifest now scopes `sources=["*.c*", "!tools"]` — the default
+  recursive `*.c*` was sweeping in `tools/` (venv + `__pycache__` `.cpython-*.pyc` match `*.c*`), which
+  broke the link. `tools/` is dev-only; excluded like the firmware excludes `lib/`.
+
 ### Immediate next steps (in priority order)
-1. **Re-clone both test cards** from their `.nfc` (via the app) — the probe's destructive runs reset
-   geometry to 64/0x8B and left block 63 = `69 96 00 00`. After: `hf 15 info` → 66 blk / IC 0x0F, and
-   `hf 15 rdbl -* -b 63` → `00 00 00 00`.
-2. **Run the Flipper ground-truth sweep** over `tools/test_nfc/slixtest_*.nfc`:
-   `tools/.venv/bin/python tools/flipper_ground_truth.py --pm3-crosscheck`. Expected: SLIX-28 /
-   LRi2K-56 / Tag-it-64 / edgedata_64 → PASS; oversize_empty_70 → PASS (empty over-capacity);
-   oversize_edgedata_70 → PARTIAL (6 non-empty blocks the 64-block card can't hold — validates the
-   app's honest-partial reporting).
-3. **Re-run the capacity probe** (`--card my64blk --probes info,capacity`) → 66 reported / 64 physical
-   / 2 phantom, now that magictype won't silently corrupt the baseline.
+1. **Deploy the rebuilt FAP** (`build/f7-firmware-C/.extapps/nfc_magic_dev.fap`) to the Flipper and
+   **re-validate the write change on-device**: re-clone the test card, then clone `oversize_edgedata_70`
+   onto it via the app → expect **Clone partial, "6 block(s) didn't fit: 64 65 66 67 68 69"** (blocks
+   56-63 now written, no more `stale` — only the true phantom 64-69). Confirm `oversize_empty_70` and the
+   real 66-block access-pass source both report **Success** (empty over-capacity, byte-identical).
+2. **Re-run the ground-truth sweep** (`tools/.venv/bin/python tools/flipper_ground_truth.py`) on a
+   freshly re-cloned card (or write a ≥64 source first) → all six should now be clean; the mismatch
+   labels (`stale`/`not-written`) make any residue self-diagnosing.
+3. **Re-clone both test cards** from their `.nfc` — the probe runs left them at 64/0x8B with block 63 =
+   `69 96 00 00`.
 4. **Test the real access-pass reader** with the clone (does the door open? — settles UID-only vs more).
 5. Optional harness add: an `info`-probe check for READ MULTIPLE (0x23) support (a real per-card trait).
 
