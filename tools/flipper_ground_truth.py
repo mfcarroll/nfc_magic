@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Goal-2: ground-truth the nfc_magic app's ISO15693 / SLIX clone against real hardware.
+"""Goal-2: ground-truth the nfc_magic app's ISO15693 clone against real hardware.
 
 This is the human-in-the-loop other half of the proxmark harness (iso15693_magic_probe.py). The
 actual card write happens on the Flipper's own UI (we can't and shouldn't automate the on-device
 NFC Magic app); this tool automates everything around it so a run is fast and repeatable:
 
-  for each source .nfc (default tools/test_nfc/slixtest_*.nfc):
+  for each source .nfc (default tools/test_nfc/iso15693_*.nfc):
     1. parse the source locally (UID / geometry / IC / DSFID / AFI / block data)
     2. UPLOAD it to the Flipper's nfc/ folder  (prefixed `gt_` so it's easy to spot / clean up)
     3. snapshot the nfc/ file list, then print on-device instructions and WAIT for the operator to
@@ -20,7 +20,7 @@ NFC Magic app); this tool automates everything around it so a run is fast and re
 Everything lands in a campaign dir (campaign.log / manifest.json / raw/) just like the pm3 harness.
 
 Requires pyserial -> run under the tools venv:
-    tools/.venv/bin/python tools/flipper_ground_truth.py --sources tools/test_nfc/slixtest_*.nfc
+    tools/.venv/bin/python tools/flipper_ground_truth.py --sources tools/test_nfc/iso15693_*.nfc
 """
 
 import argparse
@@ -173,9 +173,9 @@ def pm3_crosscheck(pm3, split, src, save_raw):
 # --------------------------------------------------------------------------- run
 def main():
     ap = argparse.ArgumentParser(
-        description="Ground-truth the nfc_magic ISO15693/SLIX clone via Flipper upload + read-back compare.",
+        description="Ground-truth the nfc_magic ISO15693 clone via Flipper upload + read-back compare.",
         formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
-    ap.add_argument("--sources", nargs="+", help="source .nfc files (default: tools/test_nfc/slixtest_*.nfc)")
+    ap.add_argument("--sources", nargs="+", help="source .nfc files (default: tools/test_nfc/iso15693_*.nfc)")
     ap.add_argument("--port", default="auto", help="Flipper serial port (default: auto-detect)")
     ap.add_argument("--scripts", default=None, help="path to Flipper firmware `scripts` dir")
     ap.add_argument("--out", default=None, help="campaign output dir (default: tools/campaigns/gt_<stamp>)")
@@ -190,11 +190,11 @@ def main():
     args = ap.parse_args()
 
     sources = []
-    for pat in (args.sources or ["tools/test_nfc/slixtest_*.nfc"]):
+    for pat in (args.sources or ["tools/test_nfc/iso15693_*.nfc"]):
         sources.extend(sorted(glob.glob(pat)) if any(c in pat for c in "*?[") else [pat])
     sources = [s for s in sources if os.path.isfile(s)]
     if not sources:
-        print(C("err", "no source .nfc files found (looked for tools/test_nfc/slixtest_*.nfc)."))
+        print(C("err", "no source .nfc files found (looked for tools/test_nfc/iso15693_*.nfc)."))
         return 2
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -225,7 +225,7 @@ def main():
                 f.write(text if isinstance(text, str) else str(text))
         return _save
 
-    wlog(C("head", "=== ISO15693/SLIX Flipper ground-truth  %s ===" % stamp))
+    wlog(C("head", "=== ISO15693 Flipper ground-truth  %s ===" % stamp))
     wlog("sources : %s" % ", ".join(os.path.basename(s) for s in sources))
     wlog("output  : %s" % (out_dir if not args.dry_run else "(dry-run, none)"))
 

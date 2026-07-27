@@ -1,6 +1,6 @@
-# tools/ — SLIX / ISO15693 magic test tooling
+# tools/ — ISO15693 magic test tooling
 
-Dev/test helpers for the SLIX (magic ISO15693) work. **Not part of the FAP** — they don't build into
+Dev/test helpers for the ISO15693 (magic) work. **Not part of the FAP** — they don't build into
 the app and needn't go upstream with it.
 
 ## `iso15693_magic_probe.py` — characterize a magic card (Proxmark3)
@@ -54,8 +54,8 @@ Needs `pyserial`, which the system python lacks — run under the tools venv (on
 
 ```bash
 python3 -m venv tools/.venv && tools/.venv/bin/pip install pyserial   # once
-tools/.venv/bin/python tools/flipper_ground_truth.py                  # all tools/test_nfc/slixtest_*.nfc
-tools/.venv/bin/python tools/flipper_ground_truth.py --sources tools/test_nfc/slixtest_slix_28.nfc
+tools/.venv/bin/python tools/flipper_ground_truth.py                  # all tools/test_nfc/iso15693_*.nfc
+tools/.venv/bin/python tools/flipper_ground_truth.py --sources tools/test_nfc/iso15693_slix_28.nfc
 tools/.venv/bin/python tools/flipper_ground_truth.py --pm3-crosscheck  # add a Proxmark3 read
 python3 tools/flipper_ground_truth.py --dry-run                        # parse/preview, no device
 ```

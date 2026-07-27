@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate synthetic ISO15693-3 source .nfc files for testing the nfc_magic SLIX clone/impersonation.
+"""Generate synthetic ISO15693-3 source .nfc files for testing the nfc_magic ISO15693 clone/impersonation.
 
 Each file is a valid Flipper "ISO15693-3" device dump with a chosen identity (UID / IC ref / DSFID /
 AFI / block count) and data pattern. Drop them in the Flipper's `nfc/` folder, then in NFC Magic:
@@ -93,7 +93,7 @@ def build_nfc(p):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Generate ISO15693-3 test .nfc files for SLIX clone testing.")
+    ap = argparse.ArgumentParser(description="Generate ISO15693-3 test .nfc files for ISO15693 clone testing.")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_nfc"),
                     help="output dir (default: tools/test_nfc/). Point at a mounted SD `nfc/` to use directly.")
     ap.add_argument("--only", help="comma-list of profiles to emit (default: all). See --list.")
@@ -111,7 +111,7 @@ def main():
     for name in names:
         if name not in PROFILES:
             raise SystemExit("unknown profile '%s' (see --list)" % name)
-        path = os.path.join(args.out, "slixtest_%s.nfc" % name)
+        path = os.path.join(args.out, "iso15693_%s.nfc" % name)
         with open(path, "w") as f:
             f.write(build_nfc(PROFILES[name]))
         print("wrote %s  (%d blocks, IC 0x%02X)" % (path, PROFILES[name]["blocks"], PROFILES[name]["ic_ref"]))
