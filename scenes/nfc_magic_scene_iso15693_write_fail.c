@@ -35,11 +35,11 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) :
                                                          advertised;
         widget_add_string_element(
-            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Clone complete");
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Clone finished");
         FuriString* text = furi_string_alloc();
         furi_string_printf(
             text,
-            "Copy matches source.\nHolds %u/%u blocks.\nTop %u empty.",
+            "Data matches source.\nHolds %u/%u blocks.\nTop %u were empty.",
             physical,
             advertised,
             extra);

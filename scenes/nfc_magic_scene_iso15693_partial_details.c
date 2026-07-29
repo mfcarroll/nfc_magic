@@ -12,8 +12,9 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     // so soften the wording; for a partial they're the blocks that wouldn't write / clear.
     const uint32_t reason =
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
+    const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
     const char* title;
-    if(reason == NfcMagicIso15693WriteFailReasonOverCapacity) {
+    if(over_capacity) {
         title = "Empty top blocks";
     } else {
         title = instance->iso15693_is_wipe_mode ? "Blocks not cleared" : "Blocks not written";
@@ -21,6 +22,12 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     widget_add_string_element(widget, 0, 0, AlignLeft, AlignTop, FontPrimary, title);
 
     FuriString* message = furi_string_alloc();
+    if(over_capacity) {
+        // These empty blocks are past the card's physical capacity -- no data was lost, but say why
+        // they weren't written. ("Card too small" is reserved for the partial screen, where real data
+        // IS lost; this clone's data all fit.)
+        furi_string_cat_str(message, "Didn't fit on the card:\n");
+    }
     nfc_magic_partial_details_append_indices(
         message, instance->iso15693_clone_failed_bitmap, instance->iso15693_clone_blocks_total, 0);
     if(instance->iso15693_clone_used_gen1) {
