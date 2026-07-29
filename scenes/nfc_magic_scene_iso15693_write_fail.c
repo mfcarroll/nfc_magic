@@ -27,26 +27,24 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         instance->notifications, over_capacity ? &sequence_success : &sequence_error);
 
     if(over_capacity) {
-        // The clone matched the source, but the card ended up advertising more blocks than it
-        // physically holds (the extra source blocks were empty, so nothing was lost). Success, but
-        // worth flagging: a reader that probes the top blocks sees them error/zero, and you can't
-        // store real data there.
+        // Clean success: the copy matched the source, the card just advertises more blocks than it
+        // physically holds (the extra source blocks were empty, so nothing was lost). Concise summary
+        // here, gen2-style; the exact empty top blocks are behind "Details".
         const uint16_t advertised = instance->iso15693_clone_blocks_total;
         const uint16_t extra = instance->iso15693_clone_over_capacity;
         const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) :
                                                          advertised;
+        widget_add_string_element(
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Clone complete");
         FuriString* text = furi_string_alloc();
-        furi_string_cat_printf(
+        furi_string_printf(
             text,
-            "Copy matches source. Card holds %u of %u blocks; the top %u were empty. It now "
-            "advertises more than it physically has.",
+            "Copy matches source.\nHolds %u/%u blocks.\nTop %u empty.",
             physical,
             advertised,
             extra);
-        widget_add_string_element(
-            widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Clone complete");
-        // Scrolling element (not a fixed text box) so the note isn't silently clipped past the height.
-        widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
+        widget_add_string_multiline_element(
+            widget, 4, 20, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(partial) {
         // Summary only -- counts here, the per-block list behind "Details" -- mirroring the Gen2 /
@@ -113,8 +111,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             (over_capacity || partial) ? "Finish" : "Back",
             nfc_magic_scene_iso15693_write_fail_widget_callback,
             instance);
-        // A partial with a per-block list gets "Details" (forward) to that list, like Gen2 / USCUID.
-        if(partial && instance->iso15693_clone_failed_count > 0) {
+        // "Details" (forward) lists the affected blocks, like Gen2 / USCUID: a partial's failed
+        // blocks, or an over-capacity's empty top blocks.
+        if(over_capacity || (partial && instance->iso15693_clone_failed_count > 0)) {
             widget_add_button_element(
                 widget,
                 GuiButtonTypeRight,
@@ -135,6 +134,7 @@ bool nfc_magic_scene_iso15693_write_fail_on_event(void* context, SceneManagerEve
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
     const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
     const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
+    const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == GuiButtonTypeLeft) {
@@ -147,8 +147,8 @@ bool nfc_magic_scene_iso15693_write_fail_on_event(void* context, SceneManagerEve
                     instance->scene_manager, NfcMagicSceneIso15693);
             }
         } else if(event.event == GuiButtonTypeRight) {
-            if(partial) {
-                // Details -> the per-block "not written / not cleared" list.
+            if(partial || over_capacity) {
+                // Details -> the affected-block list (failed blocks, or the empty top blocks).
                 scene_manager_next_scene(
                     instance->scene_manager, NfcMagicSceneIso15693PartialDetails);
                 consumed = true;

@@ -7,14 +7,18 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
-    widget_add_string_element(
-        widget,
-        0,
-        0,
-        AlignLeft,
-        AlignTop,
-        FontPrimary,
-        instance->iso15693_is_wipe_mode ? "Blocks not cleared" : "Blocks not written");
+    // Reached from the write-fail summary (still on the stack): its reason picks the title. For an
+    // over-capacity success these are the empty blocks the card can't physically hold (not a failure),
+    // so soften the wording; for a partial they're the blocks that wouldn't write / clear.
+    const uint32_t reason =
+        scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
+    const char* title;
+    if(reason == NfcMagicIso15693WriteFailReasonOverCapacity) {
+        title = "Empty top blocks";
+    } else {
+        title = instance->iso15693_is_wipe_mode ? "Blocks not cleared" : "Blocks not written";
+    }
+    widget_add_string_element(widget, 0, 0, AlignLeft, AlignTop, FontPrimary, title);
 
     FuriString* message = furi_string_alloc();
     nfc_magic_partial_details_append_indices(
