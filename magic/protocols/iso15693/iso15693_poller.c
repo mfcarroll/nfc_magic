@@ -317,8 +317,11 @@ static void
 
 // Wipe mode: write zeros to every data block on the card itself (UID untouched), using the target's
 // own reported geometry. We attempt every block rather than pre-skipping the target's locked ones: a
-// magic card often ignores its own lock bits and accepts the write, and a block that genuinely won't
-// clear must be counted so the "nothing could be wiped" guard can fire.
+// magic card often ignores its own lock bits and accepts the write. A block whose zero-write fails is
+// only a real failure if it STILL HOLDS DATA -- a phantom block past the card's real capacity (the
+// card over-reports its geometry) or an already-clear block left nothing behind, so counting it would
+// be a false "partial wipe". A locked block that genuinely retains data is counted (the wipe's
+// privacy promise wasn't kept there), which also lets the "nothing could be wiped" guard fire.
 static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3Data* target = nfc_poller_get_data(instance->poller);
     const uint16_t block_count = iso15693_3_get_block_count(target);
@@ -338,7 +341,21 @@ static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poll
         block++) {
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, zeros, (uint8_t)block, size);
-        if(error != Iso15693_3ErrorNone) {
+        if(error == Iso15693_3ErrorNone) continue;
+
+        // The zero-write failed, so the block is unchanged and its activation-time contents are what
+        // still remains there. Only count it if data actually remains: a phantom block past the card's
+        // real capacity, or an already-clear block, reads back zero and isn't a real "wouldn't clear".
+        // A locked block that still holds data IS a real failure.
+        const uint8_t* remaining = iso15693_3_get_block_data(target, block);
+        bool has_data = false;
+        for(uint8_t i = 0; i < block_size; i++) {
+            if(remaining[i] != 0) {
+                has_data = true;
+                break;
+            }
+        }
+        if(has_data) {
             instance->clone_failed_count++;
             instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
         }
@@ -508,9 +525,8 @@ static NfcCommand iso15693_poller_nfc_callback(NfcGenericEvent event, void* cont
 
     // On the FIRST activation of a clone/wipe (write_state still Start, before any write step),
     // tell the scene a card was detected so its popup switches from "apply the same card" to
-    // "writing" -- the other magic pollers emit this event; ours previously did not, so the ISO15693
-    // clone popup sat on "apply the same card" for the whole write. Fires once (write_step advances
-    // the state). Not emitted in a bare Write-UID (its scene has a static popup and its own callback).
+    // "writing". Fires once (write_step advances the state). Not emitted in a bare Write-UID
+    // (its scene has a static popup and its own callback).
     if(instance->write_state == Iso15693WriteStateStart &&
        (instance->mode == Iso15693PollerModeClone || instance->mode == Iso15693PollerModeWipe)) {
         iso15693_poller_report(instance, Iso15693PollerEventCardDetected);
