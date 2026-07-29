@@ -1,5 +1,4 @@
 #include "../nfc_magic_app_i.h"
-#include "nfc_magic_scene_partial_details_common.h"
 
 void nfc_magic_scene_iso15693_write_fail_widget_callback(
     GuiButtonType result,
@@ -50,41 +49,34 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(partial) {
-        // Scrolls (not a fixed box) so the block list + gen1 note can't be silently clipped. Partial
-        // means some blocks wouldn't write: real source data lost, empty failures that weren't a
-        // clean capacity tail, or (for a wipe) blocks that wouldn't clear. Name them.
-        FuriString* text = furi_string_alloc();
-        furi_string_cat_str(
-            text, instance->iso15693_is_wipe_mode ? "Wiped.\n" : "UID + data cloned.\n");
-        if(instance->iso15693_clone_failed_count > 0) {
-            furi_string_cat_printf(
-                text,
-                instance->iso15693_is_wipe_mode ? "%u block(s) wouldn't clear: " :
-                                                  "%u block(s) couldn't be written: ",
-                instance->iso15693_clone_failed_count);
-            nfc_magic_partial_details_append_indices(
-                text,
-                instance->iso15693_clone_failed_bitmap,
-                ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8,
-                20);
-            furi_string_push_back(text, '\n');
-        }
-        if(instance->iso15693_clone_used_gen1) {
-            // The clone fell back to the gen1 method, which stamps the UID (56/57) plus unlock/commit
-            // (62/63) into those data blocks -- so they no longer match the source.
-            furi_string_cat_str(
-                text,
-                "gen1 method: blocks 56/57/62/63 hold UID + unlock/commit, not your file's data.");
-        }
+        // Summary only -- counts here, the per-block list behind "Details" -- mirroring the Gen2 /
+        // USCUID-UL partial screens. Partial means some blocks wouldn't write (real source data lost,
+        // or empty failures that weren't a clean capacity tail), or a clone fell back to gen1.
+        const uint16_t total = instance->iso15693_clone_blocks_total;
+        const uint16_t failed = instance->iso15693_clone_failed_count;
+        const uint16_t ok = (total >= failed) ? (uint16_t)(total - failed) : 0;
         widget_add_string_element(
             widget,
-            3,
+            64,
             0,
-            AlignLeft,
+            AlignCenter,
             AlignTop,
             FontPrimary,
             instance->iso15693_is_wipe_mode ? "Wipe partial" : "Clone partial");
-        widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
+        FuriString* text = furi_string_alloc();
+        furi_string_printf(
+            text,
+            instance->iso15693_is_wipe_mode ? "Wiped %u/%u blocks\nNot cleared: %u" :
+                                              "Cloned %u/%u blocks\nNot written: %u",
+            ok,
+            total,
+            failed);
+        if(instance->iso15693_clone_used_gen1) {
+            // gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ.
+            furi_string_cat_str(text, "\ngen1: 56/57/62/63 differ");
+        }
+        widget_add_string_multiline_element(
+            widget, 4, 20, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
         furi_string_free(text);
     } else {
         const char* message = card_lost ?
@@ -97,21 +89,40 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             widget, 0, 13, AlignLeft, AlignTop, FontSecondary, message);
     }
 
-    // Only a lost card is worth retrying; a rejected/partial write would just repeat.
     if(card_lost) {
+        // Card removed mid-write -> retryable. Retry re-runs the write; Exit leaves. Matches the
+        // generic write-fail screen (Retry left, Exit right).
         widget_add_button_element(
             widget,
             GuiButtonTypeLeft,
             "Retry",
             nfc_magic_scene_iso15693_write_fail_widget_callback,
             instance);
+        widget_add_button_element(
+            widget,
+            GuiButtonTypeRight,
+            "Exit",
+            nfc_magic_scene_iso15693_write_fail_widget_callback,
+            instance);
+    } else {
+        // over-capacity / partial are (qualified) successes -> "Finish"; not-magic is a failure ->
+        // "Back". The primary exit sits on the left, like the Gen2/USCUID/gen4 result screens.
+        widget_add_button_element(
+            widget,
+            GuiButtonTypeLeft,
+            (over_capacity || partial) ? "Finish" : "Back",
+            nfc_magic_scene_iso15693_write_fail_widget_callback,
+            instance);
+        // A partial with a per-block list gets "Details" (forward) to that list, like Gen2 / USCUID.
+        if(partial && instance->iso15693_clone_failed_count > 0) {
+            widget_add_button_element(
+                widget,
+                GuiButtonTypeRight,
+                "Details",
+                nfc_magic_scene_iso15693_write_fail_widget_callback,
+                instance);
+        }
     }
-    widget_add_button_element(
-        widget,
-        GuiButtonTypeRight,
-        "OK",
-        nfc_magic_scene_iso15693_write_fail_widget_callback,
-        instance);
 
     view_dispatcher_switch_to_view(instance->view_dispatcher, NfcMagicAppViewWidget);
 }
@@ -120,13 +131,32 @@ bool nfc_magic_scene_iso15693_write_fail_on_event(void* context, SceneManagerEve
     NfcMagicApp* instance = context;
     bool consumed = false;
 
+    const uint32_t reason =
+        scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
+    const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
+    const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
+
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == GuiButtonTypeLeft) {
-            // Retry: back to the write scene, which re-runs the write on enter.
-            consumed = scene_manager_previous_scene(instance->scene_manager);
+            if(card_lost) {
+                // Retry: back to the write scene, which re-runs the write on enter.
+                consumed = scene_manager_previous_scene(instance->scene_manager);
+            } else {
+                // Finish / Back -> the ISO15693 menu.
+                consumed = scene_manager_search_and_switch_to_previous_scene(
+                    instance->scene_manager, NfcMagicSceneIso15693);
+            }
         } else if(event.event == GuiButtonTypeRight) {
-            consumed = scene_manager_search_and_switch_to_previous_scene(
-                instance->scene_manager, NfcMagicSceneIso15693);
+            if(partial) {
+                // Details -> the per-block "not written / not cleared" list.
+                scene_manager_next_scene(
+                    instance->scene_manager, NfcMagicSceneIso15693PartialDetails);
+                consumed = true;
+            } else {
+                // Card-lost "Exit" -> the ISO15693 menu.
+                consumed = scene_manager_search_and_switch_to_previous_scene(
+                    instance->scene_manager, NfcMagicSceneIso15693);
+            }
         }
     } else if(event.type == SceneManagerEventTypeBack) {
         consumed = scene_manager_search_and_switch_to_previous_scene(
@@ -138,10 +168,8 @@ bool nfc_magic_scene_iso15693_write_fail_on_event(void* context, SceneManagerEve
 void nfc_magic_scene_iso15693_write_fail_on_exit(void* context) {
     NfcMagicApp* instance = context;
 
-    // Reset to the default reason so a later failure isn't mislabelled.
-    scene_manager_set_scene_state(
-        instance->scene_manager,
-        NfcMagicSceneIso15693WriteFail,
-        NfcMagicIso15693WriteFailReasonNotMagic);
+    // NOTE: do not reset the scene state here. The write scene always sets the reason before entering
+    // this scene, and the "Details" round-trip re-enters this scene, which must re-read the same
+    // reason -- clearing it here would rebuild the wrong screen on return from Details.
     widget_reset(instance->widget);
 }
