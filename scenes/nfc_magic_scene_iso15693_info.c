@@ -25,8 +25,7 @@ void nfc_magic_scene_iso15693_info_on_enter(void* context) {
     const uint8_t manufacturer_id = iso15693_3_get_manufacturer_id(iso_data);
     furi_string_cat_printf(
         temp_str, "Mfr: %s\n", iso15693_info_get_manufacturer_name(manufacturer_id));
-    furi_string_cat_printf(
-        temp_str, "Chip: %s\n", iso15693_info_get_chip_info_ex(iso_data->uid));
+    furi_string_cat_printf(temp_str, "Chip: %s\n", iso15693_info_get_chip_info_ex(iso_data->uid));
 
     // Memory geometry from GET SYSTEM INFO (only valid when the flag bit is set).
     if(sys_info->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) {

@@ -18,24 +18,24 @@
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
 // gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each.
-#define ISO15693_MAGIC_CMD_WRITE  (0x21U) // ISO15693 WRITE BLOCK
+#define ISO15693_MAGIC_CMD_WRITE (0x21U) // ISO15693 WRITE BLOCK
 
 // Standard ISO15693 identity writes, used to make a clone match the source's AFI / DSFID.
 #define ISO15693_MAGIC_CMD_WRITE_AFI   (0x27U) // ISO15693 WRITE AFI
 #define ISO15693_MAGIC_CMD_WRITE_DSFID (0x29U) // ISO15693 WRITE DSFID
-#define ISO15693_MAGIC_BLK_UNLOCK (0x3EU) // written as 0
-#define ISO15693_MAGIC_BLK_COMMIT (0x3FU) // written as 0x6996 (arms the UID change)
-#define ISO15693_MAGIC_BLK_UID_LO (0x38U) // uid[7..4]
-#define ISO15693_MAGIC_BLK_UID_HI (0x39U) // uid[3..0]
+#define ISO15693_MAGIC_BLK_UNLOCK      (0x3EU) // written as 0
+#define ISO15693_MAGIC_BLK_COMMIT      (0x3FU) // written as 0x6996 (arms the UID change)
+#define ISO15693_MAGIC_BLK_UID_LO      (0x38U) // uid[7..4]
+#define ISO15693_MAGIC_BLK_UID_HI      (0x39U) // uid[3..0]
 
 // gen2: magic write command (0xE0) with a 0x09 subcommand and a block reference; 4 data
 // bytes each. Frame layout: 02 E0 09 <ref> d0 d1 d2 d3 (+CRC).
-#define ISO15693_MAGIC_CMD_WRITE_V2  (0xE0U) // ISO15693_MAGIC_WRITE
-#define ISO15693_MAGIC_V2_SUB        (0x09U)
-#define ISO15693_MAGIC_V2_BLK_CFG    (0x47U) // system-info config: max block / block size / IC ref
-#define ISO15693_MAGIC_V2_BLK_CFG2   (0x52U) // written as 0
-#define ISO15693_MAGIC_V2_BLK_UID_HI (0x40U) // uid[7..4]
-#define ISO15693_MAGIC_V2_BLK_UID_LO (0x41U) // uid[3..0]
+#define ISO15693_MAGIC_CMD_WRITE_V2     (0xE0U) // ISO15693_MAGIC_WRITE
+#define ISO15693_MAGIC_V2_SUB           (0x09U)
+#define ISO15693_MAGIC_V2_BLK_CFG       (0x47U) // system-info config: max block / block size / IC ref
+#define ISO15693_MAGIC_V2_BLK_CFG2      (0x52U) // written as 0
+#define ISO15693_MAGIC_V2_BLK_UID_HI    (0x40U) // uid[7..4]
+#define ISO15693_MAGIC_V2_BLK_UID_LO    (0x41U) // uid[3..0]
 // Fixed config payload for the CFG block, verbatim from proxmark's gen2 sequence (matches a
 // 64-block / 4-byte-block / IC-ref-0x8B card; these values are constant in proxmark too).
 #define ISO15693_MAGIC_V2_CFG_MAXBLOCK  (0x3FU)
@@ -125,7 +125,8 @@ static void iso15693_poller_build_gen2_frame(
 
 // Magic cards may not answer these writes, so per-frame transceive results are intentionally
 // ignored. (The UID read-back is the real check.)
-static void iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
+static void
+    iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
     BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
     BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
 
@@ -135,10 +136,12 @@ static void iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller,
     iso15693_poller_build_gen1_frame(tx, ISO15693_MAGIC_BLK_COMMIT, 0x69, 0x96, 0x00, 0x00);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
-    iso15693_poller_build_gen1_frame(tx, ISO15693_MAGIC_BLK_UID_LO, uid[7], uid[6], uid[5], uid[4]);
+    iso15693_poller_build_gen1_frame(
+        tx, ISO15693_MAGIC_BLK_UID_LO, uid[7], uid[6], uid[5], uid[4]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
-    iso15693_poller_build_gen1_frame(tx, ISO15693_MAGIC_BLK_UID_HI, uid[3], uid[2], uid[1], uid[0]);
+    iso15693_poller_build_gen1_frame(
+        tx, ISO15693_MAGIC_BLK_UID_HI, uid[3], uid[2], uid[1], uid[0]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     bit_buffer_free(tx);
@@ -164,10 +167,12 @@ static void iso15693_poller_send_backdoor_uid_gen2(
     iso15693_poller_build_gen2_frame(tx, ISO15693_MAGIC_V2_BLK_CFG2, 0x00, 0x00, 0x00, 0x00);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
-    iso15693_poller_build_gen2_frame(tx, ISO15693_MAGIC_V2_BLK_UID_HI, uid[7], uid[6], uid[5], uid[4]);
+    iso15693_poller_build_gen2_frame(
+        tx, ISO15693_MAGIC_V2_BLK_UID_HI, uid[7], uid[6], uid[5], uid[4]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
-    iso15693_poller_build_gen2_frame(tx, ISO15693_MAGIC_V2_BLK_UID_LO, uid[3], uid[2], uid[1], uid[0]);
+    iso15693_poller_build_gen2_frame(
+        tx, ISO15693_MAGIC_V2_BLK_UID_LO, uid[3], uid[2], uid[1], uid[0]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     bit_buffer_free(tx);
@@ -177,7 +182,8 @@ static void iso15693_poller_send_backdoor_uid_gen2(
 // Best-effort: make the clone match the source's AFI / DSFID via the standard ISO15693 WRITE AFI /
 // WRITE DSFID commands (only for fields the source actually reported). Frames: 02 27 <afi> and
 // 02 29 <dsfid> (+CRC). Failures are ignored -- these are identity extras, not the core clone.
-static void iso15693_poller_write_identity(Iso15693_3Poller* iso_poller, const Iso15693_3Data* source) {
+static void
+    iso15693_poller_write_identity(Iso15693_3Poller* iso_poller, const Iso15693_3Data* source) {
     const Iso15693_3SystemInfo* sys = &source->system_info;
     BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
     BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
@@ -207,10 +213,11 @@ static void iso15693_poller_report(Iso15693Poller* instance, Iso15693PollerEvent
     }
 }
 
-// Clone mode: write every writable data block from the source image with the standard ISO15693 WRITE
-// BLOCK. Locked blocks are skipped (they'd reject the write); real write errors are counted into the
-// failure bitmap for Partial reporting. Runs synchronously on the Nfc worker thread.
-static void iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
+// Clone mode: write every data block from the source image with the standard ISO15693 WRITE BLOCK.
+// Real write errors are counted into the failure bitmap for Partial reporting. Runs synchronously on
+// the Nfc worker thread.
+static void
+    iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3Data* source = instance->clone_source;
     const uint16_t source_count = iso15693_3_get_block_count(source);
     const uint8_t block_size = iso15693_3_get_block_size(source);
@@ -236,9 +243,13 @@ static void iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso156
     //   - empty block that fails      -> nothing to clone there, no data lost: clone_over_capacity only
     //     (the card reports those blocks as zero anyway, so the clone still matches -> stays Success)
     //
+    // Do NOT skip blocks locked in the SOURCE image: the source's lock bits describe the ORIGINAL
+    // card, not the magic target (which is writable regardless), and locked blocks are exactly where
+    // real tags keep provisioned data. Attempt every block; a genuinely unwritable non-empty block is
+    // counted as a real loss by the error path below.
+    //
     // block_number is a uint8_t on the wire, so 256 blocks is the ceiling.
     for(uint16_t block = 0; block < source_count && block < 256; block++) {
-        if(iso15693_3_is_block_locked(source, block)) continue;
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
@@ -260,8 +271,13 @@ static void iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso156
     }
 }
 
-// Wipe mode: write zeros to every writable data block on the card itself (UID untouched). Uses the
-// target's own reported geometry and lock bits.
+// ISO15693 Get System Info stores (block size - 1) in a 5-bit field, so a block is at most 32 bytes.
+#define ISO15693_MAX_BLOCK_SIZE (32U)
+
+// Wipe mode: write zeros to every data block on the card itself (UID untouched), using the target's
+// own reported geometry. We attempt every block rather than pre-skipping the target's locked ones: a
+// magic card often ignores its own lock bits and accepts the write, and a block that genuinely won't
+// clear must be counted so the "nothing could be wiped" guard can fire.
 static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3Data* target = nfc_poller_get_data(instance->poller);
     const uint16_t block_count = iso15693_3_get_block_count(target);
@@ -274,10 +290,10 @@ static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poll
 
     if(block_count == 0 || block_size == 0) return;
 
-    uint8_t zeros[32] = {0};
+    // 32-byte zero buffer covers every valid geometry; the clamp is belt-and-braces.
+    uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
     const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
     for(uint16_t block = 0; block < block_count && block < 256; block++) {
-        if(iso15693_3_is_block_locked(target, block)) continue;
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, zeros, (uint8_t)block, size);
         if(error != Iso15693_3ErrorNone) {
@@ -295,7 +311,8 @@ static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poll
 //    56/57/62/63, so those no longer match the source. (A bare Write-UID has no source data to
 //    disturb, so gen1 there is still a clean Success.)
 static Iso15693PollerEvent iso15693_poller_success_or_partial(Iso15693Poller* instance) {
-    const bool gen1_clone = (instance->mode == Iso15693PollerModeClone) && instance->clone_used_gen1;
+    const bool gen1_clone = (instance->mode == Iso15693PollerModeClone) &&
+                            instance->clone_used_gen1;
     if(instance->clone_failed_count > 0 || gen1_clone) {
         return Iso15693PollerEventPartial;
     }
@@ -305,7 +322,8 @@ static Iso15693PollerEvent iso15693_poller_success_or_partial(Iso15693Poller* in
 // Read the UID back for verification, retrying a few times so a momentary miss right after the field
 // power-cycle isn't mistaken for a removed card. Runs on the Nfc worker thread (furi_delay_ms is the
 // same primitive the SDK poller uses between activation attempts).
-static Iso15693_3Error iso15693_poller_verify_inventory(Iso15693_3Poller* iso_poller, uint8_t* uid) {
+static Iso15693_3Error
+    iso15693_poller_verify_inventory(Iso15693_3Poller* iso_poller, uint8_t* uid) {
     Iso15693_3Error error = Iso15693_3ErrorNone;
     for(uint32_t attempt = 0; attempt < ISO15693_POLLER_VERIFY_ATTEMPTS; attempt++) {
         error = iso15693_3_poller_inventory(iso_poller, uid);
@@ -318,7 +336,8 @@ static Iso15693_3Error iso15693_poller_verify_inventory(Iso15693_3Poller* iso_po
 // Drives one write-mode step. Runs on the Nfc worker thread with the field active. Returns the
 // NfcCommand for the poller: Reset power-cycles the field (so the next Ready verifies a freshly
 // re-powered card), Stop ends the operation.
-static NfcCommand iso15693_poller_write_step(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
+static NfcCommand
+    iso15693_poller_write_step(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     uint8_t readback[ISO15693_3_UID_SIZE] = {0};
 
     switch(instance->write_state) {
@@ -330,7 +349,8 @@ static NfcCommand iso15693_poller_write_step(Iso15693Poller* instance, Iso15693_
             Iso15693PollerEvent outcome;
             if(instance->clone_blocks_total > 0 &&
                instance->clone_failed_count >= instance->clone_blocks_total) {
-                outcome = Iso15693PollerEventFail; // nothing could be wiped (read-only / not writable)
+                outcome =
+                    Iso15693PollerEventFail; // nothing could be wiped (read-only / not writable)
             } else {
                 outcome = iso15693_poller_success_or_partial(instance);
             }
@@ -442,6 +462,16 @@ static NfcCommand iso15693_poller_nfc_callback(NfcGenericEvent event, void* cont
         return NfcCommandStop;
     }
 
+    // On the FIRST activation of a clone/wipe (write_state still Start, before any write step),
+    // tell the scene a card was detected so its popup switches from "apply the same card" to
+    // "writing" -- the other magic pollers emit this event; ours previously did not, so the ISO15693
+    // clone popup sat on "apply the same card" for the whole write. Fires once (write_step advances
+    // the state). Not emitted in a bare Write-UID (its scene has a static popup and its own callback).
+    if(instance->write_state == Iso15693WriteStateStart &&
+       (instance->mode == Iso15693PollerModeClone || instance->mode == Iso15693PollerModeWipe)) {
+        iso15693_poller_report(instance, Iso15693PollerEventCardDetected);
+    }
+
     // Write mode. event.instance is the concrete Iso15693_3Poller; raw frames must be sent there.
     return iso15693_poller_write_step(instance, event.instance);
 }
@@ -500,7 +530,10 @@ static void iso15693_poller_start_internal(
     nfc_poller_start(instance->poller, iso15693_poller_nfc_callback, instance);
 }
 
-void iso15693_poller_start(Iso15693Poller* instance, Iso15693PollerCallback callback, void* context) {
+void iso15693_poller_start(
+    Iso15693Poller* instance,
+    Iso15693PollerCallback callback,
+    void* context) {
     iso15693_poller_start_internal(instance, Iso15693PollerModeInfo, callback, context);
 }
 
@@ -528,7 +561,10 @@ void iso15693_poller_start_clone(
     iso15693_poller_start_internal(instance, Iso15693PollerModeClone, callback, context);
 }
 
-void iso15693_poller_start_wipe(Iso15693Poller* instance, Iso15693PollerCallback callback, void* context) {
+void iso15693_poller_start_wipe(
+    Iso15693Poller* instance,
+    Iso15693PollerCallback callback,
+    void* context) {
     furi_assert(instance);
     iso15693_poller_start_internal(instance, Iso15693PollerModeWipe, callback, context);
 }
@@ -560,7 +596,10 @@ bool iso15693_poller_source_uses_gen1_blocks(const Iso15693_3Data* source) {
     const uint8_t block_size = iso15693_3_get_block_size(source);
     if(block_size == 0) return false;
     const uint8_t gen1_blocks[] = {
-        ISO15693_MAGIC_BLK_UID_LO, ISO15693_MAGIC_BLK_UID_HI, ISO15693_MAGIC_BLK_UNLOCK, ISO15693_MAGIC_BLK_COMMIT};
+        ISO15693_MAGIC_BLK_UID_LO,
+        ISO15693_MAGIC_BLK_UID_HI,
+        ISO15693_MAGIC_BLK_UNLOCK,
+        ISO15693_MAGIC_BLK_COMMIT};
     for(size_t i = 0; i < sizeof(gen1_blocks); i++) {
         const uint16_t block = gen1_blocks[i];
         if(block >= block_count) continue;

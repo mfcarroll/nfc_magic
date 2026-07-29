@@ -2,6 +2,10 @@
 
 #include <lib/nfc/protocols/iso15693_3/iso15693_3.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Thin wrapper around the SDK's Iso15693_3Data. The ISO15693-3 poller already fills in
 // system_info (block count/size, DSFID, AFI, IC ref) and the block data during activation,
 // so there is nothing to duplicate here, everything the ISO15693 scenes need lives inside
@@ -17,3 +21,7 @@ void iso15693_data_free(Iso15693Data* instance);
 void iso15693_data_reset(Iso15693Data* instance);
 
 void iso15693_data_copy(Iso15693Data* target, const Iso15693Data* source);
+
+#ifdef __cplusplus
+}
+#endif

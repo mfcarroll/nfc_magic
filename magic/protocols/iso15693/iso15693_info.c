@@ -111,11 +111,11 @@ static const ManufacturerName manufacturer_mapping[] = {
     {0x61, "Wearlinks Technology Inc. China"},
     {0x62, "Userstar Information Systems Co., Ltd Taiwan"},
     {0x63, "Pragmatic Printing Ltd. UK"},
-    {0x64, "Associacao do Laboratorio de Sistemas Integraveis Tecnologico – LSI-TEC Brazil"},
+    {0x64, "Associacao do Laboratorio de Sistemas Integraveis Tecnologico - LSI-TEC Brazil"},
     {0x65, "Tendyron Corporation China"},
     {0x66, "MUTO Smart Co., Ltd. Korea"},
     {0x67, "ON Semiconductor USA"},
-    {0x68, "TÜBİTAK BİLGEM Turkey"},
+    {0x68, "TUBITAK BILGEM Turkey"},
     {0x69, "Huada Semiconductor Co., Ltd China"},
     {0x6A, "SEVENEY France"},
     {0x6B, "ISSM France"},
@@ -131,7 +131,8 @@ char* iso15693_info_get_manufacturer_name(uint8_t vendor_id) {
     int len = sizeof(manufacturer_mapping) / sizeof(ManufacturerName);
 
     for(i = 0; i < len; ++i)
-        if(vendor_id == manufacturer_mapping[i].manufacturer_byte) return manufacturer_mapping[i].desc;
+        if(vendor_id == manufacturer_mapping[i].manufacturer_byte)
+            return manufacturer_mapping[i].desc;
 
     //No match, return default
     return manufacturer_mapping[len - 1].desc;
@@ -162,7 +163,7 @@ static const ChipInfo chip_id_mapping[] = {
     {0x02, 0x1C, 0xFC, "SRI4K"},
     {0x02, 0x30, 0xFC, "SRT512"},
 
-    // 0x02 = ST — ST25TV product-authentication series (IC id from proxmark uidmapping). The 0x08/
+    // 0x02 = ST - ST25TV product-authentication series (IC id from proxmark uidmapping). The 0x08/
     // 0x23-C variants are omitted: their IC ids collide with LRI2K / other ST parts.
     {0x02, 0x23, 0xFF, "ST25TV02K / ST25TV512"},
     {0x02, 0x35, 0xFF, "ST25TV04K-P"},
@@ -199,13 +200,22 @@ static const ChipInfo chip_id_mapping[] = {
     // 0x16 = EM Microelectronic-Marin SA Switzerland (Skidata)
     {0x16, 0x04, 0xFF, "EM4034 [IC id = 01] (Read/Write - no AFI)"},
     {0x16, 0x0C, 0xFF, "EM4035 [IC id = 03] (Read/Write - replaced by 4233)"},
-    {0x16, 0x10, 0xFF, "EM4135 [IC id = 04] (Read/Write - replaced by 4233) 36x64bit start page 13"},
+    {0x16,
+     0x10,
+     0xFF,
+     "EM4135 [IC id = 04] (Read/Write - replaced by 4233) 36x64bit start page 13"},
     {0x16, 0x14, 0xFF, "EM4036 [IC id = 05] 28pF"},
     {0x16, 0x18, 0xFF, "EM4006 [IC id = 06] (Read Only)"},
     {0x16, 0x1C, 0xFF, "EM4133 [IC id = 07] 23,5pF (Read/Write)"},
-    {0x16, 0x20, 0xFF, "EM4033 [IC id = 08] 23,5pF (Read Only - no AFI / no DSFID / no security blocks)"},
+    {0x16,
+     0x20,
+     0xFF,
+     "EM4033 [IC id = 08] 23,5pF (Read Only - no AFI / no DSFID / no security blocks)"},
     {0x16, 0x24, 0xFF, "EM4233 [IC id = 09] 23,5pF CustomerID-102"},
-    {0x16, 0x28, 0xFF, "EM4233 SLIC [IC id = 10] 23,5pF (1Kb flash memory - not provide High Security mode and QuietStorage feature)"},
+    {0x16,
+     0x28,
+     0xFF,
+     "EM4233 SLIC [IC id = 10] 23,5pF (1Kb flash memory - not provide High Security mode and QuietStorage feature)"},
     {0x16, 0x3C, 0xFF, "EM4237 [IC id = 15] 23,5pF"},
     {0x16, 0x7C, 0xFF, "EM4233 [IC id = 31] 95pF"},
     {0x16, 0x94, 0xFF, "EM4036 [IC id = 37] 95pF  51x64bit "},

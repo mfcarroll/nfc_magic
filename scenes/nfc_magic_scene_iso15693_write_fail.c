@@ -32,7 +32,8 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // store real data there.
         const uint16_t advertised = instance->iso15693_clone_blocks_total;
         const uint16_t extra = instance->iso15693_clone_over_capacity;
-        const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) : advertised;
+        const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) :
+                                                         advertised;
         FuriString* text = furi_string_alloc();
         furi_string_cat_printf(
             text,
@@ -43,8 +44,8 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             extra);
         widget_add_string_element(
             widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Clone complete");
-        widget_add_text_box_element(
-            widget, 0, 14, 128, 40, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
+        // Scrolling element (not a fixed text box) so the note isn't silently clipped past the height.
+        widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(partial) {
         // Full-width text box (no icon) so the detail can wrap. Partial means some NON-EMPTY source
@@ -52,15 +53,16 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // locked), so it couldn't be cloned. Name the blocks. (Empty blocks that don't fit lose
         // nothing and never reach here -- they stay a clean Success.)
         FuriString* text = furi_string_alloc();
-        furi_string_cat_str(text, instance->iso15693_is_wipe_mode ? "Wiped.\n" : "UID + data cloned.\n");
+        furi_string_cat_str(
+            text, instance->iso15693_is_wipe_mode ? "Wiped.\n" : "UID + data cloned.\n");
         if(instance->iso15693_clone_failed_count > 0) {
             furi_string_cat_printf(
                 text,
                 instance->iso15693_is_wipe_mode ? "%u block(s) wouldn't clear: " :
-                                              "%u block(s) didn't fit the card: ",
+                                                  "%u block(s) didn't fit the card: ",
                 instance->iso15693_clone_failed_count);
             uint16_t shown = 0;
-            for(uint16_t block = 0; block < 256; block++) {
+            for(uint16_t block = 0; block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8; block++) {
                 if(instance->iso15693_clone_failed_bitmap[block / 8] & (1u << (block % 8))) {
                     if(shown >= 20) {
                         furi_string_cat_str(text, "...");
@@ -73,10 +75,11 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             furi_string_push_back(text, '\n');
         }
         if(instance->iso15693_clone_used_gen1) {
-            // The clone fell back to the gen1 method, which stamps the UID/commit into blocks
-            // 56/57/62/63 -- so those no longer match the source. (gen1 is not hardware-validated.)
+            // The clone fell back to the gen1 method, which stamps the UID (56/57) plus unlock/commit
+            // (62/63) into those data blocks -- so they no longer match the source.
             furi_string_cat_str(
-                text, "gen1 method: blocks 56/57/62/63 hold the UID, not your file's data.");
+                text,
+                "gen1 method: blocks 56/57/62/63 hold UID + unlock/commit, not your file's data.");
         }
         widget_add_string_element(
             widget,
@@ -90,8 +93,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             widget, 0, 14, 128, 38, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
         furi_string_free(text);
     } else {
-        const char* message = card_lost ? "Card removed\nbefore the write\ncould finish." :
-                                          "Not a magic tag.\nThis card doesn't\nsupport UID write.";
+        const char* message = card_lost ?
+                                  "Card removed\nbefore the write\ncould finish." :
+                                  "Not a magic tag.\nThis card doesn't\nsupport UID write.";
         widget_add_icon_element(widget, 83, 22, &I_WarningDolphinFlip_45x42);
         widget_add_string_element(
             widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Write failed");
@@ -142,6 +146,8 @@ void nfc_magic_scene_iso15693_write_fail_on_exit(void* context) {
 
     // Reset to the default reason so a later failure isn't mislabelled.
     scene_manager_set_scene_state(
-        instance->scene_manager, NfcMagicSceneIso15693WriteFail, NfcMagicIso15693WriteFailReasonNotMagic);
+        instance->scene_manager,
+        NfcMagicSceneIso15693WriteFail,
+        NfcMagicIso15693WriteFailReasonNotMagic);
     widget_reset(instance->widget);
 }

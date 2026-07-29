@@ -5,8 +5,10 @@
 Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, and
 **clone / wipe** a magic ISO15693 card the same way the app handles its other magic types.
 
-The magic write frames are an exact port of proxmark3's `SetTag15693Uid` (gen1) and
-`SetTag15693Uid_v2` (gen2).
+The magic write frames follow proxmark3's `SetTag15693Uid` (gen1) and `SetTag15693Uid_v2` (gen2):
+gen1 is a verbatim port, and so is gen2's command structure — except that in clone mode the gen2 CFG
+frame substitutes the source card's geometry and IC ref (in place of proxmark's fixed `3f 03 8b`), so
+the copy advertises the same chip identity.
 
 ### Added
 - **Detection** — any ISO15693 tag that activates is treated as a magic candidate and routed to a
@@ -28,10 +30,10 @@ The magic write frames are an exact port of proxmark3's `SetTag15693Uid` (gen1) 
   note that the card now advertises more blocks than it physically holds (a reader probing the top
   blocks sees them error/zero, and real data can't be stored there). A card that advertises a larger
   geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
-- **gen1 fidelity is surfaced.** The gen1 backdoor stores the UID in data blocks 56/57/62/63, so a
-  gen1 clone can't reproduce a source that uses them. If the source has data there, the confirm warns
-  before the write; if the clone actually fell back to gen1, it reports the Partial clone status and
-  flags those blocks.
+- **gen1 fidelity is surfaced.** The gen1 backdoor overwrites data blocks 56/57/62/63 — the UID
+  (56/57) plus unlock/commit (62/63) — so a gen1 clone can't reproduce a source that uses them. If the
+  source has data there, the confirm warns before the write; if the clone actually fell back to gen1,
+  it reports Partial and flags those blocks.
 - **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
   UID after a reset is not misreported as a failure.
 - The potentially destructive **gen1 fallback only runs if the gen2 write left the UID unchanged**,
@@ -39,12 +41,11 @@ The magic write frames are an exact port of proxmark3's `SetTag15693Uid` (gen1) 
 - Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
   instead of a generic error, and detect / write popups **time out** instead of hanging.
 
-### Validation
-- The **gen2** path is validated end-to-end on hardware: byte-identical clones across chip types and
-  geometries (28 / 56 / 64 / 70 blocks), confirmed by both the stock NFC read-back and a Proxmark3
-  cross-read; wipe and the honest over-capacity reporting confirmed too.
-- The **gen1** path is a faithful proxmark port but is **not yet hardware-validated** (no gen1 magic
-  ISO15693 card was available to test against).
+### Validation (at 2.1)
+- The **gen2** path was validated end-to-end on hardware for this release: byte-identical clones
+  across 28 / 56 / 64 / 70-block geometries, plus wipe and the over-capacity reporting.
+- The **gen1** path shipped as a faithful proxmark port, not tested against gen1 hardware (none was
+  available).
 
 ## 2.0
 

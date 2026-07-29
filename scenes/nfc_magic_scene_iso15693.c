@@ -19,7 +19,11 @@ void nfc_magic_scene_iso15693_on_enter(void* context) {
     Submenu* submenu = app->submenu;
 
     submenu_add_item(
-        submenu, "Write", SubmenuIndexIso15693Write, nfc_magic_scene_iso15693_submenu_callback, app);
+        submenu,
+        "Write",
+        SubmenuIndexIso15693Write,
+        nfc_magic_scene_iso15693_submenu_callback,
+        app);
 
     submenu_add_item(
         submenu, "Wipe", SubmenuIndexIso15693Wipe, nfc_magic_scene_iso15693_submenu_callback, app);

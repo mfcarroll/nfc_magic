@@ -3,6 +3,10 @@
 #include <nfc/nfc_poller.h>
 #include "iso15693_data.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct Iso15693Poller Iso15693Poller;
 
 // Size (bytes) of the per-block failure bitmap; covers up to 256 blocks (the ISO15693 max).
@@ -20,6 +24,7 @@ typedef enum {
     Iso15693PollerEventPartial, // clone: UID written, but some data blocks could not be written
     Iso15693PollerEventFail, // card present but the backdoor write was not accepted (not a magic tag)
     Iso15693PollerEventCardLost, // no card in the field / card removed before the operation finished
+    Iso15693PollerEventCardDetected, // a magic candidate activated (drives the write popup UI)
 } Iso15693PollerEvent;
 
 typedef void (*Iso15693PollerCallback)(Iso15693PollerEvent event, void* context);
@@ -30,7 +35,10 @@ void iso15693_poller_free(Iso15693Poller* instance);
 
 // Detect + read (Info mode). Emits Success once a card is read, or CardLost after a bounded number
 // of activation attempts with no card in the field.
-void iso15693_poller_start(Iso15693Poller* instance, Iso15693PollerCallback callback, void* context);
+void iso15693_poller_start(
+    Iso15693Poller* instance,
+    Iso15693PollerCallback callback,
+    void* context);
 
 // Magic UID write. `uid` is ISO15693_3_UID_SIZE bytes, MSB-first (uid[0] must be 0xE0).
 // The poller writes the gen2 backdoor sequence first (a harmless custom command on a non-magic tag)
@@ -45,18 +53,18 @@ void iso15693_poller_start_write_uid(
     Iso15693PollerCallback callback,
     void* context);
 
-// Full clone: write `source`'s UID (magic backdoor) and every writable data block (standard WRITE
-// BLOCK, locked blocks skipped) onto a magic card. `source` is an ISO15693-3 image loaded from a
-// saved .nfc. Reports Success (UID + all blocks), Partial (UID ok, some blocks failed), Fail (UID
-// not accepted) or CardLost. Data blocks are written first, then the UID.
+// Full clone: write `source`'s UID (magic backdoor) and every data block (standard WRITE BLOCK) onto
+// a magic card. `source` is an ISO15693-3 image loaded from a saved .nfc. Reports Success (UID + all
+// blocks), Partial (UID ok, some blocks failed), Fail (UID not accepted) or CardLost. Data blocks are
+// written first, then the UID.
 void iso15693_poller_start_clone(
     Iso15693Poller* instance,
     const Iso15693_3Data* source,
     Iso15693PollerCallback callback,
     void* context);
 
-// After a clone, the per-block write result: source block count, in-range blocks that failed to
-// write (locked/protected), source blocks past the target's capacity (couldn't fit), a bitmap
+// After a clone, the per-block write result: source block count, non-empty blocks that failed to
+// write (data lost), source blocks past the target's capacity (empty, couldn't fit), a bitmap
 // (bit N = block N failed), and whether the gen1 fallback set the UID (which overwrites blocks
 // 56/57/62/63). Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE
 // bytes.
@@ -72,11 +80,18 @@ void iso15693_poller_get_clone_result(
 // would overwrite -- so the write flow can warn before a possible gen1 clone. Source inspection only.
 bool iso15693_poller_source_uses_gen1_blocks(const Iso15693_3Data* source);
 
-// Wipe: write zeros to every writable data block on the card (UID left unchanged, like proxmark's
-// 'hf 15 wipe'). Reports Success / Partial (some blocks failed) / Fail (nothing writable) /
+// Wipe: write zeros to every data block on the card (UID left unchanged, like proxmark's
+// 'hf 15 wipe'). Reports Success / Partial (some blocks failed) / Fail (nothing could be wiped) /
 // CardLost. Per-block detail is available via iso15693_poller_get_clone_result().
-void iso15693_poller_start_wipe(Iso15693Poller* instance, Iso15693PollerCallback callback, void* context);
+void iso15693_poller_start_wipe(
+    Iso15693Poller* instance,
+    Iso15693PollerCallback callback,
+    void* context);
 
 void iso15693_poller_stop(Iso15693Poller* instance);
 
 Iso15693Data* iso15693_poller_get_data(Iso15693Poller* instance);
+
+#ifdef __cplusplus
+}
+#endif

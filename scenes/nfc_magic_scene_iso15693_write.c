@@ -1,7 +1,8 @@
 #include "../nfc_magic_app_i.h"
 #include "../magic/protocols/iso15693/iso15693_poller.h"
 
-static void nfc_magic_scene_iso15693_write_poller_callback(Iso15693PollerEvent event, void* context) {
+static void
+    nfc_magic_scene_iso15693_write_poller_callback(Iso15693PollerEvent event, void* context) {
     NfcMagicApp* instance = context;
 
     if(event == Iso15693PollerEventSuccess) {

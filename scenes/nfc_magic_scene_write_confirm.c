@@ -15,8 +15,8 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
-    const bool iso15693_wipe =
-        (instance->protocol == NfcMagicProtocolIso15693) && instance->iso15693_is_wipe_mode;
+    const bool iso15693_wipe = (instance->protocol == NfcMagicProtocolIso15693) &&
+                               instance->iso15693_is_wipe_mode;
     const bool is_wipe = instance->uscuid_ul_is_wipe_mode || iso15693_wipe;
 
     const char* text;
@@ -28,10 +28,14 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
         instance->protocol == NfcMagicProtocolIso15693 &&
         iso15693_poller_source_uses_gen1_blocks(
             nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3))) {
-        // The source stores data in the gen1 backdoor blocks (56/57/62/63). A gen1 card would have
-        // those overwritten with the UID, so warn specifically before the write.
+        // The source stores data in the gen1 backdoor blocks (56/57/62/63). If this card needs the
+        // gen1 method, those get overwritten with UID/commit bytes, so warn specifically first.
         text =
-            "File uses blocks 56/57/62/63. If this card is gen1 (not gen2), gen1 puts the UID in those blocks, so they can't be cloned.";
+            "File uses blocks 56/57/62/63. On a gen1 card these get overwritten with UID/commit bytes, so they can't be cloned.";
+    } else if(instance->protocol == NfcMagicProtocolIso15693) {
+        // ISO15693/NfcV has no MIFARE "manufacturer block"; the real risk is the magic UID rewrite.
+        text =
+            "Rewrites the UID and data on this magic ISO15693 card. On some cards it may not take.";
     } else {
         text =
             "Writing to this card will change manufacturer block. On some cards it may not be rewritten";

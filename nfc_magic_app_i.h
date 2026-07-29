@@ -155,12 +155,15 @@ struct NfcMagicApp {
     // and holding that config would make the scanner's first nfc_config() furi_check-fail.
     Iso15693Poller* iso15693_poller;
     Iso15693Data* iso15693_data; // last read result, kept so the info scene survives the poller free
-    uint8_t iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
+    uint8_t
+        iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
     bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)
     uint16_t iso15693_clone_blocks_total; // ISO15693 clone: data blocks on the source image
     uint16_t iso15693_clone_failed_count; // ISO15693 clone: in-range blocks that couldn't be written
-    uint16_t iso15693_clone_over_capacity; // ISO15693 clone: source blocks past the target's capacity
-    uint8_t iso15693_clone_failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
+    uint16_t
+        iso15693_clone_over_capacity; // ISO15693 clone: source blocks past the target's capacity
+    uint8_t iso15693_clone_failed_bitmap
+        [ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
     bool iso15693_clone_used_gen1; // ISO15693 clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
 
     Gen4* gen4_data;

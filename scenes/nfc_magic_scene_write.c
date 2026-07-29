@@ -157,10 +157,16 @@ NfcCommand
 // ISO15693 clone: our iso15693 poller uses a simpler event callback than the SDK-style pollers
 // above. Map its outcome onto the shared write events; the per-block partial stats are stashed for
 // the fail/partial screen.
-static void nfc_magic_scene_write_iso15693_poller_callback(Iso15693PollerEvent event, void* context) {
+static void
+    nfc_magic_scene_write_iso15693_poller_callback(Iso15693PollerEvent event, void* context) {
     NfcMagicApp* instance = context;
 
-    if(event == Iso15693PollerEventSuccess) {
+    if(event == Iso15693PollerEventCardDetected) {
+        // First activation: flip the popup off "Apply the same card" to "Writing" (mirrors the other
+        // magic pollers, which all emit a card-detected event).
+        view_dispatcher_send_custom_event(
+            instance->view_dispatcher, NfcMagicCustomEventCardDetected);
+    } else if(event == Iso15693PollerEventSuccess) {
         // Read the clone stats on success too, so the Success handler can distinguish an exact clone
         // from one where the card ended up advertising more blocks than it physically holds
         // (over-capacity with empty tail -- no data lost, but worth a note).
@@ -186,7 +192,8 @@ static void nfc_magic_scene_write_iso15693_poller_callback(Iso15693PollerEvent e
     } else if(event == Iso15693PollerEventCardLost) {
         view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventCardLost);
     } else { // Iso15693PollerEventFail: backdoor write not accepted (not a magic tag)
-        view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventWorkerFail);
+        view_dispatcher_send_custom_event(
+            instance->view_dispatcher, NfcMagicCustomEventWorkerFail);
     }
 }
 
@@ -257,13 +264,18 @@ void nfc_magic_scene_write_on_enter(void* context) {
         if(instance->iso15693_is_wipe_mode) {
             // Zero every data block on the card (no source file).
             iso15693_poller_start_wipe(
-                instance->iso15693_poller, nfc_magic_scene_write_iso15693_poller_callback, instance);
+                instance->iso15693_poller,
+                nfc_magic_scene_write_iso15693_poller_callback,
+                instance);
         } else {
             // Clone the loaded ISO15693 image (UID + writable blocks) onto the magic card.
             const Iso15693_3Data* source =
                 nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
             iso15693_poller_start_clone(
-                instance->iso15693_poller, source, nfc_magic_scene_write_iso15693_poller_callback, instance);
+                instance->iso15693_poller,
+                source,
+                nfc_magic_scene_write_iso15693_poller_callback,
+                instance);
         }
     } else {
         instance->gen4_poller = gen4_poller_alloc(instance->nfc);
@@ -293,7 +305,9 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {
                 scene_manager_set_scene_state(
-                    instance->scene_manager, NfcMagicSceneWrite, NfcMagicSceneWriteStateCardSearch);
+                    instance->scene_manager,
+                    NfcMagicSceneWrite,
+                    NfcMagicSceneWriteStateCardSearch);
                 nfc_magic_scene_write_setup_view(instance);
             }
             consumed = true;

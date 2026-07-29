@@ -241,7 +241,8 @@ static int32_t nfc_magic_scanner_worker(void* context) {
             break;
         }
 
-        // Non-ISO14443-3A cards (ISO14443-3B / ISO15693 / FeliCa) are simply not magic.
+        // Remaining non-ISO14443-3A cards (ISO14443-3B / FeliCa) are simply not magic.
+        // (ISO15693 is handled separately as a magic candidate, above.)
         if(nfc_magic_scanner_detect_not_magic(instance->nfc)) {
             NfcMagicScannerEvent event = {
                 .type = NfcMagicScannerEventTypeDetectedNotMagic,
