@@ -31,11 +31,11 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
         // The source stores data in the gen1 backdoor blocks (56/57/62/63). If this card needs the
         // gen1 method, those get overwritten with UID/commit bytes, so warn specifically first.
         text =
-            "File uses blocks 56/57/62/63. On a gen1 card these get overwritten with UID/commit bytes, so they can't be cloned.";
+            "Source uses blocks 56/57/62/63; a gen1 card overwrites those, so they can't be cloned.";
     } else if(instance->protocol == NfcMagicProtocolIso15693) {
-        // ISO15693/NfcV has no MIFARE "manufacturer block"; the real risk is the magic UID rewrite.
-        text =
-            "Rewrites the UID and data on this magic ISO15693 card. On some cards it may not take.";
+        // NfcV has no MIFARE "manufacturer block". The real risk: ANY ISO15693 tag is treated as a
+        // magic candidate, so its data is overwritten before we learn whether it's actually magic.
+        text = "Overwrites UID and data - even if this tag isn't magic.";
     } else {
         text =
             "Writing to this card will change manufacturer block. On some cards it may not be rewritten";

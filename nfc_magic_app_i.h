@@ -154,7 +154,8 @@ struct NfcMagicApp {
     // iso15693_poller_alloc -> nfc_poller_alloc(Iso15693_3) calls nfc_config() on the shared Nfc,
     // and holding that config would make the scanner's first nfc_config() furi_check-fail.
     Iso15693Poller* iso15693_poller;
-    Iso15693Data* iso15693_data; // last read result, kept so the info scene survives the poller free
+    Iso15693_3Data*
+        iso15693_data; // last read result, kept so the info scene survives the poller free
     uint8_t
         iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
     bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)

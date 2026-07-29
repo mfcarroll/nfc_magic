@@ -8,8 +8,9 @@ static void nfc_magic_iso15693_get_info_poller_callback(Iso15693PollerEvent even
         // On success, send a custom event to the scene manager to transition
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventIso15693CardDetected);
-    } else { // Iso15693PollerEventFail
-        // On failure, send a different event to go back
+    } else {
+        // Info mode only ever emits Success or CardLost (never Fail -- that's a write-only outcome),
+        // so this branch means no card activated within the poller's retry budget.
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventIso15693CardDetectFailed);
     }
@@ -41,13 +42,15 @@ bool nfc_magic_scene_iso15693_get_info_on_event(void* context, SceneManagerEvent
         if(event.event == NfcMagicCustomEventIso15693CardDetected) {
             // Keep the read result in the app so the info scene still has it after the
             // poller is freed in on_exit.
-            iso15693_data_copy(app->iso15693_data, iso15693_poller_get_data(app->iso15693_poller));
+            iso15693_3_copy(app->iso15693_data, iso15693_poller_get_data(app->iso15693_poller));
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneIso15693Info);
             consumed = true;
         } else if(event.event == NfcMagicCustomEventIso15693CardDetectFailed) {
-            // Failed to detect, go back to the previous scene (the ISO15693 menu)
-            scene_manager_search_and_switch_to_previous_scene(
-                app->scene_manager, NfcMagicSceneIso15693);
+            // No card activated within the poller's retry budget. Show why, instead of silently
+            // dropping back to the menu; Back then returns to the ISO15693 menu.
+            nfc_magic_app_blink_stop(app);
+            popup_set_header(app->popup, "No card found", 68, 19, AlignCenter, AlignBottom);
+            popup_set_text(app->popup, "No ISO15693 card detected", 68, 21, AlignCenter, AlignTop);
             consumed = true;
         }
     }

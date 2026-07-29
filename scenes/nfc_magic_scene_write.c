@@ -207,10 +207,14 @@ static void nfc_magic_scene_write_setup_view(NfcMagicApp* instance) {
         popup_set_text(
             instance->popup, "Apply the\nsame card\nto the back", 128, 32, AlignRight, AlignCenter);
     } else {
+        // "Wiping" vs "Writing": the USCUID-UL and ISO15693 wipes each set their own flag.
+        const bool is_wipe =
+            instance->uscuid_ul_is_wipe_mode ||
+            (instance->protocol == NfcMagicProtocolIso15693 && instance->iso15693_is_wipe_mode);
         popup_set_icon(popup, 12, 23, &I_Loading_24);
         popup_set_header(
             popup,
-            instance->uscuid_ul_is_wipe_mode ? "Wiping\nDon't move..." : "Writing\nDon't move...",
+            is_wipe ? "Wiping\nDon't move..." : "Writing\nDon't move...",
             52,
             32,
             AlignLeft,

@@ -1,4 +1,5 @@
 #include "../nfc_magic_app_i.h"
+#include "nfc_magic_scene_partial_details_common.h"
 
 void nfc_magic_scene_iso15693_write_fail_widget_callback(
     GuiButtonType result,
@@ -21,9 +22,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
     const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
     const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
 
-    // Partial and over-capacity are soft (successful) outcomes; card-lost / not-magic are errors.
+    // Over-capacity is a clean success (nothing was lost) -> success tone. Partial means something
+    // didn't write, and card-lost / not-magic are outright failures -> error tone.
     notification_message(
-        instance->notifications, (partial || over_capacity) ? &sequence_success : &sequence_error);
+        instance->notifications, over_capacity ? &sequence_success : &sequence_error);
 
     if(over_capacity) {
         // The clone matched the source, but the card ended up advertising more blocks than it
@@ -48,10 +50,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(partial) {
-        // Full-width text box (no icon) so the detail can wrap. Partial means some NON-EMPTY source
-        // blocks wouldn't write -- that data is past the card's real capacity (or the blocks are
-        // locked), so it couldn't be cloned. Name the blocks. (Empty blocks that don't fit lose
-        // nothing and never reach here -- they stay a clean Success.)
+        // Scrolls (not a fixed box) so the block list + gen1 note can't be silently clipped. Partial
+        // means some blocks wouldn't write: real source data lost, empty failures that weren't a
+        // clean capacity tail, or (for a wipe) blocks that wouldn't clear. Name them.
         FuriString* text = furi_string_alloc();
         furi_string_cat_str(
             text, instance->iso15693_is_wipe_mode ? "Wiped.\n" : "UID + data cloned.\n");
@@ -59,19 +60,13 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             furi_string_cat_printf(
                 text,
                 instance->iso15693_is_wipe_mode ? "%u block(s) wouldn't clear: " :
-                                                  "%u block(s) didn't fit the card: ",
+                                                  "%u block(s) couldn't be written: ",
                 instance->iso15693_clone_failed_count);
-            uint16_t shown = 0;
-            for(uint16_t block = 0; block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8; block++) {
-                if(instance->iso15693_clone_failed_bitmap[block / 8] & (1u << (block % 8))) {
-                    if(shown >= 20) {
-                        furi_string_cat_str(text, "...");
-                        break;
-                    }
-                    furi_string_cat_printf(text, "%u ", block);
-                    shown++;
-                }
-            }
+            nfc_magic_partial_details_append_indices(
+                text,
+                instance->iso15693_clone_failed_bitmap,
+                ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8,
+                20);
             furi_string_push_back(text, '\n');
         }
         if(instance->iso15693_clone_used_gen1) {
@@ -89,8 +84,7 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             AlignTop,
             FontPrimary,
             instance->iso15693_is_wipe_mode ? "Wipe partial" : "Clone partial");
-        widget_add_text_box_element(
-            widget, 0, 14, 128, 38, AlignLeft, AlignTop, furi_string_get_cstr(text), false);
+        widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(text));
         furi_string_free(text);
     } else {
         const char* message = card_lost ?

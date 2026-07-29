@@ -4,9 +4,9 @@
 #include <lib/nfc/protocols/iso15693_3/iso15693_3_poller.h>
 #include <toolbox/bit_buffer.h>
 
-// ISO15693_3_FDT_WRITE_POLL_FC is defined by the Momentum-iso15693 SDK fork. Provide a fallback so this
-// FAP also builds against a stock SDK that only ships ISO15693_3_FDT_POLL_FC (271200 carrier cycles
-// ~= 20ms, the value the fork uses for a WRITE frame's response timeout).
+// ISO15693_3_FDT_WRITE_POLL_FC is the WRITE-frame response timeout (271200 carrier cycles ~= 20ms,
+// long enough for the tag to program its EEPROM before it answers). Older SDKs predate this macro,
+// so keep a fallback with the same value the current SDK defines.
 #ifndef ISO15693_3_FDT_WRITE_POLL_FC
 #define ISO15693_3_FDT_WRITE_POLL_FC (271200U)
 #endif
@@ -17,16 +17,17 @@
 // generations exist and the write tries gen2 then (only if untouched) gen1.
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
-// gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each.
-#define ISO15693_MAGIC_CMD_WRITE (0x21U) // ISO15693 WRITE BLOCK
+// gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each. The UID blocks are named by the
+// UID bytes they carry (uid[0] is the MSB, so uid[7..4] is the numerically low half of the UID).
+#define ISO15693_MAGIC_CMD_WRITE    (0x21U) // ISO15693 WRITE BLOCK
+#define ISO15693_MAGIC_BLK_UNLOCK   (0x3EU) // written as 0
+#define ISO15693_MAGIC_BLK_COMMIT   (0x3FU) // written as 0x6996 (arms the UID change)
+#define ISO15693_MAGIC_BLK_UID_7654 (0x38U) // uid[7..4]
+#define ISO15693_MAGIC_BLK_UID_3210 (0x39U) // uid[3..0]
 
 // Standard ISO15693 identity writes, used to make a clone match the source's AFI / DSFID.
 #define ISO15693_MAGIC_CMD_WRITE_AFI   (0x27U) // ISO15693 WRITE AFI
 #define ISO15693_MAGIC_CMD_WRITE_DSFID (0x29U) // ISO15693 WRITE DSFID
-#define ISO15693_MAGIC_BLK_UNLOCK      (0x3EU) // written as 0
-#define ISO15693_MAGIC_BLK_COMMIT      (0x3FU) // written as 0x6996 (arms the UID change)
-#define ISO15693_MAGIC_BLK_UID_LO      (0x38U) // uid[7..4]
-#define ISO15693_MAGIC_BLK_UID_HI      (0x39U) // uid[3..0]
 
 // gen2: magic write command (0xE0) with a 0x09 subcommand and a block reference; 4 data
 // bytes each. Frame layout: 02 E0 09 <ref> d0 d1 d2 d3 (+CRC).
@@ -34,8 +35,8 @@
 #define ISO15693_MAGIC_V2_SUB           (0x09U)
 #define ISO15693_MAGIC_V2_BLK_CFG       (0x47U) // system-info config: max block / block size / IC ref
 #define ISO15693_MAGIC_V2_BLK_CFG2      (0x52U) // written as 0
-#define ISO15693_MAGIC_V2_BLK_UID_HI    (0x40U) // uid[7..4]
-#define ISO15693_MAGIC_V2_BLK_UID_LO    (0x41U) // uid[3..0]
+#define ISO15693_MAGIC_V2_BLK_UID_7654  (0x40U) // uid[7..4]
+#define ISO15693_MAGIC_V2_BLK_UID_3210  (0x41U) // uid[3..0]
 // Fixed config payload for the CFG block, verbatim from proxmark's gen2 sequence (matches a
 // 64-block / 4-byte-block / IC-ref-0x8B card; these values are constant in proxmark too).
 #define ISO15693_MAGIC_V2_CFG_MAXBLOCK  (0x3FU)
@@ -64,7 +65,7 @@ typedef enum {
 
 struct Iso15693Poller {
     NfcPoller* poller;
-    Iso15693Data* data;
+    Iso15693_3Data* data; // last read result (Info mode), kept for the info scene after poller free
     Iso15693PollerMode mode;
     uint8_t target_uid[ISO15693_3_UID_SIZE];
     uint8_t original_uid[ISO15693_3_UID_SIZE]; // UID before the write, to gate the gen1 fallback
@@ -74,8 +75,13 @@ struct Iso15693Poller {
     // it) and per-block write results.
     Iso15693_3Data* clone_source;
     uint16_t clone_blocks_total; // blocks on the source image
-    uint16_t clone_failed_count; // in-range blocks that errored on write (locked/protected)
-    uint16_t clone_over_capacity; // source blocks past the target's capacity (couldn't fit)
+    // Blocks that failed to write and count as a real problem: either they held source data (lost),
+    // or they were empty failures that did NOT form a clean capacity tail (so we can't call them
+    // over-capacity). Drives Partial.
+    uint16_t clone_failed_count;
+    // Empty source blocks past the card's real capacity: a contiguous run above the last block that
+    // did write, so nothing was lost. Drives the "clone complete, with a note" Success.
+    uint16_t clone_over_capacity;
     uint8_t clone_failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE];
     // Set when the gen1 fallback (not gen2) actually set the UID. gen1 stamps the UID/commit into
     // data blocks 56/57/62/63, so a clone that fell back to gen1 can't be byte-identical there.
@@ -137,11 +143,11 @@ static void
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     iso15693_poller_build_gen1_frame(
-        tx, ISO15693_MAGIC_BLK_UID_LO, uid[7], uid[6], uid[5], uid[4]);
+        tx, ISO15693_MAGIC_BLK_UID_7654, uid[7], uid[6], uid[5], uid[4]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     iso15693_poller_build_gen1_frame(
-        tx, ISO15693_MAGIC_BLK_UID_HI, uid[3], uid[2], uid[1], uid[0]);
+        tx, ISO15693_MAGIC_BLK_UID_3210, uid[3], uid[2], uid[1], uid[0]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     bit_buffer_free(tx);
@@ -168,11 +174,11 @@ static void iso15693_poller_send_backdoor_uid_gen2(
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     iso15693_poller_build_gen2_frame(
-        tx, ISO15693_MAGIC_V2_BLK_UID_HI, uid[7], uid[6], uid[5], uid[4]);
+        tx, ISO15693_MAGIC_V2_BLK_UID_7654, uid[7], uid[6], uid[5], uid[4]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     iso15693_poller_build_gen2_frame(
-        tx, ISO15693_MAGIC_V2_BLK_UID_LO, uid[3], uid[2], uid[1], uid[0]);
+        tx, ISO15693_MAGIC_V2_BLK_UID_3210, uid[3], uid[2], uid[1], uid[0]);
     iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
 
     bit_buffer_free(tx);
@@ -219,8 +225,16 @@ static void iso15693_poller_report(Iso15693Poller* instance, Iso15693PollerEvent
 static void
     iso15693_poller_write_source_blocks(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3Data* source = instance->clone_source;
-    const uint16_t source_count = iso15693_3_get_block_count(source);
+    uint16_t source_count = iso15693_3_get_block_count(source);
     const uint8_t block_size = iso15693_3_get_block_size(source);
+
+    // A block number is a uint8_t on the wire and the failure bitmap holds this many bits, so only the
+    // first 256 blocks can be attempted or accounted for. Real ISO15693 tags never exceed this; clamp
+    // defensively so a corrupt/hand-edited source can't make clone_blocks_total overstate what was
+    // actually written (which would skew the over-capacity "holds X of Y" report).
+    if(source_count > ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8) {
+        source_count = ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
+    }
 
     instance->clone_blocks_total = source_count;
     instance->clone_failed_count = 0;
@@ -237,23 +251,37 @@ static void
     // stale data in the reachable gap when re-cloning onto a card that currently advertises fewer
     // blocks. The only reliable capacity test is to write the block and see if it takes.
     //
-    // A block that genuinely won't write is the card's real capacity limit. Classify by whether the
-    // source actually had data there:
-    //   - non-empty block that fails -> real shortfall, data lost: clone_failed_count + bitmap (Partial)
-    //   - empty block that fails      -> nothing to clone there, no data lost: clone_over_capacity only
-    //     (the card reports those blocks as zero anyway, so the clone still matches -> stays Success)
+    // A block that genuinely won't write is the card's real capacity limit -- BUT a write can also
+    // fail for reasons that have nothing to do with capacity (a transient RF error, a block locked on
+    // the target, the card slipping out of the field). We can't tell those apart from a single
+    // attempt, so we only tell the "over-capacity" story when the evidence really looks like a
+    // capacity edge: a contiguous run of EMPTY blocks past the last block that physically accepted a
+    // write. Classify each failure now, then decide below.
+    //   - non-empty block that fails -> real data lost: clone_failed_count + bitmap (Partial)
+    //   - empty block that fails      -> maybe past capacity: clone_over_capacity (+ bitmap), pending
+    //     the contiguous-tail test below; a mid-range/scattered empty failure is folded into Partial
+    //     rather than reported as a (possibly false) capacity figure.
     //
     // Do NOT skip blocks locked in the SOURCE image: the source's lock bits describe the ORIGINAL
     // card, not the magic target (which is writable regardless), and locked blocks are exactly where
-    // real tags keep provisioned data. Attempt every block; a genuinely unwritable non-empty block is
-    // counted as a real loss by the error path below.
+    // real tags keep provisioned data. Attempt every block.
     //
-    // block_number is a uint8_t on the wire, so 256 blocks is the ceiling.
-    for(uint16_t block = 0; block < source_count && block < 256; block++) {
+    // block_number is a uint8_t on the wire, and the failure bitmap holds this many bits.
+    int32_t highest_success = -1; // highest block index that physically accepted a write
+    uint16_t first_fail = source_count; // lowest block index that failed
+    for(uint16_t block = 0; block < source_count && block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
+        block++) {
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
-        if(error == Iso15693_3ErrorNone) continue;
+        if(error == Iso15693_3ErrorNone) {
+            highest_success = block;
+            continue;
+        }
+        if(block < first_fail) first_fail = block;
+        // Record every failed block in the bitmap so a Partial screen can name it, whichever bucket
+        // it ends up in.
+        instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
 
         bool non_empty = false;
         for(uint8_t i = 0; i < block_size; i++) {
@@ -264,10 +292,23 @@ static void
         }
         if(non_empty) {
             instance->clone_failed_count++;
-            instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
         } else {
             instance->clone_over_capacity++;
         }
+    }
+
+    // Over-capacity is only an honest claim when the empty failures are EXACTLY the top run of the
+    // address space, above the last block that wrote (and at least one block did write). With no
+    // non-empty failure and first_fail == highest_success + 1, every failed index is > highest_success
+    // and none is below it -> a contiguous empty tail. Anything else (a mid-range empty failure, or
+    // nothing wrote at all) can't prove a capacity edge, so fold those empties into the real-failure
+    // count and report a plain Partial instead of a confident, possibly-wrong capacity figure.
+    const bool empty_failures_are_tail =
+        (instance->clone_over_capacity > 0) && (instance->clone_failed_count == 0) &&
+        (highest_success >= 0) && (first_fail == (uint16_t)(highest_success + 1));
+    if(instance->clone_over_capacity > 0 && !empty_failures_are_tail) {
+        instance->clone_failed_count += instance->clone_over_capacity;
+        instance->clone_over_capacity = 0; // the bitmap already carries these blocks
     }
 }
 
@@ -293,7 +334,8 @@ static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poll
     // 32-byte zero buffer covers every valid geometry; the clamp is belt-and-braces.
     uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
     const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
-    for(uint16_t block = 0; block < block_count && block < 256; block++) {
+    for(uint16_t block = 0; block < block_count && block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
+        block++) {
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, zeros, (uint8_t)block, size);
         if(error != Iso15693_3ErrorNone) {
@@ -304,9 +346,11 @@ static void iso15693_poller_wipe_blocks(Iso15693Poller* instance, Iso15693_3Poll
 }
 
 // The terminal outcome once a write finishes:
-//  - a NON-EMPTY block we couldn't write means real data was lost -> Partial. Empty blocks that
-//    wouldn't take are past the card's real capacity but lose nothing (the card reports them as zero
-//    anyway), so the clone still matches -> clean Success.
+//  - a NON-EMPTY block we couldn't write means real data was lost -> Partial. An empty block that
+//    wouldn't take is treated as past the card's real capacity ONLY when the empty failures form a
+//    contiguous tail above the last block that wrote (nothing lost -- the card reports them as zero
+//    anyway) -> clean Success; any other empty failure is folded into clone_failed_count -> Partial
+//    (see iso15693_poller_write_source_blocks).
 //  - a CLONE that fell back to gen1 -> Partial: gen1 stamps the UID/commit into data blocks
 //    56/57/62/63, so those no longer match the source. (A bare Write-UID has no source data to
 //    disturb, so gen1 there is still a clean Success.)
@@ -457,7 +501,7 @@ static NfcCommand iso15693_poller_nfc_callback(NfcGenericEvent event, void* cont
     if(instance->mode == Iso15693PollerModeInfo) {
         // The poller filled Iso15693_3Data (UID + system info) during activation.
         const Iso15693_3Data* poller_data = nfc_poller_get_data(instance->poller);
-        iso15693_3_copy(instance->data->iso15693_3_data, poller_data);
+        iso15693_3_copy(instance->data, poller_data);
         iso15693_poller_report(instance, Iso15693PollerEventSuccess);
         return NfcCommandStop;
     }
@@ -479,7 +523,7 @@ static NfcCommand iso15693_poller_nfc_callback(NfcGenericEvent event, void* cont
 Iso15693Poller* iso15693_poller_alloc(Nfc* nfc) {
     Iso15693Poller* instance = malloc(sizeof(Iso15693Poller));
     instance->poller = nfc_poller_alloc(nfc, NfcProtocolIso15693_3);
-    instance->data = iso15693_data_alloc();
+    instance->data = iso15693_3_alloc();
     instance->clone_source = iso15693_3_alloc();
     instance->mode = Iso15693PollerModeInfo;
     instance->write_state = Iso15693WriteStateStart;
@@ -500,7 +544,7 @@ void iso15693_poller_free(Iso15693Poller* instance) {
         iso15693_poller_stop(instance);
     }
     nfc_poller_free(instance->poller);
-    iso15693_data_free(instance->data);
+    iso15693_3_free(instance->data);
     iso15693_3_free(instance->clone_source);
     free(instance);
 }
@@ -525,7 +569,7 @@ static void iso15693_poller_start_internal(
     instance->clone_over_capacity = 0;
     instance->clone_used_gen1 = false;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
-    iso15693_data_reset(instance->data);
+    iso15693_3_reset(instance->data);
     instance->running = true;
     nfc_poller_start(instance->poller, iso15693_poller_nfc_callback, instance);
 }
@@ -596,8 +640,8 @@ bool iso15693_poller_source_uses_gen1_blocks(const Iso15693_3Data* source) {
     const uint8_t block_size = iso15693_3_get_block_size(source);
     if(block_size == 0) return false;
     const uint8_t gen1_blocks[] = {
-        ISO15693_MAGIC_BLK_UID_LO,
-        ISO15693_MAGIC_BLK_UID_HI,
+        ISO15693_MAGIC_BLK_UID_7654,
+        ISO15693_MAGIC_BLK_UID_3210,
         ISO15693_MAGIC_BLK_UNLOCK,
         ISO15693_MAGIC_BLK_COMMIT};
     for(size_t i = 0; i < sizeof(gen1_blocks); i++) {
@@ -619,7 +663,7 @@ void iso15693_poller_stop(Iso15693Poller* instance) {
     }
 }
 
-Iso15693Data* iso15693_poller_get_data(Iso15693Poller* instance) {
+const Iso15693_3Data* iso15693_poller_get_data(Iso15693Poller* instance) {
     furi_assert(instance);
     return instance->data;
 }

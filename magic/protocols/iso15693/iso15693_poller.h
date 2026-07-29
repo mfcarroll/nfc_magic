@@ -1,7 +1,7 @@
 #pragma once
 
 #include <nfc/nfc_poller.h>
-#include "iso15693_data.h"
+#include <lib/nfc/protocols/iso15693_3/iso15693_3.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +20,14 @@ typedef enum {
 } Iso15693PollerMode;
 
 typedef enum {
-    Iso15693PollerEventSuccess, // info read ok, or the write/clone verified against the target
-    Iso15693PollerEventPartial, // clone: UID written, but some data blocks could not be written
-    Iso15693PollerEventFail, // card present but the backdoor write was not accepted (not a magic tag)
+    Iso15693PollerEventSuccess, // Info: card read. Write/clone: the target UID read back and matched
+        // (only the UID is re-read; block contents are not compared). Wipe: every block took the zero
+        // write (the UID is untouched and never re-read).
+    Iso15693PollerEventPartial, // the operation mostly worked but isn't a clean result: a clone lost
+        // some data blocks or fell back to gen1 (overwriting 56/57/62/63), or a wipe couldn't clear
+        // every block.
+    Iso15693PollerEventFail, // the operation didn't take: a write/clone backdoor was rejected (not a
+        // magic tag), or a wipe cleared nothing.
     Iso15693PollerEventCardLost, // no card in the field / card removed before the operation finished
     Iso15693PollerEventCardDetected, // a magic candidate activated (drives the write popup UI)
 } Iso15693PollerEvent;
@@ -46,7 +51,8 @@ void iso15693_poller_start(
 // WRITE-BLOCK sequence. Before each read-back it power-cycles the field (like proxmark's
 // switch_off + getUID) so a card that only latches the new UID after a reset is not misreported as a
 // failure. Reports Success only if a read-back inventory returns the requested UID.
-// See .notes/protocol-reference.md for the byte-level frames.
+// The byte-level frames are defined in iso15693_poller.c (ported from proxmark3 armsrc/iso15693.c,
+// SetTag15693Uid / SetTag15693Uid_v2).
 void iso15693_poller_start_write_uid(
     Iso15693Poller* instance,
     const uint8_t* uid,
@@ -63,11 +69,15 @@ void iso15693_poller_start_clone(
     Iso15693PollerCallback callback,
     void* context);
 
-// After a clone, the per-block write result: source block count, non-empty blocks that failed to
-// write (data lost), source blocks past the target's capacity (empty, couldn't fit), a bitmap
-// (bit N = block N failed), and whether the gen1 fallback set the UID (which overwrites blocks
-// 56/57/62/63). Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE
-// bytes.
+// After a clone, the per-block write result:
+//   blocks_total  - source block count.
+//   failed_count  - blocks that failed to write and count as a real problem: they held source data
+//                   (lost), or they were empty failures that weren't a clean capacity tail. -> Partial.
+//   over_capacity - empty source blocks past the card's real capacity: a contiguous run above the
+//                   last block that wrote, so nothing was lost. -> Success with a note.
+//   failed_bitmap - bit N set = source block N failed to write (covers both buckets above).
+//   used_gen1     - the gen1 fallback set the UID (which overwrites blocks 56/57/62/63).
+// Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE bytes.
 void iso15693_poller_get_clone_result(
     Iso15693Poller* instance,
     uint16_t* blocks_total,
@@ -90,7 +100,9 @@ void iso15693_poller_start_wipe(
 
 void iso15693_poller_stop(Iso15693Poller* instance);
 
-Iso15693Data* iso15693_poller_get_data(Iso15693Poller* instance);
+// The last Info-mode read result (UID + system info + block data). Owned by the poller; valid until
+// the poller is freed, so the Info scene copies it out. Read-only.
+const Iso15693_3Data* iso15693_poller_get_data(Iso15693Poller* instance);
 
 #ifdef __cplusplus
 }
