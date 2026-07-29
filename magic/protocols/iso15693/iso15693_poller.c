@@ -56,6 +56,11 @@
 #define ISO15693_POLLER_VERIFY_ATTEMPTS (3U)
 #define ISO15693_POLLER_VERIFY_RETRY_MS (5U)
 
+// Retry a failed clone WRITE BLOCK this many times before treating the block as genuinely unwritable.
+// On these cards writes are gated by physical memory, so a block that fails EVERY attempt is past the
+// card's real capacity; retrying rides out a transient RF error that would otherwise look like one.
+#define ISO15693_POLLER_WRITE_ATTEMPTS (3U)
+
 // Write-mode state machine. Each verify runs after a NfcCommandReset field power-cycle.
 typedef enum {
     Iso15693WriteStateStart, // read the current UID, send gen2, request a field reset
@@ -87,6 +92,10 @@ struct Iso15693Poller {
     // data blocks 56/57/62/63, so a clone that fell back to gen1 can't be byte-identical there.
     // NOTE: the gen1 path is NOT hardware-validated -- we only have a gen2 test card. See the PR note.
     bool clone_used_gen1;
+    // Set when the blocks that couldn't be written are a persistent, contiguous run at the very top
+    // of the card -- the signature of "source larger than the card's physical capacity". Gates the
+    // "Card too small" message; a scattered/anomalous failure leaves it false (generic report).
+    bool clone_capacity_confirmed;
     Iso15693PollerCallback callback;
     void* context;
     bool running;
@@ -239,6 +248,7 @@ static void
     instance->clone_blocks_total = source_count;
     instance->clone_failed_count = 0;
     instance->clone_over_capacity = 0;
+    instance->clone_capacity_confirmed = false;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
 
     if(source_count == 0 || block_size == 0) return;
@@ -246,40 +256,38 @@ static void
     // Do our best to reproduce the card EXACTLY: attempt every source block. We deliberately do NOT
     // cap at the target's advertised block count. On these magic cards WRITE BLOCK is gated by
     // physical memory, not by the reported count (verified on hardware: writes succeed well past the
-    // advertised count, and a card's high blocks don't even read until they've been written -- so a
-    // pre-write read may under-report true capacity). Capping at the advertised count would also leave
-    // stale data in the reachable gap when re-cloning onto a card that currently advertises fewer
-    // blocks. The only reliable capacity test is to write the block and see if it takes.
+    // advertised count). Capping would also leave stale data in the reachable gap when re-cloning onto
+    // a card that currently advertises fewer blocks. The only reliable capacity test is to write.
     //
-    // A block that genuinely won't write is the card's real capacity limit -- BUT a write can also
-    // fail for reasons that have nothing to do with capacity (a transient RF error, a block locked on
-    // the target, the card slipping out of the field). We can't tell those apart from a single
-    // attempt, so we only tell the "over-capacity" story when the evidence really looks like a
-    // capacity edge: a contiguous run of EMPTY blocks past the last block that physically accepted a
-    // write. Classify each failure now, then decide below.
-    //   - non-empty block that fails -> real data lost: clone_failed_count + bitmap (Partial)
-    //   - empty block that fails      -> maybe past capacity: clone_over_capacity (+ bitmap), pending
-    //     the contiguous-tail test below; a mid-range/scattered empty failure is folded into Partial
-    //     rather than reported as a (possibly false) capacity figure.
+    // Retry a failed write a few times so a transient RF glitch doesn't masquerade as a real limit: a
+    // block that fails EVERY attempt is genuinely unwritable. Since magic cards ignore their own lock
+    // bits, that means the block is past the card's physical capacity. Classify each persistent
+    // failure by whether the source had data there (non-empty -> data lost; empty -> nothing lost),
+    // and track position so we can confirm below that the failures are a contiguous run at the TOP of
+    // the card -- the capacity signature. A scattered/interior failure is anomalous and won't be
+    // called capacity.
     //
     // Do NOT skip blocks locked in the SOURCE image: the source's lock bits describe the ORIGINAL
     // card, not the magic target (which is writable regardless), and locked blocks are exactly where
     // real tags keep provisioned data. Attempt every block.
-    //
-    // block_number is a uint8_t on the wire, and the failure bitmap holds this many bits.
-    int32_t highest_success = -1; // highest block index that physically accepted a write
-    uint16_t first_fail = source_count; // lowest block index that failed
+    int32_t highest_success = -1; // highest block index that accepted a write
+    uint16_t first_fail = source_count; // lowest block index that failed every attempt
     for(uint16_t block = 0; block < source_count && block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
         block++) {
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
-        Iso15693_3Error error =
-            iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
+        Iso15693_3Error error = Iso15693_3ErrorNone;
+        for(uint32_t attempt = 0; attempt < ISO15693_POLLER_WRITE_ATTEMPTS; attempt++) {
+            error =
+                iso15693_3_poller_write_block(iso_poller, block_data, (uint8_t)block, block_size);
+            if(error == Iso15693_3ErrorNone) break;
+            furi_delay_ms(ISO15693_POLLER_VERIFY_RETRY_MS);
+        }
         if(error == Iso15693_3ErrorNone) {
-            highest_success = block;
+            highest_success = block; // written (perhaps after riding out a transient error)
             continue;
         }
         if(block < first_fail) first_fail = block;
-        // Record every failed block in the bitmap so a Partial screen can name it, whichever bucket
+        // Record every failed block in the bitmap so a result screen can name it, whichever bucket
         // it ends up in.
         instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
 
@@ -297,18 +305,19 @@ static void
         }
     }
 
-    // Over-capacity is only an honest claim when the empty failures are EXACTLY the top run of the
-    // address space, above the last block that wrote (and at least one block did write). With no
-    // non-empty failure and first_fail == highest_success + 1, every failed index is > highest_success
-    // and none is below it -> a contiguous empty tail. Anything else (a mid-range empty failure, or
-    // nothing wrote at all) can't prove a capacity edge, so fold those empties into the real-failure
-    // count and report a plain Partial instead of a confident, possibly-wrong capacity figure.
-    const bool empty_failures_are_tail =
-        (instance->clone_over_capacity > 0) && (instance->clone_failed_count == 0) &&
-        (highest_success >= 0) && (first_fail == (uint16_t)(highest_success + 1));
-    if(instance->clone_over_capacity > 0 && !empty_failures_are_tail) {
+    // The failures are a real capacity edge only if they form a contiguous run at the very top of the
+    // card, above the last block that wrote (first_fail == highest_success + 1, with >=1 success) --
+    // the shape of "source bigger than the card". Confirm that before making any capacity claim.
+    const bool any_failure = (instance->clone_failed_count + instance->clone_over_capacity) > 0;
+    const bool failures_are_top_tail = any_failure && (highest_success >= 0) &&
+                                       (first_fail == (uint16_t)(highest_success + 1));
+    if(failures_are_top_tail) {
+        instance->clone_capacity_confirmed = true;
+    } else if(instance->clone_over_capacity > 0) {
+        // Not a clean capacity tail (scattered/anomalous) -> don't report an over-capacity "success";
+        // fold the empty failures into the plain failure count (the bitmap already carries them).
         instance->clone_failed_count += instance->clone_over_capacity;
-        instance->clone_over_capacity = 0; // the bitmap already carries these blocks
+        instance->clone_over_capacity = 0;
     }
 }
 
@@ -584,6 +593,7 @@ static void iso15693_poller_start_internal(
     instance->clone_failed_count = 0;
     instance->clone_over_capacity = 0;
     instance->clone_used_gen1 = false;
+    instance->clone_capacity_confirmed = false;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
     iso15693_3_reset(instance->data);
     instance->running = true;
@@ -635,7 +645,8 @@ void iso15693_poller_get_clone_result(
     uint16_t* failed_count,
     uint16_t* over_capacity,
     uint8_t* failed_bitmap,
-    bool* used_gen1) {
+    bool* used_gen1,
+    bool* capacity_confirmed) {
     furi_assert(instance);
     if(blocks_total) *blocks_total = instance->clone_blocks_total;
     if(failed_count) *failed_count = instance->clone_failed_count;
@@ -644,6 +655,7 @@ void iso15693_poller_get_clone_result(
         memcpy(failed_bitmap, instance->clone_failed_bitmap, ISO15693_POLLER_BLOCK_BITMAP_SIZE);
     }
     if(used_gen1) *used_gen1 = instance->clone_used_gen1;
+    if(capacity_confirmed) *capacity_confirmed = instance->clone_capacity_confirmed;
 }
 
 // True if the source image has non-empty data in any of the gen1 backdoor blocks (56/57/62/63) that

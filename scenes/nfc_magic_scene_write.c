@@ -176,7 +176,8 @@ static void
             &instance->iso15693_clone_failed_count,
             &instance->iso15693_clone_over_capacity,
             instance->iso15693_clone_failed_bitmap,
-            &instance->iso15693_clone_used_gen1);
+            &instance->iso15693_clone_used_gen1,
+            &instance->iso15693_clone_capacity_confirmed);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerSuccess);
     } else if(event == Iso15693PollerEventPartial) {
@@ -186,7 +187,8 @@ static void
             &instance->iso15693_clone_failed_count,
             &instance->iso15693_clone_over_capacity,
             instance->iso15693_clone_failed_bitmap,
-            &instance->iso15693_clone_used_gen1);
+            &instance->iso15693_clone_used_gen1,
+            &instance->iso15693_clone_capacity_confirmed);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerPartial);
     } else if(event == Iso15693PollerEventCardLost) {

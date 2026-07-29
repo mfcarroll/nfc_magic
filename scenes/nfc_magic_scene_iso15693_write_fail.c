@@ -51,8 +51,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // USCUID-UL partial screens. Partial means some blocks wouldn't write (real source data lost,
         // or empty failures that weren't a clean capacity tail), or a clone fell back to gen1.
         const uint16_t total = instance->iso15693_clone_blocks_total;
-        const uint16_t failed = instance->iso15693_clone_failed_count;
-        const uint16_t ok = (total >= failed) ? (uint16_t)(total - failed) : 0;
+        // Everything that didn't write: real-data losses plus any empty blocks past capacity.
+        const uint16_t not_written =
+            instance->iso15693_clone_failed_count + instance->iso15693_clone_over_capacity;
+        const uint16_t ok = (total >= not_written) ? (uint16_t)(total - not_written) : 0;
         widget_add_string_element(
             widget,
             64,
@@ -68,8 +70,14 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
                                               "Cloned %u/%u blocks\nNot written: %u",
             ok,
             total,
-            failed);
-        if(instance->iso15693_clone_used_gen1) {
+            not_written);
+        if(instance->iso15693_clone_capacity_confirmed &&
+           instance->iso15693_clone_failed_count > 0) {
+            // Real data was lost because those blocks are a persistent, contiguous run at the top of
+            // the card -> the card is physically smaller than the source. (An empty top tail loses
+            // nothing and is reported as an over-capacity success, not here.)
+            furi_string_cat_str(text, "\nCard too small");
+        } else if(instance->iso15693_clone_used_gen1) {
             // gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ.
             furi_string_cat_str(text, "\ngen1: 56/57/62/63 differ");
         }

@@ -166,6 +166,7 @@ struct NfcMagicApp {
     uint8_t iso15693_clone_failed_bitmap
         [ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
     bool iso15693_clone_used_gen1; // ISO15693 clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
+    bool iso15693_clone_capacity_confirmed; // ISO15693 clone: failures are a top-tail = card too small
 
     Gen4* gen4_data;
 

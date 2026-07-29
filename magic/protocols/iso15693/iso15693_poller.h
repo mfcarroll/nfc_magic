@@ -69,14 +69,18 @@ void iso15693_poller_start_clone(
     Iso15693PollerCallback callback,
     void* context);
 
-// After a clone, the per-block write result:
-//   blocks_total  - source block count.
-//   failed_count  - blocks that failed to write and count as a real problem: they held source data
-//                   (lost), or they were empty failures that weren't a clean capacity tail. -> Partial.
-//   over_capacity - empty source blocks past the card's real capacity: a contiguous run above the
-//                   last block that wrote, so nothing was lost. -> Success with a note.
-//   failed_bitmap - bit N set = source block N failed to write (covers both buckets above).
-//   used_gen1     - the gen1 fallback set the UID (which overwrites blocks 56/57/62/63).
+// After a clone, the per-block write result. A "failure" here means the block failed EVERY write
+// retry (a transient glitch that later succeeded is not a failure):
+//   blocks_total      - source block count.
+//   failed_count      - blocks that failed and count as a real problem: they held source data (data
+//                       lost), or were empty failures that weren't a clean top-of-card tail. -> Partial.
+//   over_capacity     - empty blocks that failed and form a contiguous run at the top of the card
+//                       (past physical capacity; nothing lost). -> Success with a note.
+//   failed_bitmap     - bit N set = source block N failed (covers both buckets above).
+//   used_gen1         - the gen1 fallback set the UID (which overwrites blocks 56/57/62/63).
+//   capacity_confirmed- the failures are a persistent, contiguous run at the very top of the card,
+//                       i.e. the source is genuinely larger than the card's physical capacity. False
+//                       for a scattered/anomalous failure (reported generically, no capacity claim).
 // Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE bytes.
 void iso15693_poller_get_clone_result(
     Iso15693Poller* instance,
@@ -84,7 +88,8 @@ void iso15693_poller_get_clone_result(
     uint16_t* failed_count,
     uint16_t* over_capacity,
     uint8_t* failed_bitmap,
-    bool* used_gen1);
+    bool* used_gen1,
+    bool* capacity_confirmed);
 
 // True if the source stores real data in a gen1 backdoor block (56/57/62/63) that a gen1 fallback
 // would overwrite -- so the write flow can warn before a possible gen1 clone. Source inspection only.
