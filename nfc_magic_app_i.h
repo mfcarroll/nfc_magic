@@ -73,6 +73,7 @@ enum NfcMagicAppCustomEvent {
     NfcMagicCustomEventTextInputDone,
     NfcMagicCustomEventIso15693CardDetected,
     NfcMagicCustomEventIso15693CardDetectFailed,
+    NfcMagicCustomEventIso15693NotGen2,
 };
 
 typedef struct {
@@ -108,6 +109,8 @@ typedef enum {
     NfcMagicIso15693WriteFailReasonPartial, // clone: UID written but some data blocks failed
     NfcMagicIso15693WriteFailReasonOverCapacity, // clone OK, but the card now advertises more blocks
         // than it physically holds (the extra were empty, so nothing was lost) -- a success with a note
+    NfcMagicIso15693WriteFailReasonNothingWiped, // wipe: not one block accepted the zero-write
+    NfcMagicIso15693WriteFailReasonEmptySource, // clone: the source image has no data blocks to write
 } NfcMagicIso15693WriteFailReason;
 
 struct NfcMagicApp {
@@ -159,6 +162,8 @@ struct NfcMagicApp {
     uint8_t
         iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
     bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)
+    bool iso15693_force_gen1; // ISO15693 clone: run the opt-in gen1 attempt (set by the gen1 opt-in
+        // scene, cleared when a fresh clone is started from the menu)
     uint16_t iso15693_clone_blocks_total; // ISO15693 clone: data blocks on the source image
     uint16_t iso15693_clone_failed_count; // ISO15693 clone: in-range blocks that couldn't be written
     uint16_t
@@ -167,6 +172,7 @@ struct NfcMagicApp {
         [ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
     bool iso15693_clone_used_gen1; // ISO15693 clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
     bool iso15693_clone_capacity_confirmed; // ISO15693 clone: failures are a top-tail = card too small
+    bool iso15693_clone_identity_failed; // ISO15693 clone: card rejected the AFI/DSFID write
 
     Gen4* gen4_data;
 

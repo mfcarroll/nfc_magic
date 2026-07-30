@@ -28,13 +28,23 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         // IS lost; this clone's data all fit.)
         furi_string_cat_str(message, "Didn't fit on the card:\n");
     }
+    // Scan the whole bitmap, not clone_blocks_total: the wipe and gen1 paths reduce clone_blocks_total
+    // to a logical count that excludes the skipped backdoor blocks (56/57/62/63), yet failures are
+    // recorded at their TRUE block index, which can exceed that reduced total. Unused bits are 0, so
+    // only real failures print, each at its true index -- keeping this list consistent with the
+    // "Not written/cleared: N" summary count.
     nfc_magic_partial_details_append_indices(
-        message, instance->iso15693_clone_failed_bitmap, instance->iso15693_clone_blocks_total, 0);
+        message, instance->iso15693_clone_failed_bitmap, ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8, 0);
     if(instance->iso15693_clone_used_gen1) {
         // The gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ from the
         // source regardless of the write results above.
         furi_string_cat_str(
             message, "\ngen1: 56/57/62/63 hold UID + unlock/commit, not file data.");
+    }
+    if(instance->iso15693_clone_identity_failed) {
+        // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not
+        // match the source.
+        furi_string_cat_str(message, "\nAFI/DSFID: card rejected the write.");
     }
     widget_add_text_scroll_element(widget, 0, 13, 128, 51, furi_string_get_cstr(message));
     furi_string_free(message);

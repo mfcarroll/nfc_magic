@@ -20,26 +20,30 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
     const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
     const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
     const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
+    const bool nothing_wiped = (reason == NfcMagicIso15693WriteFailReasonNothingWiped);
+    const bool empty_source = (reason == NfcMagicIso15693WriteFailReasonEmptySource);
 
     // Over-capacity is a clean success (nothing was lost) -> success tone. Partial means something
-    // didn't write, and card-lost / not-magic are outright failures -> error tone.
+    // didn't write, and card-lost / not-magic / nothing-wiped / empty-source are outright failures ->
+    // error tone.
     notification_message(
         instance->notifications, over_capacity ? &sequence_success : &sequence_error);
 
     if(over_capacity) {
-        // Clean success: the copy matched the source, the card just advertises more blocks than it
+        // Clean success: every source block was written, the card just advertises more blocks than it
         // physically holds (the extra source blocks were empty, so nothing was lost). Concise summary
-        // here, gen2-style; the exact empty top blocks are behind "Details".
+        // here, gen2-style; the exact empty top blocks are behind "Details". We confirm the writes
+        // were accepted, not a byte-for-byte read-back, so the wording says "written", not "matches".
         const uint16_t advertised = instance->iso15693_clone_blocks_total;
         const uint16_t extra = instance->iso15693_clone_over_capacity;
-        const uint16_t physical = (advertised > extra) ? (uint16_t)(advertised - extra) :
-                                                         advertised;
+        // The over-capacity gate guarantees >=1 block wrote, so extra < advertised.
+        const uint16_t physical = (uint16_t)(advertised - extra);
         widget_add_string_element(
             widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Clone finished");
         FuriString* text = furi_string_alloc();
         furi_string_printf(
             text,
-            "Data matches source.\nHolds %u/%u blocks.\nTop %u were empty.",
+            "All data written.\nHolds %u/%u blocks.\nTop %u were empty.",
             physical,
             advertised,
             extra);
@@ -71,6 +75,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             ok,
             total,
             not_written);
+        // At most one qualifier line fits, so show the most significant (real data loss > gen1 UID
+        // clobber > AFI/DSFID). A lower-priority caveat is intentionally dropped when a higher one
+        // applies -- the clone is already flagged Partial, so the user knows it's imperfect either way.
         if(instance->iso15693_clone_capacity_confirmed &&
            instance->iso15693_clone_failed_count > 0) {
             // Real data was lost because those blocks are a persistent, contiguous run at the top of
@@ -80,10 +87,40 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         } else if(instance->iso15693_clone_used_gen1) {
             // gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ.
             furi_string_cat_str(text, "\ngen1: 56/57/62/63 differ");
+        } else if(instance->iso15693_clone_identity_failed) {
+            // All data blocks took, but the card rejected the AFI/DSFID write.
+            furi_string_cat_str(text, "\nAFI/DSFID not set");
         }
         widget_add_string_multiline_element(
             widget, 4, 20, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
         furi_string_free(text);
+    } else if(nothing_wiped) {
+        // A wipe that cleared nothing: the card accepted no zero-write (read-only / no usable
+        // geometry). The UID was never touched -- say so, since the generic "not a magic tag / UID
+        // write" message would be wrong for a wipe.
+        widget_add_string_element(
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Wipe failed");
+        widget_add_string_multiline_element(
+            widget,
+            0,
+            13,
+            AlignLeft,
+            AlignTop,
+            FontSecondary,
+            "No blocks could be\ncleared. The card\nrejected all writes.\nIts UID is unchanged.");
+    } else if(empty_source) {
+        // A clone whose source image has no data blocks: nothing was written (not even the UID), so
+        // the card is untouched. Distinct from a non-magic card.
+        widget_add_string_element(
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Nothing to clone");
+        widget_add_string_multiline_element(
+            widget,
+            0,
+            13,
+            AlignLeft,
+            AlignTop,
+            FontSecondary,
+            "The saved file has\nno data blocks to\nclone. Nothing was\nwritten to the card.");
     } else {
         const char* message = card_lost ?
                                   "Card removed\nbefore the write\ncould finish." :

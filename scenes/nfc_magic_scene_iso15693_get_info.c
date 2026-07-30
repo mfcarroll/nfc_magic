@@ -8,12 +8,13 @@ static void nfc_magic_iso15693_get_info_poller_callback(Iso15693PollerEvent even
         // On success, send a custom event to the scene manager to transition
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventIso15693CardDetected);
-    } else {
-        // Info mode only ever emits Success or CardLost (never Fail -- that's a write-only outcome),
-        // so this branch means no card activated within the poller's retry budget.
+    } else if(event == Iso15693PollerEventCardLost) {
+        // Info mode only ever emits Success or CardLost (never a write outcome). CardLost here means
+        // no card activated within the poller's retry budget.
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventIso15693CardDetectFailed);
     }
+    // Any other event is not expected in Info mode and is intentionally ignored.
 }
 
 // Back button on the "no card" fail screen; forwards to the scene event handler.

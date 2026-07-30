@@ -20,9 +20,10 @@ void nfc_magic_scene_iso15693_write_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Popup* popup = instance->popup;
 
-    popup_set_header(popup, "Writing UID", 68, 19, AlignCenter, AlignBottom);
-    popup_set_text(popup, "Keep card on the\nback of Flipper", 68, 21, AlignCenter, AlignTop);
+    // Icon on the left; text right-aligned a few px in from the right edge (a small margin) so it
+    // both clears the 60px-wide icon on the left and isn't jammed against the right edge.
     popup_set_icon(popup, 0, 8, &I_NFC_manual_60x50);
+    popup_set_text(popup, "Writing UID\nKeep card\non the back", 122, 32, AlignRight, AlignCenter);
     view_dispatcher_switch_to_view(instance->view_dispatcher, NfcMagicAppViewPopup);
 
     // Allocate the poller here (not at app startup); freed in on_exit.
@@ -41,6 +42,11 @@ bool nfc_magic_scene_iso15693_write_on_event(void* context, SceneManagerEvent ev
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == NfcMagicCustomEventWorkerSuccess) {
+            // The poller verified the new UID reads back, so refresh the stored read result too --
+            // otherwise re-entering Write UID (without a fresh Info read) would seed the byte editor
+            // from the pre-write UID and look as if the write hadn't taken.
+            memcpy(
+                instance->iso15693_data->uid, instance->iso15693_target_uid, ISO15693_3_UID_SIZE);
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneSuccess);
             consumed = true;
         } else if(

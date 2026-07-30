@@ -52,6 +52,7 @@ bool nfc_magic_scene_iso15693_on_event(void* context, SceneManagerEvent event) {
             // Clone a saved ISO15693 .nfc onto the magic card, via the shared file-select + write
             // flow (same as Gen1/Gen2/USCUID-UL).
             app->iso15693_is_wipe_mode = false;
+            app->iso15693_force_gen1 = false; // a fresh clone always tries gen2 first
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneFileSelect);
             consumed = true;
         } else if(event.event == SubmenuIndexIso15693Wipe) {

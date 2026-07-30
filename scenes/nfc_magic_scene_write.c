@@ -177,7 +177,8 @@ static void
             &instance->iso15693_clone_over_capacity,
             instance->iso15693_clone_failed_bitmap,
             &instance->iso15693_clone_used_gen1,
-            &instance->iso15693_clone_capacity_confirmed);
+            &instance->iso15693_clone_capacity_confirmed,
+            &instance->iso15693_clone_identity_failed);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerSuccess);
     } else if(event == Iso15693PollerEventPartial) {
@@ -188,15 +189,33 @@ static void
             &instance->iso15693_clone_over_capacity,
             instance->iso15693_clone_failed_bitmap,
             &instance->iso15693_clone_used_gen1,
-            &instance->iso15693_clone_capacity_confirmed);
+            &instance->iso15693_clone_capacity_confirmed,
+            &instance->iso15693_clone_identity_failed);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerPartial);
     } else if(event == Iso15693PollerEventCardLost) {
         view_dispatcher_send_custom_event(instance->view_dispatcher, NfcMagicCustomEventCardLost);
-    } else { // Iso15693PollerEventFail: backdoor write not accepted (not a magic tag)
+    } else if(event == Iso15693PollerEventNotGen2) {
+        // gen2 left the UID unchanged (not a gen2 magic card). Offer the opt-in gen1 retry; nothing
+        // has been written, so the card is untouched.
+        view_dispatcher_send_custom_event(
+            instance->view_dispatcher, NfcMagicCustomEventIso15693NotGen2);
+    } else if(event == Iso15693PollerEventFail) {
+        // Backdoor write not accepted (not a magic tag), or an empty-source clone. Stash the stats so
+        // the fail handler can tell an empty source (blocks_total == 0) from a non-magic card.
+        iso15693_poller_get_clone_result(
+            instance->iso15693_poller,
+            &instance->iso15693_clone_blocks_total,
+            &instance->iso15693_clone_failed_count,
+            &instance->iso15693_clone_over_capacity,
+            instance->iso15693_clone_failed_bitmap,
+            &instance->iso15693_clone_used_gen1,
+            &instance->iso15693_clone_capacity_confirmed,
+            &instance->iso15693_clone_identity_failed);
         view_dispatcher_send_custom_event(
             instance->view_dispatcher, NfcMagicCustomEventWorkerFail);
     }
+    // Any other event is not expected from the clone/wipe poller and is intentionally ignored.
 }
 
 static void nfc_magic_scene_write_setup_view(NfcMagicApp* instance) {
@@ -274,14 +293,24 @@ void nfc_magic_scene_write_on_enter(void* context) {
                 nfc_magic_scene_write_iso15693_poller_callback,
                 instance);
         } else {
-            // Clone the loaded ISO15693 image (UID + writable blocks) onto the magic card.
+            // Clone the loaded ISO15693 image onto the magic card. The gen2 attempt runs first;
+            // if the user opted into the destructive gen1 retry on the "not gen2 magic" screen
+            // (iso15693_force_gen1), run that instead.
             const Iso15693_3Data* source =
                 nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
-            iso15693_poller_start_clone(
-                instance->iso15693_poller,
-                source,
-                nfc_magic_scene_write_iso15693_poller_callback,
-                instance);
+            if(instance->iso15693_force_gen1) {
+                iso15693_poller_start_clone_gen1(
+                    instance->iso15693_poller,
+                    source,
+                    nfc_magic_scene_write_iso15693_poller_callback,
+                    instance);
+            } else {
+                iso15693_poller_start_clone(
+                    instance->iso15693_poller,
+                    source,
+                    nfc_magic_scene_write_iso15693_poller_callback,
+                    instance);
+            }
         }
     } else {
         instance->gen4_poller = gen4_poller_alloc(instance->nfc);
@@ -365,14 +394,26 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
         } else if(event.event == NfcMagicCustomEventWorkerFail) {
             if(instance->protocol == NfcMagicProtocolIso15693) {
+                // Pick the reason: a wipe that cleared nothing, an empty-source clone (no data
+                // blocks, flagged by blocks_total == 0), or an ordinary non-magic card.
+                NfcMagicIso15693WriteFailReason reason;
+                if(instance->iso15693_is_wipe_mode) {
+                    reason = NfcMagicIso15693WriteFailReasonNothingWiped;
+                } else if(instance->iso15693_clone_blocks_total == 0) {
+                    reason = NfcMagicIso15693WriteFailReasonEmptySource;
+                } else {
+                    reason = NfcMagicIso15693WriteFailReasonNotMagic;
+                }
                 scene_manager_set_scene_state(
-                    instance->scene_manager,
-                    NfcMagicSceneIso15693WriteFail,
-                    NfcMagicIso15693WriteFailReasonNotMagic);
+                    instance->scene_manager, NfcMagicSceneIso15693WriteFail, reason);
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWriteFail);
             }
+            consumed = true;
+        } else if(event.event == NfcMagicCustomEventIso15693NotGen2) {
+            // gen2 clone was rejected -> offer the opt-in gen1 retry on a dedicated screen.
+            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693Gen1Optin);
             consumed = true;
         }
     }
