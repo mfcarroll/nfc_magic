@@ -21,7 +21,10 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
 
     const char* text;
     if(iso15693_wipe) {
-        text = "Zeroes every data block on this card. The UID is left unchanged.";
+        // Names the exception rather than promising "every data block": 56/57/62/63 are deliberately
+        // skipped (they hold the gen1 UID / unlock / commit registers), so on a gen1 card the UID
+        // survives -- and on a gen2 card, where they are ordinary data, they are left as they were.
+        text = "Zeroes the data blocks, except 56/57/62/63 (gen1 UID). The UID is left unchanged.";
     } else if(instance->uscuid_ul_is_wipe_mode) {
         text = "Blank factory dump: config &\npassword cleared, UID zeroed.";
     } else {

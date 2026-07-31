@@ -3,7 +3,7 @@
 
 enum SubmenuIndex {
     SubmenuIndexIso15693Write, // clone a saved .nfc onto the card (like the other magic types)
-    SubmenuIndexIso15693Wipe, // zero every data block
+    SubmenuIndexIso15693Wipe, // zero the data blocks (56/57/62/63 skipped)
     SubmenuIndexIso15693WriteUid, // enter a UID by hand (magic-only bonus)
     SubmenuIndexIso15693Info, // read + show the card in front of you
 };
@@ -56,11 +56,12 @@ bool nfc_magic_scene_iso15693_on_event(void* context, SceneManagerEvent event) {
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneFileSelect);
             consumed = true;
         } else if(event.event == SubmenuIndexIso15693Wipe) {
-            // Zero every data block (no source file, UID untouched) via the shared write scene.
+            // Zero the data blocks, skipping 56/57/62/63 (no source file, UID untouched).
             app->iso15693_is_wipe_mode = true;
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneWriteConfirm);
             consumed = true;
         } else if(event.event == SubmenuIndexIso15693WriteUid) {
+            app->iso15693_force_gen1 = false; // a fresh Write-UID always tries gen2 first
             scene_manager_next_scene(app->scene_manager, NfcMagicSceneIso15693WriteInput);
             consumed = true;
         } else if(event.event == SubmenuIndexIso15693Info) {

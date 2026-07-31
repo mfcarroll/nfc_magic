@@ -113,6 +113,14 @@ typedef enum {
     NfcMagicIso15693WriteFailReasonEmptySource, // clone: the source image has no data blocks to write
 } NfcMagicIso15693WriteFailReason;
 
+// Which flow reached the gen1 opt-in screen. The two consent to different things (a clone writes every
+// data block, a Write-UID writes only the UID registers) and return to different write scenes. Stored
+// as the opt-in scene's state by whichever scene routes to it.
+typedef enum {
+    NfcMagicIso15693Gen1OptinFromClone,
+    NfcMagicIso15693Gen1OptinFromWriteUid,
+} NfcMagicIso15693Gen1OptinSource;
+
 struct NfcMagicApp {
     ViewDispatcher* view_dispatcher;
     Gui* gui;
@@ -162,8 +170,8 @@ struct NfcMagicApp {
     uint8_t
         iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
     bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)
-    bool iso15693_force_gen1; // ISO15693 clone: run the opt-in gen1 attempt (set by the gen1 opt-in
-        // scene, cleared when a fresh clone is started from the menu)
+    bool iso15693_force_gen1; // ISO15693 clone / Write-UID: run the opt-in gen1 attempt (set by the
+        // gen1 opt-in scene, cleared when a fresh clone or Write-UID is started from the menu)
     uint16_t iso15693_clone_blocks_total; // ISO15693 clone: data blocks on the source image
     uint16_t iso15693_clone_failed_count; // ISO15693 clone: in-range blocks that couldn't be written
     uint16_t

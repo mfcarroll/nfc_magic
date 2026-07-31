@@ -1,10 +1,15 @@
 #include "../nfc_magic_app_i.h"
 #include "../magic/protocols/iso15693/iso15693_poller.h"
 
-// Shown mid-clone when the gen2 backdoor left the UID unchanged (not a gen2 magic card, or not magic
+// Shown mid-write when the gen2 backdoor left the UID unchanged (not a gen2 magic card, or not magic
 // at all). Offers the destructive, NOT-hardware-tested gen1 fallback as an explicit opt-in. Nothing
-// has been written to the card yet, so declining leaves it untouched; accepting re-runs the clone in
-// gen1 mode (the write scene reads iso15693_force_gen1 on enter).
+// has been written to the card yet, so declining leaves it untouched; accepting re-runs the write in
+// gen1 mode (both write scenes read iso15693_force_gen1 on enter).
+//
+// Reached from two flows, distinguished by this scene's state (NfcMagicIso15693Gen1OptinSource):
+// the clone (NfcMagicSceneWrite), which goes on to write every data block, and the bare Write-UID
+// (NfcMagicSceneIso15693Write), which writes only the four UID registers. They consent to different
+// things, so the body text differs and each returns to its own write scene.
 static void nfc_magic_scene_iso15693_gen1_optin_button_callback(
     GuiButtonType result,
     InputType type,
@@ -22,18 +27,35 @@ void nfc_magic_scene_iso15693_gen1_optin_on_enter(void* context) {
     widget_add_string_element(
         widget, 3, 0, AlignLeft, AlignTop, FontPrimary, "Not gen2 magic card");
 
+    const bool from_write_uid =
+        scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693Gen1Optin) ==
+        NfcMagicIso15693Gen1OptinFromWriteUid;
+
     FuriString* body = furi_string_alloc();
-    furi_string_cat_str(
-        body,
-        "Might be gen1, or not magic at all. Gen1 writes the UID to blocks 56/57/62/63 first, then "
-        "the rest of the data only if that UID takes. A non-magic tag loses at most those 4 blocks. "
-        "Gen1 is not hardware-tested.");
-    // If the source itself stores data in those backdoor blocks, gen1 can't reproduce it -- warn at
-    // the decision point (this is the source-side pre-check that used to sit on the up-front confirm).
-    const Iso15693_3Data* source =
-        nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
-    if(iso15693_poller_source_uses_gen1_blocks(source)) {
-        furi_string_cat_str(body, "\n\nYour file's data in 56/57/62/63 can't be cloned by gen1.");
+    if(from_write_uid) {
+        // A bare Write-UID has no source data to write, so gen1 touches only the four registers --
+        // but on a plain tag those are ordinary data blocks, which is the whole risk here.
+        furi_string_cat_str(
+            body,
+            "Might be gen1, or not magic at all. Gen1 sets the UID by writing blocks 56/57/62/63 "
+            "with an ordinary write, which any writable tag accepts -- so on a tag that isn't magic "
+            "this overwrites whatever those 4 blocks hold. Nothing else is written. "
+            "Gen1 is not hardware-tested.");
+    } else {
+        furi_string_cat_str(
+            body,
+            "Might be gen1, or not magic at all. Gen1 writes the UID to blocks 56/57/62/63 first, "
+            "then the rest of the data only if that UID takes. A non-magic tag loses at most those 4 "
+            "blocks. Gen1 is not hardware-tested.");
+        // If the source itself stores data in those backdoor blocks, gen1 can't reproduce it -- warn
+        // at the decision point (the source-side pre-check that used to sit on the up-front confirm).
+        // Clone only: a Write-UID has no source file.
+        const Iso15693_3Data* source =
+            nfc_device_get_data(instance->source_dev, NfcProtocolIso15693_3);
+        if(iso15693_poller_source_uses_gen1_blocks(source)) {
+            furi_string_cat_str(
+                body, "\n\nYour file's data in 56/57/62/63 can't be cloned by gen1.");
+        }
     }
     // Scrolling body (Up/Down) so the full warning always fits alongside the button row.
     widget_add_text_scroll_element(widget, 0, 14, 128, 37, furi_string_get_cstr(body));
@@ -61,10 +83,16 @@ bool nfc_magic_scene_iso15693_gen1_optin_on_event(void* context, SceneManagerEve
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == GuiButtonTypeRight) {
-            // Opt in: re-run the clone in gen1 mode. The write scene reads iso15693_force_gen1 on
+            // Opt in: re-run the write in gen1 mode. The write scene reads iso15693_force_gen1 on
             // enter; the gen2 attempt wrote nothing, so this is the first thing to touch the card.
+            const bool from_write_uid =
+                scene_manager_get_scene_state(
+                    instance->scene_manager, NfcMagicSceneIso15693Gen1Optin) ==
+                NfcMagicIso15693Gen1OptinFromWriteUid;
             instance->iso15693_force_gen1 = true;
-            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWrite);
+            scene_manager_next_scene(
+                instance->scene_manager,
+                from_write_uid ? NfcMagicSceneIso15693Write : NfcMagicSceneWrite);
             consumed = true;
         } else if(event.event == GuiButtonTypeLeft) {
             // Decline: leave the card untouched, back to the ISO15693 menu.

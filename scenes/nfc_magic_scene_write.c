@@ -287,7 +287,7 @@ void nfc_magic_scene_write_on_enter(void* context) {
     } else if(instance->protocol == NfcMagicProtocolIso15693) {
         instance->iso15693_poller = iso15693_poller_alloc(instance->nfc);
         if(instance->iso15693_is_wipe_mode) {
-            // Zero every data block on the card (no source file).
+            // Zero the card's data blocks, skipping 56/57/62/63 (no source file).
             iso15693_poller_start_wipe(
                 instance->iso15693_poller,
                 nfc_magic_scene_write_iso15693_poller_callback,
@@ -412,7 +412,12 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             }
             consumed = true;
         } else if(event.event == NfcMagicCustomEventIso15693NotGen2) {
-            // gen2 clone was rejected -> offer the opt-in gen1 retry on a dedicated screen.
+            // gen2 clone was rejected -> offer the opt-in gen1 retry on a dedicated screen. Tell it
+            // this is the clone flow (it consents to a full data-block write and returns here).
+            scene_manager_set_scene_state(
+                instance->scene_manager,
+                NfcMagicSceneIso15693Gen1Optin,
+                NfcMagicIso15693Gen1OptinFromClone);
             scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693Gen1Optin);
             consumed = true;
         }

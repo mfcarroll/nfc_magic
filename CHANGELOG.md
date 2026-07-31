@@ -18,9 +18,13 @@ the copy advertises the same chip identity.
   (and the -S / -L variants) apart via the UID type-indicator bits.
 - **Clone from a saved `.nfc`** — writes the UID (magic backdoor), all data blocks, and the source's
   identity (IC ref / block geometry / AFI / DSFID) so the copy advertises the same chip. gen2 sets
-  UID + geometry via the `0xE0` magic command; a gen1 card falls back to the block-write backdoor.
-- **Wipe** — zero every writable data block; the UID is left unchanged.
-- **Write UID** — manual magic backdoor UID write with a confirmation screen.
+  UID + geometry via the `0xE0` magic command; if the card turns out not to be gen2, gen1 is offered
+  as an explicit opt-in (see below).
+- **Wipe** — zero the card's data blocks; the UID is left unchanged. Blocks 56/57/62/63 are skipped:
+  on a gen1 card they hold the UID / unlock / commit registers, so zeroing them would break the "UID
+  unchanged" promise. They are excluded from the reported total rather than counted as wiped.
+- **Write UID** — manual magic backdoor UID write. Tries gen2 first and, only if that leaves the UID
+  unchanged, offers the same opt-in gen1 attempt the clone does.
 
 ### Behaviour
 - **Writes every source block and reports only real data loss.** WRITE BLOCK on these cards is gated
@@ -32,14 +36,29 @@ the copy advertises the same chip identity.
   geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
 - **gen1 fidelity is surfaced.** The gen1 backdoor overwrites data blocks 56/57/62/63 — the UID
   (56/57) plus unlock/commit (62/63) — so a gen1 clone can't reproduce a source that uses them. If the
-  source has data there, the confirm warns before the write; if the clone actually fell back to gen1,
-  it reports Partial and flags those blocks.
+  source has data there, the opt-in screen warns before anything is written; if the clone actually used
+  gen1, it reports Partial and flags those blocks.
 - **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
   UID after a reset is not misreported as a failure.
-- The potentially destructive **gen1 fallback only runs if the gen2 write left the UID unchanged**,
-  so a gen2 card is never clobbered by gen1.
+- **Nothing is written until the card proves it is magic.** The write sends only the gen2 backdoor UID
+  first; data blocks and identity fields follow only once the UID reads back as the target. A card that
+  isn't gen2 magic is therefore left completely untouched, which is also why the clone no longer shows
+  an up-front confirmation screen — there is nothing to consent to before that point.
+- **The destructive gen1 fallback is opt-in.** It is offered only when the gen2 write left the UID
+  unchanged, and only after the user accepts a screen that states what gen1 writes and that the gen1
+  path is not hardware-tested. The gen1 attempt itself writes the UID registers first and the data
+  blocks only if that UID took, so a tag that isn't gen1 either loses at most those four blocks.
+- **Identity writes are reported.** If the card rejects the source's AFI or DSFID outright, the clone
+  reports Partial with a note instead of a clean Success.
 - Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
   instead of a generic error, and detect / write popups **time out** instead of hanging.
+- **A card lifted mid-write is reported as a removal, not as a card fault.** Losing the card partway
+  through makes every remaining block fail, which looks identical to reaching the card's physical
+  capacity — so if any block fails, the write re-checks the card is still present before drawing any
+  conclusion, and reports **"Card removed"** rather than "card too small" or a partial wipe.
+- **A wipe only calls a block unwiped if it can prove data is still there**, by reading the block back
+  after the failed write. A block it cannot read back is counted as unwiped rather than assumed clear,
+  so a wipe never reports more success than it can demonstrate.
 
 ### Validation (at 2.1)
 - The **gen2** path was validated end-to-end on hardware for this release: byte-identical clones
