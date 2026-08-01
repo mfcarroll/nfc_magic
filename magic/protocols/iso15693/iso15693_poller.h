@@ -117,9 +117,9 @@ void iso15693_poller_start_clone_gen1(
 //   capacity_confirmed- the failures are a persistent, contiguous run at the very top of the card,
 //                       i.e. the source is genuinely larger than the card's physical capacity. False
 //                       for a scattered/anomalous failure (reported generically, no capacity claim).
-//   identity_failed   - the source reported an AFI / DSFID but the card rejected the WRITE AFI / WRITE
-//                       DSFID, so that field may not be set (best-effort; can over-report on a card
-//                       that accepts the write without answering). -> Partial.
+//   identity_failed   - the source reported an AFI / DSFID, but after the write GET SYSTEM INFO did not
+//                       read that field back with the source's value, so the copy does not carry it.
+//                       Verified by read-back, not inferred from the write's return. -> Partial.
 // Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE bytes.
 void iso15693_poller_get_clone_result(
     Iso15693Poller* instance,

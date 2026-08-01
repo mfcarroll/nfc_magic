@@ -48,8 +48,11 @@ the copy advertises the same chip identity.
   unchanged, and only after the user accepts a screen that states what gen1 writes and that the gen1
   path is not hardware-tested. The gen1 attempt itself writes the UID registers first and the data
   blocks only if that UID took, so a tag that isn't gen1 either loses at most those four blocks.
-- **Identity writes are reported.** If the card rejects the source's AFI or DSFID outright, the clone
-  reports Partial with a note instead of a clean Success.
+- **Identity writes are verified by read-back.** The source's AFI / DSFID are written, then read back
+  with GET SYSTEM INFO and compared; a field the copy doesn't carry is reported as Partial with a note
+  rather than a clean Success. Checking the write's return value alone is not enough — a tag refuses
+  in-band, answering with a well-formed frame that carries an error flag, and the write call reports
+  success either way.
 - Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
   instead of a generic error, and detect / write popups **time out** instead of hanging.
 - **A card lifted mid-write is reported as a removal, not as a card fault.** Losing the card partway

@@ -207,37 +207,70 @@ static void iso15693_poller_send_backdoor_uid_gen2(
     bit_buffer_free(rx);
 }
 
-// Best-effort: make the clone match the source's AFI / DSFID via the standard ISO15693 WRITE AFI /
-// WRITE DSFID commands (only for fields the source actually reported). Frames: 02 27 <afi> and
-// 02 29 <dsfid> (+CRC). A rejected write is recorded (clone_afi_failed / clone_dsfid_failed) so the
-// result can flag that the field may not have been set; it downgrades the clone to Partial but never
+// Make the clone match the source's AFI / DSFID via the standard ISO15693 WRITE AFI / WRITE DSFID
+// commands (only for fields the source actually reported). Frames: 02 27 <afi> and 02 29 <dsfid>
+// (+CRC). Each field is then READ BACK with GET SYSTEM INFO and compared; a field that doesn't match
+// is recorded (clone_afi_failed / clone_dsfid_failed), which downgrades the clone to Partial but never
 // fails it, since these are identity extras, not the core UID/data payload.
 static void
     iso15693_poller_write_identity(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
     const Iso15693_3SystemInfo* sys = &instance->clone_source->system_info;
+    const bool want_dsfid = (sys->flags & ISO15693_3_SYSINFO_FLAG_DSFID) != 0;
+    const bool want_afi = (sys->flags & ISO15693_3_SYSINFO_FLAG_AFI) != 0;
+    if(!want_dsfid && !want_afi) return; // source reported neither field: nothing to reproduce
+
     BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
     BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
 
-    if(sys->flags & ISO15693_3_SYSINFO_FLAG_DSFID) {
-        bit_buffer_reset(tx);
-        bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
-        bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_DSFID);
-        bit_buffer_append_byte(tx, sys->dsfid);
-        if(iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC) !=
-           Iso15693_3ErrorNone) {
-            instance->clone_dsfid_failed = true;
+    // A field is only "written" once we have READ IT BACK and it matches, exactly like the UID. The
+    // send return can't be trusted on its own: a tag refuses in-band, answering with the error flag set
+    // in the response's flags byte plus an error code -- a well-formed, CRC-valid frame -- so
+    // iso15693_3_poller_send_frame returns None and the refusal is invisible. (The SDK's own
+    // write_block catches that by following send_frame with iso15693_3_write_block_response_parse;
+    // there is no equivalent for WRITE AFI / WRITE DSFID.) The converse is just as wrong: a tag that
+    // applies the write without answering looks like a failure. GET SYSTEM INFO is the only way to
+    // read AFI/DSFID back, and it returns both, so one call verifies both fields.
+    //
+    // Retry the write+verify pair so a transient RF error isn't mistaken for a refusal -- the same
+    // reasoning as the block loop's retries.
+    bool dsfid_ok = !want_dsfid;
+    bool afi_ok = !want_afi;
+    for(uint32_t attempt = 0; attempt < ISO15693_POLLER_WRITE_ATTEMPTS && (!dsfid_ok || !afi_ok);
+        attempt++) {
+        if(!dsfid_ok) {
+            bit_buffer_reset(tx);
+            bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
+            bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_DSFID);
+            bit_buffer_append_byte(tx, sys->dsfid);
+            iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
         }
-    }
-    if(sys->flags & ISO15693_3_SYSINFO_FLAG_AFI) {
-        bit_buffer_reset(tx);
-        bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
-        bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_AFI);
-        bit_buffer_append_byte(tx, sys->afi);
-        if(iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC) !=
-           Iso15693_3ErrorNone) {
-            instance->clone_afi_failed = true;
+        if(!afi_ok) {
+            bit_buffer_reset(tx);
+            bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
+            bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_AFI);
+            bit_buffer_append_byte(tx, sys->afi);
+            iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
         }
+
+        Iso15693_3SystemInfo readback = {0};
+        if(iso15693_3_poller_get_system_info(iso_poller, &readback) == Iso15693_3ErrorNone) {
+            // Require the target to ADVERTISE the field as well as hold the right value: a copy that
+            // no longer reports the AFI/DSFID the source reported isn't a faithful clone either.
+            if(!dsfid_ok && (readback.flags & ISO15693_3_SYSINFO_FLAG_DSFID) &&
+               readback.dsfid == sys->dsfid) {
+                dsfid_ok = true;
+            }
+            if(!afi_ok && (readback.flags & ISO15693_3_SYSINFO_FLAG_AFI) &&
+               readback.afi == sys->afi) {
+                afi_ok = true;
+            }
+        }
+        if(dsfid_ok && afi_ok) break;
+        furi_delay_ms(ISO15693_POLLER_VERIFY_RETRY_MS);
     }
+
+    instance->clone_dsfid_failed = !dsfid_ok;
+    instance->clone_afi_failed = !afi_ok;
 
     bit_buffer_free(tx);
     bit_buffer_free(rx);
