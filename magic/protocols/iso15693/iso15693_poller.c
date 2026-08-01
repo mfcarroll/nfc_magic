@@ -14,7 +14,8 @@
 // Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3 (GPLv3)
 // SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Unaddressed frames are sent to
 // hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card
-// generations exist and the write tries gen2 then (only if untouched) gen1.
+// generations exist: the write always tries gen2 first, and offers gen1 -- which is destructive on a
+// non-magic tag -- only as an explicit user opt-in after gen2 leaves the UID unchanged.
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
 // gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each. The UID blocks are named by the
@@ -63,9 +64,11 @@
 
 // Write-mode state machine. Each verify runs after a NfcCommandReset field power-cycle.
 typedef enum {
-    Iso15693WriteStateStart, // read the current UID, send gen2, request a field reset
-    Iso15693WriteStateVerifyGen2, // verify gen2; if the UID is untouched, send gen1 + reset
-    Iso15693WriteStateVerifyGen1, // verify gen1
+    Iso15693WriteStateStart, // note the current UID, send the backdoor UID (gen2, or gen1 on an
+        // opt-in gen1 run), request a field reset
+    Iso15693WriteStateVerifyGen2, // verify gen2: on a match write the payload; if the UID is untouched
+        // report NotGen2 and STOP so the scene can offer the gen1 opt-in (it is not sent from here)
+    Iso15693WriteStateVerifyGen1, // verify the opt-in gen1 UID; on a match write the payload
 } Iso15693WriteState;
 
 struct Iso15693Poller {
@@ -75,16 +78,17 @@ struct Iso15693Poller {
     uint8_t target_uid[ISO15693_3_UID_SIZE];
     uint8_t original_uid[ISO15693_3_UID_SIZE]; // UID before the write, to gate the gen1 fallback
     Iso15693WriteState write_state;
-    // Clone only: this run is the opt-in gen1 attempt (write the gen1 UID, verify it, then the data),
-    // entered from the "not gen2 magic" screen. A normal run leaves this false and tries gen2 first,
-    // offering gen1 only if gen2 is rejected.
+    // This run is the opt-in gen1 attempt (write the gen1 UID, verify it, then the payload), entered
+    // from the "not gen2 magic" screen. Set for a clone AND for a bare Write-UID. A normal run leaves
+    // this false and tries gen2 first, offering gen1 only if gen2 leaves the UID unchanged.
     bool attempt_gen1;
     uint32_t activation_errors; // consecutive activation failures (no card) -> timeout
     // Clone mode: the source image (kept separate from `data` so start_internal's reset can't wipe
     // it) and per-block write results.
     Iso15693_3Data* clone_source;
-    uint16_t clone_blocks_total; // clone: blocks on the source image. wipe: wipeable (non-backdoor)
-        // block count on the card (the 4 gen1 registers 56/57/62/63 are excluded, see wipe_blocks)
+    uint16_t clone_blocks_total; // clone: blocks on the source image, less 56/57/62/63 on a gen1 run
+        // (they carry the UID, not source data). wipe: wipeable (non-backdoor) block count on the card
+        // (the 4 gen1 registers 56/57/62/63 are excluded, see wipe_blocks)
     // Clone mode: blocks that failed to write and count as a real problem: either they held source
     // data (lost), or they were empty failures that did NOT form a clean capacity tail (so we can't
     // call them over-capacity). Drives Partial. Wipe mode: reused as the count of blocks that still
@@ -621,10 +625,10 @@ static NfcCommand
         }
 
         // gen2 first: send only the UID + geometry (NO data yet). For a clone the data blocks are
-        // written afterwards, once VerifyGen2 confirms the card actually took the gen2 UID -- so a
-        // non-magic tag is never clobbered by a doomed clone. The CFG block programs what the card
-        // reports for geometry / IC ref: the source's values for a clone (same chip identity), the
-        // fixed magic default otherwise. (gen1 has no geometry block.)
+        // written afterwards, once VerifyGen2 confirms the card actually took the gen2 UID -- so a tag
+        // that does not take that UID is never clobbered by a doomed clone. The CFG block programs
+        // what the card reports for geometry / IC ref: the source's values for a clone (same chip
+        // identity), the fixed magic default otherwise. (gen1 has no geometry block.)
         uint8_t cfg_maxblock = ISO15693_MAGIC_V2_CFG_MAXBLOCK;
         uint8_t cfg_blocksize = ISO15693_MAGIC_V2_CFG_BLOCKSIZE;
         uint8_t cfg_icref = ISO15693_MAGIC_V2_CFG_IC_REF;
@@ -649,9 +653,13 @@ static NfcCommand
             return NfcCommandStop;
         }
         if(memcmp(readback, instance->target_uid, ISO15693_3_UID_SIZE) == 0) {
-            // gen2 took the UID -- the card is confirmed magic. NOW write the clone payload (AFI/DSFID
-            // + data blocks); the gen2 UID lives in a separate backdoor register space, so data-block
-            // writes can't disturb it. A bare Write-UID has no payload to write.
+            // The UID now reads back as the target, so the card accepted a gen2 magic command: write
+            // the clone payload (AFI/DSFID + data blocks). The gen2 UID lives in a separate backdoor
+            // register space, so data-block writes can't disturb it. A bare Write-UID has no payload.
+            // Strictly this proves "the UID is now the target", not "the card is magic": if the tag
+            // presented already had that UID the comparison passes without the write having done
+            // anything. In practice that tag is the one the source was read from, so the payload it
+            // then receives is the data it already holds.
             if(instance->mode == Iso15693PollerModeClone) {
                 iso15693_poller_write_identity(instance, iso_poller);
                 if(!iso15693_poller_write_source_blocks(instance, iso_poller, false)) {

@@ -21,18 +21,21 @@ typedef enum {
 
 typedef enum {
     Iso15693PollerEventSuccess, // Info: card read. Write/clone: the target UID read back and matched
-        // (only the UID is re-read; block contents are not compared). Wipe: every block it attempted
+        // (the UID, plus the AFI/DSFID on a clone, are re-read; block CONTENTS are never compared --
+        // a data block counts as written when the card ACKs it). Wipe: every block it attempted
         // accepted the zero write (backdoor registers 56/57/62/63 are skipped; the UID is untouched
         // and never re-read).
     Iso15693PollerEventPartial, // the operation mostly worked but isn't a clean result: a clone lost
         // some data blocks, fell back to gen1 (overwriting 56/57/62/63), or had its AFI/DSFID write
         // rejected; or a wipe couldn't clear every block.
-    Iso15693PollerEventFail, // the operation didn't take: a write/clone backdoor was rejected (not a
-        // magic tag), or a wipe cleared nothing.
+    Iso15693PollerEventFail, // the operation didn't take: the backdoor write was rejected (not a
+        // magic tag), the gen2 write changed the UID to neither the original nor the target, an opt-in
+        // gen1 UID didn't take, the clone source had no data blocks, or a wipe cleared nothing.
     Iso15693PollerEventCardLost, // no card in the field / card removed before the operation finished
     Iso15693PollerEventCardDetected, // a magic candidate activated (drives the write popup UI)
-    Iso15693PollerEventNotGen2, // clone: gen2 left the UID unchanged (not a gen2 magic card, or not
-        // magic at all). Nothing was written; the scene offers the opt-in gen1 retry.
+    Iso15693PollerEventNotGen2, // gen2 left the UID unchanged (not a gen2 magic card, or not magic
+        // at all). Nothing was written; the scene offers the opt-in gen1 retry. Emitted for a clone AND
+        // for a bare Write-UID -- both gate the destructive gen1 attempt behind that consent.
 } Iso15693PollerEvent;
 
 typedef void (*Iso15693PollerCallback)(Iso15693PollerEvent event, void* context);
@@ -52,10 +55,11 @@ void iso15693_poller_start(
 // Writes ONLY the gen2 backdoor sequence -- a harmless custom command on a non-magic tag. Before the
 // read-back it power-cycles the field (like proxmark's switch_off + getUID) so a card that only
 // latches the new UID after a reset is not misreported as a failure.
-// Reports CardDetected (first activation), then Success (the read-back inventory returns the requested
-// UID), Fail (the UID changed to neither the original nor the target) or CardLost. If gen2 leaves the
-// UID unchanged it reports NotGen2 WITHOUT having written anything, so the caller can offer the
-// destructive gen1 retry via iso15693_poller_start_write_uid_gen1().
+// Reports Success (the read-back inventory returns the requested UID), Fail (the UID changed to
+// neither the original nor the target) or CardLost. If gen2 leaves the UID unchanged it reports NotGen2
+// WITHOUT having written anything, so the caller can offer the destructive gen1 retry via
+// iso15693_poller_start_write_uid_gen1(). It does NOT emit CardDetected: that event exists to switch
+// the shared clone/wipe popup off "apply the same card", and is only emitted in those two modes.
 // The byte-level frames are defined in iso15693_poller.c (ported from proxmark3 armsrc/iso15693.c,
 // SetTag15693Uid / SetTag15693Uid_v2).
 void iso15693_poller_start_write_uid(
@@ -68,7 +72,7 @@ void iso15693_poller_start_write_uid(
 // Writes the destructive gen1 sequence -- ordinary WRITE BLOCK into blocks 56/57/62/63, which ANY
 // writable tag accepts, so on a non-magic tag this destroys four blocks of user data -- then verifies.
 // A Write-UID has no payload to follow, so a verified UID is a clean Success.
-// Reports CardDetected (first activation), then Success, Fail (the gen1 UID didn't take) or CardLost.
+// Reports Success, Fail (the gen1 UID didn't take) or CardLost -- and no CardDetected, as above.
 // NOTE: gen1 is NOT hardware-validated.
 void iso15693_poller_start_write_uid_gen1(
     Iso15693Poller* instance,
@@ -77,9 +81,9 @@ void iso15693_poller_start_write_uid_gen1(
     void* context);
 
 // Full clone (gen2 attempt): write `source`'s UID via the gen2 backdoor FIRST, and only once that UID
-// reads back does it write every data block (standard WRITE BLOCK) -- so a non-magic tag is never
-// clobbered by a doomed clone. `source` is an ISO15693-3 image loaded from a saved .nfc. Reports
-// CardDetected (first activation), then Success (UID + all blocks), Partial (some blocks / the
+// reads back does it write every data block (standard WRITE BLOCK) -- so a tag that does not take the
+// gen2 UID is never clobbered by a doomed clone. `source` is an ISO15693-3 image loaded from a saved
+// .nfc. Reports CardDetected (first activation), then Success (UID + all blocks), Partial (some / the
 // AFI/DSFID write failed), Fail (source has no data blocks) or CardLost. If gen2 leaves the UID
 // unchanged (not a gen2 magic card) it reports NotGen2 without writing anything, so the caller can
 // offer the destructive gen1 retry via iso15693_poller_start_clone_gen1().
@@ -105,9 +109,15 @@ void iso15693_poller_start_clone_gen1(
     Iso15693PollerCallback callback,
     void* context);
 
-// After a clone, the per-block write result. A "failure" here means the block failed EVERY write
-// retry (a transient glitch that later succeeded is not a failure):
-//   blocks_total      - source block count.
+// The per-block write result, after a clone OR a wipe (start_wipe sends callers here too). A "failure"
+// here means the block failed EVERY write retry (a transient glitch that later succeeded is not a
+// failure):
+//   blocks_total      - the blocks this run attempted and reports against, which is mode-dependent:
+//                       the source block count for a gen2 clone, that count MINUS the 4 skipped
+//                       backdoor registers for a gen1 clone, or the card's wipeable (non-backdoor)
+//                       block count for a wipe. NOTE failed_bitmap is indexed by TRUE block number, so
+//                       a set bit can sit above blocks_total -- scan the whole bitmap, not
+//                       [0, blocks_total).
 //   failed_count      - blocks that failed and count as a real problem: they held source data (data
 //                       lost), or were empty failures that weren't a clean top-of-card tail. -> Partial.
 //   over_capacity     - empty blocks that failed and form a contiguous run at the top of the card
