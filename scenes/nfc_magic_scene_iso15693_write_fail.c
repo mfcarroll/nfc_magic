@@ -75,9 +75,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             ok,
             total,
             not_written);
-        // At most one qualifier line fits, so show the most significant (real data loss > gen1 UID
-        // clobber > AFI/DSFID). A lower-priority caveat is intentionally dropped when a higher one
-        // applies -- the clone is already flagged Partial, so the user knows it's imperfect either way.
+        // The body sits at y=20 with the button row below it, so only three FontSecondary lines fit:
+        // the two count lines plus ONE qualifier. Show the most significant (real data loss > gen1 UID
+        // clobber > AFI/DSFID). A lower-priority caveat is dropped from THIS screen only -- "Details"
+        // below is offered whenever any caveat applies and lists all of them, so nothing is unreachable.
         if(instance->iso15693_clone_capacity_confirmed &&
            instance->iso15693_clone_failed_count > 0) {
             // Real data was lost because those blocks are a persistent, contiguous run at the top of
@@ -156,9 +157,15 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             (over_capacity || partial) ? "Finish" : "Back",
             nfc_magic_scene_iso15693_write_fail_widget_callback,
             instance);
-        // "Details" (forward) lists the affected blocks, like Gen2 / USCUID: a partial's failed
-        // blocks, or an over-capacity's empty top blocks.
-        if(over_capacity || (partial && instance->iso15693_clone_failed_count > 0)) {
+        // "Details" (forward) carries everything that didn't fit the summary, like Gen2 / USCUID: a
+        // partial's failed blocks, an over-capacity's empty top blocks, and the gen1 / AFI-DSFID
+        // caveats. Offer it whenever there is ANY of those -- not just failed blocks. Without the two
+        // caveat terms, a partial whose only problem is the gen1 UID clobber or a rejected AFI/DSFID
+        // (both possible with zero failed blocks) had no Details button, and since the summary shows
+        // only its single highest-priority qualifier, the lower one was then reachable nowhere at all.
+        if(over_capacity || (partial && (instance->iso15693_clone_failed_count > 0 ||
+                                         instance->iso15693_clone_used_gen1 ||
+                                         instance->iso15693_clone_identity_failed))) {
             widget_add_button_element(
                 widget,
                 GuiButtonTypeRight,

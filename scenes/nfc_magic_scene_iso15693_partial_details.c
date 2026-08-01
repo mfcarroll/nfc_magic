@@ -13,16 +13,31 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     const uint32_t reason =
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
     const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
+    // A partial can reach this screen with NO failed blocks -- when its only problem is the gen1 UID
+    // clobber or a rejected AFI/DSFID. Titling an empty list "Blocks not written" would be wrong, so
+    // name the screen for what it actually shows.
+    const bool has_block_list =
+        (instance->iso15693_clone_failed_count + instance->iso15693_clone_over_capacity) > 0;
+    // Whether the listed blocks are merely EMPTY ones past the card's physical capacity (nothing lost)
+    // has to be decided from the capacity facts, not from the reason code: a Partial can consist purely
+    // of an empty capacity tail plus a gen1 / AFI-DSFID caveat, and in that state clone_over_capacity
+    // only survived because the failures were a confirmed contiguous top tail. Calling those blocks
+    // "not written" with no softening would overstate the damage on a clone that lost nothing.
+    const bool only_empty_tail = (instance->iso15693_clone_failed_count == 0) &&
+                                 (instance->iso15693_clone_over_capacity > 0);
+    const bool empty_blocks = over_capacity || only_empty_tail;
     const char* title;
-    if(over_capacity) {
+    if(empty_blocks) {
         title = "Empty top blocks";
-    } else {
+    } else if(has_block_list) {
         title = instance->iso15693_is_wipe_mode ? "Blocks not cleared" : "Blocks not written";
+    } else {
+        title = "Clone notes";
     }
     widget_add_string_element(widget, 0, 0, AlignLeft, AlignTop, FontPrimary, title);
 
     FuriString* message = furi_string_alloc();
-    if(over_capacity) {
+    if(empty_blocks) {
         // These empty blocks are past the card's physical capacity -- no data was lost, but say why
         // they weren't written. ("Card too small" is reserved for the partial screen, where real data
         // IS lost; this clone's data all fit.)
@@ -35,16 +50,19 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     // "Not written/cleared: N" summary count.
     nfc_magic_partial_details_append_indices(
         message, instance->iso15693_clone_failed_bitmap, ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8, 0);
+    // Separate the caveats from whatever precedes them, but don't open with a blank line when there is
+    // no block list above (the notes-only case).
     if(instance->iso15693_clone_used_gen1) {
         // The gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ from the
         // source regardless of the write results above.
-        furi_string_cat_str(
-            message, "\ngen1: 56/57/62/63 hold UID + unlock/commit, not file data.");
+        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        furi_string_cat_str(message, "gen1: 56/57/62/63 hold UID + unlock/commit, not file data.");
     }
     if(instance->iso15693_clone_identity_failed) {
         // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not
         // match the source.
-        furi_string_cat_str(message, "\nAFI/DSFID: card rejected the write.");
+        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        furi_string_cat_str(message, "AFI/DSFID: card rejected the write.");
     }
     widget_add_text_scroll_element(widget, 0, 13, 128, 51, furi_string_get_cstr(message));
     furi_string_free(message);
