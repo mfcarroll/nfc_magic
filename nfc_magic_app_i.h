@@ -111,7 +111,17 @@ typedef enum {
         // than it physically holds (the extra were empty, so nothing was lost) -- a success with a note
     NfcMagicIso15693WriteFailReasonNothingWiped, // wipe: not one block accepted the zero-write
     NfcMagicIso15693WriteFailReasonEmptySource, // clone: the source image has no data blocks to write
+    NfcMagicIso15693WriteFailReasonNothingCloned, // clone: the UID took but not one data block did, so
+        // the card carries the source's UID and none of its data
 } NfcMagicIso15693WriteFailReason;
+
+// Which ISO15693 operation the shared write scene is running. Replaces the old is-wipe bool, now that
+// Write-UID runs there too rather than in a scene of its own.
+typedef enum {
+    NfcMagicIso15693ModeClone, // write a saved .nfc image onto the card
+    NfcMagicIso15693ModeWipe, // zero the card's data blocks (56/57/62/63 skipped)
+    NfcMagicIso15693ModeWriteUid, // write a hand-entered UID and nothing else
+} NfcMagicIso15693Mode;
 
 // Which flow reached the gen1 opt-in screen. The two consent to different things (a clone writes every
 // data block, a Write-UID writes only the UID registers) and return to different write scenes. Stored
@@ -169,22 +179,13 @@ struct NfcMagicApp {
         iso15693_data; // last read result, kept so the info scene survives the poller free
     uint8_t
         iso15693_target_uid[ISO15693_3_UID_SIZE]; // MSB-first UID to write to a magic ISO15693 card
-    bool iso15693_is_wipe_mode; // ISO15693 write scene: wipe (zero blocks) vs clone (from a file)
+    NfcMagicIso15693Mode iso15693_mode; // which ISO15693 operation the shared write scene is running
     bool iso15693_force_gen1; // ISO15693 clone / Write-UID: run the opt-in gen1 attempt (set by the
         // gen1 opt-in scene, cleared when a fresh clone or Write-UID is started from the menu)
-    uint16_t iso15693_clone_blocks_total; // ISO15693: blocks the run reports against -- source count
-        // (clone), less the 4 backdoor blocks (gen1 clone), or the card's wipeable count (wipe)
-    uint16_t
-        iso15693_clone_failed_count; // ISO15693 clone: in-range blocks that couldn't be written.
-        // Wipe: blocks that still held data after a failed zero-write
-    uint16_t
-        iso15693_clone_over_capacity; // ISO15693 clone: source blocks past the target's capacity
-    uint8_t iso15693_clone_failed_bitmap
-        [ISO15693_POLLER_BLOCK_BITMAP_SIZE]; // bit N = source block N failed
-    bool iso15693_clone_used_gen1; // ISO15693 clone: gen1 fallback set the UID (overwrote blocks 56/57/62/63)
-    bool iso15693_clone_capacity_confirmed; // ISO15693 clone: failures are a top-tail = card too small
-    bool iso15693_clone_identity_failed; // ISO15693 clone: the copy doesn't carry the source's
-        // AFI/DSFID -- decided by GET SYSTEM INFO read-back, not by the write's return value
+    // Outcome of the last ISO15693 clone or wipe, fetched once per terminal event. See
+    // Iso15693PollerResult in iso15693_poller.h for the per-field meaning and its mode dependence.
+    Iso15693PollerResult iso15693_result;
+    // AFI/DSFID -- decided by GET SYSTEM INFO read-back, not by the write's return value
 
     Gen4* gen4_data;
 

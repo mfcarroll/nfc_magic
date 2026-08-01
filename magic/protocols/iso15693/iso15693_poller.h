@@ -109,37 +109,39 @@ void iso15693_poller_start_clone_gen1(
     Iso15693PollerCallback callback,
     void* context);
 
-// The per-block write result, after a clone OR a wipe (start_wipe sends callers here too). A "failure"
-// here means the block failed EVERY write retry (a transient glitch that later succeeded is not a
-// failure):
-//   blocks_total      - the blocks this run attempted and reports against, which is mode-dependent:
-//                       the source block count for a gen2 clone, that count MINUS the 4 skipped
-//                       backdoor registers for a gen1 clone, or the card's wipeable (non-backdoor)
-//                       block count for a wipe. NOTE failed_bitmap is indexed by TRUE block number, so
-//                       a set bit can sit above blocks_total -- scan the whole bitmap, not
-//                       [0, blocks_total).
-//   failed_count      - blocks that failed and count as a real problem: they held source data (data
-//                       lost), or were empty failures that weren't a clean top-of-card tail. -> Partial.
-//   over_capacity     - empty blocks that failed and form a contiguous run at the top of the card
-//                       (past physical capacity; nothing lost). -> Success with a note.
-//   failed_bitmap     - bit N set = source block N failed (covers both buckets above).
-//   used_gen1         - the gen1 fallback set the UID (which overwrites blocks 56/57/62/63).
-//   capacity_confirmed- the failures are a persistent, contiguous run at the very top of the card,
-//                       i.e. the source is genuinely larger than the card's physical capacity. False
-//                       for a scattered/anomalous failure (reported generically, no capacity claim).
-//   identity_failed   - the source reported an AFI / DSFID, but after the write GET SYSTEM INFO did not
-//                       read that field back with the source's value, so the copy does not carry it.
-//                       Verified by read-back, not inferred from the write's return. -> Partial.
-// Any out param may be NULL. `failed_bitmap` must hold ISO15693_POLLER_BLOCK_BITMAP_SIZE bytes.
-void iso15693_poller_get_clone_result(
-    Iso15693Poller* instance,
-    uint16_t* blocks_total,
-    uint16_t* failed_count,
-    uint16_t* over_capacity,
-    uint8_t* failed_bitmap,
-    bool* used_gen1,
-    bool* capacity_confirmed,
-    bool* identity_failed);
+// The per-block write result of a clone or a wipe. A "failure" here means the block failed EVERY write
+// retry (a transient glitch that later succeeded is not a failure).
+typedef struct {
+    // The blocks this run attempted and reports against, which is mode-dependent: the source block
+    // count for a gen2 clone, that count MINUS the 4 skipped backdoor registers for a gen1 clone, or
+    // the card's wipeable (non-backdoor) block count for a wipe. NOTE failed_bitmap is indexed by TRUE
+    // block number, so a set bit can sit above blocks_total -- scan the whole bitmap, not
+    // [0, blocks_total).
+    uint16_t blocks_total;
+    // Blocks that failed and count as a real problem: they held source data (lost), or were empty
+    // failures that weren't a clean top-of-card tail. -> Partial. In wipe mode, blocks that still held
+    // data after a failed zero-write.
+    uint16_t failed_count;
+    // Empty blocks that failed and form a contiguous run at the top of the card (past physical
+    // capacity; nothing lost) -> Success with a note. Unused by a wipe.
+    uint16_t over_capacity;
+    // Bit N set = block N failed, at its TRUE block index (covers both buckets above).
+    uint8_t failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE];
+    // The gen1 fallback set the UID, which overwrites blocks 56/57/62/63.
+    bool used_gen1;
+    // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is
+    // genuinely larger than the card's physical capacity. False for a scattered/anomalous failure
+    // (reported generically, with no capacity claim).
+    bool capacity_confirmed;
+    // The source reported an AFI / DSFID, but after the write GET SYSTEM INFO did not read that field
+    // back with the source's value, so the copy does not carry it. Verified by read-back, not inferred
+    // from the write's return. -> Partial.
+    bool identity_failed;
+} Iso15693PollerResult;
+
+// Fill `result` with the outcome of the last clone or wipe. Valid once a terminal event has been
+// reported; the poller resets every field at the start of each run.
+void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* result);
 
 // True if the source stores real data in a gen1 backdoor block (56/57/62/63) that a gen1 fallback
 // would overwrite -- so the write flow can warn before a possible gen1 clone. Source inspection only.
@@ -150,7 +152,7 @@ bool iso15693_poller_source_uses_gen1_blocks(const Iso15693_3Data* source);
 // preserved). Reports CardDetected (first activation), then Success / Partial (some blocks failed) /
 // Fail (nothing could be wiped) / CardLost -- the last of which also covers a card lifted DURING the
 // loop, so blocks that never got the chance aren't reported as blocks the card refused to clear.
-// Per-block detail is available via iso15693_poller_get_clone_result().
+// Per-block detail is available via iso15693_poller_get_result().
 void iso15693_poller_start_wipe(
     Iso15693Poller* instance,
     Iso15693PollerCallback callback,

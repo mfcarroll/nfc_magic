@@ -22,6 +22,8 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
     const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
     const bool nothing_wiped = (reason == NfcMagicIso15693WriteFailReasonNothingWiped);
     const bool empty_source = (reason == NfcMagicIso15693WriteFailReasonEmptySource);
+    const bool nothing_cloned = (reason == NfcMagicIso15693WriteFailReasonNothingCloned);
+    const bool wipe_mode = (instance->iso15693_mode == NfcMagicIso15693ModeWipe);
 
     // Over-capacity is a clean success (nothing was lost) -> success tone. Partial means something
     // didn't write, and card-lost / not-magic / nothing-wiped / empty-source are outright failures ->
@@ -34,8 +36,8 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // physically holds (the extra source blocks were empty, so nothing was lost). Concise summary
         // here, gen2-style; the exact empty top blocks are behind "Details". We confirm the writes
         // were accepted, not a byte-for-byte read-back, so the wording says "written", not "matches".
-        const uint16_t advertised = instance->iso15693_clone_blocks_total;
-        const uint16_t extra = instance->iso15693_clone_over_capacity;
+        const uint16_t advertised = instance->iso15693_result.blocks_total;
+        const uint16_t extra = instance->iso15693_result.over_capacity;
         // The over-capacity gate guarantees >=1 block wrote, so extra < advertised.
         const uint16_t physical = (uint16_t)(advertised - extra);
         widget_add_string_element(
@@ -54,10 +56,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // Summary only -- counts here, the per-block list behind "Details" -- mirroring the Gen2 /
         // USCUID-UL partial screens. Partial means some blocks wouldn't write (real source data lost,
         // or empty failures that weren't a clean capacity tail), or a clone fell back to gen1.
-        const uint16_t total = instance->iso15693_clone_blocks_total;
+        const uint16_t total = instance->iso15693_result.blocks_total;
         // Everything that didn't write: real-data losses plus any empty blocks past capacity.
         const uint16_t not_written =
-            instance->iso15693_clone_failed_count + instance->iso15693_clone_over_capacity;
+            instance->iso15693_result.failed_count + instance->iso15693_result.over_capacity;
         const uint16_t ok = (total >= not_written) ? (uint16_t)(total - not_written) : 0;
         widget_add_string_element(
             widget,
@@ -66,12 +68,12 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             AlignCenter,
             AlignTop,
             FontPrimary,
-            instance->iso15693_is_wipe_mode ? "Wipe partial" : "Clone partial");
+            wipe_mode ? "Wipe partial" : "Clone partial");
         FuriString* text = furi_string_alloc();
         furi_string_printf(
             text,
-            instance->iso15693_is_wipe_mode ? "Wiped %u/%u blocks\nNot cleared: %u" :
-                                              "Cloned %u/%u blocks\nNot written: %u",
+            wipe_mode ? "Wiped %u/%u blocks\nNot cleared: %u" :
+                        "Cloned %u/%u blocks\nNot written: %u",
             ok,
             total,
             not_written);
@@ -79,16 +81,16 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // the two count lines plus ONE qualifier. Show the most significant (real data loss > gen1 UID
         // clobber > AFI/DSFID). A lower-priority caveat is dropped from THIS screen only -- "Details"
         // below is offered whenever any caveat applies and lists all of them, so nothing is unreachable.
-        if(instance->iso15693_clone_capacity_confirmed &&
-           instance->iso15693_clone_failed_count > 0) {
+        if(instance->iso15693_result.capacity_confirmed &&
+           instance->iso15693_result.failed_count > 0) {
             // Real data was lost because those blocks are a persistent, contiguous run at the top of
             // the card -> the card is physically smaller than the source. (An empty top tail loses
             // nothing and is reported as an over-capacity success, not here.)
             furi_string_cat_str(text, "\nCard too small");
-        } else if(instance->iso15693_clone_used_gen1) {
+        } else if(instance->iso15693_result.used_gen1) {
             // gen1 fallback stamped the UID/commit into blocks 56/57/62/63, so they differ.
             furi_string_cat_str(text, "\ngen1: 56/57/62/63 differ");
-        } else if(instance->iso15693_clone_identity_failed) {
+        } else if(instance->iso15693_result.identity_failed) {
             // All data blocks took, but the card rejected the AFI/DSFID write.
             furi_string_cat_str(text, "\nAFI/DSFID not set");
         }
@@ -109,6 +111,20 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             AlignTop,
             FontSecondary,
             "No blocks could be\ncleared. The card\nrejected all writes.\nIts UID is unchanged.");
+    } else if(nothing_cloned) {
+        // The gen2/gen1 UID write took, but every data block was rejected. Say what the card now holds:
+        // it answers with the source's UID, so a UID-only reader accepts it while anything that reads
+        // memory does not. No block list -- it would name every block.
+        widget_add_string_element(
+            widget, 64, 0, AlignCenter, AlignTop, FontPrimary, "Clone failed");
+        widget_add_string_multiline_element(
+            widget,
+            0,
+            13,
+            AlignLeft,
+            AlignTop,
+            FontSecondary,
+            "The UID was written\nbut no data block\nwould take. The card\nhas the UID only.");
     } else if(empty_source) {
         // A clone whose source image has no data blocks: nothing was written (not even the UID), so
         // the card is untouched. Distinct from a non-magic card.
@@ -163,9 +179,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // caveat terms, a partial whose only problem is the gen1 UID clobber or a rejected AFI/DSFID
         // (both possible with zero failed blocks) had no Details button, and since the summary shows
         // only its single highest-priority qualifier, the lower one was then reachable nowhere at all.
-        if(over_capacity || (partial && (instance->iso15693_clone_failed_count > 0 ||
-                                         instance->iso15693_clone_used_gen1 ||
-                                         instance->iso15693_clone_identity_failed))) {
+        if(over_capacity || (partial && (instance->iso15693_result.failed_count > 0 ||
+                                         instance->iso15693_result.used_gen1 ||
+                                         instance->iso15693_result.identity_failed))) {
             widget_add_button_element(
                 widget,
                 GuiButtonTypeRight,

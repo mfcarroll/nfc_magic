@@ -16,7 +16,7 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
     Widget* widget = instance->widget;
 
     const bool iso15693_wipe = (instance->protocol == NfcMagicProtocolIso15693) &&
-                               instance->iso15693_is_wipe_mode;
+                               instance->iso15693_mode == NfcMagicIso15693ModeWipe;
     const bool is_wipe = instance->uscuid_ul_is_wipe_mode || iso15693_wipe;
 
     const char* text;

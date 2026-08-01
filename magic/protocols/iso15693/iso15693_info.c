@@ -232,13 +232,8 @@ static const char* iso15693_info_get_chip_info(uint8_t vendor_id, uint8_t chip_i
     while(chip_id_mapping[i].mask > 0) {
         if(vendor_id == chip_id_mapping[i].manufacturer &&
            (chip_id & chip_id_mapping[i].mask) == chip_id_mapping[i].chip_id) {
-            if(best == -1) {
-                best = i;
-            } else {
-                if(chip_id_mapping[i].mask > chip_id_mapping[best].mask) {
-                    best = i;
-                }
-            }
+            // Keep the most specific match: a wider mask pins more chip-id bits.
+            if(best == -1 || chip_id_mapping[i].mask > chip_id_mapping[best].mask) best = i;
         }
         i++;
     }

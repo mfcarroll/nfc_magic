@@ -62,8 +62,10 @@ the copy advertises the same chip identity.
   an AFI/DSFID the card wouldn't take. A clean success is a plain success screen, and the outright
   failures are a single message.
 - Each outcome has its own screen: **"Not a magic tag"**, **"Card removed"**, **"Nothing to clone"**
-  for a source with no data blocks, and a wipe failure saying no blocks could be cleared and the UID is
-  unchanged. Detect and write popups time out after a few seconds with no card.
+  for a source with no data blocks, a wipe failure saying no blocks could be cleared and the UID is
+  unchanged, and a clone failure for the case where the UID was written but not one data block would
+  take — the card would otherwise look right to a UID-only reader while holding none of the data.
+  Detect and write popups time out after a few seconds with no card.
 
 ### Validation (at 2.1)
 - The **gen2** path was validated end-to-end on hardware for this release: byte-identical clones

@@ -4,12 +4,12 @@
 // Shown mid-write when the gen2 backdoor left the UID unchanged (not a gen2 magic card, or not magic
 // at all). Offers the destructive, NOT-hardware-tested gen1 fallback as an explicit opt-in. Nothing
 // has been written to the card yet, so declining leaves it untouched; accepting re-runs the write in
-// gen1 mode (both write scenes read iso15693_force_gen1 on enter).
+// gen1 mode (NfcMagicSceneWrite reads iso15693_force_gen1 and iso15693_mode on enter).
 //
-// Reached from two flows, distinguished by this scene's state (NfcMagicIso15693Gen1OptinSource):
-// the clone (NfcMagicSceneWrite), which goes on to write every data block, and the bare Write-UID
-// (NfcMagicSceneIso15693Write), which writes only the four UID registers. They consent to different
-// things, so the body text differs and each returns to its own write scene.
+// Reached from two flows, distinguished by this scene's state (NfcMagicIso15693Gen1OptinSource): a
+// clone, which goes on to write every data block, and a bare Write-UID, which writes only the four UID
+// registers. They consent to different things, so the body text differs; both resume in the same
+// write scene.
 static void nfc_magic_scene_iso15693_gen1_optin_button_callback(
     GuiButtonType result,
     InputType type,
@@ -83,16 +83,11 @@ bool nfc_magic_scene_iso15693_gen1_optin_on_event(void* context, SceneManagerEve
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == GuiButtonTypeRight) {
-            // Opt in: re-run the write in gen1 mode. The write scene reads iso15693_force_gen1 on
-            // enter; the gen2 attempt wrote nothing, so this is the first thing to touch the card.
-            const bool from_write_uid =
-                scene_manager_get_scene_state(
-                    instance->scene_manager, NfcMagicSceneIso15693Gen1Optin) ==
-                NfcMagicIso15693Gen1OptinFromWriteUid;
+            // Opt in: re-run the write in gen1 mode. The gen2 attempt wrote nothing, so this is the
+            // first thing to touch the card. Both flows resume in the shared write scene, which reads
+            // iso15693_force_gen1 and iso15693_mode on enter.
             instance->iso15693_force_gen1 = true;
-            scene_manager_next_scene(
-                instance->scene_manager,
-                from_write_uid ? NfcMagicSceneIso15693Write : NfcMagicSceneWrite);
+            scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWrite);
             consumed = true;
         } else if(event.event == GuiButtonTypeLeft) {
             // Decline: leave the card untouched, back to the ISO15693 menu.
