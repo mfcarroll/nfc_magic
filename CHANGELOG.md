@@ -34,6 +34,12 @@ the copy advertises the same chip identity.
   note that the card now advertises more blocks than it physically holds (a reader probing the top
   blocks sees them error/zero, and real data can't be stored there). A card that advertises a larger
   geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
+- **A Partial or over-capacity result is a summary plus a Details screen**, like the Gen2 / USCUID-UL
+  partial screens: the summary carries the counts and the single most significant caveat (only one line
+  fits above the buttons), and **Details** lists the exact blocks involved plus any remaining caveats —
+  the gen1 56/57/62/63 clobber, or an AFI/DSFID the card wouldn't take — so no caveat is reported
+  somewhere the user can't reach. A clean success stays a plain success screen; the outright failures
+  are a single message.
 - **gen1 fidelity is surfaced.** The gen1 backdoor overwrites data blocks 56/57/62/63 — the UID
   (56/57) plus unlock/commit (62/63) — so a gen1 clone can't reproduce a source that uses them. If the
   source has data there, the opt-in screen warns before anything is written; if the clone actually used
