@@ -32,8 +32,9 @@ the copy advertises the same chip identity.
   every block: a non-empty block that won't write is reported as **Partial** (named); an empty block
   past the card's real capacity loses nothing, so it stays a **Success** — but one flagged with a
   note that the card now advertises more blocks than it physically holds (a reader probing the top
-  blocks sees them error/zero, and real data can't be stored there). A card that advertises a larger
-  geometry than it physically holds (fake-flash) clones faithfully for the blocks that fit.
+  blocks gets a read error rather than the zeros the source had there, and real data can't be stored
+  in them). A card that advertises a larger geometry than it physically holds (fake-flash) clones
+  faithfully for the blocks that fit.
 - **A Partial or over-capacity result is a summary plus a Details screen**, like the Gen2 / USCUID-UL
   partial screens: the summary carries the counts and the single most significant caveat (only one line
   fits above the buttons), and **Details** lists the exact blocks involved plus any remaining caveats —
@@ -46,7 +47,7 @@ the copy advertises the same chip identity.
   gen1, it reports Partial and flags those blocks.
 - **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
   UID after a reset is not misreported as a failure.
-- **Nothing is written until the card proves it is magic.** The write sends only the gen2 backdoor UID
+- **No data is written until the card proves it is magic.** The write sends only the gen2 backdoor UID
   first; data blocks and identity fields follow only once the UID reads back as the target. A card that
   isn't gen2 magic is therefore left completely untouched, which is also why the clone no longer shows
   an up-front confirmation screen — there is nothing to consent to before that point.

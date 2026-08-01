@@ -103,10 +103,11 @@ struct Iso15693Poller {
     // of the card -- the signature of "source larger than the card's physical capacity". Gates the
     // "Card too small" message; a scattered/anomalous failure leaves it false (generic report).
     bool clone_capacity_confirmed;
-    // Clone mode: the source reported an AFI / DSFID but the card rejected the standard WRITE AFI /
-    // WRITE DSFID, so that identity field may not have been set. Downgrades the clone to Partial with
-    // a note. Best-effort: a card that silently accepts the write without answering can over-report
-    // here, so this never fails the clone -- the UID and data blocks are the real payload.
+    // Clone mode: the source reported an AFI / DSFID, but reading it back with GET SYSTEM INFO did not
+    // return that field carrying the source's value, so the copy does not advertise it. Decided by
+    // read-back rather than by the write's return value, so neither an in-band refusal nor a silent
+    // accept is misread (see iso15693_poller_write_identity). Downgrades the clone to Partial with a
+    // note; it never fails the clone -- the UID and data blocks are the real payload.
     bool clone_afi_failed;
     bool clone_dsfid_failed;
     Iso15693PollerCallback callback;
@@ -511,9 +512,13 @@ static uint16_t iso15693_poller_wipe_blocks(
 // The terminal outcome once a write finishes:
 //  - a NON-EMPTY block we couldn't write means real data was lost -> Partial. An empty block that
 //    wouldn't take is treated as past the card's real capacity ONLY when the empty failures form a
-//    contiguous tail above the last block that wrote (nothing lost -- the card reports them as zero
-//    anyway) -> clean Success; any other empty failure is folded into clone_failed_count -> Partial
-//    (see iso15693_poller_write_source_blocks).
+//    contiguous tail above the last block that wrote -> clean Success: the source held nothing
+//    there, so there was nothing to lose. That is NOT a claim that the clone behaves identically --
+//    the source reads those blocks back as zeros, whereas past a card's real capacity the read
+//    itself fails (measured on hardware; it may differ by card). That difference is why this
+//    outcome carries a note on screen rather than being reported as an unqualified success. Any
+//    other empty failure is folded into clone_failed_count -> Partial (see
+//    iso15693_poller_write_source_blocks).
 //  - a CLONE that fell back to gen1 -> Partial: gen1 stamps the UID/commit into data blocks
 //    56/57/62/63, so those no longer match the source. (A bare Write-UID has no source data to
 //    disturb, so gen1 there is still a clean Success.)
