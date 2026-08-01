@@ -27,48 +27,43 @@ the copy advertises the same chip identity.
   unchanged, offers the same opt-in gen1 attempt the clone does.
 
 ### Behaviour
-- **Writes every source block and reports only real data loss.** WRITE BLOCK on these cards is gated
-  by physical memory, not the advertised block count (verified on hardware), so the clone attempts
-  every block: a non-empty block that won't write is reported as **Partial** (named); an empty block
-  past the card's real capacity loses nothing, so it stays a **Success** — but one flagged with a
-  note that the card now advertises more blocks than it physically holds (a reader probing the top
-  blocks gets a read error rather than the zeros the source had there, and real data can't be stored
-  in them). A card that advertises a larger geometry than it physically holds (fake-flash) clones
-  faithfully for the blocks that fit.
-- **A Partial or over-capacity result is a summary plus a Details screen**, like the Gen2 / USCUID-UL
-  partial screens: the summary carries the counts and the single most significant caveat (only one line
-  fits above the buttons), and **Details** lists the exact blocks involved plus any remaining caveats —
-  the gen1 56/57/62/63 clobber, or an AFI/DSFID the card wouldn't take — so no caveat is reported
-  somewhere the user can't reach. A clean success stays a plain success screen; the outright failures
-  are a single message.
-- **gen1 fidelity is surfaced.** The gen1 backdoor overwrites data blocks 56/57/62/63 — the UID
-  (56/57) plus unlock/commit (62/63) — so a gen1 clone can't reproduce a source that uses them. If the
-  source has data there, the opt-in screen warns before anything is written; if the clone actually used
-  gen1, it reports Partial and flags those blocks.
-- **Verifies after an RF field power-cycle** (`NfcCommandReset`), so a card that only latches the new
-  UID after a reset is not misreported as a failure.
-- **No data is written until the card proves it is magic.** The write sends only the gen2 backdoor UID
-  first; data blocks and identity fields follow only once the UID reads back as the target. A card that
-  isn't gen2 magic is therefore left completely untouched, which is also why the clone no longer shows
-  an up-front confirmation screen — there is nothing to consent to before that point.
-- **The destructive gen1 fallback is opt-in.** It is offered only when the gen2 write left the UID
-  unchanged, and only after the user accepts a screen that states what gen1 writes and that the gen1
-  path is not hardware-tested. The gen1 attempt itself writes the UID registers first and the data
-  blocks only if that UID took, so a tag that isn't gen1 either loses at most those four blocks.
-- **Identity writes are verified by read-back.** The source's AFI / DSFID are written, then read back
-  with GET SYSTEM INFO and compared; a field the copy doesn't carry is reported as Partial with a note
-  rather than a clean Success. Checking the write's return value alone is not enough — a tag refuses
-  in-band, answering with a well-formed frame that carries an error flag, and the write call reports
-  success either way.
-- Non-magic / removed-card outcomes show dedicated **"Not a magic tag"** / **"Card removed"** messages
-  instead of a generic error, and detect / write popups **time out** instead of hanging.
-- **A card lifted mid-write is reported as a removal, not as a card fault.** Losing the card partway
-  through makes every remaining block fail, which looks identical to reaching the card's physical
-  capacity — so if any block fails, the write re-checks the card is still present before drawing any
-  conclusion, and reports **"Card removed"** rather than "card too small" or a partial wipe.
-- **A wipe only calls a block unwiped if it can prove data is still there**, by reading the block back
-  after the failed write. A block it cannot read back is counted as unwiped rather than assumed clear,
-  so a wipe never reports more success than it can demonstrate.
+- **The clone attempts every source block and reports only real data loss.** WRITE BLOCK on these cards
+  is gated by physical memory rather than by the advertised block count, so every block is attempted. A
+  non-empty block that won't write is reported as **Partial**, naming the blocks. An empty block past
+  the card's real capacity loses nothing, so the clone is a **Success** carrying a note that the card
+  advertises more blocks than it physically holds — reading one of those blocks gives an error rather
+  than the zeros the source had there, and real data can't be stored in them. A card whose advertised
+  geometry exceeds its physical memory (fake-flash) clones faithfully for the blocks that fit.
+- **No data is written until the card takes the magic UID.** The write sends the gen2 backdoor UID
+  first; data blocks and identity fields follow once that UID reads back as the target. A card that
+  doesn't take it is left untouched, so cloning has no up-front confirmation prompt — the destructive
+  gen1 attempt carries its own consent screen instead.
+- **The gen1 fallback is opt-in.** It is offered only when the gen2 write leaves the UID unchanged, and
+  only after the user accepts a screen stating what gen1 writes and that the gen1 path is not
+  hardware-tested. gen1 writes the UID registers first and the data blocks only if that UID took, so a
+  tag that turns out not to be gen1 loses at most those four blocks. Write UID uses the same flow.
+- **gen1 fidelity is surfaced.** The gen1 backdoor stores the UID in data blocks 56/57 plus
+  unlock/commit in 62/63, so a gen1 clone can't reproduce a source that keeps data there. The opt-in
+  screen says so before anything is written, and a clone that used gen1 reports Partial and flags those
+  blocks.
+- **Writes are verified by read-back.** The UID is re-read after an RF field power-cycle
+  (`NfcCommandReset`), so a card that only latches a new UID after a reset still verifies. The source's
+  AFI / DSFID are re-read with GET SYSTEM INFO and compared; a field the copy doesn't carry is reported
+  as Partial with a note. Block contents are not compared — a data block counts as written when the
+  card acknowledges it.
+- **A wipe counts a block as unwiped unless it can show the block is clear**, by reading it back after
+  a failed write. A block it cannot read back is counted as unwiped rather than assumed clear.
+- **A card lifted mid-write reports "Card removed".** Losing the card partway through makes every
+  remaining block fail, which looks the same as reaching the card's physical capacity, so when a block
+  fails the write re-checks that the card is still present before reporting a capacity verdict.
+- **Partial and over-capacity results are a summary plus a Details screen**, matching the Gen2 /
+  USCUID-UL partial screens. The summary carries the counts and the most significant caveat, and
+  **Details** lists the blocks involved plus any further caveats — the gen1 56/57/62/63 overwrite, or
+  an AFI/DSFID the card wouldn't take. A clean success is a plain success screen, and the outright
+  failures are a single message.
+- Each outcome has its own screen: **"Not a magic tag"**, **"Card removed"**, **"Nothing to clone"**
+  for a source with no data blocks, and a wipe failure saying no blocks could be cleared and the UID is
+  unchanged. Detect and write popups time out after a few seconds with no card.
 
 ### Validation (at 2.1)
 - The **gen2** path was validated end-to-end on hardware for this release: byte-identical clones
