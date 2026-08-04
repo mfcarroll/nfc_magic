@@ -45,6 +45,18 @@ PROFILES = {
     "oversize_empty_70": dict(uid="E0 04 01 10 F1 F2 F3 F4", ic_ref=0x0F, dsfid=0x02, afi=0x00, blocks=70,
                               data={0: _HDR0, 1: _HDR1},
                               note="70 blocks, empty tail -- over-reports but should clone cleanly (Success)"),
+    # Wipe-residue seed for the merge gate. EVERY block carries 5A <blk> A5 <blk>: obviously synthetic,
+    # self-identifying (so block-addressing weirdness shows up as a wrong number, not just wrong data),
+    # and the same marker iso15693_magic_probe.py's writespan probe uses.
+    #
+    # Why a full fill is needed: every other 64-block profile here is zeros above block 1, so residue a
+    # wipe failed to clear is indistinguishable from a wipe that worked. Clone this, then clone
+    # slix_28 over it -- which reprograms the card to ADVERTISE 28 blocks -- then wipe. The wipe stops
+    # at the advertised 28, so blocks 28..63 should still read back as 5A <blk> A5 <blk> while the
+    # screen says the wipe succeeded.
+    "wipeseed_64": dict(uid="E0 04 01 10 5E ED 00 01", ic_ref=0x0F, dsfid=0x00, afi=0x00, blocks=64,
+                        data={b: "5A%02XA5%02X" % (b, b) for b in range(64)},
+                        note="64 blocks, EVERY block 5A<blk>A5<blk> -- wipe-residue seed for the merge gate"),
 }
 
 _TYPES = ("ISO14443-3A, ISO14443-3B, ISO14443-4A, ISO14443-4B, ISO15693-3, FeliCa, NTAG/Ultralight, "
