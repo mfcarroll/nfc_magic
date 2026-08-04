@@ -45,6 +45,16 @@ PROFILES = {
     "oversize_empty_70": dict(uid="E0 04 01 10 F1 F2 F3 F4", ic_ref=0x0F, dsfid=0x02, afi=0x00, blocks=70,
                               data={0: _HDR0, 1: _HDR1},
                               note="70 blocks, empty tail -- over-reports but should clone cleanly (Success)"),
+    # The only profile with a NON-ZERO AFI, and it exists because every other one has afi=0x00 -- which
+    # makes the harness's AFI check vacuous. A card that silently refused every WRITE AFI still reads
+    # back 0x00 and still compares equal, so "AFI OK 00->00" proves nothing. That is precisely the
+    # failure the app's AFI/DSFID read-back verification was built to catch (a tag can refuse in-band,
+    # answering with the error flag set in a well-formed frame, so the send's return value is not
+    # evidence), and it had never been presented with an AFI it could fail on. DSFID is already covered
+    # by the 0x02 profiles.
+    "identity_64": dict(uid="E0 04 01 10 1D 1D 1D 1D", ic_ref=0x0F, dsfid=0x05, afi=0x27, blocks=64,
+                        data={0: _HDR0, 1: _HDR1},
+                        note="64 blocks, NON-ZERO AFI 0x27 + DSFID 0x05 -- the only real test of the AFI write"),
     # Wipe-residue seed for the merge gate. EVERY block carries 5A <blk> A5 <blk>: obviously synthetic,
     # self-identifying (so block-addressing weirdness shows up as a wrong number, not just wrong data),
     # and the same marker iso15693_magic_probe.py's writespan probe uses.
