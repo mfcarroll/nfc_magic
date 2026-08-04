@@ -20,9 +20,13 @@ the copy advertises the same chip identity.
   identity (IC ref / block geometry / AFI / DSFID) so the copy advertises the same chip. gen2 sets
   UID + geometry via the `0xE0` magic command; if the card turns out not to be gen2, gen1 is offered
   as an explicit opt-in (see below).
-- **Wipe** — zero the card's data blocks; the UID is left unchanged. Blocks 56/57/62/63 are skipped:
-  on a gen1 card they hold the UID / unlock / commit registers, so zeroing them would break the "UID
-  unchanged" promise. They are excluded from the reported total rather than counted as wiped.
+- **Wipe** — zero every data block, including 56/57/62/63. On a gen2 card those are ordinary user
+  data, so sparing them would leave real data behind on the card people actually have. On a **gen1**
+  card they are the UID / unlock / commit registers, and the wipe does not re-read the UID
+  afterwards — so it is not guaranteed to leave a gen1 card's UID intact. This matches proxmark's
+  `hf 15 wipe`, which sweeps the same range with no special handling, and is flagged in the code as
+  an open question pending a gen1 card to test against.
+- **Live "Writing X / N" progress** during a clone or wipe, as the USCUID-UL clone already had.
 - **Write UID** — manual magic backdoor UID write. Tries gen2 first and, only if that leaves the UID
   unchanged, offers the same opt-in gen1 attempt the clone does.
 

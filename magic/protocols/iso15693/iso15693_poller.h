@@ -16,14 +16,14 @@ typedef enum {
     Iso15693PollerModeInfo, // detect + read UID / system info
     Iso15693PollerModeWriteUid, // magic backdoor UID write (gen2 only; gen1 is a separate opt-in run)
     Iso15693PollerModeClone, // write UID + all data blocks from a source image
-    Iso15693PollerModeWipe, // zero the data blocks except 56/57/62/63 (UID left unchanged)
+    Iso15693PollerModeWipe, // zero every data block (UID left unchanged)
 } Iso15693PollerMode;
 
 typedef enum {
     Iso15693PollerEventSuccess, // Info: card read. Write/clone: the target UID read back and matched
         // (the UID, plus the AFI/DSFID on a clone, are re-read; block CONTENTS are never compared --
         // a data block counts as written when the card ACKs it). Wipe: every block it attempted
-        // accepted the zero write (backdoor registers 56/57/62/63 are skipped; the UID is untouched
+        // accepted the zero write (the UID is untouched
         // and never re-read).
     Iso15693PollerEventPartial, // the operation mostly worked but isn't a clean result: a clone lost
         // some data blocks, fell back to gen1 (overwriting 56/57/62/63), or had its AFI/DSFID write
@@ -33,6 +33,9 @@ typedef enum {
         // gen1 UID didn't take, the clone source had no data blocks, or a wipe cleared nothing.
     Iso15693PollerEventCardLost, // no card in the field / card removed before the operation finished
     Iso15693PollerEventCardDetected, // a magic candidate activated (drives the write popup UI)
+    Iso15693PollerEventWriteProgress, // some blocks done; read the result for the running counts.
+        // Emitted a bounded number of times per pass, NOT per block -- see
+        // ISO15693_POLLER_PROGRESS_STEPS in the .c for why that bound is a correctness constraint
     Iso15693PollerEventNotGen2, // gen2 left the UID unchanged (not a gen2 magic card, or not magic
         // at all). Nothing was written; the scene offers the opt-in gen1 retry. Emitted for a clone AND
         // for a bare Write-UID -- both gate the destructive gen1 attempt behind that consent.
@@ -114,9 +117,9 @@ void iso15693_poller_start_clone_gen1(
 typedef struct {
     // The blocks this run attempted and reports against, which is mode-dependent: the source block
     // count for a gen2 clone, that count MINUS the 4 skipped backdoor registers for a gen1 clone, or
-    // the card's wipeable (non-backdoor) block count for a wipe. NOTE failed_bitmap is indexed by TRUE
-    // block number, so a set bit can sit above blocks_total -- scan the whole bitmap, not
-    // [0, blocks_total).
+    // the card's full advertised block count for a wipe (which skips nothing).
+    // NOTE failed_bitmap is indexed by TRUE block number, so a set bit can sit above blocks_total --
+    // scan the whole bitmap, not [0, blocks_total).
     uint16_t blocks_total;
     // Blocks that failed and count as a real problem: they held source data (lost), or were empty
     // failures that weren't a clean top-of-card tail. -> Partial. In wipe mode, blocks that still held
@@ -137,6 +140,9 @@ typedef struct {
     // back with the source's value, so the copy does not carry it. Verified by read-back, not inferred
     // from the write's return. -> Partial.
     bool identity_failed;
+    // Running position of the block pass, for the live progress popup. Meaningful from the first
+    // WriteProgress event; equals blocks_total once the pass has finished.
+    uint16_t blocks_done;
 } Iso15693PollerResult;
 
 // Fill `result` with the outcome of the last clone or wipe. Valid once a terminal event has been
@@ -147,10 +153,12 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
 // would overwrite -- so the write flow can warn before a possible gen1 clone. Source inspection only.
 bool iso15693_poller_source_uses_gen1_blocks(const Iso15693_3Data* source);
 
-// Wipe: write zeros to every data block on the card (UID left unchanged, like proxmark's
-// 'hf 15 wipe'; the gen1 backdoor registers 56/57/62/63 are skipped so the UID / magic state is
-// preserved). Reports CardDetected (first activation), then Success / Partial (some blocks failed) /
-// Fail (nothing could be wiped) / CardLost -- the last of which also covers a card lifted DURING the
+// Wipe: write zeros to every data block on the card, like proxmark's 'hf 15 wipe'. Blocks
+// 56/57/62/63 are cleared too -- on gen2 they are ordinary user data. On gen1 those same blocks are
+// the UID/unlock/commit registers and nothing re-reads the UID afterwards, so the wipe does not
+// guarantee the UID survives on a gen1 card; see the open question in iso15693_poller_wipe_blocks.
+// Reports CardDetected (first activation), then Success / Partial (some blocks failed) / Fail
+// (nothing could be wiped) / CardLost -- the last of which also covers a card lifted DURING the
 // loop, so blocks that never got the chance aren't reported as blocks the card refused to clear.
 // Per-block detail is available via iso15693_poller_get_result().
 void iso15693_poller_start_wipe(

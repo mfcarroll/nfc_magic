@@ -4,6 +4,8 @@
 #include <lib/nfc/protocols/iso15693_3/iso15693_3_poller.h>
 #include <toolbox/bit_buffer.h>
 
+#define TAG "Iso15693Poller"
+
 // ISO15693_3_FDT_WRITE_POLL_FC is the WRITE-frame response timeout (271200 carrier cycles ~= 20ms,
 // long enough for the tag to program its EEPROM before it answers). Older SDKs predate this macro,
 // so keep a fallback with the same value the current SDK defines.
@@ -65,6 +67,21 @@
 // card's real capacity; retrying rides out a transient RF error that would otherwise look like one.
 #define ISO15693_POLLER_WRITE_ATTEMPTS (3U)
 
+// How many progress updates a block pass may emit, in total.
+//
+// This is a hard safety bound, not a tuning knob. The block loops below run to completion inside a
+// single poller callback on the Nfc worker thread, and a progress event ends up in
+// view_dispatcher_send_custom_event, which blocks with FuriWaitForever on a queue of
+// VIEW_DISPATCHER_QUEUE_LEN (16) entries. A Back press during a write puts the GUI thread inside
+// nfc_poller_stop -> furi_thread_join waiting for this very worker, so it stops draining that queue.
+// Emit more events than the queue can hold and the worker blocks forever, the join never returns,
+// and the device hangs with the write popup on screen.
+//
+// Staying well under 16 keeps that impossible. Emitting per block does NOT -- if you want that, the
+// loop has to yield to the Nfc worker between blocks (return NfcCommandContinue and resume from a
+// cursor) the way uscuid_ul_poller.c does, and only then is per-block safe.
+#define ISO15693_POLLER_PROGRESS_STEPS (8U)
+
 // Write-mode state machine. Each verify runs after a NfcCommandReset field power-cycle.
 typedef enum {
     Iso15693WriteStateStart, // note the current UID, send the backdoor UID (gen2, or gen1 on an
@@ -90,8 +107,7 @@ struct Iso15693Poller {
     // it) and per-block write results.
     Iso15693_3Data* clone_source;
     uint16_t clone_blocks_total; // clone: blocks on the source image, less 56/57/62/63 on a gen1 run
-        // (they carry the UID, not source data). wipe: wipeable (non-backdoor) block count on the card
-        // (the 4 gen1 registers 56/57/62/63 are excluded, see wipe_blocks)
+        // (they carry the UID, not source data). wipe: the card's full advertised block count
     // Clone mode: blocks that failed to write and count as a real problem: either they held source
     // data (lost), or they were empty failures that did NOT form a clean capacity tail (so we can't
     // call them over-capacity). Drives Partial. Wipe mode: reused as the count of blocks that still
@@ -117,6 +133,8 @@ struct Iso15693Poller {
     // note; it never fails the clone -- the UID and data blocks are the real payload.
     bool clone_afi_failed;
     bool clone_dsfid_failed;
+    uint16_t clone_blocks_done; // blocks attempted so far, for the progress popup
+    uint8_t progress_step; // last progress band emitted this pass (see PROGRESS_STEPS)
     Iso15693PollerCallback callback;
     void* context;
     bool running;
@@ -277,6 +295,8 @@ static void
         furi_delay_ms(ISO15693_POLLER_VERIFY_RETRY_MS);
     }
 
+    if(!dsfid_ok) FURI_LOG_W(TAG, "DSFID did not read back as written");
+    if(!afi_ok) FURI_LOG_W(TAG, "AFI did not read back as written");
     instance->clone_dsfid_failed = !dsfid_ok;
     instance->clone_afi_failed = !afi_ok;
 
@@ -288,6 +308,24 @@ static void iso15693_poller_report(Iso15693Poller* instance, Iso15693PollerEvent
     if(instance->callback) {
         instance->callback(event, instance->context);
     }
+}
+
+// Publish how far the block pass has got, at most ISO15693_POLLER_PROGRESS_STEPS times per pass.
+// The bound is what keeps a Back press from deadlocking the app -- read the comment on that macro
+// before changing anything here.
+static void
+    iso15693_poller_report_progress(Iso15693Poller* instance, uint16_t done, uint16_t total) {
+    instance->clone_blocks_done = done;
+    if(total == 0) return;
+
+    // Emit only when we cross into a new 1/STEPS band. `step` is monotone in `done` and capped at
+    // STEPS, so this can fire at most STEPS+1 times per pass -- the safety bound is structural
+    // rather than something a second guard has to enforce.
+    const uint8_t step = (uint8_t)(((uint32_t)done * ISO15693_POLLER_PROGRESS_STEPS) / total);
+    if(step == instance->progress_step) return;
+    instance->progress_step = step;
+
+    iso15693_poller_report(instance, Iso15693PollerEventWriteProgress);
 }
 
 // Clone mode: write every data block from the source image with the standard ISO15693 WRITE BLOCK.
@@ -352,8 +390,9 @@ static bool iso15693_poller_write_source_blocks(
     // Do NOT skip blocks locked in the SOURCE image: the source's lock bits describe the ORIGINAL
     // card, not the magic target (which is writable regardless), and locked blocks are exactly where
     // real tags keep provisioned data. Attempt every block.
-    int32_t highest_success = -1; // highest block index that accepted a write
-    uint16_t first_fail = source_count; // lowest block index that failed every attempt
+    bool wrote_any = false; // at least one block accepted a write
+    bool wrote_above_failure = false; // a block wrote ABOVE one that failed -> not a capacity tail
+    uint16_t done = 0; // blocks attempted, the denominator the progress popup shows
     for(uint16_t block = 0; block < source_count && block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
         block++) {
         if(skip_backdoor &&
@@ -361,6 +400,9 @@ static bool iso15693_poller_write_source_blocks(
             block == ISO15693_MAGIC_BLK_UNLOCK || block == ISO15693_MAGIC_BLK_COMMIT)) {
             continue; // gen1 owns these; the gen1 UID sequence already wrote them
         }
+        // Before the write, so a clean run reports progress too -- the success path below continues
+        // straight to the next block.
+        iso15693_poller_report_progress(instance, done++, total);
         const uint8_t* block_data = iso15693_3_get_block_data(source, block);
         Iso15693_3Error error = Iso15693_3ErrorNone;
         for(uint32_t attempt = 0; attempt < ISO15693_POLLER_WRITE_ATTEMPTS; attempt++) {
@@ -370,10 +412,15 @@ static bool iso15693_poller_write_source_blocks(
             furi_delay_ms(ISO15693_POLLER_VERIFY_RETRY_MS);
         }
         if(error == Iso15693_3ErrorNone) {
-            highest_success = block; // written (perhaps after riding out a transient error)
+            // A success ABOVE an earlier failure means the failures are not a run at the top, so
+            // they cannot be the card's capacity edge.
+            if(instance->clone_failed_count + instance->clone_over_capacity > 0) {
+                wrote_above_failure = true;
+            }
+            wrote_any = true;
             continue;
         }
-        if(block < first_fail) first_fail = block;
+        FURI_LOG_W(TAG, "clone: block %u refused (err %d)", block, error);
         // Record every failed block in the bitmap so a result screen can name it, whichever bucket
         // it ends up in.
         instance->clone_failed_bitmap[block / 8] |= (uint8_t)(1u << (block % 8));
@@ -391,10 +438,16 @@ static bool iso15693_poller_write_source_blocks(
             instance->clone_over_capacity++;
         }
     }
+    iso15693_poller_report_progress(instance, done, total); // land on 100%
 
     // The failures are a real capacity edge only if they form a contiguous run at the very top of the
-    // card, above the last block that wrote (first_fail == highest_success + 1, with >=1 success) --
-    // the shape of "source bigger than the card". Confirm that before making any capacity claim.
+    // card, with at least one block below them having written -- the shape of "source bigger than the
+    // card". Confirm that before making any capacity claim.
+    //
+    // Tracked as "did anything write above a failure" rather than by comparing block indices: on the
+    // gen1 path blocks 56/57/62/63 are skipped, so a capacity edge landing near them leaves a gap
+    // between the last success and the first failure, and an index comparison reads that gap as a
+    // scattered failure and downgrades a lossless clone to Partial.
     const bool any_failure = (instance->clone_failed_count + instance->clone_over_capacity) > 0;
 
     // A card lifted mid-loop makes every remaining block fail, which is EXACTLY the shape of the card's
@@ -404,8 +457,7 @@ static bool iso15693_poller_write_source_blocks(
     // nothing. (Bail before classifying: the caller reports CardLost and ignores these counters.)
     if(any_failure && !iso15693_poller_card_still_present(iso_poller)) return false;
 
-    const bool failures_are_top_tail = any_failure && (highest_success >= 0) &&
-                                       (first_fail == (uint16_t)(highest_success + 1));
+    const bool failures_are_top_tail = any_failure && wrote_any && !wrote_above_failure;
     if(failures_are_top_tail) {
         instance->clone_capacity_confirmed = true;
     } else if(instance->clone_over_capacity > 0) {
@@ -426,9 +478,12 @@ static bool iso15693_poller_write_source_blocks(
 // at activation (see below); a block we cannot read back is counted, so the wipe fails closed. A
 // locked block that genuinely retains data is counted (the wipe's privacy promise wasn't kept there),
 // which also lets the "nothing could be wiped" guard fire.
-// The gen1 backdoor registers (blocks 56/57/62/63) live in this same block-number space; they are
-// skipped so the wipe keeps its "UID left unchanged" promise (they carry UID/unlock/commit, not user
-// data). Returns the number of blocks that actually accepted the zero-write, so the caller can tell a
+// The gen1 backdoor registers (blocks 56/57/62/63) live in this same block-number space and ARE
+// cleared, deliberately. Skipping them would keep the "UID unchanged" promise on a gen1 card at the
+// cost of leaving four blocks of real user data behind on every gen2 card, where they are ordinary
+// memory -- a certain loss to avoid something the sequence cannot do. Zeroing them cannot move a
+// gen1 UID either: arming that needs 0x6996 in the commit block, and a wipe writes zero.
+// Returns the number of blocks that actually accepted the zero-write, so the caller can tell a
 // genuine wipe from one where nothing could be cleared.
 static uint16_t iso15693_poller_wipe_blocks(
     Iso15693Poller* instance,
@@ -438,15 +493,7 @@ static uint16_t iso15693_poller_wipe_blocks(
     const uint16_t block_count = iso15693_3_get_block_count(target);
     const uint8_t block_size = iso15693_3_get_block_size(target);
 
-    // Report the wipeable block count (excluding the backdoor registers we skip below), so the result
-    // screen's "Wiped X/Y" reflects the blocks actually attempted, not the raw geometry -- otherwise
-    // the skipped 56/57/62/63 would be miscounted as wiped.
-    uint16_t wipeable_blocks = block_count;
-    if(ISO15693_MAGIC_BLK_UID_7654 < block_count) wipeable_blocks--;
-    if(ISO15693_MAGIC_BLK_UID_3210 < block_count) wipeable_blocks--;
-    if(ISO15693_MAGIC_BLK_UNLOCK < block_count) wipeable_blocks--;
-    if(ISO15693_MAGIC_BLK_COMMIT < block_count) wipeable_blocks--;
-    instance->clone_blocks_total = wipeable_blocks;
+    instance->clone_blocks_total = block_count;
     instance->clone_failed_count = 0;
     instance->clone_over_capacity = 0;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
@@ -457,14 +504,25 @@ static uint16_t iso15693_poller_wipe_blocks(
     uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
     const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
     uint16_t wiped = 0;
+
+    // OPEN QUESTION, gen1 only: this loop writes the gen1 UID registers (56/57) before it reaches
+    // unlock/commit (62/63). The gen1 arm sequence is unlock=0 then commit=0x6996 then the UID
+    // blocks, and nothing ever clears commit again -- not this app, and not proxmark's
+    // SetTag15693Uid -- so a card that has had a gen1 UID written may still be armed, and zeroing
+    // 56/57 while it is would be the arm sequence with a zero payload.
+    //
+    // An earlier revision tried to de-arm by pre-writing the commit block. That was withdrawn: it
+    // wrote commit before unlock, the reverse of the only ordering the hardware is documented to
+    // accept, so it would either be rejected outright or -- worse -- leave unlock freshly zeroed,
+    // i.e. one step INTO the arm sequence, right before this loop touches the UID registers.
+    //
+    // Left as-is deliberately, matching proxmark's `hf 15 wipe`, which walks 0..0xFF with no de-arm
+    // at all. The grounded fix is not reordering blind writes but verifying: re-read the UID after
+    // the wipe and report a mismatch instead of claiming the UID is unchanged. That needs a gen1
+    // card to validate against, which nobody on this PR has.
     for(uint16_t block = 0; block < block_count && block < ISO15693_POLLER_BLOCK_BITMAP_SIZE * 8;
         block++) {
-        // Skip the gen1 backdoor registers (UID 56/57, unlock 62, commit 63): zeroing them would
-        // disturb the card's UID / magic state, which the wipe promises to leave untouched.
-        if(block == ISO15693_MAGIC_BLK_UID_7654 || block == ISO15693_MAGIC_BLK_UID_3210 ||
-           block == ISO15693_MAGIC_BLK_UNLOCK || block == ISO15693_MAGIC_BLK_COMMIT) {
-            continue;
-        }
+        iso15693_poller_report_progress(instance, block + 1, block_count);
         Iso15693_3Error error =
             iso15693_3_poller_write_block(iso_poller, zeros, (uint8_t)block, size);
         if(error == Iso15693_3ErrorNone) {
@@ -825,6 +883,8 @@ static void iso15693_poller_start_internal(
     instance->clone_over_capacity = 0;
     instance->clone_used_gen1 = false;
     instance->clone_capacity_confirmed = false;
+    instance->clone_blocks_done = 0;
+    instance->progress_step = UINT8_MAX; // no band emitted yet, so the first call fires
     instance->clone_afi_failed = false;
     instance->clone_dsfid_failed = false;
     memset(instance->clone_failed_bitmap, 0, sizeof(instance->clone_failed_bitmap));
@@ -913,6 +973,7 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
     // the clone path, so this guard is future-proofing against them ever leaking cross-mode.
     result->identity_failed = (instance->mode == Iso15693PollerModeClone) &&
                               (instance->clone_afi_failed || instance->clone_dsfid_failed);
+    result->blocks_done = instance->clone_blocks_done;
 }
 
 // True if the source image has non-empty data in any of the gen1 backdoor blocks (56/57/62/63) that
