@@ -61,10 +61,21 @@ title `Write UID?`, the UID as two space-separated 4-byte groups, both warning l
 `Write`. That screen is only reachable from the new `iso15693_write_uid` branch, which sets the title,
 body, button label and 38px height together — so a correct title plus a correct label covers all four.
 
-Still unverified, both needing no card: the **ISO15693 wipe** confirm (`Wipe card?` / "Zeroes every data
-block, / including the gen1 magic / blocks 56/57/62/63." / `Continue`) and the **plain clone** confirm
-(`Risky operation`, 54px box). They kept their strings byte-for-byte, but the fold reordered the
-if-chain they sit in and the `title` local is now shared, so they are cheap and worth a look.
+**Verified 2026-08-11, ISO15693 → Wipe → confirm screen**: `Wipe card?`, the three-line body, `Continue`.
+
+**That is full coverage of the fold on the hardware that exists.** Only two routes reach this scene with
+an ISO15693 card, and both are checked. An ISO15693 **clone** never reaches it at all —
+`file_select.c:106` routes ISO15693 straight to `NfcMagicSceneWrite`, deliberately (the gen2 write is
+harmless on a non-magic tag and data blocks land only after the UID reads back as the target, so there
+is nothing to confirm up front).
+
+The other two variants — the plain `Risky operation` clone confirm and the USCUID-UL wipe text — need a
+**Gen1, Gen4 or USCUID-UL** magic card, and none exists on either side of this PR. They are safe by
+construction rather than by test: for a non-ISO15693 protocol `iso15693` is false, so both new
+conditions are false and control falls through the same `uscuid_ul_is_wipe_mode` / `else` chain as
+before; `title` is the identical `is_wipe ? ... : ...` expression, `confirm_label` stays `"Continue"`,
+`text_height` stays 54. Neither path reads a value the fold introduced. Say it that way in the reply
+rather than listing them as untested — the argument is stronger than the gap.
 
 Everything else in the batch is non-render code.
 
