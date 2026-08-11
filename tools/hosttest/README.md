@@ -53,8 +53,22 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-13 cases over `iso15693_poller_wipe_blocks`, including the geometries re-derived by hand each review
-round:
+38 tests across three files.
+
+**`test_outcome.c` — 14 cases over `iso15693_poller_success_or_partial`**, the single place where "what
+happened" becomes "what the user is told". A pure function of the result fields, so the tests read as the
+contract: which conditions qualify a result, which do not, and which of those are clone-only. Includes the
+two that look like oversights and are not — `uid_verified` being absent from the Partial list (making it
+Partial would flag every wipe where the user lifts the card as it completes) and the all-rejected `Fail`
+guard sparing a wipe (whose failed and accepted sets are disjoint). Both would be "fixed" by a reader who
+had not read the reasoning, and both now fail loudly if they are.
+
+**`test_clone_blocks.c` — 11 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
+set `clone_capacity_confirmed`, since that renders "Card too small". This is the file that found the
+clock-cut capacity bug.
+
+**`test_wipe_sweep.c` — 13 cases over `iso15693_poller_wipe_blocks`**, including the geometries re-derived
+by hand each review round:
 
 - clean 64/64
 - advertised 28 / physical 64 — the case the sweep exists for, measured on hardware
@@ -72,10 +86,25 @@ round:
 
 ## Not covered yet
 
-- `iso15693_poller_write_source_blocks` (the clone loop) — same technique, not yet written. The capacity
-  gate's discriminating case lives here.
-- `iso15693_poller_write_step` and the terminal-event choice — needs the state machine driven rather than
-  a single function called.
+- `iso15693_poller_write_step` — the state machine around the three functions above: the gen2/gen1 UID
+  verifies, the field power-cycles, and the activation-error budgets. Needs the poller callback driven
+  rather than one function called, so it is the next real increment.
+- `iso15693_poller_write_identity` — the AFI/DSFID write-then-read-back-and-compare retry loop. Its
+  *outcome* is covered (a rejected field is Partial, clone-only); the retry mechanics are not.
 - Anything above the poller: the scenes and their rendering.
-- The gen1 path. Its block-skipping arithmetic is testable; its wire behaviour is not, and no gen1 card
-  exists on either side of the PR.
+- The gen1 path on the wire. Its block-skipping arithmetic is covered in `test_clone_blocks.c`; what a
+  gen1 card actually does is untestable here, and none exists on either side of the PR.
+
+## Reasoned-only behaviours, before and after
+
+The five from `.notes/test-bench-idea.md`, which shipped on reasoning because no available card produces
+them:
+
+| behaviour | now |
+|---|---|
+| tail-drop fix's positive case | **tested** — `test_wipe_sweep.c`, dead stretch inside the claimed range |
+| the capacity gate's discriminating case | **tested** — `test_clone_blocks.c`, a failed block that answers a read |
+| a clone cut by the clock, card still present | **tested** — and it was wrong; see the `pass_truncated` fix |
+| truncated sweep reporting as Partial | **tested** — `test_outcome.c`; the *screens* remain untested |
+| `uid_verified` false | **partly** — that it does not downgrade the outcome is tested; the path that sets it needs `write_step` |
+| the gen1 path | still unreachable, and needs a card |
