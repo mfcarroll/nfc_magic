@@ -269,41 +269,64 @@ That was deliberate rather than careless. It's the exact structural sibling of `
 
 **Title:** NFC Magic ISO15693: writes and inventory are unaddressed, so a second tag in the field is written too
 
-**Pre-existing, not introduced by #250** — raised there and split out at the reviewer's request.
+> Field-by-field for the pack's bug-report form. The H1 above is the **Title** field.
+>
+> Two things to flag before filing. This concerns the **ISO15693 support added in #250**, which is not
+> in a released version yet — so "App version" is the unreleased 2.1, not 2.0. And the reproduction
+> below is **expected from the frame construction, not staged on hardware**: it needs two ISO15693 tags
+> in the field at once and would destroy data on the second one.
 
-## What
+### App
 
-Both SDK helpers the ISO15693 magic poller relies on are unaddressed broadcasts, and nothing ever
-suppresses the other tags in the field:
+NFC Magic
+
+### App version
+
+2.1 (unreleased — the ISO15693 support in #250)
+
+### Describe the bug
+
+The ISO15693 wipe sends its `WRITE BLOCK` frames **unaddressed**, so every ISO15693 tag inside the
+reader field receives them — not just the one the user selected. A second tag in range has its blocks
+zeroed too, with nothing in the UI indicating another tag was ever there.
+
+Both of the helpers involved are unaddressed broadcasts, and nothing suppresses the other tags:
 
 - `iso15693_3_poller_write_block()` builds its request flags as
   `ISO15693_3_REQ_FLAG_SUBCARRIER_1 | ISO15693_3_REQ_FLAG_DATA_RATE_HI` — no `ADDRESSED` flag and no
-  UID in the frame. Every tag in the field that isn't in Quiet state acts on it.
+  UID in the frame.
 - `iso15693_3_poller_inventory()` sends a **1-slot** INVENTORY (`INVENTORY_T5 | T5_N_SLOTS_1`), so with
-  two tags present it returns whichever one wins the slot rather than detecting the collision.
+  two tags present it returns whichever wins the slot rather than detecting the collision.
 - The poller never sends STAY QUIET, so nothing puts a bystander tag out of scope.
-
-## Why it matters
-
-For a read this is a wrong answer. For NFC Magic's **wipe** it is data loss on a card the user never
-selected: a second ISO15693 tag inside the reader field receives the same `WRITE BLOCK` frames and has
-its blocks zeroed, with nothing in the UI indicating a second tag was ever there.
 
 The same flaw then undermines the report. The wipe re-reads the UID afterwards to catch a card whose
 identity it moved — on a gen1 card the zeros land in blocks 56/57, which *are* the UID registers, so the
-card carries on working but stops answering to the identity its owner recorded. The screen printing the
-UID it answers to now is the only route back to that card.
-
-If the post-wipe inventory is answered by the *bystander* instead, that screen prints a UID belonging to
-a different card entirely. The owner records the wrong identity for their own card and the real one is
-never shown — strictly worse than printing nothing.
+card carries on working but stops answering to the identity its owner recorded, and the screen printing
+the UID it answers to now is the only route back to it. If that post-wipe inventory is answered by the
+**bystander** instead, the screen prints a UID belonging to a different card entirely: the owner records
+the wrong identity for their own card, and the real one is never shown. Strictly worse than printing
+nothing.
 
 Needs two ISO15693 tags within the field simultaneously, which is uncommon but hardly exotic — a badge
 holder or wallet does it.
 
-## Possible directions
+### Reproduction
 
-Not prescribing an approach, but for discussion:
+**Not staged on hardware** — expected from the frame construction above. It would need two ISO15693 tags
+and would destroy data on the second, so it has not been run:
+
+1. Place two ISO15693 tags within the reader field at once.
+2. NFC Magic → the ISO15693 menu → **Wipe**.
+3. Expected: both tags are zeroed, though only one was presented for the operation; and the post-wipe
+   UID check may report against whichever tag answers the inventory.
+
+### Firmware version
+
+_(fill in the Unleashed/Momentum version you tested on)_
+
+### Anything else?
+
+**Possible directions.** Not prescribing an approach, but for discussion:
 
 - use the **addressed** form (`ADDRESSED` flag + UID) for `write_block` once activation has established
   a UID — the wipe already knows the target's UID before it writes anything;
@@ -313,11 +336,16 @@ Not prescribing an approach, but for discussion:
 
 The last one alone would close the destructive half.
 
-## Where
+**On which tracker this belongs to.** The two helpers are firmware SDK code
+(`lib/nfc/protocols/iso15693_3/iso15693_3_poller_i.c`), not app code — but the destructive behaviour is
+the app's wipe, and every fix above is available app-side, since the app already builds its own raw
+frames for the magic commands. Filing here for that reason; a firmware-side report may be warranted
+too, as any caller of those helpers has the same exposure.
 
-`lib/nfc/protocols/iso15693_3/iso15693_3_poller_i.c` in the firmware SDK (`iso15693_3_poller_inventory`
-~line 132, `iso15693_3_poller_write_block` ~line 237), reached from
-`base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c`.
+**Where.** Reached from `base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c`
+(`iso15693_poller_wipe_blocks`, and the UID verify in `Iso15693WriteStateVerifyWipe`).
+
+Raised by @mishamyte during review of #250 and split out at his request.
 
 ---
 
@@ -325,100 +353,91 @@ The last one alone would close the destructive half.
 
 **Title:** NFC Magic: a card removed mid-write is never reported on Gen2/Classic or USCUID-UL — the poller stalls waiting to re-activate
 
-**Pre-existing.** Found while scoping a change in #250; filing separately because it constrains anything
-that touches the shared write scene.
+> Field-by-field for the pack's bug-report form. The H1 above is the **Title** field.
 
-## Observed on hardware
+### App
 
-Same procedure each time: start a clone, lift the card the moment the popup switches to "Writing", then
-wait.
+NFC Magic
+
+### App version
+
+2.0
+
+### Describe the bug
+
+Lift the card during a clone and the write never reports anything. The popup stays on
+**"Writing / Don't move..."** indefinitely — no "Card removed", no partial result, and no report of the
+blocks that *were* written before the card left, which for a half-completed clone is exactly what you
+need to know.
+
+Tested across five protocols, lifting the card the moment the popup switched to "Writing":
 
 | protocol | card | needs a re-activation mid-write? | result |
 |---|---|---|---|
 | **Gen2 / Classic** | CUID magic Classic 1K | **yes** — halts after every block | **no report.** 88s observed, then still nothing |
-| **USCUID-UL** | magic NTAG216 | **yes** — returns `NfcCommandReset` on a failed page | **no report** after >1 min, frozen at `Writing 147/231` |
-| Gen4 | GTU "Ultimate Magic Card" | no — never halts, stays activated | reports immediately — "Something went wrong while writing" |
-| Gen1A | magic Classic 1K | no — abandons the write on the first failure | reports promptly — same screen |
-| ISO15693 | gen2 magic | n/a — counts activation errors against a budget | reports |
+| **USCUID-UL** | magic NTAG216 | **yes** — resets on a failed page | **no report** after >1 min, frozen at `Writing 147/231` |
+| Gen4 | GTU "Ultimate Magic Card" | no — never halts, stays activated | reports immediately |
+| Gen1A | magic Classic 1K | no — abandons the write on the first failure | reports promptly |
 
-## Why, confirmed by log
+Gen1A and Gen4 are the useful contrast: the same action produces a proper failure screen there, so this
+is not inherent to losing the card mid-write.
 
-Captured with `log debug` on the Gen2 run, at the moment the card was lifted:
+On Gen2/Classic there is no escape either, because Back leads to an inescapable loop — a separate
+defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene's `on_exit` calls
+`<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report.
+
+### Reproduction
+
+1. Load a saved MIFARE Classic dump (or a MIFARE Ultralight/NTAG dump for USCUID-UL).
+2. Start a clone onto a Gen2/CUID magic Classic card, or a magic NTAG that the app detects as USCUID-UL.
+3. Lift the card as soon as the popup switches to **"Writing / Don't move..."**.
+4. Wait. The popup does not resolve.
+
+### Firmware version
+
+_(fill in the Unleashed/Momentum version you tested on)_
+
+### Logs
+
+Gen2 clone, `log debug`, at the moment the card was lifted:
 
 ```
 9282385 [D][GEN2] Block 34 finished, halting
 9282389 [E][ISO14443_3A] Sdd response wrong length
 9282492 [D][Nfc] FWT Timeout
-9282595 [D][Nfc] FWT Timeout          <- every ~103ms, for the next 88 seconds
-...                                      zero GEN2 lines in that whole window
+9282595 [D][Nfc] FWT Timeout
+...            <- every ~103ms for the next 88 seconds, and not one GEN2 line
 ```
 
-The state machine is **stuck, not slow**. Nothing after `Block 34 finished` — no further block attempts,
-no failures, nothing. The 103ms cadence is the `furi_delay_ms(100)` in `iso14443_3a_poller_run`'s error
-path.
+### Anything else?
 
-The cause is that `gen2_poller_write_block_handler` **halts the card after every block**
-(`gen2_poller_halt`, at its end), so reaching the next block requires a **re-activation**. Once the card
-is gone that activation fails, the iso3 poller emits `Iso14443_3aPollerEventTypeError` — and
-`gen2_poller_callback` acts only on `Ready`, so it discards it and the state machine is never called
-again.
+**Why.** `gen2_poller_write_block_handler` halts the card after every block (`gen2_poller_halt`, at its
+end), so reaching the next block needs a **re-activation**. Once the card is gone that activation fails,
+the iso3 poller emits `Iso14443_3aPollerEventTypeError`, and `gen2_poller_callback` acts only on
+`Ready` — so it discards it and the state machine is never called again. The 103ms cadence above is the
+`furi_delay_ms(100)` in `iso14443_3a_poller_run`'s error path.
 
-That single rule explains every protocol tested: **a write stalls exactly when it needs a re-activation
-after the card has left.** Gen4 and Gen1A never need one mid-write — Gen4 does not halt between blocks
-and so stays activated, receives its `Ready`, fails the write and sets its terminal state — which is why
-they report promptly despite `gen4_poller_callback` discarding the same event. USCUID-direct needs one
-for a different reason: its write handler returns `NfcCommandReset` on a failed page, deliberately, to
-revive a tag that went mute after NAKing a locked page.
+That single rule covers every protocol tested: **a write stalls exactly when it needs a re-activation
+after the card has left.** Gen4 discards the same event and is fine, because it never needs one — it
+does not halt between blocks, so it keeps receiving `Ready`, fails the write and sets its terminal
+state. USCUID-UL needs one for a different reason: its write handler returns `NfcCommandReset` on a
+failed page, deliberately, to revive a tag that went mute after NAKing a locked page.
 
-## Consequence
+**Possible direction.** Handle `Iso14443_3aPollerEventTypeError` in the two affected callbacks rather
+than discarding it — count it against a budget, and on exhaustion emit the terminal event that fits that
+poller: `Partial` with the blocks or pages that did land, rather than `Fail`. There is a precedent in
+this pack: the ISO15693 poller added in #250 counts activation failures against
+`ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports `CardLost`.
 
-The write popup never resolves. No "Card removed", no partial result, and no report of the blocks that
-*were* written before the card left — which for a half-completed clone is exactly what the user needs.
+Any change to USCUID has a trap: that `NfcCommandReset` is deliberate, and a naive budget would destroy
+the behaviour it exists for. It has to tell "reset to revive a NAKing tag" apart from "the card is gone".
 
-On Gen2/Classic the escape is worse than merely absent: pressing Back lands in an inescapable loop
-between the write-check and write scenes — a separate defect, #ISSUE-BACKLOOP.
+**Where.** `base_pack/nfc_magic/magic/protocols/gen2/gen2_poller.c` (`gen2_poller_write_handler`) and
+`.../uscuid_ul/uscuid_ul_poller.c` (`uscuid_ul_poller_write_handler`). `gen1a` and `gen4` are
+unaffected; both were tested.
 
-Note also that Back never aborts a write in any case. The scene's `on_exit` calls
-`<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report rather
-than cancelling anything.
-
-## Repro
-
-1. Start a Gen2 / Classic or USCUID-UL clone.
-2. Lift the card as soon as the popup switches to "Writing".
-3. Wait. The popup does not resolve — observed for 88s on Gen2 and over a minute on USCUID-UL, with
-   `log debug` showing no state-machine activity at all in that window.
-
-## Why this is an issue rather than a fix in #250
-
-Beyond being a different protocol family from that PR, the two affected pollers need different terminal
-events: `gen2`'s `Partial` carries a per-block bitmap, USCUID's carries `pages_written`. And the USCUID
-change has the reset caveat described below. It is two changes with two correct answers, in protocols
-that PR doesn't touch.
-
-## Direction
-
-Handle `Iso14443_3aPollerEventTypeError` in the two affected callbacks rather than discarding it — count
-it against a budget, as the ISO15693 poller does with `ISO15693_POLLER_MAX_ACTIVATION_ERRORS`, and on
-exhaustion emit the terminal event that fits that poller: `Partial` with the blocks or pages that did
-land, rather than `Fail`.
-
-There is a precedent for the reporting half in this codebase too. The ISO15693 poller distinguishes
-"this block failed" from "the card left" by asking once, on failure — `iso15693_poller_card_still_present()`,
-a retried inventory — so it can report `CardLost` instead of blaming the card for blocks it never got the
-chance to write.
-
-Note USCUID has a trap for any fix: its write handler returns `NfcCommandReset` on a failed page
-**deliberately**, because a genuine tag can go mute after NAKing a locked page, and re-activation revives
-it so the remaining pages still land — turning a total `Fail` into a `Partial`. Any change there has to
-tell "reset to revive a NAKing tag" apart from "the card is gone", or it destroys the behaviour that
-reset exists to provide.
-
-## Where
-
-`base_pack/nfc_magic/magic/protocols/` — `gen2/gen2_poller.c` (`gen2_poller_write_handler`) and
-`uscuid_ul/uscuid_ul_poller.c` (`uscuid_ul_poller_write_handler`). `gen1a` and `gen4` are unaffected;
-both were tested.
+Found while testing #250, which does not touch any of these files — `gen2_poller.c`,
+`uscuid_ul_poller.c` and the write-check scene are byte-identical to 2.0.
 
 ---
 
@@ -426,47 +445,65 @@ both were tested.
 
 **Title:** NFC Magic: Back during a Gen2/Classic write is inescapable, and silently restarts the write from block 0
 
-**Pre-existing** — present on `main`, unrelated to #250, found while testing that PR.
+> Field-by-field for the pack's bug-report form. The H1 above is the **Title** field.
 
-## What
+### App
 
-`nfc_magic_scene_gen2_write_check_on_enter()` pushes the write scene from **on_enter** when the target
+NFC Magic
+
+### App version
+
+2.0
+
+### Describe the bug
+
+Pressing Back during a Gen2/Classic write does not leave the write screen. It returns to it, at its
+card-search state — **"Apply the same card to the back"** — and pressing Back again does the same. There
+is no way out of the loop.
+
+`nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from **`on_enter`** when the target
 has no write problems:
 
 ```c
 if(problems.all_problems == 0) {
-    if(instance->gen2_poller_is_wipe_mode) {
-        scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWipe);
-        return;
-    } else {
-        scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWrite);
-        return;
-    }
+    ...
+    scene_manager_next_scene(instance->scene_manager, NfcMagicSceneWrite);
+    return;
 }
 ```
 
-It is a pass-through scene, but it stays on the scene stack. So Back from the write scene pops to it,
-its `on_enter` runs again, and it immediately pushes the write scene forward again:
+It is a pass-through scene but stays on the scene stack, so Back pops to it, its `on_enter` runs again,
+and it immediately pushes the write scene forward again:
 
 ```
-Write ──Back──▶ Gen2WriteCheck ──on_enter──▶ Write ──Back──▶ Gen2WriteCheck ──▶ …
+Write --Back--> Gen2WriteCheck --on_enter--> Write --Back--> Gen2WriteCheck --> ...
 ```
 
-The user sees the write screen return to its card-search state, "Apply the same card to the back", and
-no amount of pressing Back escapes it.
+**Second effect: the write silently restarts.** `nfc_magic_scene_write_on_enter` allocates the poller and
+`on_exit` frees it, so each trip round the loop is a **brand-new write starting from block 0**, not a
+resumption. Lift the card mid-write, press Back, re-apply it, and the clone completes — having rewritten
+the whole card from scratch. Any partial-write counts shown afterwards describe the fresh attempt, not
+the interrupted one.
 
-## Second effect: the write silently restarts
+### Reproduction
 
-`nfc_magic_scene_write_on_enter()` allocates the poller and `on_exit` frees it, so each trip round the
-loop is a **brand-new write starting from block 0** — not a resumption.
+1. Load a saved MIFARE Classic dump.
+2. Start a clone onto a Gen2/Classic target that has no write problems, so the check scene passes
+   straight through.
+3. At **"Writing / Don't move..."**, press Back.
+4. The write screen reappears at **"Apply the same card to the back"**.
+5. Press Back again — the same screen. There is no exit.
 
-That is easy to mistake for a resumed write. Lift the card mid-write, press Back, re-apply the card, and
-the clone completes — but it has rewritten the entire card from scratch, and any partial-write counts
-shown afterwards describe the fresh attempt rather than the interrupted one.
+Reachable without removing the card at all: any Back during a Gen2/Classic write hits it.
 
-## Confirmed by log
+### Firmware version
 
-Four Back presses during one stuck Gen2 write, each tearing down and re-creating the poller:
+_(fill in the Unleashed/Momentum version you tested on)_
+
+### Logs
+
+Four Back presses during one write, each tearing down and re-creating the poller, then the card
+re-applied:
 
 ```
 9370728 [D][GEN2] Stopping Gen2 poller
@@ -474,40 +511,24 @@ Four Back presses during one stuck Gen2 write, each tearing down and re-creating
 9410660 [D][GEN2] Stopping Gen2 poller
 9410814 [D][GEN2] Stopping Gen2 poller
 9410953 [D][GEN2] Stopping Gen2 poller
-9413351 [D][GEN2] Block 0 is the same, skipping   <- card re-applied: restarted from block 0
+9413351 [D][GEN2] Block 0 is the same, skipping   <- restarted from block 0
 ```
 
-The last line is the silent restart: re-applying the card began a fresh write at block 0 rather than
-resuming where the interrupted one stopped.
+### Anything else?
 
-## Repro
+**Why it is not usually noticed.** The loop needs the write screen to still be on top when Back is
+pressed. If the write completes first, the result screen replaces it and the check scene is never
+re-entered from behind. It shows up when a write is slow or has stopped reporting — which is exactly
+#ISSUE-STALL, so the two compound: the write does not resolve, and Back does not get you out.
 
-1. Gen2 / Classic clone, onto a target with no write problems (so the check scene passes straight
-   through).
-2. At "Writing / Don't move...", press Back.
-3. The write screen reappears at "Apply the same card to the back". Back again does the same. There is
-   no exit.
-
-Reachable without removing the card at all — any Back during a Gen2/Classic write hits it.
-
-## Why it is not usually noticed
-
-The loop needs the write screen to still be on top when Back is pressed. If the write completes first,
-the result screen replaces it and the check scene is never re-entered from behind. It shows up when a
-write is slow or has stopped reporting — which is exactly the situation in #ISSUE-STALL, so the two
-compound: the write does not resolve, and Back does not get you out.
-
-## Direction
-
-The check scene shouldn't remain on the stack when it has nothing to display. Options for discussion:
+**Possible directions.** The check scene should not remain on the stack when it has nothing to display:
 
 - have the caller decide, so the check scene is only entered when `all_problems != 0`;
-- or replace rather than push — `scene_manager_search_and_switch_to_another_scene` — so no frame is left
-  behind to re-fire;
+- or replace rather than push, so no frame is left behind to re-fire;
 - or record in the scene state that it has already passed through, and have `on_enter` return to the
   menu on the way back rather than pushing forward again.
 
-## Where
-
-`base_pack/nfc_magic/scenes/nfc_magic_scene_gen2_write_check.c` (`on_enter`). Worth checking
+**Where.** `base_pack/nfc_magic/scenes/nfc_magic_scene_gen2_write_check.c` (`on_enter`). Worth checking
 `nfc_magic_scene_mf_classic_write_check.c` for the same shape.
+
+Found while testing #250, which does not touch this scene — it is byte-identical to 2.0.

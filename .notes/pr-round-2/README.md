@@ -43,8 +43,20 @@ exist.
 1. `./check-shas.py` — the stack has been restructured several times; this fails if any cited fork SHA
    no longer exists. Run after any rebase.
 2. **Push the fork branch.** The replies cite fork SHAs; they are dead links until it is up.
-3. **File the three issues by hand**, in manifest order, so labels can be set: unaddressed frames,
-   poller stall, write-check Back loop. Note the three numbers.
+3. **File the three issues by hand**, in manifest order: unaddressed frames, poller stall, write-check
+   Back loop. Note the three numbers.
+
+   The pack uses a **structured bug-report form**, not free text. Each draft is laid out field by field
+   (`### App`, `### App version`, `### Describe the bug`, `### Reproduction`, `### Firmware version`,
+   `### Logs`, `### Anything else?`) — the H1 at the top is the **Title** field. Copy each section into
+   the matching box. Fill **Firmware version** yourself; it is the one field these drafts can't know.
+
+   Versions differ on purpose. The poller-stall and Back-loop bugs are reported against **2.0**, the
+   released version: `gen2_poller.c`, `uscuid_ul_poller.c` and `nfc_magic_scene_gen2_write_check.c` are
+   byte-identical between 2.0 and this PR, so they reproduce on a stock build. The unaddressed-frames
+   issue is against **2.1 (unreleased)**, because ISO15693 support does not exist in 2.0 — and its
+   reproduction is marked as expected rather than observed, since staging it needs a second ISO15693 tag
+   and would destroy data on it.
 4. `./link-issues.py <frames#> <stall#> <backloop#>` — substitutes the real numbers for the
    `#ISSUE-FRAMES` / `#ISSUE-STALL` / `#ISSUE-BACKLOOP` tokens.
 5. `./assemble-review.py` and re-read the substituted lines.
