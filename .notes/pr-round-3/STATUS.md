@@ -1,4 +1,7 @@
-# Round 3 — PUSHED AND POSTED 2026-08-11
+# His Round 4 review — ANSWERED, PUSHED AND POSTED 2026-08-11
+
+Directory naming is misleading: this is `pr-round-3/` but holds what **he** numbers Round 4, and our
+reply to it lives in `pr-round-4/`. See [../pr-rounds.md](../pr-rounds.md).
 
 Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his review verbatim.
 
@@ -66,8 +69,8 @@ Say this plainly in the reply. See [../test-bench-idea.md](../test-bench-idea.md
 
 ## Next
 
-Round 3 is closed out. Awaiting his response. When it arrives, capture it under
-`.notes/pr-round-5/received/` the same way.
+This exchange is closed out. Awaiting his response, which will be his Round 5 — capture it and our
+reply together under `.notes/pr-round-5/`, one directory for the whole exchange.
 
 Pass C, whenever it is taken: the two deferred simplifications above, plus the round-1 queue — the duplicated retry loop
    (he called it non-optional), the `{reason, title, body}` render table, the duplicated confirm scene,

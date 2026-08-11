@@ -11,6 +11,7 @@ docs. Written 2026-07-26.
 | [capability-matrix.md](capability-matrix.md) | 3-way capability comparison (our app / stock Flipper NFC / proxmark) + a prioritized roadmap of deferred features. |
 | [worklog.md](worklog.md) | Running log of the offline changes actually made, commit by commit. |
 | [test-bench-idea.md](test-bench-idea.md) | Parked: how to stage the wipe/clone cases no card we own can produce. Host-side tests of the sweep logic look higher-value than PM3 simulation. |
+| [pr-rounds.md](pr-rounds.md) | **Read first if a round number matters.** The directory names are not his round numbers, and one exchange is split across two directories. |
 | [pr-round-2/](pr-round-2/) | PR #250 review round 2: his verbatim review, and the reply / inline-thread / issue drafts written in response. Nothing in there is posted yet. |
 
 ## One-paragraph status
