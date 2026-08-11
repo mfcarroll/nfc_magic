@@ -64,8 +64,8 @@ So on Gen2/Classic and USCUID-UL, swallowing Back would leave the user on a popu
 and that they can no longer leave — recoverable only by rebooting. I'd rather under-deliver on your
 approval than ship that.
 
-Testing it turned up two pre-existing defects on those paths, both filed rather than fixed here — the
-second and third of the issues below.
+Testing it turned up two pre-existing defects on those paths, both filed rather than fixed here:
+#ISSUE-STALL and #ISSUE-BACKLOOP.
 
 ## Bench
 
@@ -94,7 +94,7 @@ Write-UID guard already state the position you endorsed.
 
 All filed rather than fixed in passing:
 
-1. **The unaddressed-frame hazard** you asked for. Verified rather than restated: `write_block` builds
+1. #ISSUE-FRAMES — **the unaddressed-frame hazard** you asked for. Verified rather than restated: `write_block` builds
    its flags as `SUBCARRIER_1 | DATA_RATE_HI` with no `ADDRESSED` flag and no UID, `inventory` is
    1-slot, and nothing ever sends STAY QUIET. So a bystander tag gets zeroed — *and* it can win the
    post-wipe inventory. That second half matters more than it first looks. The "UID changed" screen
@@ -103,12 +103,12 @@ All filed rather than fixed in passing:
    the screen printing the UID it answers to now is the only route back to it. If a bystander wins that
    inventory, the screen prints the bystander's UID instead — so the owner records an identity belonging
    to a different card, and the real one is never shown.
-2. **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
+2. #ISSUE-STALL — **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
    activation error that says it has gone. Gen4 and Gen1A are the contrast cases that isolate the
    cause, and the debug log shows the state machine stopped rather than grinding. There is a precedent
    for the fix in your own tree: ISO15693 counts those errors against
    `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports `CardLost`.
-3. **On Gen2/Classic, Back during a write is inescapable.**
+3. #ISSUE-BACKLOOP — **on Gen2/Classic, Back during a write is inescapable.**
    `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
    the check scene which immediately pushes forward again. Each trip round the loop also frees and
    reallocates the poller, so re-applying the card silently restarts the write from block 0 rather than
@@ -376,7 +376,7 @@ The write popup never resolves. No "Card removed", no partial result, and no rep
 *were* written before the card left — which for a half-completed clone is exactly what the user needs.
 
 On Gen2/Classic the escape is worse than merely absent: pressing Back lands in an inescapable loop
-between the write-check and write scenes. That is a separate defect, filed alongside this one.
+between the write-check and write scenes — a separate defect, #ISSUE-BACKLOOP.
 
 Note also that Back never aborts a write in any case. The scene's `on_exit` calls
 `<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report rather
@@ -494,9 +494,8 @@ Reachable without removing the card at all — any Back during a Gen2/Classic wr
 
 The loop needs the write screen to still be on top when Back is pressed. If the write completes first,
 the result screen replaces it and the check scene is never re-entered from behind. It shows up when a
-write is slow or has stopped reporting — which is exactly the situation in the companion issue about
-Gen2/USCUID writes never terminating, so the two compound: the write does not resolve, and Back does not
-get you out.
+write is slow or has stopped reporting — which is exactly the situation in #ISSUE-STALL, so the two
+compound: the write does not resolve, and Back does not get you out.
 
 ## Direction
 

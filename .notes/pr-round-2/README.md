@@ -14,6 +14,7 @@ response and **not yet posted**. Dev-only — `tools/sync-to-fork.sh` never sync
 | [issue-2-poller-timeouts.md](issue-2-poller-timeouts.md) | New issue — Gen2/USCUID don't report a card removed mid-write |
 | [issue-3-write-check-back-loop.md](issue-3-write-check-back-loop.md) | New issue — Back during a Gen2 write is inescapable |
 | [check-shas.py](check-shas.py) | Verifies every cited fork SHA still exists. Run before posting. |
+| [link-issues.py](link-issues.py) | Substitutes real issue numbers for the `#ISSUE-*` tokens, once the issues are filed. |
 | [post-pr-replies.sh](post-pr-replies.sh) | Posts the threads then the body. Prompts for `post` first. Issues are filed by hand. |
 | [received/](received/) | His review verbatim — body + all 16 inline comments |
 
@@ -36,11 +37,23 @@ The other nine belong to later passes and get no "deferred" reply — the body l
 
 ## Order of operations
 
-0. `./check-shas.py` — the stack has been restructured several times; this fails if any cited fork SHA
-   no longer exists. Run it after any rebase and before posting.
-1. **Push the fork branch first.** The replies cite fork SHAs; they are dead links until it is up.
-2. `./post-pr-replies.sh` — threads, then the top-level comment.
-3. File the three issues by hand, so labels can be set.
+Issues first, PR comment last — the comment links them by number, so it can only be written once they
+exist.
+
+1. `./check-shas.py` — the stack has been restructured several times; this fails if any cited fork SHA
+   no longer exists. Run after any rebase.
+2. **Push the fork branch.** The replies cite fork SHAs; they are dead links until it is up.
+3. **File the three issues by hand**, in manifest order, so labels can be set: unaddressed frames,
+   poller stall, write-check Back loop. Note the three numbers.
+4. `./link-issues.py <frames#> <stall#> <backloop#>` — substitutes the real numbers for the
+   `#ISSUE-FRAMES` / `#ISSUE-STALL` / `#ISSUE-BACKLOOP` tokens.
+5. `./assemble-review.py` and re-read the substituted lines.
+6. `./post-pr-replies.sh` — the seven threaded replies, then the top-level comment. It refuses to run
+   while any token is unsubstituted or any SHA is stale.
+
+The two issue bodies cross-reference each other, so their tokens can only be resolved after both are
+filed. Step 4 rewrites the local drafts; paste those two bodies back into the filed issues if you want
+those links live. The PR comment is the one that matters, and it is posted after the substitution.
 
 ## Conventions worth keeping
 

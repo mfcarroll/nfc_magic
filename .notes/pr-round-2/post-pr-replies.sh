@@ -6,6 +6,15 @@ REPO=xMasterX/all-the-plugins
 PR=250
 cd "$(dirname "$0")"
 
+# Guard: never post an unsubstituted issue token into a public comment.
+if grep -rq '#ISSUE-' pr-reply-body.md pr-inline/; then
+  echo "ERROR: unsubstituted #ISSUE- tokens remain. File the issues first, then run:"
+  echo "  ./link-issues.py <frames#> <stall#> <backloop#>"
+  grep -rn '#ISSUE-' pr-reply-body.md pr-inline/ || true
+  exit 1
+fi
+./check-shas.py || { echo "ERROR: stale fork SHAs -- rebase or re-sync before posting."; exit 1; }
+
 read -rp "This posts 7 inline replies + 1 top-level comment to $REPO#$PR. Type 'post' to continue: " ok
 [ "$ok" = "post" ] || { echo "aborted"; exit 1; }
 

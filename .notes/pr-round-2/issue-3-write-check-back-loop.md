@@ -68,9 +68,8 @@ Reachable without removing the card at all — any Back during a Gen2/Classic wr
 
 The loop needs the write screen to still be on top when Back is pressed. If the write completes first,
 the result screen replaces it and the check scene is never re-entered from behind. It shows up when a
-write is slow or has stopped reporting — which is exactly the situation in the companion issue about
-Gen2/USCUID writes never terminating, so the two compound: the write does not resolve, and Back does not
-get you out.
+write is slow or has stopped reporting — which is exactly the situation in #ISSUE-STALL, so the two
+compound: the write does not resolve, and Back does not get you out.
 
 ## Direction
 

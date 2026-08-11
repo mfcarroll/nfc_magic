@@ -51,7 +51,7 @@ The write popup never resolves. No "Card removed", no partial result, and no rep
 *were* written before the card left — which for a half-completed clone is exactly what the user needs.
 
 On Gen2/Classic the escape is worse than merely absent: pressing Back lands in an inescapable loop
-between the write-check and write scenes. That is a separate defect, filed alongside this one.
+between the write-check and write scenes — a separate defect, #ISSUE-BACKLOOP.
 
 Note also that Back never aborts a write in any case. The scene's `on_exit` calls
 `<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report rather
