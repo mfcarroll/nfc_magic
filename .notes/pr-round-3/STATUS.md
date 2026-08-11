@@ -1,13 +1,14 @@
-# Round 3 — state as of the end of Passes A and B
+# Round 3 — PUSHED AND POSTED 2026-08-11
 
 Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his review verbatim.
 
 ## Where things are
 
 - Dev `iso15693-dev`: **12 code commits** on `a3e13a3a`'s content, plus `.notes` commits. Clean.
-- Fork `nfc-magic-iso15693`: re-synced, **12 commits fast-forward from `a3e13a3a`**, unpushed. Always
-  reset to `origin/nfc-magic-iso15693` before replaying — resetting to `d659a919` silently drops round
-  2's pushed commits and turns the next push into a force-push over his review threads.
+- Fork `nfc-magic-iso15693` = `688614e8`, **PUSHED** (fast-forward from `a3e13a3a`, no force). Reply and
+  eight threaded replies posted, all verified byte-identical to the drafts. Always reset to
+  `origin/nfc-magic-iso15693` before replaying — resetting to `d659a919` silently drops already-pushed
+  commits and turns the next push into a force-push over his review threads.
 - Builds clean at Momentum 87.15 and Unleashed 88.2, zero warnings, clang-format applied.
 - Nothing posted for this round.
 
@@ -65,12 +66,10 @@ Say this plainly in the reply. See [../test-bench-idea.md](../test-bench-idea.md
 
 ## Next
 
-1. Re-sync the fork (one fork commit per dev commit, `NFC Magic ISO15693: <subject>`).
-2. Draft the reply + thread replies into `.notes/pr-round-4/`, same shape as round 2:
-   `pr-reply-body.md`, `pr-inline/<comment-id>.md`, `check-shas.py`, `assemble-review.py`,
-   `post-pr-replies.sh`. Thread ids are in `received/inline.json`.
-3. Push, then post.
-4. Pass C: the two deferred simplifications above, plus the round-1 queue — the duplicated retry loop
+Round 3 is closed out. Awaiting his response. When it arrives, capture it under
+`.notes/pr-round-5/received/` the same way.
+
+Pass C, whenever it is taken: the two deferred simplifications above, plus the round-1 queue — the duplicated retry loop
    (he called it non-optional), the `{reason, title, body}` render table, the duplicated confirm scene,
    and the comment cut. File is ~42% comment against ~10% for the other pollers.
 
