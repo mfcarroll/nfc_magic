@@ -6,8 +6,8 @@ PR #250, `nfc_magic_dev` on branch `iso15693-dev`. His Round 4 review is **answe
 posted** — fork `nfc-magic-iso15693` = `688614e8`, 12 commits, reply and 8 threaded replies live.
 Awaiting his Round 5.
 
-**Pass C items 1-4 are committed locally and NOT pushed** (2026-08-11). Four commits on top of
-`83e90cb`, fork untouched:
+**Pass C items 1-4 are committed locally and NOT pushed** (2026-08-11), plus one prose fix found while
+verifying item 4 on hardware. Five code commits on top of `83e90cb`, fork untouched:
 
 | item | commit | comment | code |
 |---|---|---|---|
@@ -15,8 +15,9 @@ Awaiting his Round 5.
 | 2. hoist ticks, name the off-by-one | `15eea79` | +2 | +2 |
 | 3. success route's two locals | `015d8cd` | +1 | −1 |
 | 4. fold the confirm scene | `04d392d` | +3 | −39 |
+| — the clone's missing-confirm claim | `d921055` | +3 (+2 CHANGELOG) | 0 |
 
-Batch: comment +4, code −51. Both firmwares rebuilt clean from scratch (85 objects, Momentum 87.15 and
+Batch: comment +9, code −51. Both firmwares rebuilt clean from scratch (85 objects, Momentum 87.15 and
 Unleashed 88.2), zero compiler warnings — the only two warnings are pre-existing fbt manifest
 complaints about Momentum's unrelated `cli_bridge` and `mtp` apps. Churn audit: **0 lines** written
 then rewritten inside the batch.
@@ -78,6 +79,30 @@ before; `title` is the identical `is_wipe ? ... : ...` expression, `confirm_labe
 rather than listing them as untested — the argument is stronger than the gap.
 
 Everything else in the batch is non-render code.
+
+## Raise in the reply: the clone has no consent screen on the happy path
+
+Found by using the app, not by reading it — the operator expected a warning before an ISO15693 clone and
+got none. It is **not** a regression: `20649a5` added the skip deliberately, and `CHANGELOG.md:61` has
+declared it for two rounds. Before that commit ISO15693 fell through to the shared confirm, which is why
+it feels like it used to be there. It did.
+
+`d921055` corrects the prose. What is left is a design position worth stating rather than waiting for him
+to find:
+
+> On the happy path — a genuine gen2 magic card — there is no consent screen anywhere in the ISO15693
+> clone. The gen1 opt-in fires only when gen2 *fails* to take the UID, so the one case where the card's
+> contents are certainly replaced is the case with no gate.
+
+Put both sides in. **For:** nothing is written until the UID reads back as the target, so a non-magic tag
+is untouched; the shared confirm's text is a *bricking* warning ("may not be rewritten") that does not
+apply to gen2 ISO15693; and Gen2/Classic reach the write unprompted too when their checks find nothing.
+**Against:** an ISO15693 wipe prompts and a clone does not, though both destroy what is on the card.
+
+The answer we settled on is that the asymmetry is right — a wipe's only product is destruction, a clone
+leaves the card holding a chosen image — and the behaviour stays. **The gen1 opt-in is not up for
+discussion; it carries the real consent and stays exactly as it is.** Offer the asymmetry up anyway; four
+rounds say he finds this class of thing, and it lands better volunteered.
 
 ## Still held
 
