@@ -30,7 +30,7 @@ Gen1A and Gen4 are the useful contrast: the same action produces a proper failur
 is not inherent to losing the card mid-write.
 
 On Gen2/Classic there is no escape either, because Back leads to an inescapable loop — a separate
-defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene's `on_exit` calls
+defect, #253. Note Back does not abort a write in any case: the scene's `on_exit` calls
 `<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report.
 
 ### Reproduction
@@ -42,8 +42,7 @@ defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 

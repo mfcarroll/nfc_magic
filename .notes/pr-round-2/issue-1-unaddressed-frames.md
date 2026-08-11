@@ -53,8 +53,7 @@ and would destroy data on the second, so it has not been run:
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Anything else?
 
@@ -77,4 +76,4 @@ too, as any caller of those helpers has the same exposure.
 **Where.** Reached from `base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c`
 (`iso15693_poller_wipe_blocks`, and the UID verify in `Iso15693WriteStateVerifyWipe`).
 
-Raised by @mishamyte during review of #250 and split out at his request.
+Raised by @mishamyte during review of #250 and split out at his request for future work.

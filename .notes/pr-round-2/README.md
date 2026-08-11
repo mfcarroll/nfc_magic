@@ -46,6 +46,12 @@ exist.
 3. **File the three issues by hand**, in manifest order: unaddressed frames, poller stall, write-check
    Back loop. Note the three numbers.
 
+   **The two later issues cross-reference each other, so they go out with `#ISSUE-*` tokens still in
+   them** — neither number exists at paste time. Fix both by hand straight after filing (edit the issue,
+   replace the token with the real number). `post-pr-replies.sh` guards the PR comment against this, but
+   nothing can guard a hand-filed issue. Filed 2026-08-11 as #251 / #252 / #253, and both tokens needed
+   exactly this correction.
+
    The pack uses a **structured bug-report form**, not free text. Each draft is laid out field by field
    (`### App`, `### App version`, `### Describe the bug`, `### Reproduction`, `### Firmware version`,
    `### Logs`, `### Anything else?`) — the H1 at the top is the **Title** field. Copy each section into

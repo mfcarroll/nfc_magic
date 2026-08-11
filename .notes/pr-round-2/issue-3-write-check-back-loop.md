@@ -53,8 +53,7 @@ Reachable without removing the card at all: any Back during a Gen2/Classic write
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 
@@ -75,7 +74,7 @@ re-applied:
 **Why it is not usually noticed.** The loop needs the write screen to still be on top when Back is
 pressed. If the write completes first, the result screen replaces it and the check scene is never
 re-entered from behind. It shows up when a write is slow or has stopped reporting — which is exactly
-#ISSUE-STALL, so the two compound: the write does not resolve, and Back does not get you out.
+#252, so the two compound: the write does not resolve, and Back does not get you out.
 
 **Possible directions.** The check scene should not remain on the stack when it has nothing to display:
 
