@@ -13,6 +13,7 @@ response and **not yet posted**. Dev-only — `tools/sync-to-fork.sh` never sync
 | [issue-1-unaddressed-frames.md](issue-1-unaddressed-frames.md) | New issue — unaddressed write/inventory frames hit a bystander tag |
 | [issue-2-poller-timeouts.md](issue-2-poller-timeouts.md) | New issue — Gen2/USCUID don't report a card removed mid-write |
 | [issue-3-write-check-back-loop.md](issue-3-write-check-back-loop.md) | New issue — Back during a Gen2 write is inescapable |
+| [check-shas.py](check-shas.py) | Verifies every cited fork SHA still exists. Run before posting. |
 | [post-pr-replies.sh](post-pr-replies.sh) | Posts the threads then the body. Prompts for `post` first. Issues are filed by hand. |
 | [received/](received/) | His review verbatim — body + all 16 inline comments |
 
@@ -35,6 +36,8 @@ The other nine belong to later passes and get no "deferred" reply — the body l
 
 ## Order of operations
 
+0. `./check-shas.py` — the stack has been restructured several times; this fails if any cited fork SHA
+   no longer exists. Run it after any rebase and before posting.
 1. **Push the fork branch first.** The replies cite fork SHAs; they are dead links until it is up.
 2. `./post-pr-replies.sh` — threads, then the top-level comment.
 3. File the three issues by hand, so labels can be set.

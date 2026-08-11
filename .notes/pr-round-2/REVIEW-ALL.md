@@ -133,7 +133,7 @@ it has already shipped a bug once, then the result-scene table and the duplicate
 **Status:** FIXED  
 **Thread id:** `3719022267`
 
-Fixed in `e9116666`. New `Iso15693WriteStateVerifyWipe`, entered after `NfcCommandReset`, exactly as you suggested and the way `VerifyGen2` already does it.
+Fixed in `ad4272c4`. New `Iso15693WriteStateVerifyWipe`, entered after `NfcCommandReset`, exactly as you suggested and the way `VerifyGen2` already does it.
 
 You were right that this shipped at the wrong severity. Our own pre-push review raised the missing power-cycle and rated it **minor** *because* it was gen1-only and therefore untestable. That's backwards — the commit message, the CHANGELOG and the consent screen all rest on this check, so an unverifiable one is worth less than none. Untestability should have raised the severity, not lowered it.
 
@@ -153,7 +153,7 @@ Benched on the gen2 card: no `wipe: card did not return after the field reset` (
 **Status:** FIXED  
 **Thread id:** `3719022269`
 
-Fixed in `7eca3613`. The `break` is now gated on the whole advertised range having been attempted. The tail-drop rule is untouched.
+Fixed in `cfa1b37f`. The `break` is now gated on the whole advertised range having been attempted. The tail-drop rule is untouched.
 
 You were right that I conflated two separable decisions — and I put that wrong adjudication into a commit message and into my reply to you. Two reviewers disagreed, I picked a winner, and the actual answer was that the question needed splitting.
 
@@ -180,7 +180,7 @@ wipe: 72 blocks attempted, 64 cleared, 907ms (advertised 28)
 **Status:** FIXED  
 **Thread id:** `3719022271`
 
-Fixed in `2bedb421`. New reason on the result scene:
+Fixed in `241d3957`. New reason on the result scene:
 
 ```
 Wipe complete
@@ -208,7 +208,7 @@ This does add an eleventh render branch to that scene — see my reply on your r
 **Status:** FIXED  
 **Thread id:** `3719022293`
 
-Fixed in `efcf1585`. A `furi_get_tick()` deadline, checked before each block so the loop variable stays the exclusive end of the attempted range for the tail arithmetic.
+Fixed in `78e1d168`. A `furi_get_tick()` deadline, checked before each block so the loop variable stays the exclusive end of the attempted range for the tail arithmetic.
 
 **10s**, set as a backstop rather than a tuning knob, because the two errors it sits between are wildly asymmetric: cutting a legitimate sweep early leaves real data unwiped above the cut — this sweep's own privacy failure, reached from the other direction — while an over-long sweep only makes the user wait, and the block ceiling already caps that near 18s. So it clears any sweep a real card can ask for by a wide margin rather than being tuned down to shorten the pathological case.
 
@@ -222,7 +222,7 @@ Most of that 907ms is the expensive tail — 8 refused blocks at 3 write attempt
 
 A cut sweep says so rather than passing its range off as the card's extent: `Wipe stopped / Cleared N blocks. / Card claims M. / Time limit reached.`, plus a `Stopped: time limit` qualifier on the partial screen that outranks the other three, since it changes what the counts mean.
 
-Note this pairs with swallowing Back during a write (`766cfd19`, scoped to ISO15693 — reasoning in the top-level reply): that stops the un-abortable window freezing the GUI, this stops it being 18 seconds long.
+Note this pairs with swallowing Back during a write (`65d71105`, scoped to ISO15693 — reasoning in the top-level reply): that stops the un-abortable window freezing the GUI, this stops it being 18 seconds long.
 
 ---
 
@@ -232,7 +232,7 @@ Note this pairs with swallowing Back during a write (`766cfd19`, scoped to ISO15
 **Status:** FIXED  
 **Thread id:** `3719022325`
 
-Fixed in `de9e797e`. It now reads "a wipe failure saying no block accepted the zero-write" — your suggested wording.
+Fixed in `a3e13a3a`. It now reads "a wipe failure saying no block accepted the zero-write" — your suggested wording.
 
 Fixed in this pass rather than held for the documentation batch, since it sits in the same list the new entries were joining and leaving a known-false line while editing its neighbours seemed worse than the scope creep.
 
@@ -262,7 +262,7 @@ The fix is unchanged from what you described — reuse the `has_data` scan from 
 
 Not touched in this pass, per your request to keep the simplification separate from the hazard fixes.
 
-One thing you should know before you count them again: **it's 11 now, not 10.** The wipe success screen (`2bedb421`, your third blocking item) added a branch.
+One thing you should know before you count them again: **it's 11 now, not 10.** The wipe success screen (`241d3957`, your third blocking item) added a branch.
 
 That was deliberate rather than careless. It's the exact structural sibling of `over_capacity` — a qualified success with counts, title plus a body built from a `FuriString` — so the `{reason, title, body}` table you proposed absorbs it with no new shape. But it does mean the collapse got marginally bigger because of this round, and I'd rather say so than have you find an extra branch where you left ten.
 
