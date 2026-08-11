@@ -42,7 +42,8 @@ defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene
 
 ### Firmware version
 
-_(fill in the Unleashed/Momentum version you tested on)_
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
+of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 

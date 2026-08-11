@@ -53,7 +53,8 @@ Reachable without removing the card at all: any Back during a Gen2/Classic write
 
 ### Firmware version
 
-_(fill in the Unleashed/Momentum version you tested on)_
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
+of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 
