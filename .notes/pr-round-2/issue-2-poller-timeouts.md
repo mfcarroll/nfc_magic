@@ -1,4 +1,4 @@
-# NFC Magic: a card removed mid-write is not reported on Gen2/Classic or USCUID-UL — every remaining block is retried instead
+# NFC Magic: a card removed mid-write is never reported on Gen2/Classic or USCUID-UL — the poller stalls waiting to re-activate
 
 **Pre-existing.** Found while scoping a change in #250; filing separately because it constrains anything
 that touches the shared write scene.
@@ -8,32 +8,47 @@ that touches the shared write scene.
 Same procedure each time: start a clone, lift the card the moment the popup switches to "Writing", then
 wait.
 
-| protocol | card | on a failed block | result |
+| protocol | card | needs a re-activation mid-write? | result |
 |---|---|---|---|
-| **Gen2 / Classic** | CUID magic Classic 1K | mark failed, `current_block++`, carry on | **no report.** Popup sits on "Writing / Don't move..." |
-| **USCUID-UL** | magic NTAG216 | mark failed, `write_index++`, carry on | **no report** after >1 min, frozen at `Writing 147/231` |
-| Gen4 | GTU "Ultimate Magic Card" | `state = Fail`, stop | reports immediately — "Something went wrong while writing" |
-| Gen1A | magic Classic 1K | `state = Fail`, stop | reports promptly — same screen |
-| ISO15693 | gen2 magic | n/a — checks the card is still present | reports |
+| **Gen2 / Classic** | CUID magic Classic 1K | **yes** — halts after every block | **no report.** 88s observed, then still nothing |
+| **USCUID-UL** | magic NTAG216 | **yes** — returns `NfcCommandReset` on a failed page | **no report** after >1 min, frozen at `Writing 147/231` |
+| Gen4 | GTU "Ultimate Magic Card" | no — never halts, stays activated | reports immediately — "Something went wrong while writing" |
+| Gen1A | magic Classic 1K | no — abandons the write on the first failure | reports promptly — same screen |
+| ISO15693 | gen2 magic | n/a — counts activation errors against a budget | reports |
 
-The correlation is exact across all five: a poller that **abandons the write on the first failed block**
-reports straight away; a poller that **carries on through every remaining block** never gets there in any
-tolerable time. Gen4 is the decisive case — it shares Gen2's callback shape and its `Ready`-only event
-handling, and it is fine. So the callback structure is not the cause; what the write handler does with a
-failure is.
+## Why, confirmed by log
 
-Gen2 has up to 64 blocks left to retry, each paying a failed authentication and a halt. USCUID-UL had 84
-pages left, and on the direct engine each failure additionally returns `NfcCommandReset` and triggers a
-doomed re-activation before the next attempt.
+Captured with `log debug` on the Gen2 run, at the moment the card was lifted:
 
-Which strongly suggests these writes are not *stalled* but *grinding* — the user-visible effect is the
-same, but it means the fix is to notice the card has gone, not to add a blanket timeout.
+```
+9282385 [D][GEN2] Block 34 finished, halting
+9282389 [E][ISO14443_3A] Sdd response wrong length
+9282492 [D][Nfc] FWT Timeout
+9282595 [D][Nfc] FWT Timeout          <- every ~103ms, for the next 88 seconds
+...                                      zero GEN2 lines in that whole window
+```
+
+The state machine is **stuck, not slow**. Nothing after `Block 34 finished` — no further block attempts,
+no failures, nothing. The 103ms cadence is the `furi_delay_ms(100)` in `iso14443_3a_poller_run`'s error
+path.
+
+The cause is that `gen2_poller_write_block_handler` **halts the card after every block**
+(`gen2_poller_halt`, at its end), so reaching the next block requires a **re-activation**. Once the card
+is gone that activation fails, the iso3 poller emits `Iso14443_3aPollerEventTypeError` — and
+`gen2_poller_callback` acts only on `Ready`, so it discards it and the state machine is never called
+again.
+
+That single rule explains every protocol tested: **a write stalls exactly when it needs a re-activation
+after the card has left.** Gen4 and Gen1A never need one mid-write — Gen4 does not halt between blocks
+and so stays activated, receives its `Ready`, fails the write and sets its terminal state — which is why
+they report promptly despite `gen4_poller_callback` discarding the same event. USCUID-direct needs one
+for a different reason: its write handler returns `NfcCommandReset` on a failed page, deliberately, to
+revive a tag that went mute after NAKing a locked page.
 
 ## Consequence
 
-The write popup does not resolve in any usable time. No "Card removed", no partial result, and no report
-of the blocks that *were* written before the card left — which for a half-completed clone is exactly what
-the user needs.
+The write popup never resolves. No "Card removed", no partial result, and no report of the blocks that
+*were* written before the card left — which for a half-completed clone is exactly what the user needs.
 
 On Gen2/Classic the escape is worse than merely absent: pressing Back lands in an inescapable loop
 between the write-check and write scenes. That is a separate defect, filed alongside this one.
@@ -42,22 +57,12 @@ Note also that Back never aborts a write in any case. The scene's `on_exit` call
 `<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report rather
 than cancelling anything.
 
-## What is not yet confirmed
-
-That these are grinding rather than genuinely stuck. The evidence above is strong but indirect, and
-neither poller's display can distinguish the two: Gen2 shows no counter, and USCUID emits
-`UscuidUlPollerEventTypeWriteProgress` only after a *successful* page (immediately after
-`instance->written++`), so a frozen `147/231` is equally consistent with 84 consecutive failures.
-
-`gen2_poller_write_block_handler` logs `Failed to write block %d` at debug level on every failed block,
-so `log debug` during the stall settles it: lines scrolling means grinding, silence means stuck. Worth a
-minute before choosing a fix.
-
 ## Repro
 
 1. Start a Gen2 / Classic or USCUID-UL clone.
 2. Lift the card as soon as the popup switches to "Writing".
-3. Wait. The popup does not resolve.
+3. Wait. The popup does not resolve — observed for 88s on Gen2 and over a minute on USCUID-UL, with
+   `log debug` showing no state-machine activity at all in that window.
 
 ## Why this is an issue rather than a fix in #250
 
@@ -68,11 +73,15 @@ that PR doesn't touch.
 
 ## Direction
 
-There is a working precedent in this codebase. The ISO15693 poller distinguishes "this block failed"
-from "the card left" by asking, once, on failure — `iso15693_poller_card_still_present()`, a retried
-inventory — and reports `CardLost` instead of blaming the card for blocks it never got the chance to
-write. The same check in these two write loops would end the pass immediately and let each report the
-terminal event that fits it: `Partial` with the blocks or pages that did land, rather than `Fail`.
+Handle `Iso14443_3aPollerEventTypeError` in the two affected callbacks rather than discarding it — count
+it against a budget, as the ISO15693 poller does with `ISO15693_POLLER_MAX_ACTIVATION_ERRORS`, and on
+exhaustion emit the terminal event that fits that poller: `Partial` with the blocks or pages that did
+land, rather than `Fail`.
+
+There is a precedent for the reporting half in this codebase too. The ISO15693 poller distinguishes
+"this block failed" from "the card left" by asking once, on failure — `iso15693_poller_card_still_present()`,
+a retried inventory — so it can report `CardLost` instead of blaming the card for blocks it never got the
+chance to write.
 
 Note USCUID has a trap for any fix: its write handler returns `NfcCommandReset` on a failed page
 **deliberately**, because a genuine tag can go mute after NAKing a locked page, and re-activation revives

@@ -38,6 +38,22 @@ That is easy to mistake for a resumed write. Lift the card mid-write, press Back
 the clone completes — but it has rewritten the entire card from scratch, and any partial-write counts
 shown afterwards describe the fresh attempt rather than the interrupted one.
 
+## Confirmed by log
+
+Four Back presses during one stuck Gen2 write, each tearing down and re-creating the poller:
+
+```
+9370728 [D][GEN2] Stopping Gen2 poller
+9409962 [D][GEN2] Stopping Gen2 poller
+9410660 [D][GEN2] Stopping Gen2 poller
+9410814 [D][GEN2] Stopping Gen2 poller
+9410953 [D][GEN2] Stopping Gen2 poller
+9413351 [D][GEN2] Block 0 is the same, skipping   <- card re-applied: restarted from block 0
+```
+
+The last line is the silent restart: re-applying the card began a fresh write at block 0 rather than
+resuming where the interrupted one stopped.
+
 ## Repro
 
 1. Gen2 / Classic clone, onto a target with no write problems (so the check scene passes straight

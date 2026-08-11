@@ -23,18 +23,19 @@ Swallowing Back is only safe where the write is **guaranteed to report something
 write path terminates with a report. The others aren't. Tested rather than argued — same procedure each
 time, start a clone and lift the card the moment the popup says "Writing":
 
-| protocol | card | on a failed block | result |
+| protocol | card | needs a re-activation mid-write? | result |
 |---|---|---|---|
-| Gen2 / Classic | CUID magic Classic 1K | carries on to the next block | **no report**, popup sits on "Writing" |
-| USCUID-UL | magic NTAG216 | carries on to the next page | **no report** after >1 min, frozen at `Writing 147/231` |
-| Gen4 | GTU "Ultimate Magic Card" | abandons the write | reports immediately |
-| Gen1A | magic Classic 1K | abandons the write | reports promptly |
+| Gen2 / Classic | CUID magic Classic 1K | yes — halts after every block | **no report** (88s observed) |
+| USCUID-UL | magic NTAG216 | yes — resets on a failed page | **no report** after >1 min |
+| Gen4 | GTU "Ultimate Magic Card" | no — stays activated | reports immediately |
+| Gen1A | magic Classic 1K | no — bails on first failure | reports promptly |
 
-The correlation is exact: a poller that abandons the write on the first failed block reports straight
-away; one that carries on through every remaining block never gets there in any tolerable time. Gen4 is
-the decisive case, since it shares Gen2's callback shape and its `Ready`-only event handling and is
-nonetheless fine — so those writes are almost certainly grinding rather than stalled, with Gen2 having up
-to 64 blocks left to retry and USCUID 84 pages.
+A write stalls exactly when it needs a **re-activation** after the card has left. `gen2` halts after
+every block, so it needs one to reach the next; once the card is gone that activation fails, the iso3
+poller emits `Iso14443_3aPollerEventTypeError`, and `gen2_poller_callback` acts only on `Ready` — so the
+state machine is never called again. Confirmed with `log debug`: 88 seconds of `FWT Timeout` at the
+100ms retry cadence with not one `GEN2` line in the window. Gen4 discards the same event and is fine,
+because it never needs the re-activation.
 
 So on Gen2/Classic and USCUID-UL, swallowing Back would leave the user on a popup that never resolves
 and that they can no longer leave — recoverable only by rebooting. I'd rather under-deliver on your
@@ -42,9 +43,9 @@ approval than ship that.
 
 Two things fell out of testing it, both pre-existing and both filed rather than fixed here:
 
-- Gen2/Classic and USCUID-UL not reporting a card removed mid-write. There's a precedent for the fix in
-  your own tree: ISO15693 asks `iso15693_poller_card_still_present()` once on failure and reports
-  CardLost rather than blaming the card for blocks it never reached.
+- Gen2/Classic and USCUID-UL not reporting a card removed mid-write, because they discard the
+  activation error that says it has. There's a precedent for the fix in your own tree: ISO15693 counts
+  those against `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports CardLost.
 - On Gen2/Classic, Back during a write is **inescapable**:
   `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
   the check scene which immediately pushes forward again. It also means each trip round the loop frees
@@ -87,10 +88,9 @@ All filed rather than fixed in passing:
    the screen printing the UID it answers to now is the only route back to it. If a bystander wins that
    inventory, the screen prints the bystander's UID instead — so the owner records an identity belonging
    to a different card, and the real one is never shown.
-2. **Gen2/Classic and USCUID-UL not reporting a card removed mid-write**, written up from the runs
-   above, with Gen4 and Gen1A as the contrast cases that isolate the cause. It still marks one thing
-   unconfirmed — grinding versus genuinely stuck — and says how to settle it
-   (`gen2_poller_write_block_handler` logs every failed block at debug level).
+2. **Gen2/Classic and USCUID-UL not reporting a card removed mid-write**, with Gen4 and Gen1A as the
+   contrast cases that isolate the cause, and the debug log that shows the state machine is stopped
+   rather than grinding.
 3. **The Gen2/Classic write-check Back loop**, with the silent restart-from-block-0 that follows from
    it.
 
