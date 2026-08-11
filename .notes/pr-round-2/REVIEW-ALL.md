@@ -21,14 +21,14 @@ Push the fork branch **first** — the replies cite fork SHAs.
 
 # 1. Top-level comment on PR #250
 
-Three blocking items, one commit each, plus the two you'd bundle with them. Benched on the gen2 card
-only — no full matrix, as you asked.
+Six commits, one per decision: the three blocking items, the two you'd bundle with them, and the
+CHANGELOG. Benched on the gen2 card only — no full matrix, as you asked.
 
-I've replied in the threads rather than here for the five items this pass closes, so you can resolve
-them as you verify: the read-back power-cycle, the sweep floor, the wipe success screen, the wall-clock
-bound, and the stale CHANGELOG line. Two more threads have replies despite *not* being fixed this pass,
-because this round changed what they're worth — the re-probe's presence-vs-content classification, and
-the render-branch count.
+I've replied in the threads rather than here for the five items this pass closes, so you can resolve them
+as you verify: the read-back power-cycle, the sweep no longer stopping below the advertised count, the
+wipe success screen, the wall-clock bound, and the stale CHANGELOG line. Two more threads have replies
+despite *not* being fixed this pass, because this round changed what they're worth — the re-probe's
+presence-vs-content classification, and the render-branch count.
 
 Your two corrections noted and taken. `BLK_UNLOCK` / `BLK_COMMIT` / "arms the UID change" get marked as
 our inference in the documentation batch rather than here, to keep this pass to the hazards.
@@ -65,7 +65,7 @@ and that they can no longer leave — recoverable only by rebooting. I'd rather 
 approval than ship that.
 
 Testing it turned up two pre-existing defects on those paths, both filed rather than fixed here:
-#ISSUE-STALL and #ISSUE-BACKLOOP.
+#252 and #253.
 
 ## Bench
 
@@ -94,7 +94,7 @@ Write-UID guard already state the position you endorsed.
 
 All filed rather than fixed in passing:
 
-1. #ISSUE-FRAMES — **the unaddressed-frame hazard** you asked for. Verified rather than restated: `write_block` builds
+1. #251 — **the unaddressed-frame hazard** you asked for. Verified rather than restated: `write_block` builds
    its flags as `SUBCARRIER_1 | DATA_RATE_HI` with no `ADDRESSED` flag and no UID, `inventory` is
    1-slot, and nothing ever sends STAY QUIET. So a bystander tag gets zeroed — *and* it can win the
    post-wipe inventory. That second half matters more than it first looks. The "UID changed" screen
@@ -103,12 +103,12 @@ All filed rather than fixed in passing:
    the screen printing the UID it answers to now is the only route back to it. If a bystander wins that
    inventory, the screen prints the bystander's UID instead — so the owner records an identity belonging
    to a different card, and the real one is never shown.
-2. #ISSUE-STALL — **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
+2. #252 — **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
    activation error that says it has gone. Gen4 and Gen1A are the contrast cases that isolate the
    cause, and the debug log shows the state machine stopped rather than grinding. There is a precedent
-   for the fix in your own tree: ISO15693 counts those errors against
+   for the fix in the ISO15693 poller this PR adds: it counts those same errors against
    `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports `CardLost`.
-3. #ISSUE-BACKLOOP — **on Gen2/Classic, Back during a write is inescapable.**
+3. #253 — **on Gen2/Classic, Back during a write is inescapable.**
    `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
    the check scene which immediately pushes forward again. Each trip round the loop also frees and
    reallocates the poller, so re-applying the card silently restarts the write from block 0 rather than
@@ -322,8 +322,7 @@ and would destroy data on the second, so it has not been run:
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Anything else?
 
@@ -346,7 +345,7 @@ too, as any caller of those helpers has the same exposure.
 **Where.** Reached from `base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c`
 (`iso15693_poller_wipe_blocks`, and the UID verify in `Iso15693WriteStateVerifyWipe`).
 
-Raised by @mishamyte during review of #250 and split out at his request.
+Raised by @mishamyte during review of #250 and split out at his request for future work.
 
 ---
 
@@ -384,7 +383,7 @@ Gen1A and Gen4 are the useful contrast: the same action produces a proper failur
 is not inherent to losing the card mid-write.
 
 On Gen2/Classic there is no escape either, because Back leads to an inescapable loop — a separate
-defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene's `on_exit` calls
+defect, #253. Note Back does not abort a write in any case: the scene's `on_exit` calls
 `<proto>_poller_stop` → `furi_thread_join`, so it waits for the worker and discards the report.
 
 ### Reproduction
@@ -396,8 +395,7 @@ defect, #ISSUE-BACKLOOP. Note Back does not abort a write in any case: the scene
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 
@@ -500,8 +498,7 @@ Reachable without removing the card at all: any Back during a Gen2/Classic write
 
 ### Firmware version
 
-Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none
-of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
+Momentum `mntm-012-308-g8ed809fba`, not Unleashed. Local build carrying unrelated LF RFID changes; none of them touch `lib/nfc`, `furi_hal_nfc` or `applications/main/nfc`, so the NFC stack is stock Momentum.
 
 ### Logs
 
@@ -522,7 +519,7 @@ re-applied:
 **Why it is not usually noticed.** The loop needs the write screen to still be on top when Back is
 pressed. If the write completes first, the result screen replaces it and the check scene is never
 re-entered from behind. It shows up when a write is slow or has stopped reporting — which is exactly
-#ISSUE-STALL, so the two compound: the write does not resolve, and Back does not get you out.
+#252, so the two compound: the write does not resolve, and Back does not get you out.
 
 **Possible directions.** The check scene should not remain on the stack when it has nothing to display:
 

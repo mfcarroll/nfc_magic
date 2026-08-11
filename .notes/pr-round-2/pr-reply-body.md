@@ -1,11 +1,11 @@
-Three blocking items, one commit each, plus the two you'd bundle with them. Benched on the gen2 card
-only — no full matrix, as you asked.
+Six commits, one per decision: the three blocking items, the two you'd bundle with them, and the
+CHANGELOG. Benched on the gen2 card only — no full matrix, as you asked.
 
-I've replied in the threads rather than here for the five items this pass closes, so you can resolve
-them as you verify: the read-back power-cycle, the sweep floor, the wipe success screen, the wall-clock
-bound, and the stale CHANGELOG line. Two more threads have replies despite *not* being fixed this pass,
-because this round changed what they're worth — the re-probe's presence-vs-content classification, and
-the render-branch count.
+I've replied in the threads rather than here for the five items this pass closes, so you can resolve them
+as you verify: the read-back power-cycle, the sweep no longer stopping below the advertised count, the
+wipe success screen, the wall-clock bound, and the stale CHANGELOG line. Two more threads have replies
+despite *not* being fixed this pass, because this round changed what they're worth — the re-probe's
+presence-vs-content classification, and the render-branch count.
 
 Your two corrections noted and taken. `BLK_UNLOCK` / `BLK_COMMIT` / "arms the UID change" get marked as
 our inference in the documentation batch rather than here, to keep this pass to the hazards.
@@ -83,7 +83,7 @@ All filed rather than fixed in passing:
 2. #252 — **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
    activation error that says it has gone. Gen4 and Gen1A are the contrast cases that isolate the
    cause, and the debug log shows the state machine stopped rather than grinding. There is a precedent
-   for the fix in your own tree: ISO15693 counts those errors against
+   for the fix in the ISO15693 poller this PR adds: it counts those same errors against
    `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports `CardLost`.
 3. #253 — **on Gen2/Classic, Back during a write is inescapable.**
    `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
