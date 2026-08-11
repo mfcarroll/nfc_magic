@@ -54,12 +54,19 @@ Also fixed in passing: `226dd74` (a `notes:` commit from an earlier session) had
 the hunk to the fork without the locals it uses and broken the fork build. Split into `2876ee2`
 (notes only, original message and author date preserved) and `015d8cd` (the code).
 
-## Not verified on hardware
+## Hardware coverage for this batch
 
-Item 4 moved the render path for one screen: **Write UID → enter a UID → the confirm screen**. It needs
-no card and is 30 seconds on the device. Everything else in the batch is non-render code, and the other
-three confirm variants (ISO15693 wipe, USCUID-UL wipe, plain clone) kept their strings and their 54px
-box height byte-for-byte.
+**Verified 2026-08-11, Write UID → enter UID → confirm screen** (the one render path item 4 moved):
+title `Write UID?`, the UID as two space-separated 4-byte groups, both warning lines, centre button
+`Write`. That screen is only reachable from the new `iso15693_write_uid` branch, which sets the title,
+body, button label and 38px height together — so a correct title plus a correct label covers all four.
+
+Still unverified, both needing no card: the **ISO15693 wipe** confirm (`Wipe card?` / "Zeroes every data
+block, / including the gen1 magic / blocks 56/57/62/63." / `Continue`) and the **plain clone** confirm
+(`Risky operation`, 54px box). They kept their strings byte-for-byte, but the fold reordered the
+if-chain they sit in and the `title` local is now shared, so they are cheap and worth a look.
+
+Everything else in the batch is non-render code.
 
 ## Still held
 
