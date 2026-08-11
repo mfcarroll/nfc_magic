@@ -4,9 +4,10 @@ Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his revi
 
 ## Where things are
 
-- Dev `iso15693-dev`: **16 code commits** on `a3e13a3a`'s content, plus `.notes` commits. Clean.
-- Fork `nfc-magic-iso15693`: **NOT re-synced yet** — still at `a3e13a3a` (round 2). Do the replay before
-  drafting reply SHAs.
+- Dev `iso15693-dev`: **15 code commits** on `a3e13a3a`'s content, plus `.notes` commits. Clean.
+- Fork `nfc-magic-iso15693`: re-synced, **15 commits fast-forward from `a3e13a3a`**, unpushed. Always
+  reset to `origin/nfc-magic-iso15693` before replaying — resetting to `d659a919` silently drops round
+  2's pushed commits and turns the next push into a force-push over his review threads.
 - Builds clean at Momentum 87.15 and Unleashed 88.2, zero warnings, clang-format applied.
 - Nothing posted for this round.
 
@@ -23,7 +24,7 @@ All addressed except three he explicitly left to the simplification pass.
 | `:532` clone data-pass clock | `e6688cf` |
 | `:62`, `:137`, `write_fail.c:70` the three figures | `c036f29` |
 | `:260`, `:695`, `poller.h:24`, `:209`, `app_i.h:129` | `ddcc3f6` + `78ea645` |
-| `:853` tail-drop premise, `:866` "every exit" | `faa81f2` |
+| `:853` tail-drop premise, `:866` "every exit" | `21eda2a` |
 | `CHANGELOG:39` | `4714d3b` |
 | `scene_write.c:519` Back comment's wrong claims | `3818a42` |
 | `:741` three copies of the rule (asked for now) | `cce73be` |
@@ -34,8 +35,10 @@ Plus, not from his inline list: truncation became `Partial` rather than a qualif
 (`78ea645`), and the round-1 leftovers — capacity claim on evidence (`a2fb582`), block-size clamp and
 re-probe by content (`88dd51a`), four remaining drift claims (`73e3c3a`).
 
-Two bugs of ours caught by hardware during the round: the off-by-one in the attempted count
-(`14ff079`), and the card-lost exits skipping the timing line (`faa81f2`).
+One bug of ours caught by hardware during the round: routing the card-lost exits through the tail left
+the attempted count one short. Folded into the commit that caused it (`21eda2a`) rather than shipped as
+an introduce-then-fix pair, which he flagged as a smell last round — so there is nothing to explain in
+the reply.
 
 ## Verified on hardware
 

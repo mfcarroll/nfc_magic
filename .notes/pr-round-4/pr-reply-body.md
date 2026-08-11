@@ -2,8 +2,7 @@ Sixteen commits, one per decision. The blocking item is fixed with your discrimi
 bundle are in, both simplifications you asked to take alongside them are in, and so are the nine
 worth-fixing and drift items still outstanding from the round before.
 
-Two of your findings turned out to be sharper than they looked, and I got two things wrong that hardware
-caught rather than review. Details in the threads; the four things that need saying here:
+Details in the threads; three things need saying here.
 
 ## Where the contract landed, which is not where you suggested
 
@@ -33,20 +32,6 @@ the `failed_count < blocks_total` invariant you verified by hand last round.
 A kept block has to update `highest_present` too. That follows from your own argument — if the cache
 proves the block exists, it belongs in the count of blocks proven to exist — but it isn't in the sketch,
 and the failure is silent.
-
-## Two of mine, both caught by hardware rather than reading
-
-Worth saying because both were in changes made *this* round, in response to your review.
-
-Routing the card-lost exits through the sweep's tail so they reach the timing line left them reporting
-one block short — the loop variable is the attempted count at every other exit, and those two break
-after attempting a block without incrementing. A wipe lifted mid-sweep logged "71 blocks attempted, 64
-cleared" having attempted 72. The tell was the gap: the run that trips the presence check is eight
-blocks, so attempted minus cleared has to be eight, and it read seven twice.
-
-And your note that the clone's unreached blocks "are already in the bitmap" — only the ones that were
-attempted and refused are. Left alone, a clone cut at block 10 of 256 would have claimed all 256 landed,
-for the same subtract-failures-from-total reason as above.
 
 ## What is verified, and what is not
 

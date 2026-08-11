@@ -81,6 +81,17 @@ those links live. The PR comment is the one that matters, and it is posted after
   poller-stall) are not mentioned: confessing to those performs diligence rather than exercising it.
 - **No internal shorthand.** `B1` / `W4` / `S2` are ours, from the working brief; they appear nowhere in
   his review. Every item names itself.
+- **Don't leak process into artifacts that describe the present.** Three instances caught by review, all
+  the same fault: internal labels in the reply, "no longer"/"Previously" in a CHANGELOG for a feature
+  that has never shipped, and "stating it twice let them drift" in a code comment. The rule the code
+  enforces belongs in the comment; the incident that produced the rule belongs in the commit message,
+  which is what `git blame` is for. The exception is when the incident IS the evidence -- the
+  WIPE_MAX_BLOCKS hardware measurement, the PROGRESS_STEPS deadlock argument -- because those justify a
+  specific number that cannot be re-derived.
+- **Net-zero comment lines is not the goal.** A refactor that collapses two statements into one should
+  shrink the commentary. Report added/removed comment vs code on each commit; the file sits at 42%
+  against ~10% for the other pollers, so any commit adding more comment than code is going the wrong
+  way.
 - **Claims about runtime behaviour are hardware, not reasoning.** The poller-stall section went through
   three wrong code-reading models before it was tested on five card types. Reading generates the
   prediction; the test is what gets written up.
