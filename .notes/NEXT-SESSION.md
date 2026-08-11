@@ -137,6 +137,17 @@ that no longer exists.
   earlier one in the batch added? Diff each with `--unified=0`, collect added/removed line text per
   commit, compare. Found 39 lines of churn last round. He reviews commit by commit and has flagged
   intra-batch churn twice.
+- **Ask before the first edit to shipped code that is not on the agreed list.** A bug you find while
+  doing something else is a FINDING TO REPORT, not a licence to change the diff the reviewer is reading.
+  This cost real trust on 2026-08-11: the host harness turned up a genuine "Card too small" defect and it
+  was fixed in `iso15693_poller.c` without asking, during a task whose whole premise was that it touched
+  no app code. The fix was correct and the decision was not ours to make. Report it, recommend it, wait.
+- **Classify every commit as shipped-vs-dev-only in the message where you report it, up front.** Anything
+  outside `tools/` and `.notes/` is shipped code and gets named explicitly, never left to a tail
+  paragraph. One line per commit is enough:
+  `for c in <shas>; do git show --stat --format= --name-only $c | grep -qv '^tools/' && echo "$c SHIPPED"; done`
+  The failure this prevents is not a wrong commit, it is a report the user cannot check at a glance --
+  which is what turns one unasked change into "did you also push?".
 - **Never reset the fork to `d659a919`.** Always reset to `origin/nfc-magic-iso15693` before replaying,
   then verify `git merge-base --is-ancestor origin/nfc-magic-iso15693 HEAD`. Resetting to the old base
   silently drops pushed commits and turns the next push into a force-push over his review threads.
