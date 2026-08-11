@@ -13,33 +13,35 @@ Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his revi
 
 ## Coverage against his 24 inline comments
 
-All addressed except three he explicitly left to the simplification pass.
+All addressed except two he agreed could wait. Commit SHAs are dev-side; the fork carries one commit
+per dev commit with an `NFC Magic ISO15693:` prefix.
 
-| his comment | commit |
+| his comment | commit subject |
 |---|---|
-| `:859` **blocking**, tail-drop vs floor | `940e62f` |
-| `write_fail.c:344` details gate (asked for now) | `727036c` |
-| `:978`, `write_fail.c:126`, `write_fail.c:196` truncation on every screen | `792d5f6` |
-| `:1125`, `:1194`, `write_fail.c:307` uid_verified + retry | `792d5f6` |
-| `:532` clone data-pass clock | `e6688cf` |
-| `:62`, `:137`, `write_fail.c:70` the three figures | `c036f29` |
-| `:260`, `:695`, `poller.h:24`, `app_i.h:129` | `792d5f6` |
-| `poller.h:209` start_wipe + orphan | `792d5f6` |
-| `:853` tail-drop premise, `:866` "every exit" | `21eda2a` |
-| `CHANGELOG:39` | `4714d3b` |
-| `scene_write.c:519` Back comment's wrong claims | `3818a42` |
-| `:741` three copies of the rule (asked for now) | `cce73be` |
+| `:859` **blocking**, tail-drop vs the advertised-count floor | don't drop claimed blocks the cache proves held data |
+| `write_fail.c:344` details gate (asked for this pass) | one predicate for the details route |
+| `:978`, `write_fail.c:126`, `:196` truncation on every screen | decide and report a wipe's outcome in one place |
+| `:1125`, `:1194`, `write_fail.c:307` uid_verified + retry | same |
+| `poller.h:24`, `app_i.h:129`, `:260`, `:695`, `poller.h:209` | same |
+| `:532` clone data-pass clock | bound the clone's data pass by the clock too |
+| `:62`, `:137`, `write_fail.c:70` the three figures | correct three figures that were estimated rather than read |
+| `:853` tail-drop premise, `:866` "every exit" | time the sweep on every exit, including a lifted card |
+| `CHANGELOG:39` | changelog says which mismatches are faults and which aren't |
+| `scene_write.c:519` Back comment's wrong claims | correct the Back comment's supporting claims |
+| `:741` three copies of the rule (asked for this pass) | one statement of the block-answered rule, not three |
 | **`:711` / `:799`** hoist ticks, name the off-by-one | **deferred, Pass C** |
 | **`scene_write.c:396`** two locals | **deferred, Pass C** |
 
-Plus, not from his inline list: truncation became `Partial` rather than a qualified Success
-(`78ea645`), and the round-1 leftovers — capacity claim on evidence (`a2fb582`), block-size clamp and
-re-probe by content (`88dd51a`), four remaining drift claims (`73e3c3a`).
+Round-1 leftovers also cleared this round: the capacity claim on evidence, the block-size clamp and
+re-probe by content, and four remaining drift claims.
 
-One bug of ours caught by hardware during the round: routing the card-lost exits through the tail left
-the attempted count one short. Folded into the commit that caused it (`21eda2a`) rather than shipped as
-an introduce-then-fix pair, which he flagged as a smell last round — so there is nothing to explain in
-the reply.
+**Commit hygiene was audited mechanically** -- for each pair, does a later commit remove a line an
+earlier one in the batch added? That found 39 lines of churn: the truncation screens, uid_verified and
+the contracts were each written against "a cut sweep is a qualified Success", then rewritten when that
+model changed. Those four are now one commit, since they are one decision. Three overlapping lines
+remain, both benign. **Re-run that audit before any future push** -- the script is in the round-4 notes
+history, or reconstruct it: diff each commit with `--unified=0`, collect added and removed line text per
+commit, and look for a later commit removing what an earlier one added.
 
 ## Verified on hardware
 
