@@ -116,6 +116,26 @@ void fake_tag_cache_all_advertised(void) {
     }
 }
 
+void fake_data_init(Iso15693_3Data* data, uint16_t blocks, uint8_t block_size) {
+    memset(data, 0, sizeof(*data));
+    data->system_info.flags = ISO15693_3_SYSINFO_FLAG_MEMORY;
+    data->system_info.block_count = blocks;
+    data->system_info.block_size = block_size;
+    for(size_t i = 0; i < ISO15693_3_UID_SIZE; i++) {
+        data->uid[i] = (uint8_t)(0xE0 + i);
+    }
+    if(blocks > 0) fake_data_fill(data, 0, (uint16_t)(blocks - 1), FAKE_MARKER);
+}
+
+void fake_data_fill(Iso15693_3Data* data, uint16_t first, uint16_t last, uint8_t byte) {
+    const uint8_t size = data->system_info.block_size > FAKE_MAX_BLOCK_SIZE ?
+                             (uint8_t)FAKE_MAX_BLOCK_SIZE :
+                             data->system_info.block_size;
+    for(uint16_t b = first; b <= last && b < FAKE_MAX_BLOCKS; b++) {
+        memset(data->block_data + (size_t)b * FAKE_MAX_BLOCK_SIZE, byte, size);
+    }
+}
+
 // ---- the SDK surface the poller calls -------------------------------------------------------------
 
 Iso15693_3Error iso15693_3_poller_inventory(Iso15693_3Poller* instance, uint8_t* uid) {

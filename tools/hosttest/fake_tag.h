@@ -81,6 +81,18 @@ void fake_tag_cache_from_activation(void);
 // the sweep" -- which is what makes the tail-drop discriminator able to fire at all.
 void fake_tag_cache_all_advertised(void);
 
+// ---- source images, for the clone loop ------------------------------------------------------------
+//
+// A clone source is an Iso15693_3Data loaded from a .nfc file, so its geometry is whatever the file says
+// -- hand-editable and bounded by nothing the app controls. These build one directly.
+
+// `blocks` blocks of `block_size` bytes, every block filled with a non-zero marker.
+void fake_data_init(Iso15693_3Data* data, uint16_t blocks, uint8_t block_size);
+
+// Fill [first, last] inclusive with `byte`. Use 0 to make a block "empty", which is what lets a failed
+// write be excused as past the card's capacity.
+void fake_data_fill(Iso15693_3Data* data, uint16_t first, uint16_t last, uint8_t byte);
+
 // Captured FURI_LOG output, newest last, as one newline-joined buffer.
 const char* fake_log_text(void);
 void fake_log_clear(void);
