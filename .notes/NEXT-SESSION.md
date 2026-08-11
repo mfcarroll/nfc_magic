@@ -10,6 +10,22 @@ Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numb
 [pr-round-3/STATUS.md](pr-round-3/STATUS.md) (coverage, what is verified vs reasoned-only, and the
 pre-push checks). His Round 4 verbatim is in `pr-round-3/received/`.
 
+## Before starting: is now the right time?
+
+**Pass C is local and unpushed, always.** He is reviewing `688614e8`; pushing into a line-anchored
+review moves the code under him and undoes the separation he asked for.
+
+More than that, the order matters. He has found something in all four rounds so far, so Round 5
+requesting changes is the likely case -- and if Pass C is already applied locally, his fixes land on
+refactored code and he reviews a diff containing both. That is the mixing he asked us to avoid, just
+deferred.
+
+So: **if Round 5 has not arrived, prefer waiting.** If it has arrived and requests changes, do those
+first as their own round, push them, and take Pass C after. Starting Pass C early only pays if he is
+slow, and costs a rebase if he is not.
+
+If starting anyway, the four items below are the ones least likely to collide with whatever he says.
+
 ## The task
 
 Pass C, the simplification he has been deferring since Round 3. Nothing here changes behaviour.
@@ -28,7 +44,8 @@ Pass C, the simplification he has been deferring since Round 3. Nothing here cha
 4. **`nfc_magic_scene_iso15693_write_confirm.c`** — 68 lines, character-identical to the shared
    `nfc_magic_scene_write_confirm.c` bar two strings, a button label and a text-box height.
 
-**Hold these until his Round 5 lands**, and say so in the reply so he knows they are not forgotten:
+**Hold these until his Round 5 has been answered**, and say so in the reply so he knows they are not
+forgotten:
 
 5. The `{reason, title, body}` table for `nfc_magic_scene_iso15693_write_fail.c` — twelve render
    branches now. Leave the eleven `const bool`s at the top alone; the table deletes them.
