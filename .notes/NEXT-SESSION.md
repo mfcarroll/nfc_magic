@@ -1,4 +1,4 @@
-# Next session — start Pass C (simplification)
+# Next session — Pass C items 1-4 are DONE locally; await his Round 5
 
 ## Where things stand
 
@@ -6,43 +6,62 @@ PR #250, `nfc_magic_dev` on branch `iso15693-dev`. His Round 4 review is **answe
 posted** — fork `nfc-magic-iso15693` = `688614e8`, 12 commits, reply and 8 threaded replies live.
 Awaiting his Round 5.
 
+**Pass C items 1-4 are committed locally and NOT pushed** (2026-08-11). Four commits on top of
+`83e90cb`, fork untouched:
+
+| item | commit | comment | code |
+|---|---|---|---|
+| 1. retry loop + empty-block test | `2816bb5` | −2 | −13 |
+| 2. hoist ticks, name the off-by-one | `15eea79` | +2 | +2 |
+| 3. success route's two locals | `015d8cd` | +1 | −1 |
+| 4. fold the confirm scene | `04d392d` | +3 | −39 |
+
+Batch: comment +4, code −51. Both firmwares rebuilt clean from scratch (85 objects, Momentum 87.15 and
+Unleashed 88.2), zero compiler warnings — the only two warnings are pre-existing fbt manifest
+complaints about Momentum's unrelated `cli_bridge` and `mtp` apps. Churn audit: **0 lines** written
+then rewritten inside the batch.
+
 Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numbers), then
 [pr-round-3/STATUS.md](pr-round-3/STATUS.md) (coverage, what is verified vs reasoned-only, and the
 pre-push checks). His Round 4 verbatim is in `pr-round-3/received/`.
 
-## Before starting: is now the right time?
+## Sequencing from here
 
 **Pass C is local and unpushed, always.** He is reviewing `688614e8`; pushing into a line-anchored
 review moves the code under him and undoes the separation he asked for.
 
-More than that, the order matters. He has found something in all four rounds so far, so Round 5
-requesting changes is the likely case -- and if Pass C is already applied locally, his fixes land on
-refactored code and he reviews a diff containing both. That is the mixing he asked us to avoid, just
-deferred.
+When Round 5 arrives: **answer it first, as its own round, and push that.** Pass C goes up after, so he
+never reviews a diff mixing a fix with a refactor. If his fixes touch the sweep or the confirm scene,
+rebasing them over these four commits is cheap — they are small and independent — but the order matters
+and it is fixes first.
 
-So: **if Round 5 has not arrived, prefer waiting.** If it has arrived and requests changes, do those
-first as their own round, push them, and take Pass C after. Starting Pass C early only pays if he is
-slow, and costs a rebase if he is not.
+## What was done, and the three judgement calls worth naming in the reply
 
-If starting anyway, the four items below are the ones least likely to collide with whatever he says.
+1. **The duplicated retry loop** → `iso15693_poller_write_block_retried()`. He named it
+   `iso15693_write_block_retried()`; it carries the `iso15693_poller_` prefix instead, to match all
+   twelve other statics in the file. Same for `iso15693_poller_block_is_empty()`. **Tell him**, so the
+   rename isn't a surprise.
+2. **is-buffer-all-zero had FOUR copies, not the three he counted** — the clone's non-empty test, the
+   wipe's still-holds-data test, the re-probe's, and `iso15693_poller_block_held_data`. All four now
+   call the one helper.
+3. **His bitmap set/clear duplication is NOT done.** He listed it (`|=` / `&= ~` at six sites once you
+   count the tail loops) alongside the retry loop, but proposed no helper for it, and doing it would
+   widen the diff in the file he anchors most of his comments on. It is held with items 5 and 6 below —
+   say so rather than letting him find it still there.
 
-## The task
+Also fixed in passing: `226dd74` (a `notes:` commit from an earlier session) had swept an uncommitted
+`scene_write.c` edit into itself. Since `sync-to-fork.sh` skips `notes:` commits, that would have sent
+the hunk to the fork without the locals it uses and broken the fork build. Split into `2876ee2`
+(notes only, original message and author date preserved) and `015d8cd` (the code).
 
-Pass C, the simplification he has been deferring since Round 3. Nothing here changes behaviour.
+## Not verified on hardware
 
-**Do these now** — isolated, and he asked for the first:
+Item 4 moved the render path for one screen: **Write UID → enter a UID → the confirm screen**. It needs
+no card and is 30 seconds on the device. Everything else in the batch is non-render code, and the other
+three confirm variants (ISO15693 wipe, USCUID-UL wipe, plain clone) kept their strings and their 54px
+box height byte-for-byte.
 
-1. **The duplicated retry loop.** Character-identical between the clone and the wipe. He calls this one
-   non-optional: the copies drifted once and shipped a bug. Also duplicated: is-buffer-all-zero (three
-   sites) — one `iso15693_write_block_retried()` plus one `iso15693_block_is_empty()`.
-2. **`iso15693_poller.c`, the sweep's two minor items** — hoist `furi_ms_to_ticks(...)` out of the loop
-   (recomputed up to 256 times from compile-time constants; keep the elapsed-form comparison, an
-   absolute deadline is not wraparound-safe), and name the off-by-one:
-   `const bool claimed_range_attempted = (block + 1 >= advertised);`
-3. **`nfc_magic_scene_write.c:396`** — two locals so the gate and the reason read off the same fact.
-   Do NOT reuse `nfc_magic_scene_write_is_wiping()`; it is also true for `uscuid_ul_is_wipe_mode`.
-4. **`nfc_magic_scene_iso15693_write_confirm.c`** — 68 lines, character-identical to the shared
-   `nfc_magic_scene_write_confirm.c` bar two strings, a button label and a text-box height.
+## Still held
 
 **Hold these until his Round 5 has been answered**, and say so in the reply so he knows they are not
 forgotten:
@@ -63,7 +82,11 @@ that no longer exists.
 - **A comment earns its place only if it records something the code cannot show AND is not already
   stated elsewhere.** The file is ~42% comment against ~10% for `gen2_poller.c` and
   `uscuid_ul_poller.c`. Report added/removed comment vs code per commit; a commit adding more comment
-  than code is going the wrong way. Pass C should be strongly net-negative on comments.
+  than code is going the wrong way. The strong comment reduction is **item 6**, which is held — items
+  1-4 came out at comment +4 / code −51, and the +4 is three constraints that had nowhere else to live
+  (tick wraparound, don't-reuse-`is_wiping`, the widget copies its string so the early free is safe).
+  Naming a value is often what makes the wrong refactor look attractive, so that is exactly where the
+  constraint has to be written down.
 - **Do not leak process into artifacts that describe the present.** No "this used to be duplicated" in
   a comment, no "no longer" in a CHANGELOG for an unshipped feature. The rule goes in the comment, the
   incident in the commit message.
@@ -77,6 +100,16 @@ that no longer exists.
 - **Use exact-match, asserted string replacements when editing.** Index-based slicing broke a file
   mid-edit, and an unasserted replacement silently no-matched and cost a build cycle.
 - **`cd` in a compound shell command aims the git commit at the wrong repo.** Keep them separate.
+- **`touch` does not force an fbt rebuild.** SCons decides by content signature, not mtime, so a
+  touched file recompiles nothing and a "warning-free" claim from that run proves nothing. To actually
+  recompile, delete the app's object dir: `rm -rf <fw>/build/f7-firmware-{C,D}/.extapps/nfc_magic_dev`.
+- **Commit early; another session can commit over your working tree.** An earlier session's `notes:`
+  commit swallowed an uncommitted code edit mid-pass. Because the fork sync skips `notes:` commits, that
+  silently drops code from the fork while shipping the hunk that needs it. Commit each item as it lands
+  rather than leaving the tree dirty across a build.
+- **Commits are SSH-signed via 1Password `op-ssh-sign`.** When the vault locks, `git commit` dies with
+  `1Password: failed to fill whole buffer` / `failed to write commit object`. Retrying will not help and
+  the fix is not to disable signing — every commit on this branch is signed. Ask the user to unlock.
 
 ## Mechanics
 
