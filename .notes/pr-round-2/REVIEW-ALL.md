@@ -64,16 +64,8 @@ So on Gen2/Classic and USCUID-UL, swallowing Back would leave the user on a popu
 and that they can no longer leave — recoverable only by rebooting. I'd rather under-deliver on your
 approval than ship that.
 
-Two things fell out of testing it, both pre-existing and both filed rather than fixed here:
-
-- Gen2/Classic and USCUID-UL not reporting a card removed mid-write, because they discard the
-  activation error that says it has. There's a precedent for the fix in your own tree: ISO15693 counts
-  those against `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports CardLost.
-- On Gen2/Classic, Back during a write is **inescapable**:
-  `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
-  the check scene which immediately pushes forward again. It also means each trip round the loop frees
-  and reallocates the poller, so re-applying the card silently restarts the write from block 0 rather
-  than resuming.
+Testing it turned up two pre-existing defects on those paths, both filed rather than fixed here — the
+second and third of the issues below.
 
 ## Bench
 
@@ -111,11 +103,16 @@ All filed rather than fixed in passing:
    the screen printing the UID it answers to now is the only route back to it. If a bystander wins that
    inventory, the screen prints the bystander's UID instead — so the owner records an identity belonging
    to a different card, and the real one is never shown.
-2. **Gen2/Classic and USCUID-UL not reporting a card removed mid-write**, with Gen4 and Gen1A as the
-   contrast cases that isolate the cause, and the debug log that shows the state machine is stopped
-   rather than grinding.
-3. **The Gen2/Classic write-check Back loop**, with the silent restart-from-block-0 that follows from
-   it.
+2. **Gen2/Classic and USCUID-UL never report a card removed mid-write**, because they discard the
+   activation error that says it has gone. Gen4 and Gen1A are the contrast cases that isolate the
+   cause, and the debug log shows the state machine stopped rather than grinding. There is a precedent
+   for the fix in your own tree: ISO15693 counts those errors against
+   `ISO15693_POLLER_MAX_ACTIVATION_ERRORS` and reports `CardLost`.
+3. **On Gen2/Classic, Back during a write is inescapable.**
+   `nfc_magic_scene_gen2_write_check_on_enter` pushes the write scene from `on_enter`, so Back pops to
+   the check scene which immediately pushes forward again. Each trip round the loop also frees and
+   reallocates the poller, so re-applying the card silently restarts the write from block 0 rather than
+   resuming.
 
 ## Not in this pass
 
