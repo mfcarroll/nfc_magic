@@ -1,0 +1,86 @@
+// A programmable ISO15693 tag for host-side tests.
+//
+// The point of this file is to stage the card behaviours no card we own can produce: a block that
+// refuses a write while still answering a read, a stretch of memory that goes dead mid-sweep, a card
+// lifted at a chosen moment, and a sweep slow enough to hit the wall-clock bound.
+//
+// Everything is deterministic. There is no wall clock and no randomness: `fake_tick` advances by a
+// fixed cost per radio operation, so "10 seconds elapsed" means "the sweep did N operations".
+#pragma once
+
+#include <furi.h>
+#include <lib/nfc/protocols/iso15693_3/iso15693_3.h>
+
+typedef enum {
+    // Accepts writes, answers reads. Ordinary memory.
+    FakeBlockWritable,
+    // Refuses the write with Iso15693_3ErrorInternal, still answers reads. Write-protected memory --
+    // the case that discriminates "the card ends here" from "this block won't clear", and the one no
+    // card on this PR can be made to produce.
+    FakeBlockLocked,
+    // Answers neither a write nor a read. Past physical capacity, or a phantom block on a card that
+    // advertises more than it holds.
+    FakeBlockAbsent,
+} FakeBlockKind;
+
+typedef struct {
+    // What the card ADVERTISES via Get System Info. Deliberately independent of which blocks are
+    // actually present -- that gap is the whole subject of the sweep.
+    uint16_t advertised;
+    uint8_t block_size;
+    uint8_t uid[ISO15693_3_UID_SIZE];
+
+    FakeBlockKind kind[FAKE_MAX_BLOCKS];
+    uint8_t content[FAKE_MAX_BLOCKS][FAKE_MAX_BLOCK_SIZE];
+
+    // Radio operations (write/read/inventory) before the card leaves the field. 0 means it never does.
+    // After this many, every operation fails and inventory reports the card gone.
+    uint32_t ops_until_lifted;
+
+    // Ticks (== ms) charged per radio operation. Bench figures put a refused block in the 40-70ms
+    // range including its retries and read-back; a single op is a fraction of that. Set high to drive
+    // the sweep into ISO15693_POLLER_WIPE_MAX_MS.
+    uint32_t tick_cost_per_op;
+
+    // Counters, for assertions and for ops_until_lifted.
+    uint32_t ops;
+    uint32_t writes_attempted;
+    uint32_t writes_accepted;
+    uint32_t reads_attempted;
+    uint32_t inventories;
+} FakeTag;
+
+extern FakeTag fake_tag;
+
+// The activation cache nfc_poller_get_data() hands back. Seeded separately from the live tag on
+// purpose: a card that answered at activation and degraded during the sweep has real content here,
+// while a card already degraded before activation has zeros -- and those two produce different,
+// deliberately different, sweep outcomes.
+extern Iso15693_3Data fake_activation_cache;
+
+// Reset everything: a 0-block tag, no lift, 1 tick per op, empty log.
+void fake_tag_reset(void);
+
+// Give the tag `advertised` blocks of `block_size` bytes, `physical` of them present and writable,
+// the rest absent. Blocks below `physical` are filled with a recognisable non-zero marker.
+void fake_tag_init(uint16_t advertised, uint16_t physical, uint8_t block_size);
+
+// Mark [first, last] inclusive as `kind`, leaving content alone.
+void fake_tag_set_range(uint16_t first, uint16_t last, FakeBlockKind kind);
+
+// Fill [first, last] inclusive with a non-zero marker, or with zeros.
+void fake_tag_fill(uint16_t first, uint16_t last, uint8_t byte);
+
+// Build the activation cache the way iso15693_3_poller_activate would: walk up from block 0 copying
+// content, and stop at the first block that does not answer a read, leaving the remainder zeroed.
+// This is the faithful default and most tests should call it.
+void fake_tag_cache_from_activation(void);
+
+// Seed the cache from the tag's CURRENT content for every advertised block, regardless of whether the
+// block answers now. Models "these blocks were readable when the card was presented, and died during
+// the sweep" -- which is what makes the tail-drop discriminator able to fire at all.
+void fake_tag_cache_all_advertised(void);
+
+// Captured FURI_LOG output, newest last, as one newline-joined buffer.
+const char* fake_log_text(void);
+void fake_log_clear(void);
