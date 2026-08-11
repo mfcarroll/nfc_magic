@@ -1,4 +1,4 @@
-Sixteen commits, one per decision. The blocking item is fixed with your discriminator, the three you'd
+Twelve commits, one per decision. The blocking item is fixed with your discriminator, the three you'd
 bundle are in, both simplifications you asked to take alongside them are in, and so are the nine
 worth-fixing and drift items still outstanding from the round before.
 

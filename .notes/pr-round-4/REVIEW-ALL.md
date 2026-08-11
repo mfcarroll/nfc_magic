@@ -19,7 +19,7 @@ Push the fork branch **first** — the replies cite fork SHAs.
 
 # 1. Top-level comment on PR #250
 
-Sixteen commits, one per decision. The blocking item is fixed with your discriminator, the three you'd
+Twelve commits, one per decision. The blocking item is fixed with your discriminator, the three you'd
 bundle are in, both simplifications you asked to take alongside them are in, and so are the nine
 worth-fixing and drift items still outstanding from the round before.
 
@@ -105,7 +105,7 @@ card's claim.
 **Status:** FIXED  
 **Thread id:** `3756085157`
 
-Fixed in `c358eb50`, using your discriminator as written: before dropping a run member below `advertised`, check it against the activation cache. Non-zero is one-way proof the block existed and held data, so it stays in the report; zeros drop as before, which leaves the fake-flash card's phantoms dropping and its clean Success intact. Verified on hardware — 70 advertised against 64 physical still reports "Cleared 64 blocks. / Card claims 70."
+Fixed in `d3dd081c`, using your discriminator as written: before dropping a run member below `advertised`, check it against the activation cache. Non-zero is one-way proof the block existed and held data, so it stays in the report; zeros drop as before, which leaves the fake-flash card's phantoms dropping and its clean Success intact. Verified on hardware — 70 advertised against 64 physical still reports "Cleared 64 blocks. / Card claims 70."
 
 Your trace reproduces exactly, and the framing that it is the *floor* and the *drop* asserting opposite things about the same blocks is the part I'd missed entirely.
 
@@ -123,7 +123,7 @@ Not verified on hardware. The positive case needs a card that stops answering bo
 **Status:** FIXED  
 **Thread id:** `3756085164`
 
-Fixed in `303512b2`. You're right that this is the card the clock exists for and the one screen that never saw the flag — `wiped == 0` short-circuits here before any of the truncation reporting.
+Fixed in `f3700a4d`. You're right that this is the card the clock exists for and the one screen that never saw the flag — `wiped == 0` short-circuits here before any of the truncation reporting.
 
 One deviation: you suggested `\nStopped: time limit` to match the partial screen. I've used the same `at N of M` form instead, since it fits the same three lines and says how far the sweep actually got, which on this card is the whole question. The body has room for three, so on a cut sweep the cut replaces the prose rather than adding a fourth line that the button box would clip.
 
@@ -137,7 +137,7 @@ The partial screen's own qualifier moved rather than being fixed in place: a tru
 **Status:** FIXED  
 **Thread id:** `3756085182`
 
-Fixed in `17acf9c1`, using the sweep's own pattern — one `furi_get_tick()` before the loop, one check at the top of the body.
+Fixed in `e8459363`, using the sweep's own pattern — one `furi_get_tick()` before the loop, one check at the top of the body.
 
 **Correction to one detail:** a cut clone's unreached blocks are *not* already in the bitmap. Only blocks that were attempted and refused get bits; the ones the cut skipped were never touched by anything. Left alone they would have been counted as written, since the partial screen derives its cloned figure by subtracting failures from the total — so a clone stopped at block 10 of 256 would have claimed all 256 landed. They are now recorded as failures, which is what they are, and Details names them.
 
@@ -151,7 +151,7 @@ Worth noting the effect is narrower than the 6s/19s framing suggests. Those figu
 **Status:** FIXED  
 **Thread id:** `3756085187`
 
-Fixed in `ce8e3755`. A `uid_verified` flag, false on both no-observation branches, rendered as "UID not re-checked." on the wipe screen's third line. Your argument for not raising an error is untouched — that stays.
+Fixed in `f3700a4d`. A `uid_verified` flag, false on both no-observation branches, rendered as "UID not re-checked." on the wipe screen's third line. Your argument for not raising an error is untouched — that stays.
 
 I took your "keeps the success tone if you want it" and kept it, but only for this case, and the reasoning is worth stating because it splits your two findings apart.
 
@@ -169,7 +169,7 @@ A cut sweep also gets the Retry/Exit buttons a lost card already had, per your `
 **Status:** FIXED  
 **Thread id:** `3756085228`
 
-Both corrected in `a02971c0`, and thank you for checking rather than accepting — the conclusion being right made the supporting sentences easy to leave alone.
+Both corrected in `4212e04c`, and thank you for checking rather than accepting — the conclusion being right made the supporting sentences easy to leave alone.
 
 `gen1a` and USCUID-backdoor: right, they self-terminate, and the reason is the one you give — raw `nfc_start` makes `PollerReady` a poll-cycle tick rather than an activation, so the handlers keep running with no card. They are excluded now for want of testing rather than because they strand, and the comment says so.
 
@@ -187,7 +187,7 @@ That framing came out of the debug log rather than reading, incidentally — 88 
 **Status:** DONE -- asked for in this pass  
 **Thread id:** `3756085255`
 
-Done in `4c2e0526`, as one of the two you asked to take alongside the fixes.
+Done in `9a130207`, as one of the two you asked to take alongside the fixes.
 
 `iso15693_poller_wipe_note_present()`, three calls. The re-probe's version passes `still_absent` as the run, so the `+ 1` that used to be folded into its arithmetic becomes the ordinary count of the answering block, and the two names for the same quantity collapse to one — as you predicted.
 
@@ -203,7 +203,7 @@ One thing landed on top of it: site 3 now classifies the answering block by *con
 **Status:** DONE -- asked for in this pass  
 **Thread id:** `3756085261`
 
-Done in `d62671c9`, and taken first of everything this round, because the truncated sweep needed somewhere to put its Details entry and adding it to two gates that disagree would have preserved the disagreement.
+Done in `854d8e2c`, and taken first of everything this round, because the truncated sweep needed somewhere to put its Details entry and adding it to two gates that disagree would have preserved the disagreement.
 
 Your predicate as written, keyed on the reason code, with `on_event` keeping only its card-lost distinction. The latent divergence is gone with it.
 
@@ -217,7 +217,7 @@ The eleven `const bool`s at the top are untouched, per your note that the queued
 **Status:** FIXED -- and it found a bug  
 **Thread id:** `3756085272`
 
-Fixed in `50fdc911`. Both card-lost paths now `break` rather than `return`, so the tail runs and the line is emitted; the caller discards the counters when the card is gone, so the tail arithmetic running for it is harmless.
+Fixed in `879c6f0d`. Both card-lost paths now `break` rather than `return`, so the tail runs and the line is emitted; the caller discards the counters when the card is gone, so the tail arithmetic running for it is harmless.
 
 They also increment before breaking, which keeps the loop variable meaning the same thing at every exit — the capacity break already did, the deadline breaks before attempting, and a full run ends past the last index. Without that the line reports one block short on exactly the paths this comment added it to.
 

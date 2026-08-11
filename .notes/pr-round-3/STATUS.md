@@ -4,8 +4,8 @@ Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his revi
 
 ## Where things are
 
-- Dev `iso15693-dev`: **15 code commits** on `a3e13a3a`'s content, plus `.notes` commits. Clean.
-- Fork `nfc-magic-iso15693`: re-synced, **15 commits fast-forward from `a3e13a3a`**, unpushed. Always
+- Dev `iso15693-dev`: **12 code commits** on `a3e13a3a`'s content, plus `.notes` commits. Clean.
+- Fork `nfc-magic-iso15693`: re-synced, **12 commits fast-forward from `a3e13a3a`**, unpushed. Always
   reset to `origin/nfc-magic-iso15693` before replaying — resetting to `d659a919` silently drops round
   2's pushed commits and turns the next push into a force-push over his review threads.
 - Builds clean at Momentum 87.15 and Unleashed 88.2, zero warnings, clang-format applied.
@@ -19,11 +19,12 @@ All addressed except three he explicitly left to the simplification pass.
 |---|---|
 | `:859` **blocking**, tail-drop vs floor | `940e62f` |
 | `write_fail.c:344` details gate (asked for now) | `727036c` |
-| `:978`, `write_fail.c:126`, `write_fail.c:196` truncation on every screen | `3e240a6` |
-| `:1125`, `:1194`, `write_fail.c:307` uid_verified + retry | `8f42d79` |
+| `:978`, `write_fail.c:126`, `write_fail.c:196` truncation on every screen | `792d5f6` |
+| `:1125`, `:1194`, `write_fail.c:307` uid_verified + retry | `792d5f6` |
 | `:532` clone data-pass clock | `e6688cf` |
 | `:62`, `:137`, `write_fail.c:70` the three figures | `c036f29` |
-| `:260`, `:695`, `poller.h:24`, `:209`, `app_i.h:129` | `ddcc3f6` + `78ea645` |
+| `:260`, `:695`, `poller.h:24`, `app_i.h:129` | `792d5f6` |
+| `poller.h:209` start_wipe + orphan | `792d5f6` |
 | `:853` tail-drop premise, `:866` "every exit" | `21eda2a` |
 | `CHANGELOG:39` | `4714d3b` |
 | `scene_write.c:519` Back comment's wrong claims | `3818a42` |
