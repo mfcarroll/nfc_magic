@@ -53,7 +53,21 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-38 tests across three files.
+53 tests across four files.
+
+**`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
+drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
+callback, honour the returned `NfcCommand`, power-cycle the fake tag on `NfcCommandReset`, stop on
+`NfcCommandStop`. So the field resets, the two activation-error budgets and the gen2-then-gen1 sequencing
+are exercised rather than assumed. The reported events are recorded, so the tests assert the whole
+sequence (`CardDetected` exactly once) and not just the terminal one.
+
+This is where the fake earns its keep: it decodes the magic backdoor frames off the wire, so
+`is_gen2_magic` / `is_gen1_magic` decide whether a UID write actually takes, and a gen1 UID latches only
+on the next `fake_tag_power_cycle()` — which is the entire reason every UID verify in the poller sits
+behind a reset. Covers the armed-gen1 wipe reporting a UID change, a card that never returns from the
+reset still getting its wipe reported (`uid_verified` false), and that a clone writes no data at all onto
+a tag that refuses the gen2 UID.
 
 **`test_outcome.c` — 14 cases over `iso15693_poller_success_or_partial`**, the single place where "what
 happened" becomes "what the user is told". A pure function of the result fields, so the tests read as the
@@ -86,14 +100,16 @@ by hand each review round:
 
 ## Not covered yet
 
-- `iso15693_poller_write_step` — the state machine around the three functions above: the gen2/gen1 UID
-  verifies, the field power-cycles, and the activation-error budgets. Needs the poller callback driven
-  rather than one function called, so it is the next real increment.
 - `iso15693_poller_write_identity` — the AFI/DSFID write-then-read-back-and-compare retry loop. Its
-  *outcome* is covered (a rejected field is Partial, clone-only); the retry mechanics are not.
+  *outcome* is covered (a rejected field is Partial, clone-only) and the state-machine tests use sources
+  that advertise neither field, so it returns early. The retry mechanics are untested, and the fake's
+  `get_system_info` would need to report AFI/DSFID for that.
 - Anything above the poller: the scenes and their rendering.
-- The gen1 path on the wire. Its block-skipping arithmetic is covered in `test_clone_blocks.c`; what a
-  gen1 card actually does is untestable here, and none exists on either side of the PR.
+- The gen1 path on the wire. Its block-skipping arithmetic is covered in `test_clone_blocks.c` and its
+  latch-on-power-up behaviour is *modelled* in `test_write_step.c` — but the model is our inference from
+  proxmark's send order, not a documented contract, so those tests confirm the app behaves correctly
+  given the model rather than that the model is right. Settling that needs a gen1 card.
+- The radio layer below the SDK — what real silicon puts on the wire. See `.notes/test-bench-idea.md`.
 
 ## Reasoned-only behaviours, before and after
 
@@ -106,5 +122,5 @@ them:
 | the capacity gate's discriminating case | **tested** — `test_clone_blocks.c`, a failed block that answers a read |
 | a clone cut by the clock, card still present | **tested** — and it was wrong; see the `pass_truncated` fix |
 | truncated sweep reporting as Partial | **tested** — `test_outcome.c`; the *screens* remain untested |
-| `uid_verified` false | **partly** — that it does not downgrade the outcome is tested; the path that sets it needs `write_step` |
-| the gen1 path | still unreachable, and needs a card |
+| `uid_verified` false | **tested** — `test_write_step.c`, a card that never returns from the field reset |
+| the gen1 path | **modelled, not settled** — the latch-on-power-up behaviour is tested against our inference from proxmark's send order; confirming the inference needs a card |

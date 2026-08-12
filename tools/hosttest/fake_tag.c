@@ -198,14 +198,91 @@ Iso15693_3Error
     return Iso15693_3ErrorNone;
 }
 
-Iso15693_3Error
-    iso15693_3_poller_send_frame(Iso15693_3Poller* instance, void* tx, void* rx, uint32_t fwt) {
+// The magic backdoor UID arrives as two frames carrying half the UID each, so hold them until both have
+// landed. uid[0] is the MSB, and the block named 7654 carries uid[7..4] -- see the frame layout comments
+// in iso15693_poller.c.
+static uint8_t staged_uid[ISO15693_3_UID_SIZE];
+static bool staged_low; // blocks named 7654 -> uid[7..4]
+static bool staged_high; // blocks named 3210 -> uid[3..0]
+
+static void fake_stage_uid_half(bool is_7654, const uint8_t* d) {
+    if(is_7654) {
+        staged_uid[7] = d[0];
+        staged_uid[6] = d[1];
+        staged_uid[5] = d[2];
+        staged_uid[4] = d[3];
+        staged_low = true;
+    } else {
+        staged_uid[3] = d[0];
+        staged_uid[2] = d[1];
+        staged_uid[1] = d[2];
+        staged_uid[0] = d[3];
+        staged_high = true;
+    }
+}
+
+// Decode what the poller actually put on the wire. A tag that is not magic ignores all of it -- which is
+// the case the gen2-then-gen1 flow exists to detect, so the fake has to be able to be that tag.
+Iso15693_3Error iso15693_3_poller_send_frame(
+    Iso15693_3Poller* instance,
+    const BitBuffer* tx,
+    BitBuffer* rx,
+    uint32_t fwt) {
     (void)instance;
-    (void)tx;
     (void)rx;
     (void)fwt;
     fake_charge_op();
+
+    const BitBuffer* buf = tx;
+    if(buf == NULL || buf->size < 3 || buf->data[0] != 0x02) return Iso15693_3ErrorNone;
+
+    // gen1: 02 21 <block> d0 d1 d2 d3
+    if(buf->data[1] == 0x21 && buf->size >= 7) {
+        const uint8_t block = buf->data[2];
+        if(block == 0x38 || block == 0x39) {
+            if(fake_tag.is_gen1_magic) fake_stage_uid_half(block == 0x38, &buf->data[3]);
+            if(fake_tag.is_gen1_magic && staged_low && staged_high) {
+                // gen1 latches on the next power-up, never immediately.
+                fake_tag_arm_gen1_uid(staged_uid);
+                staged_low = staged_high = false;
+            }
+        }
+        return Iso15693_3ErrorNone;
+    }
+
+    // gen2: 02 E0 09 <ref> d0 d1 d2 d3
+    if(buf->data[1] == 0xE0 && buf->size >= 8 && buf->data[2] == 0x09) {
+        const uint8_t ref = buf->data[3];
+        if(ref == 0x40 || ref == 0x41) {
+            if(fake_tag.is_gen2_magic) fake_stage_uid_half(ref == 0x40, &buf->data[4]);
+            if(fake_tag.is_gen2_magic && staged_low && staged_high) {
+                // The gen2 backdoor register space is separate from data blocks and takes effect at once.
+                fake_tag_set_uid_now(staged_uid);
+                staged_low = staged_high = false;
+            }
+        }
+        return Iso15693_3ErrorNone;
+    }
+
     return Iso15693_3ErrorNone;
+}
+
+void fake_tag_set_uid_now(const uint8_t* uid) {
+    memcpy(fake_tag.uid, uid, ISO15693_3_UID_SIZE);
+}
+
+void fake_tag_arm_gen1_uid(const uint8_t* uid) {
+    memcpy(fake_tag.gen1_pending_uid, uid, ISO15693_3_UID_SIZE);
+    fake_tag.gen1_uid_pending = true;
+}
+
+void fake_tag_power_cycle(void) {
+    if(fake_tag.gen1_uid_pending) {
+        memcpy(fake_tag.uid, fake_tag.gen1_pending_uid, ISO15693_3_UID_SIZE);
+        fake_tag.gen1_uid_pending = false;
+    }
+    // A fresh activation re-reads the card, so the cache is rebuilt from what answers NOW.
+    fake_tag_cache_from_activation();
 }
 
 uint16_t iso15693_3_get_block_count(const Iso15693_3Data* data) {
@@ -265,15 +342,15 @@ void nfc_poller_stop(NfcPoller* instance) {
 
 BitBuffer* bit_buffer_alloc(size_t capacity) {
     (void)capacity;
-    return NULL;
+    return calloc(1, sizeof(BitBuffer));
 }
 void bit_buffer_free(BitBuffer* buf) {
-    (void)buf;
+    free(buf);
 }
 void bit_buffer_reset(BitBuffer* buf) {
-    (void)buf;
+    buf->size = 0;
 }
 void bit_buffer_append_byte(BitBuffer* buf, uint8_t byte) {
-    (void)buf;
-    (void)byte;
+    furi_check(buf->size < FAKE_FRAME_CAP);
+    buf->data[buf->size++] = byte;
 }

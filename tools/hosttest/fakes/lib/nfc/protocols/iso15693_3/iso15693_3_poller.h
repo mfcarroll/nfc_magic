@@ -3,6 +3,7 @@
 #pragma once
 
 #include <lib/nfc/protocols/iso15693_3/iso15693_3.h>
+#include <toolbox/bit_buffer.h>
 
 // Opaque to the poller; the fake ignores the pointer and answers from the one global fake tag.
 typedef struct Iso15693_3Poller Iso15693_3Poller;
@@ -33,10 +34,11 @@ Iso15693_3Error iso15693_3_poller_write_block(
 Iso15693_3Error
     iso15693_3_poller_get_system_info(Iso15693_3Poller* instance, Iso15693_3SystemInfo* data);
 
-// Raw frame send. The magic backdoor writes go out this way and the tag is not required to answer, so
-// the poller ignores the result by design -- the fake only counts the calls.
+// Raw frame send. The magic backdoor writes go out this way and the tag is not required to answer, so the
+// poller ignores the result by design. Typed like the SDK's, so an argument-order slip fails to compile;
+// the fake DECODES tx to decide whether a magic card accepts the UID.
 Iso15693_3Error iso15693_3_poller_send_frame(
     Iso15693_3Poller* instance,
-    void* tx,
-    void* rx,
+    const BitBuffer* tx,
+    BitBuffer* rx,
     uint32_t fwt);

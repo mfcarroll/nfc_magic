@@ -1,10 +1,18 @@
 // Host-side stand-in for the SDK's bit_buffer.h, for tools/hosttest only.
-// The sweep sends no frames; these exist so the backdoor-UID paths in the same translation unit link.
+//
+// These store real bytes rather than discarding them, because the fake tag DECODES the magic backdoor
+// frames the poller builds -- that is what lets a fake gen2-magic card actually change its UID and a
+// non-magic one refuse to, which is the whole subject of the write state machine.
 #pragma once
 
 #include <furi.h>
 
-typedef struct BitBuffer BitBuffer;
+#define FAKE_FRAME_CAP (64U)
+
+typedef struct {
+    uint8_t data[FAKE_FRAME_CAP];
+    size_t size;
+} BitBuffer;
 
 BitBuffer* bit_buffer_alloc(size_t capacity);
 void bit_buffer_free(BitBuffer* buf);

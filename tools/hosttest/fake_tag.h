@@ -42,6 +42,18 @@ typedef struct {
     // the sweep into ISO15693_POLLER_WIPE_MAX_MS.
     uint32_t tick_cost_per_op;
 
+    // A UID written into the gen1 registers latches only on the NEXT power-up: until then the card keeps
+    // answering the old one. That is the whole reason every UID verify in the poller sits behind a
+    // NfcCommandReset, so the fake has to model it or those tests prove nothing.
+    // Set by fake_tag_arm_gen1_uid(); applied by fake_tag_power_cycle().
+    bool gen1_uid_pending;
+    uint8_t gen1_pending_uid[ISO15693_3_UID_SIZE];
+
+    // gen2 magic: the backdoor UID write takes effect immediately, no power-cycle needed. A tag that is
+    // not magic at all leaves both of these false and keeps its UID whatever is written.
+    bool is_gen2_magic;
+    bool is_gen1_magic;
+
     // Counters, for assertions and for ops_until_lifted.
     uint32_t ops;
     uint32_t writes_attempted;
@@ -92,6 +104,21 @@ void fake_data_init(Iso15693_3Data* data, uint16_t blocks, uint8_t block_size);
 // Fill [first, last] inclusive with `byte`. Use 0 to make a block "empty", which is what lets a failed
 // write be excused as past the card's capacity.
 void fake_data_fill(Iso15693_3Data* data, uint16_t first, uint16_t last, uint8_t byte);
+
+// ---- the field, for the write state machine ------------------------------------------------------
+//
+// The poller returns NfcCommandReset to power-cycle the RF field and re-activate, and every UID verify
+// runs on the far side of one. These let a test drive that loop.
+
+// Power-cycle the field: latch any pending gen1 UID, and rebuild the activation cache the way a fresh
+// activation would. Call this wherever the poller asked for NfcCommandReset.
+void fake_tag_power_cycle(void);
+
+// Arm a gen1-style UID change: takes effect on the NEXT power_cycle, not now.
+void fake_tag_arm_gen1_uid(const uint8_t* uid);
+
+// Set the UID the card answers with right now, no power-cycle needed (the gen2 behaviour).
+void fake_tag_set_uid_now(const uint8_t* uid);
 
 // Captured FURI_LOG output, newest last, as one newline-joined buffer.
 const char* fake_log_text(void);

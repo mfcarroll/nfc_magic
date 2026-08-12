@@ -9,7 +9,7 @@ CFLAGS ?= -std=gnu11 -g -O0 -Wall -Wextra -Wno-unused-parameter
 INCLUDES := -Ifakes -I.
 BUILD := build
 
-TESTS := test_wipe_sweep test_clone_blocks test_outcome
+TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step
 
 .PHONY: all run clean
 all: run
