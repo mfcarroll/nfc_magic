@@ -64,6 +64,25 @@ than a surprise. One CHANGELOG line under Behaviour, e.g.:
 
 ## Status
 
-- CHANGELOG.md is **shipped code** and goes to the fork, so that line is NOT written yet — it needs a
-  go-ahead and it should ride with the next push rather than being slipped in.
-- Nothing in the app changes either way.
+**The CHANGELOG line is WRITTEN and COMMITTED — `fe7305d`, local and unpushed.** It went into
+`### Validation (at 2.1)` rather than `### Behaviour`, because it is a limit of the feature, not a
+behaviour of it, and that section already states scope the same way for the untested gen1 path.
+
+`fe7305d` is **shipped code** — the only shipped-code commit since the clock-cut fix. Everything else
+since then is `tools/` and `.notes/`.
+
+### What to do with it in Round 5
+
+1. **Push it with the Round 5 response**, not before. It is documentation, nothing is unsafe in the
+   meantime, and a second push into a review he has not started is a notification for no benefit.
+2. **Mention it in the reply** in a sentence or two — the declaration itself carries the substance, so the
+   reply only needs to say gen3 exists, that it is declared rather than handled, and why not handling it is
+   the right call for a PR four rounds deep.
+3. If he **asks for gen3 support**, that is a feature and should be its own PR. Detection is cheap (read
+   `0x14`/`0x15` and compare the signature); acting on it is a whole flow — a third generation in the
+   opt-in ladder, a new set of result screens, and no card to test against.
+4. If he **asks where the wire facts are**: deliberately not in `iso15693_poller.c`. They belong beside the
+   `ISO15693_MAGIC_BLK_*` defines, which is exactly the territory Pass C item 6's ownership model
+   reorganises — so they go in when item 6 does, not before.
+
+Nothing in the app changes either way.

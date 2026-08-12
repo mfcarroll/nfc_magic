@@ -16,6 +16,12 @@ look at that fix.
   13 fork commits are signed; this one is the odd one out and that is a closed decision, not a to-do.
 - This machine's fork checkout is **in line** with origin at `f8eb8164`. Nothing to reset.
 
+**One shipped-code commit is queued to go up with the Round 5 response:** `fe7305d`, a CHANGELOG line
+declaring that gen3 magic is not supported. Deliberately not pushed on its own — see
+[pr-round-5/gen3-note.md](pr-round-5/gen3-note.md) for what it covers, what it omits and why, and what to
+do if he asks for gen3 support. It is the only shipped-code change since the fix; everything else is
+`tools/` and `.notes/`.
+
 **Pass C items 1-4 remain committed locally and NOT pushed**, plus one prose fix found while verifying
 item 4 on hardware. Five code commits, all still local:
 
