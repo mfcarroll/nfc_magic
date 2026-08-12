@@ -1,6 +1,8 @@
-# Idea, parked: a bench that can stage the cases hardware can't
+# A bench that can stage the cases hardware can't
 
-Raised 2026-08-11 while finishing round 3. Not started — recorded so it isn't lost.
+Raised 2026-08-11 while finishing round 3. **Option B is BUILT** — see [../tools/hosttest/README.md](../../tools/hosttest/README.md).
+38 tests, and it found a real defect on its first run over the clone loop (the clock-cut capacity claim,
+pushed as `f8eb8164`). Options A and C are still ideas.
 
 ## The problem it would solve
 
@@ -18,15 +20,28 @@ them:
 Each is a *reported* outcome, so getting them wrong is a wrong report rather than a crash, which is
 exactly the class of bug this PR keeps finding.
 
-## Option A — proxmark3 as a tag simulator
+## Option A — a tag simulator
 
-Drive `hf 15 sim` from the PM3 CLI while the Flipper runs the app.
+**Better lead than the proxmark, found 2026-08-11:** the firmware's own unit tests already drive a poller
+against a **listener** — `applications/debug/unit_tests/tests/nfc/nfc_test.c` allocates two `Nfc*`
+instances and does `nfc_listener_alloc(listener, NfcProtocolSlix, slix_data)` + `nfc_listener_start(...)`,
+then runs a SLIX poller against it. So ISO15693 tag simulation exists in-firmware, no second device
+implied by the code.
 
-Unknown worth checking first: how much ISO15693 *tag* simulation the PM3 actually supports. Its 14443a
-emulation is mature; the 15693 side has historically been thinner than `hf 15 sim -u <uid>`, and what
-this needs is selective per-block behaviour — block N answers reads but refuses writes, blocks 20..63
-answer nothing — which may need firmware work rather than a script. Establish that before designing
-anything around it.
+Unverified, and check this first: whether one Flipper can be both poller and listener at once (it has a
+single ST25R3916), or whether those tests assume something else. That is the gate on the whole idea.
+
+Second gate: the stock `iso15693_3_listener` implements a *compliant* tag. It will not answer the magic
+backdoor (`0xE0 0x09 ...`), and selective per-block refusal — block N answers reads but refuses writes,
+blocks 20..63 answer nothing — is exactly what the host fakes do easily and a compliant listener does not
+do at all. Extending the listener is firmware work.
+
+What this route buys that `tools/hosttest` cannot: the radio layer. That is the one gap the host harness
+is honest about not reaching.
+
+Proxmark3 (`hf 15 sim`) remains a fallback rather than the first choice. Its 14443a emulation is mature;
+the 15693 side has historically been thinner than `hf 15 sim -u <uid>`, and it needs the same selective
+per-block behaviour. Establish the listener question before spending time here.
 
 ## Option B — host-side tests of the decision logic
 
@@ -53,7 +68,13 @@ rather than plain pipes.
 The log lines are already shaped for it: `wipe: N blocks attempted, M cleared, Xms (advertised A)` is a
 parseable assertion target, and the timing figure was added for exactly this kind of measurement.
 
-## Order I'd suggest
+## Order
 
-B first — it needs no hardware, covers the cases that keep being wrong, and its output is deterministic.
-A only after establishing what PM3 15693 simulation can actually do. C last, and only if A pans out.
+B is done and was the right call: no hardware, deterministic, and it caught a defect immediately.
+
+What is left of B is `iso15693_poller_write_step` — the state machine around the three functions now
+covered, which is where `uid_verified` false actually gets set, and the last testable item on the
+reasoned-only list. Needs the poller callback driven rather than one function called.
+
+A next, but only after answering the one-radio question above. C last, and only if A pans out — and note
+the Flipper CLI needs a real TTY, so it needs a pty wrapper (`pexpect`), not plain pipes.
