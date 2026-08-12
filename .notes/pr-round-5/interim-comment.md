@@ -1,9 +1,15 @@
-# Draft: interim comment on PR #250 (unsent)
+# Interim comment on PR #250 — POSTED 2026-08-12 01:14Z
 
-Not a reply to a review — this goes up **before** his Round 5, because it carries a defect fix and one
-question. Posted alongside pushing fork commit `f8eb8164` (one commit, fast-forward from `688614e8`).
+Not a reply to a review — this went up **before** his Round 5, because it carries a defect fix and one
+question. Posted alongside fork commit `f8eb8164`, a fast-forward from `688614e8`.
 
-Status: **DRAFT, NOT POSTED, NOT PUSHED.**
+Status: **POSTED AND PUSHED.** Fork `nfc-magic-iso15693` = `f8eb8164`, 13 commits. Awaiting his Round 5,
+which will be his first sight of the fix.
+
+The pushed commit is unsigned, deliberately — see the push rules in
+[../NEXT-SESSION.md](../NEXT-SESSION.md). Closed decision, not a to-do.
+
+Verbatim below, as posted.
 
 ---
 

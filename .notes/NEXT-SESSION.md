@@ -1,13 +1,23 @@
-# Next session — Pass C items 1-4 are DONE locally; await his Round 5
+# Next session — the clock-cut fix is PUSHED; Pass C is done locally; await his Round 5
 
 ## Where things stand
 
-PR #250, `nfc_magic_dev` on branch `iso15693-dev`. His Round 4 review is **answered, pushed and
-posted** — fork `nfc-magic-iso15693` = `688614e8`, 12 commits, reply and 8 threaded replies live.
-Awaiting his Round 5.
+PR #250, `nfc_magic_dev` on branch `iso15693-dev`. His Round 4 review is answered, pushed and posted,
+and since then **one further fix has been pushed and an interim comment posted** (2026-08-12 01:14Z).
 
-**Pass C items 1-4 are committed locally and NOT pushed** (2026-08-11), plus one prose fix found while
-verifying item 4 on hardware. Five code commits on top of `83e90cb`, fork untouched:
+Fork `nfc-magic-iso15693` = **`f8eb8164`**, 13 commits. Awaiting his Round 5, which will be his first
+look at that fix.
+
+- The pushed commit is the clock-cut capacity fix — see [pr-round-5/interim-comment.md](pr-round-5/interim-comment.md)
+  for exactly what was said about it, the harness, and the clone-confirm position.
+- **It is unsigned, deliberately left so.** Signing needed a machine with Touch ID; correcting it after
+  the fact would mean force-pushing the PR branch, which is not worth a signature — especially as the
+  commits are expected to be squashed at merge, which discards per-commit signatures anyway. The other
+  13 fork commits are signed; this one is the odd one out and that is a closed decision, not a to-do.
+- This machine's fork checkout is **in line** with origin at `f8eb8164`. Nothing to reset.
+
+**Pass C items 1-4 remain committed locally and NOT pushed**, plus one prose fix found while verifying
+item 4 on hardware. Five code commits, all still local:
 
 | item | commit | comment | code |
 |---|---|---|---|
@@ -148,13 +158,19 @@ that no longer exists.
   `for c in <shas>; do git show --stat --format= --name-only $c | grep -qv '^tools/' && echo "$c SHIPPED"; done`
   The failure this prevents is not a wrong commit, it is a report the user cannot check at a glance --
   which is what turns one unasked change into "did you also push?".
-- **The fork checkout here is DIVERGED as of 2026-08-11.** It holds `f8eb8164`, an unsigned commit that
-  was superseded: signing had to happen on another machine (Touch ID does not work over VNC), so
-  `f8eb8164` went to a scratch branch `origin/nfc-magic-iso15693-signing`, was amended there to sign it,
-  and the SIGNED commit is what reached the PR branch. Its SHA therefore differs from `f8eb8164`.
-  **Before doing anything in the fork, run `git fetch && git reset --hard origin/nfc-magic-iso15693`**
-  and delete the scratch branch if it is still around. Committing on top of `f8eb8164` would build on a
-  commit that is not in the PR branch's history and turn the next push into a force-push.
+- **Never give a push command in the `HEAD:branch` form.** Always name the SHA:
+  `git push origin <sha>:refs/heads/<branch>`. On 2026-08-11 the fix was signed in a clone on a second
+  machine (Touch ID does not work over VNC) while this machine's fork checkout held the unsigned version
+  at the same branch name. `git push origin HEAD:nfc-magic-iso15693` was valid on BOTH and pushed a
+  different commit depending on where it ran -- so the unsigned one landed on the PR branch and had to be
+  accepted, because undoing it meant force-pushing a live review. A SHA-explicit refspec cannot do that.
+  It also fails loudly instead of silently when the intended commit is not present locally.
+- **Signing only works from `/Users/Shared/code/.gitconfig-base` and `.gitconfig-personal`**, so a fresh
+  clone anywhere else falls back to GPG and fails with "No secret key". For an out-of-band signing run,
+  set repo-locally: `gpg.format=ssh`, `gpg.ssh.program=/Applications/1Password.app/Contents/MacOS/op-ssh-sign`,
+  `user.signingkey=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDrbH2qYmg+qPbMKs34sLMke+K/csgeWr8lymyDTh7P1`,
+  plus `user.email`/`user.name` -- `--amend` rewrites the COMMITTER, and GitHub only badges Verified when
+  that address is verified on the account.
 - **Never reset the fork to `d659a919`.** Always reset to `origin/nfc-magic-iso15693` before replaying,
   then verify `git merge-base --is-ancestor origin/nfc-magic-iso15693 HEAD`. Resetting to the old base
   silently drops pushed commits and turns the next push into a force-push over his review threads.
