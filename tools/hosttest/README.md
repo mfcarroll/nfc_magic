@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-53 tests across four files.
+55 tests across four files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -77,9 +77,12 @@ Partial would flag every wipe where the user lifts the card as it completes) and
 guard sparing a wipe (whose failed and accepted sets are disjoint). Both would be "fixed" by a reader who
 had not read the reasoning, and both now fail loudly if they are.
 
-**`test_clone_blocks.c` — 11 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
+**`test_clone_blocks.c` — 13 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
 set `clone_capacity_confirmed`, since that renders "Card too small". This is the file that found the
-clock-cut capacity bug.
+clock-cut capacity bug. Also pins the gen1 backdoor-block arithmetic at both boundaries: a source below
+block 56 must lose nothing from its total, and a source reaching 56/57 but not 62/63 must lose exactly
+two. The first is a real geometry — magic SLIX cards ship with 32 blocks, where those addresses are
+outside the data space entirely.
 
 **`test_wipe_sweep.c` — 13 cases over `iso15693_poller_wipe_blocks`**, including the geometries re-derived
 by hand each review round:

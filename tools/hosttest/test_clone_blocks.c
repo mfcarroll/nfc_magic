@@ -208,6 +208,42 @@ static void test_gen1_skips_the_backdoor_blocks(void) {
     end();
 }
 
+// A source SMALLER than the gen1 backdoor addresses. Blocks 56/57/62/63 are not in it at all, so nothing
+// may be deducted from the total -- deducting unconditionally would report "Cloned 28/28" as "28/24" and
+// understate a clone that lost nothing. Real case: magic SLIX cards ship with 32 blocks, where those four
+// addresses are outside the data space entirely and a gen1 clone therefore loses no fidelity at all.
+static void test_gen1_small_source_deducts_nothing(void) {
+    begin("gen1 on a source below block 56 deducts nothing from the total");
+    fake_tag_init(32, 32, 4);
+    fake_data_init(&source, 32, 4);
+    Iso15693Poller inst;
+    const bool present = run_clone(&inst, true);
+
+    CHECK(present);
+    CHECK_EQ(inst.clone_blocks_total, 32); // all 32, no phantom deduction
+    CHECK_EQ(inst.clone_failed_count, 0);
+    CHECK_EQ(inst.clone_over_capacity, 0);
+    end();
+}
+
+// The boundary: a source that reaches 56 and 57 but not 62 and 63. Each backdoor block is deducted only
+// if the source actually contains it, so this must lose exactly two.
+static void test_gen1_partial_backdoor_overlap(void) {
+    begin("gen1 deducts only the backdoor blocks the source actually has");
+    fake_tag_init(58, 58, 4);
+    fake_data_init(&source, 58, 4);
+    Iso15693Poller inst;
+    const bool present = run_clone(&inst, true);
+
+    CHECK(present);
+    CHECK_EQ(inst.clone_blocks_total, 56); // 58 less blocks 56 and 57; 62 and 63 are out of range
+    CHECK_EQ(inst.clone_failed_count, 0);
+    // The two in range were skipped, so the target keeps its pre-clone marker there.
+    CHECK(fake_tag.content[56][0] != 0);
+    CHECK(fake_tag.content[57][0] != 0);
+    end();
+}
+
 // An empty source has nothing to clone. The caller refuses before this point, but the loop must not
 // misbehave if reached.
 static void test_empty_source(void) {
@@ -290,6 +326,8 @@ int main(void) {
     test_interior_failure_is_not_capacity();
     test_card_lifted_mid_clone();
     test_gen1_skips_the_backdoor_blocks();
+    test_gen1_small_source_deducts_nothing();
+    test_gen1_partial_backdoor_overlap();
     test_empty_source();
     test_absurd_source_block_size_is_clamped();
     test_source_count_clamped_to_bitmap();
