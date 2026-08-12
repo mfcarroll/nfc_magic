@@ -89,27 +89,33 @@ a follow-up PR — no app in `base_pack` has tests today, so that's your call an
 something to slip into this branch. If you'd rather it stayed out, the fix above stands on its own and I'll
 keep the harness on my side.
 
-## A question: the clone has no consent screen on the happy path
+## Confirming a deliberate choice: the clone has no up-front confirm
 
-Not a defect report — a decision I'd like checked, because I can't tell whether it's right.
+Raising this because it reads as an oversight if you come across it cold, and it isn't one.
 
-An ISO15693 clone skips the up-front confirm (`file_select.c:106`). The reasoning was that nothing is
-written until the gen2 UID reads back as the target, so a non-magic tag walks away untouched, and the
-shared confirm's text is a *bricking* warning ("may not be rewritten") that doesn't apply here. Gen2 and
-Classic reach the write unprompted too when their pre-write checks find nothing, so it isn't an exception
-so much as following the closer analogue.
+An ISO15693 clone goes straight to the write (`file_select.c:106`). Nothing is written until the gen2 UID
+reads back as the target, so a tag that isn't magic walks away untouched — and the shared confirm's text is
+a *bricking* warning ("On some cards it may not be rewritten") that doesn't describe anything gen2 ISO15693
+does.
 
-But the consequence is that **on the happy path — a genuine gen2 magic card — there is no consent screen
-anywhere.** The gen1 opt-in fires only when gen2 *fails* to take the UID. So the one case where the card's
-contents are certainly replaced is the case with no gate.
+That follows the closest analogues rather than departing from them:
 
-The strongest argument against myself is the asymmetry: an ISO15693 **wipe** prompts, and a clone doesn't,
-though both destroy what's on the card. My answer is that a wipe's only product is destruction while a
-clone leaves the card holding an image the user chose — but the app just does both and never says why, so
-I've written that reasoning into the comment and the changelog rather than leaving it implied.
+| flow | gate before writing |
+|---|---|
+| Gen2, Classic | none by default; specific card-derived warnings when there is something real to say — `gen2_write_check.c:24` returns straight to the write when the checks find nothing |
+| **ISO15693 clone** | none by default; the gen1 opt-in when there is something real to say |
+| Gen1, Gen4, USCUID-UL | a static blanket confirm, same text whatever the card is |
 
-Happy either way. If you think the clone should gate, it's a small change and I'd rather hear it now than
-after.
+The app already has two patterns, and ISO15693 follows the one that fits it: consent deferred to the moment
+a destructive path becomes real, naming the actual consequence, rather than a fixed warning shown
+regardless of the card.
+
+**I think that's right.** The one thing I'll flag against myself is that an ISO15693 *wipe* prompts while a
+clone doesn't, though both replace what is on the card. My reading is that a wipe's only product is
+destruction, whereas a clone leaves the card holding an image the user picked and chose a file for — and
+that reasoning is now written into the comment and the changelog instead of being left implied.
+
+So: confirming rather than asking you to adjudicate. If you'd rather the clone gated, it's a small change.
 
 ## Still deferred, not forgotten
 
