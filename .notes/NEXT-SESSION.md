@@ -148,6 +148,13 @@ that no longer exists.
   `for c in <shas>; do git show --stat --format= --name-only $c | grep -qv '^tools/' && echo "$c SHIPPED"; done`
   The failure this prevents is not a wrong commit, it is a report the user cannot check at a glance --
   which is what turns one unasked change into "did you also push?".
+- **The fork checkout here is DIVERGED as of 2026-08-11.** It holds `f8eb8164`, an unsigned commit that
+  was superseded: signing had to happen on another machine (Touch ID does not work over VNC), so
+  `f8eb8164` went to a scratch branch `origin/nfc-magic-iso15693-signing`, was amended there to sign it,
+  and the SIGNED commit is what reached the PR branch. Its SHA therefore differs from `f8eb8164`.
+  **Before doing anything in the fork, run `git fetch && git reset --hard origin/nfc-magic-iso15693`**
+  and delete the scratch branch if it is still around. Committing on top of `f8eb8164` would build on a
+  commit that is not in the PR branch's history and turn the next push into a force-push.
 - **Never reset the fork to `d659a919`.** Always reset to `origin/nfc-magic-iso15693` before replaying,
   then verify `git merge-base --is-ancestor origin/nfc-magic-iso15693 HEAD`. Resetting to the old base
   silently drops pushed commits and turns the next push into a force-push over his review threads.
