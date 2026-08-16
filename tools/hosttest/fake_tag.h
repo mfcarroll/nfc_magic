@@ -39,7 +39,7 @@ typedef struct {
 
     // Ticks (== ms) charged per radio operation. Bench figures put a refused block in the 40-70ms
     // range including its retries and read-back; a single op is a fraction of that. Set high to drive
-    // the sweep into ISO15693_POLLER_WIPE_MAX_MS.
+    // the sweep into ISO15693_POLLER_PASS_MAX_MS.
     uint32_t tick_cost_per_op;
 
     // A UID written into the gen1 registers latches only on the NEXT power-up: until then the card keeps

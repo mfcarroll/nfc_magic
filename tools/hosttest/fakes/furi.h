@@ -2,7 +2,7 @@
 //
 // Only the handful of primitives iso15693_poller.c actually calls. The clock is FAKE and
 // deterministic -- see fake_tag.h -- because the sweep's wall-clock bound
-// (ISO15693_POLLER_WIPE_MAX_MS) is one of the behaviours no real card can be made to produce.
+// (ISO15693_POLLER_PASS_MAX_MS) is one of the behaviours no real card can be made to produce.
 #pragma once
 
 #include <stdbool.h>
