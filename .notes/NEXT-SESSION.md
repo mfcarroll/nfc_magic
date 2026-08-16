@@ -38,13 +38,22 @@ Unleashed 88.2), zero compiler warnings — the only two warnings are pre-existi
 complaints about Momentum's unrelated `cli_bridge` and `mtp` apps. Churn audit: **0 lines** written
 then rewritten inside the batch.
 
+The branch is ~25 commits ahead of `origin/iso15693-dev` (itself never pushed this round). **Six** of
+those are shipped code, in two groups, and none is up yet: the five Pass C commits above, and `fe7305d`.
+Everything else is `tools/` or `.notes/`. Regenerate that classification rather than trusting this line:
+
+```bash
+for c in $(git log --format=%h 83e90cb..HEAD); do git show --stat --format= --name-only $c \
+  | grep -qvE '^(tools/|\.notes/)' && echo "$c SHIPPED $(git log -1 --format=%s $c)"; done
+```
+
 Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numbers), then
 [pr-round-3/STATUS.md](pr-round-3/STATUS.md) (coverage, what is verified vs reasoned-only, and the
 pre-push checks). His Round 4 verbatim is in `pr-round-3/received/`.
 
 ## Sequencing from here
 
-**Pass C is local and unpushed, always.** He is reviewing `688614e8`; pushing into a line-anchored
+**Pass C is local and unpushed, always.** He is reviewing `f8eb8164`; pushing into a line-anchored
 review moves the code under him and undoes the separation he asked for.
 
 When Round 5 arrives: **answer it first, as its own round, and push that.** Pass C goes up after, so he
@@ -191,8 +200,15 @@ that no longer exists.
   silently drops code from the fork while shipping the hunk that needs it. Commit each item as it lands
   rather than leaving the tree dirty across a build.
 - **Commits are SSH-signed via 1Password `op-ssh-sign`.** When the vault locks, `git commit` dies with
-  `1Password: failed to fill whole buffer` / `failed to write commit object`. Retrying will not help and
-  the fix is not to disable signing — every commit on this branch is signed. Ask the user to unlock.
+  `1Password: failed to fill whole buffer` / `failed to write commit object`, and over VNC it fails with
+  `agent returned an error` because Touch ID cannot be reached. Retrying does not help. Ask the user to
+  unlock; do NOT extract the key from 1Password to sign with it directly, and do not silently disable
+  signing. If they cannot sign, `git -c commit.gpgsign=false commit` is the stopgap — it leaves their
+  config untouched so signing resumes by itself.
+  **Note the dev branch is currently unsigned from `b921c69` onward**: the reorder rewrote every commit
+  while signing was unavailable. It is private working history so it matters little, and
+  `git rebase --exec 'git commit --amend --no-edit -S' 83e90cb` re-signs the run — safe precisely because
+  none of it is pushed.
 
 ## Mechanics
 
@@ -206,10 +222,42 @@ that no longer exists.
 - **The user pushes and posts. Never push the PR branch without an explicit go-ahead.**
 - Hardware: one gen2 ISO15693 magic card. No gen1 card exists on either side.
 
-## What a bench cannot reach
+## The host test harness — READ THIS BEFORE TOUCHING THE POLLER
 
-Five behaviours shipped this round on reasoning alone — they need a card that refuses a write while
-still answering a read. Listed in `pr-round-3/STATUS.md`; the idea for closing that gap is in
-[test-bench-idea.md](test-bench-idea.md), where host-side tests of the sweep's decision logic look more
-tractable than tag simulation. Pass C is a good moment to start it, since a behaviour-preserving
-refactor is exactly what regression tests are for.
+`tools/hosttest`, **55 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
+
+```bash
+cd tools/hosttest && make
+```
+
+It compiles the shipped `iso15693_poller.c` **verbatim** — the test files `#include` the `.c` so the
+file-statics are reachable, and the SDK calls resolve to a fake tag via `-Ifakes`. No seam, no
+`#ifdef TEST`, nothing added to the app. Four files: the wipe sweep (13), the clone loop (13), the
+terminal-outcome contract (14), and the write state machine (15, driving the real poller callback the way
+the SDK does).
+
+**Three things that matter more than the test count:**
+
+1. **Run it after ANY change to the poller, and before claiming anything about coverage.** It found a real
+   defect on its first run over the clone loop — the clock-cut "Card too small" claim, now `f8eb8164` on
+   the PR.
+2. **If Round 5 asks for poller changes, update the tests in the same commit.** A test that still passes
+   because it was never updated is worse than no test — it reads as coverage and isn't.
+3. **The fake's semantics were verified against firmware source, with citations in the README.** If you
+   change the fake, re-check them; a wrong fake asserts wrong behaviour confidently.
+
+Where the previously reasoned-only behaviours now stand — five of six tested, one honestly out of reach:
+
+| behaviour | now |
+|---|---|
+| tail-drop fix's positive case | tested |
+| capacity gate's discriminating case | tested |
+| clock-cut clone, card present | tested — and it was wrong; that is the fix on the PR |
+| truncated sweep reporting Partial | tested at the poller; the *screens* are not |
+| `uid_verified` false | tested |
+| the gen1 path | **modelled, not settled** — the latch behaviour is our inference from proxmark's send order, so the tests show the app is right *given the model*, not that the model is. Needs a gen1 card. |
+
+Still uncovered and worth knowing: `write_identity`'s retry mechanics, every scene and its rendering, and
+the radio layer below the SDK. [test-bench-idea.md](test-bench-idea.md) has the state of the simulator
+idea — Option B is what got built; Option A's better lead is the firmware's own listener, not the
+proxmark, with two gates recorded against it.

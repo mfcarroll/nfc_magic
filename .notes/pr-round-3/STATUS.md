@@ -1,5 +1,11 @@
 # His Round 4 review — ANSWERED, PUSHED AND POSTED 2026-08-11
 
+> **SUPERSEDED for current state.** This is the historical record of the Round 4 exchange. Since it was
+> written, Pass C was taken, a further defect was found and pushed, and a host test harness was built.
+> **[../NEXT-SESSION.md](../NEXT-SESSION.md) is the authority on where things stand** — in particular the
+> "Next" section below is spent. What remains useful here is the coverage map against his 24 inline
+> comments, the hardware results, and the conventions.
+
 Directory naming is misleading: this is `pr-round-3/` but holds what **he** numbers Round 4, and our
 reply to it lives in `pr-round-4/`. See [../pr-rounds.md](../pr-rounds.md).
 
@@ -57,22 +63,25 @@ commit, and look for a later commit removing what an earlier one added.
 - Wipe with the card lifted → timing line now emitted on **both** card-lost exits (above and below the
   advertised count), attempted − cleared == 8 on all runs.
 
-## NOT verified — reasoned only
+## NOT verified — reasoned only (TRUE AS OF ROUND 4; four of these are now tested)
 
-Needs a card that refuses a write while still answering a read, which nobody has:
+Needed a card that refuses a write while still answering a read, which nobody has:
 
-- the blocking fix's positive case (a dead stretch inside the claimed range)
-- every truncated-sweep screen, and truncation reporting as Partial
-- `uid_verified` false
-- the capacity gate's discriminating case (a failed block that answers a read)
-- a clock-cut clone with the card still present
+- the blocking fix's positive case (a dead stretch inside the claimed range) — **now tested**
+- every truncated-sweep screen, and truncation reporting as Partial — **the reporting is now tested; the
+  screens are not**
+- `uid_verified` false — **now tested**
+- the capacity gate's discriminating case (a failed block that answers a read) — **now tested**
+- a clock-cut clone with the card still present — **now tested, and it was WRONG; see the fix on the PR**
 
-Say this plainly in the reply. See [../test-bench-idea.md](../test-bench-idea.md).
+Closed by the host harness in `tools/hosttest`, not by hardware. See
+[../test-bench-idea.md](../test-bench-idea.md) and `tools/hosttest/README.md`.
 
-## Next
+## Next — SPENT, see ../NEXT-SESSION.md
 
-This exchange is closed out. Awaiting his response, which will be his Round 5 — capture it and our
-reply together under `.notes/pr-round-5/`, one directory for the whole exchange.
+Kept for the record. Everything below was done: Pass C items 1-4 are committed locally, items 5 and 6 are
+still held, and `.notes/pr-round-5/` now exists holding the interim comment already posted and the gen3
+note.
 
 Pass C, whenever it is taken: the two deferred simplifications above, plus the round-1 queue — the duplicated retry loop
    (he called it non-optional), the `{reason, title, body}` render table, the duplicated confirm scene,
