@@ -314,6 +314,41 @@ static void test_clock_cut_clone_with_card_present(void) {
     // fabricated statement about the user's hardware -- the exact failure the read-probe exists to
     // prevent, arrived at from a different direction.
     CHECK(!inst.clone_capacity_confirmed);
+
+    // ...and that fact has to LEAVE the function. Held in a local, the truncation stopped the poller
+    // fabricating "Card too small" but let every screen downstream fabricate the same thing per block:
+    // "Not written: 246", 246 indices listed under "Blocks not written", and Finish rather than Retry.
+    // The card refused none of them. These two fields are what the report reads to tell a block the
+    // card refused from one nothing was sent to.
+    CHECK(inst.pass_truncated);
+    CHECK(inst.pass_cut_block > 0);
+    CHECK(inst.pass_cut_block < 256); // it really was cut, not run to the end
+
+    // The division the screens depend on: below the cut, blocks that were attempted; at and above it,
+    // blocks that were not. Everything the back-fill recorded sits above the cut.
+    uint16_t refused_below_cut = 0;
+    for(uint16_t b = 0; b < inst.pass_cut_block; b++) {
+        if(inst.clone_failed_bitmap[b / 8] & (1u << (b % 8))) refused_below_cut++;
+    }
+    CHECK_EQ(refused_below_cut, 0); // this card accepted every block it was actually asked for
+    CHECK_EQ(inst.clone_failed_count, (uint16_t)(256 - inst.pass_cut_block));
+    end();
+}
+
+// The same bound on a run that is NOT cut must leave both fields alone -- otherwise every ordinary
+// partial would offer Retry and hide its block list behind a truncation note.
+static void test_uncut_clone_sets_no_truncation(void) {
+    begin("a clone that finishes leaves the truncation fields clear");
+    fake_tag_init(64, 64, 4);
+    fake_data_init(&source, 64, 4);
+    fake_tag_set_range(30, 30, FakeBlockLocked); // an ordinary refusal, nothing to do with the clock
+    Iso15693Poller inst;
+    const bool present = run_clone(&inst, false);
+
+    CHECK(present);
+    CHECK(!inst.pass_truncated);
+    CHECK_EQ(inst.pass_cut_block, 0);
+    CHECK_EQ(inst.clone_failed_count, 1); // block 30, genuinely refused
     end();
 }
 
@@ -328,6 +363,7 @@ int main(void) {
     test_gen1_skips_the_backdoor_blocks();
     test_gen1_small_source_deducts_nothing();
     test_gen1_partial_backdoor_overlap();
+    test_uncut_clone_sets_no_truncation();
     test_empty_source();
     test_absurd_source_block_size_is_clamped();
     test_source_count_clamped_to_bitmap();

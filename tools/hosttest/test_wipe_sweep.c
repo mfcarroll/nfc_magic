@@ -86,7 +86,7 @@ static void test_clean_64(void) {
     CHECK_EQ(inst.clone_failed_count, 0);
     CHECK_EQ(inst.clone_blocks_total, 64);
     CHECK_EQ(inst.wipe_advertised, 64);
-    CHECK(!inst.wipe_truncated);
+    CHECK(!inst.pass_truncated);
     CHECK(!card_lost);
     CHECK_EQ(bitmap_count(&inst), 0);
     end();
@@ -106,7 +106,7 @@ static void test_advertises_28_holds_64(void) {
     CHECK_EQ(inst.clone_failed_count, 0);
     CHECK_EQ(inst.clone_blocks_total, 64); // what it PROVED, not what it claimed
     CHECK_EQ(inst.wipe_advertised, 28);
-    CHECK(!inst.wipe_truncated);
+    CHECK(!inst.pass_truncated);
     CHECK(!card_lost);
     end();
 }
@@ -267,7 +267,7 @@ static void test_clock_cuts_the_sweep(void) {
     bool card_lost;
     run_sweep(&inst, &card_lost);
 
-    CHECK(inst.wipe_truncated);
+    CHECK(inst.pass_truncated);
     CHECK(!card_lost);
     CHECK(inst.clone_blocks_total < 256); // stopped short of the claim
     CHECK(strstr(fake_log_text(), "time limit reached") != NULL);
@@ -293,7 +293,7 @@ static void test_cut_index_exceeds_total_after_a_tail_drop(void) {
     bool card_lost;
     run_sweep(&inst, &card_lost);
 
-    CHECK(inst.wipe_truncated);
+    CHECK(inst.pass_truncated);
     CHECK(!card_lost);
     // The whole point: these are different numbers, and the larger one is what "stopped at" means.
     // Blocks 50..53 were attempted -- three writes and a read each -- then dropped by the tail rule,
@@ -318,7 +318,7 @@ static void test_cut_index_can_exceed_the_advertised_count(void) {
     bool card_lost;
     run_sweep(&inst, &card_lost);
 
-    CHECK(inst.wipe_truncated);
+    CHECK(inst.pass_truncated);
     CHECK(!card_lost);
     CHECK(inst.pass_cut_block > inst.wipe_advertised); // the "200 of 64" shape
     end();

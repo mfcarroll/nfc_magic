@@ -187,7 +187,18 @@ static void test_uid_changed_is_partial(void) {
 static void test_truncated_sweep_is_partial(void) {
     begin("a sweep the clock cut is Partial");
     Iso15693Poller inst = clean_wipe();
-    inst.wipe_truncated = true;
+    inst.pass_truncated = true;
+    CHECK_OUTCOME(&inst, Iso15693PollerEventPartial);
+    end();
+}
+
+// The same flag on a clone. It used to be wipe-only, which is how a cut clone reached the report with
+// nothing marking it as cut -- so its unattempted blocks arrived indistinguishable from refused ones.
+// It qualifies for the same reason a sweep does: the operation's own job is left undone.
+static void test_truncated_clone_is_partial(void) {
+    begin("a clone the clock cut is Partial");
+    Iso15693Poller inst = clean_clone();
+    inst.pass_truncated = true;
     CHECK_OUTCOME(&inst, Iso15693PollerEventPartial);
     end();
 }
@@ -261,6 +272,7 @@ int main(void) {
     test_identity_failure_is_partial_for_a_clone_only();
     test_uid_changed_is_partial();
     test_truncated_sweep_is_partial();
+    test_truncated_clone_is_partial();
     test_unverified_uid_alone_is_not_a_downgrade();
     test_clone_with_every_block_rejected_is_fail();
     test_one_block_written_is_partial_not_fail();
