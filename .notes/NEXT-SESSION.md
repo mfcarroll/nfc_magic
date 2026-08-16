@@ -169,8 +169,18 @@ that no longer exists.
   no app code. The fix was correct and the decision was not ours to make. Report it, recommend it, wait.
 - **Classify every commit as shipped-vs-dev-only in the message where you report it, up front.** Anything
   outside `tools/` and `.notes/` is shipped code and gets named explicitly, never left to a tail
-  paragraph. One line per commit is enough:
-  `for c in <shas>; do git show --stat --format= --name-only $c | grep -qv '^tools/' && echo "$c SHIPPED"; done`
+  paragraph. Use THIS form -- pure git, no grep:
+  ```bash
+  for c in $(git log --reverse --format=%h <range>); do
+    f=$(git show --pretty= --name-only $c -- ':(exclude)tools' ':(exclude).notes')
+    [ -n "$f" ] && echo "SHIPPED $c $(git log -1 --format=%s $c)"
+  done
+  ```
+  **The old `| grep -qv '^tools/'` form gives WRONG ANSWERS in this environment and was used to report
+  to the user on 2026-08-16.** `grep` here is a shell function wrapping `ugrep`, whose `-q` combined
+  with `-v` returns 1 even when non-matching lines exist -- so commits touching `magic/` and `scenes/`
+  were reported as dev-only. It fails silently and plausibly, which is the worst shape. Never use
+  `grep -q` for a decision in this repo; use `grep -c` and test the count, or avoid grep as above.
   The failure this prevents is not a wrong commit, it is a report the user cannot check at a glance --
   which is what turns one unasked change into "did you also push?".
 - **Never give a push command in the `HEAD:branch` form.** Always name the SHA:
