@@ -13,7 +13,9 @@ Read [PLAN.md](PLAN.md) for the analysis and [received/](received/) for his revi
   `origin/nfc-magic-iso15693` before replaying — resetting to `d659a919` silently drops already-pushed
   commits and turns the next push into a force-push over his review threads.
 - Builds clean at Momentum 87.15 and Unleashed 88.2, zero warnings, clang-format applied.
-- Nothing posted for this round.
+- **Superseded:** work has continued past this round. For current state read
+  [../NEXT-SESSION.md](../NEXT-SESSION.md) — this file is the record of the Round 4 exchange, not a
+  live status.
 
 ## Coverage against his 24 inline comments
 
