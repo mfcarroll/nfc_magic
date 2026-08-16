@@ -220,6 +220,43 @@ that no longer exists.
   `git rebase --exec 'git commit --amend --no-edit -S' 83e90cb` re-signs the run — safe precisely because
   none of it is pushed.
 
+## Hardware checks owed for Round 5 — NOT DONE, and mostly NOT REACHABLE as-is
+
+Round 5's headline changes are all gated on `pass_truncated`, and a healthy gen2 card never truncates:
+a 64-block sweep takes ~1s against a 10s budget. So the new screens cannot be reached by using the app
+normally. They are covered by the host tests instead, which is exactly what the harness exists for --
+but that is source-level coverage, not a rendered screen.
+
+**To reach them on the card we have, temporarily lower the budget.** Set
+`ISO15693_POLLER_PASS_MAX_MS` to ~200 in `iso15693_poller.c`, build, flash, test, then REVERT before
+pushing. A healthy card is then cut a dozen or so blocks in and every truncation path renders.
+
+| # | with the budget lowered | expect |
+|---|---|---|
+| 1 | ISO15693 -> Wipe | title `Wipe stopped`; body `Cleared N blocks.` / `Stopped at block N.`; buttons **Retry** and **Details** (NOT Exit) |
+| 2 | press Details on it | scroll view; `Sweep hit its time limit at block N of the M this card claims. Blocks above that were never attempted and may still hold data.` |
+| 3 | press Back on it | leaves to the ISO15693 menu. This is the exit now -- there is no Exit button |
+| 4 | press Retry on it | re-runs the wipe |
+| 5 | ISO15693 -> clone a saved image | `Clone partial`; a `Stopped at block N` qualifier line; **Retry** offered, not Finish |
+| 6 | Details on that clone | the block list stops at the cut, and the note reads `Clone hit its time limit at block N. Blocks from there up were never sent to the card -- they are counted as not written, but the card did not refuse them. Running the clone again writes them.` |
+
+Watch the **line width** on 1 and 5: `Stopped at block %u.` replaced `Stopped at %u of %u.` and should
+be no wider, but it has not been seen rendered.
+
+**With the budget at its real value**, these are regression checks over the refactors -- the backdoor
+predicate, the two loop bounds, the tail-drop's dropped `i < advertised`:
+
+| # | test | expect |
+|---|---|---|
+| 7 | 70/64 clone | `Partial`, 6 blocks named, `Card too small` -- unchanged from Round 4 |
+| 8 | 70/64 wipe | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.` -- unchanged |
+| 9 | clone with the card lifted | `Card removed before the write could finish.` |
+| 10 | wipe with the card lifted | CardLost, timing line on both exits |
+| 11 | Details on a normal partial | the full block list, unbounded -- confirms `list_upto` does not truncate an uncut run |
+
+Nothing here needs a gen1 card. Tests 7-11 are the ones that would catch a regression from this round's
+dedup work; 1-6 are the only way to see the new behaviour rendered at all.
+
 ## Mechanics
 
 - Build: `cd ../Momentum-Firmware && FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev` (API 87.15).
