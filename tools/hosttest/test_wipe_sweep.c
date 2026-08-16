@@ -274,6 +274,56 @@ static void test_clock_cuts_the_sweep(void) {
     end();
 }
 
+// The cut index is its own figure, and these two cases are why it has to be. Both were rendering a
+// false claim about which blocks the sweep tried, from the same substitution: blocks_total standing in
+// for the cut. blocks_total is the highest block that ANSWERED, so it tracks the cut only when the
+// sweep happens to end on a proven-present block, which is exactly what a truncation prevents.
+
+// Below the claim: a trailing run the tail-drop discards was attempted -- three writes and a read each
+// -- but leaves blocks_total behind it. The screen credited the sweep with less than it tried.
+static void test_cut_index_exceeds_total_after_a_tail_drop(void) {
+    begin("a dropped trailing run leaves the cut above blocks_total");
+    fake_tag_init(64, 64, 4);
+    fake_tag_set_range(50, 63, FakeBlockAbsent); // answers neither, and the floor keeps sweeping it
+    fake_tag_cache_from_activation(); // nothing proves 50+ existed, so the tail-drop discards them
+    // 50 accepted blocks cost 1 op each; each absent one costs 3 writes + a read. 160 ticks/op puts
+    // the 10s cut a few blocks into the dead stretch -- past 50, so the drop and the cut disagree.
+    fake_tag.tick_cost_per_op = 160;
+    Iso15693Poller inst;
+    bool card_lost;
+    run_sweep(&inst, &card_lost);
+
+    CHECK(inst.wipe_truncated);
+    CHECK(!card_lost);
+    // The whole point: these are different numbers, and the larger one is what "stopped at" means.
+    // Blocks 50..53 were attempted -- three writes and a read each -- then dropped by the tail rule,
+    // so the total stops at 50 while the sweep reached 54.
+    CHECK_EQ(inst.pass_cut_block, 54);
+    CHECK_EQ(inst.clone_blocks_total, 50);
+    end();
+}
+
+// Above the claim: the card this bound was designed for. It answers a read at every address, so no
+// absent run ever closes the sweep and it walks well past the advertised count before the clock fires.
+// The cut then sits ABOVE the claim -- which is what made "Stopped at %u of %u" render "200 of 64",
+// parsing as a fraction, and so as falling short of 64 when it had gone beyond it.
+static void test_cut_index_can_exceed_the_advertised_count(void) {
+    begin("a read-everywhere card is cut above the count it advertises");
+    fake_tag_init(64, 256, 4);
+    fake_tag_set_range(0, 255, FakeBlockLocked); // refuses every write, answers every read
+    // 4 ops per refused block, so 25 ticks/op spends the 10s budget around block 100 -- comfortably
+    // past the 64 it claims, which is the condition under test.
+    fake_tag.tick_cost_per_op = 25;
+    Iso15693Poller inst;
+    bool card_lost;
+    run_sweep(&inst, &card_lost);
+
+    CHECK(inst.wipe_truncated);
+    CHECK(!card_lost);
+    CHECK(inst.pass_cut_block > inst.wipe_advertised); // the "200 of 64" shape
+    end();
+}
+
 // A card lifted mid-sweep looks exactly like memory ending there. It must report CardLost rather than
 // pass off the blocks it never reached as absent.
 static void test_card_lifted_mid_sweep(void) {
@@ -321,6 +371,8 @@ int main(void) {
     test_advertised_zero();
     test_full_256_hits_the_ceiling();
     test_clock_cuts_the_sweep();
+    test_cut_index_exceeds_total_after_a_tail_drop();
+    test_cut_index_can_exceed_the_advertised_count();
     test_card_lifted_mid_sweep();
     test_summary_line_is_emitted();
 
