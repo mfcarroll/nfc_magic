@@ -146,8 +146,14 @@ anchor most comments on, so it belongs with the comment cut rather than with fix
   consecutive commits, once for the flag rename and once for the wording. The audit also flags 16 lines
   in `partial_details.c`, which are `clang-format` re-wrapping byte-identical text after an indent
   change, not a rewritten decision.
-- **Verified on the 70/64 gen2 card**, re-run against this delta rather than cited from last round,
-  since it touched the sweep's tail-drop, both clone loop bounds and the backdoor test:
+- **Verified on hardware**, re-run against this delta rather than cited from last round, since it
+  touched the sweep's tail-drop, both clone loop bounds and the backdoor test.
+
+  The card is a **physically 64-block gen2 magic card**. It advertises 70 only because the 70-block
+  source's CFG frame programs that count during the clone — which is the whole reason the sweep cannot
+  treat the advertised figure as the card's extent, so the setup is the mechanism under test rather than
+  a quirk of our sample. The order below matters for the same reason: the wipe is meaningful *because*
+  the clone ran first and left the card claiming 70 while holding 64.
 
   | check | result |
   |---|---|

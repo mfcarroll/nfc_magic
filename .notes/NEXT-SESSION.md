@@ -243,15 +243,22 @@ pushing. A healthy card is then cut a dozen or so blocks in and every truncation
 Watch the **line width** on 1 and 5: `Stopped at block %u.` replaced `Stopped at %u of %u.` and should
 be no wider, but it has not been seen rendered.
 
-**The regression half is DONE — all five passed, 2026-08-17**, on the 70/64 gen2 card against this
-delta (not cited from Round 4):
+**The regression half is DONE — all five passed, 2026-08-17**, against this delta (not cited from
+Round 4).
+
+**The card is physically 64 blocks.** "70/64" is shorthand for its STATE, not its geometry: the
+advertised count is whatever the last clone's CFG frame programmed, and the worklog records one
+physically-64 card impersonating 28/56/64/70 on demand. So **run the clone before the wipe** -- test 10
+reports "Card claims 70" only because test 7 left it claiming 70. Wipe first and the number is whatever
+the previous session left behind. A past result was traced to exactly this ordering artifact
+(worklog 2026-07-27), so it is a trap, not a detail.
 
 | # | test | result |
 |---|---|---|
-| 7 | 70/64 clone | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`; **Finish** + Details -- confirms an uncut partial is still non-retryable after `is_retryable` learned to read the flag |
+| 7 | clone the 70-block source (FIRST) | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`; **Finish** + Details -- confirms an uncut partial is still non-retryable after `is_retryable` learned to read the flag |
 | 8 | Details on it | `Blocks not written` / `64 65 66 67 68 69` -- all six, so `list_upto` does not clip an uncut run |
 | 9 | clone, card lifted | `Card removed before the write could finish.`; **Retry + Exit** -- the right-slot rule correctly yields Exit where `has_details` is false |
-| 10 | 70/64 wipe | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`; Finish only -- the 8-block phantom tail still drops after `i < advertised` came out |
+| 10 | wipe (AFTER the clone) | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`; Finish only -- the 8-block phantom tail still drops after `i < advertised` came out |
 | 11 | wipe, card lifted | `Card removed...`; Retry + Exit |
 
 Also observed and correct: the wipe's progress popup ends at **70/70** while the result says 64 cleared.

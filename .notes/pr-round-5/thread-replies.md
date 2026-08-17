@@ -67,9 +67,9 @@ of the two, since it was making a factual claim about 170 blocks in the opposite
 truth. The sentence is now bounded by the cut, so "above that were never attempted" is true by
 construction rather than by luck.
 
-The block list is bounded the same way, and that is the half the gen2 card can check: on an uncut
-partial it still prints the full bitmap (`64 65 66 67 68 69` on the 70/64 card), so the new bound does
-not clip a run that was never cut.
+The block list is bounded the same way, and that is the half our card can check: on an uncut partial it
+still prints the full bitmap — blocks 64-69, the six a 70-block source cannot fit onto 64 blocks of
+silicon — so the new bound does not clip a run that was never cut.
 
 ---
 
@@ -84,7 +84,8 @@ rather than incidental.
 The redundant bitmap bound is gone from both loop headers, and the clamp now says it is the single
 point of truth, which is what the loops rely on.
 
-Regression-checked on the 70/64 card rather than trusted: the 70-block clone still reports
+Regression-checked on hardware rather than trusted — a physically 64-block card carrying a 70-block
+source, so it advertises 70 while holding 64. The clone still reports
 `Cloned 64/70 blocks` / `Not written: 6` / `Card too small` with all six indices in Details, and the
 wipe still reports `Cleared 64 blocks. / Card claims 70.` — the second being the one that exercises the
 dropped `i < advertised`, since that card's 8-block phantom tail is exactly what the guard was covering.
