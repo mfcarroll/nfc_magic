@@ -28,8 +28,9 @@ visible and did not look at what the report did with the same blocks.
 
 Promoted to the instance, and renamed to `pass_truncated` in both the instance and the result, since
 `sweep_truncated` on a clone's data pass would be the same drift in a new place. Full list of what it
-buys is in the main comment. Three host tests, including the refused-vs-unattempted division the
-screens now depend on.
+buys is in the main comment. Two new host tests -- an uncut clone leaving both fields clear, and a cut
+clone reaching Partial -- plus new assertions on the existing clock-cut test for the
+refused-vs-unattempted division the screens now depend on.
 
 ---
 

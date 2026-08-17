@@ -4,9 +4,10 @@ Post as the PR comment body once the push lands. Threaded replies are in `thread
 
 ---
 
-No apology needed on the timing — and thank you for the disassembly. Three of the facts you pulled out
-of `firmware.elf` were things this branch had been reasoning about rather than knowing, and one of them
-turned out to be load-bearing in a place neither of us had noticed.
+No apology needed on the timing — and thank you for the disassembly. Three facts this branch had been
+reasoning about rather than knowing are now settled, and one of them you also showed to be load-bearing
+in three places where we had written it down in none. That reconciliation was yours, not ours; all we
+did was put it in the file.
 
 All three blocking items are fixed, and both of the questions you answered are settled.
 
@@ -46,7 +47,7 @@ covers a clone's data pass, "sweep" is the same drift in a new place. Once it re
 The routing in `scene_write.c` is now mode-gated: `WipeStopped`'s screen is wipe-specific down to its
 wording, so a cut clone stays on the ordinary partial screen.
 
-**3. `CHANGELOG.md:41-48` — claimed a fault the app hides.** Fixed as documentation, and I agree the code
+**3. `CHANGELOG.md:42` and `:47` — claimed a fault the app hides.** Fixed as documentation, and I agree the code
 gap is not closable for exactly the reason you give. Both errors corrected: the fault claim now says a
 dead stretch is reported *when the app can tell it apart from memory that never existed*, with the
 prefix limit stated plainly underneath; and "were read" is now "read back **non-zero content**", with the
@@ -113,8 +114,8 @@ It is now in the unsafe set rather than enumerated and dropped. Issues named: #2
 
 Three groups, in history order. Each commit is one decision.
 
-1. **The Pass C refactors you deferred in Round 4** — the duplicated retry loop (your round-1
-   non-optional), the hoisted ticks and the named off-by-one (`:711`/`:799`), the success route's two
+1. **The Pass C refactors you deferred in Round 4** — the duplicated retry loop you called
+   non-optional, the hoisted ticks and the named off-by-one (`:711`/`:799`), the success route's two
    locals (`scene_write.c:396`), and the folded confirm scene. Plus one prose correction found while
    verifying that fold on hardware. These were finished before this review arrived and held so they
    would not move code under you mid-review.
@@ -139,9 +140,10 @@ anchor most comments on, so it belongs with the comment cut rather than with fix
 - **Size: +256 bytes.** Measured by building `origin/nfc-magic-iso15693` and this branch with the same
   toolchain — 165,216 against 165,472. Absolute figures on our toolchain will not match your 149,248, so
   the delta is the useful number: essentially the new Details strings and one `uint16_t` in the result.
-- Host tests: **59, all green** (was 55). Five new cases: the two cut-index traces from your `:117`
-  thread, the refused-vs-unattempted division a cut clone's report depends on, an uncut clone leaving
-  both fields clear, and a cut clone reaching Partial.
+- Host tests: **59, all green** (was 55). Four new cases — the two cut-index traces from your `:117`
+  thread, an uncut clone leaving both truncation fields clear, and a cut clone reaching Partial — plus
+  new assertions on the existing clock-cut clone test for the refused-vs-unattempted division its report
+  now depends on.
 - Commit hygiene audit: **1 line** of genuine intra-batch churn — a comment line touched by two
   consecutive commits, once for the flag rename and once for the wording. The audit also flags 16 lines
   in `partial_details.c`, which are `clang-format` re-wrapping byte-identical text after an indent
