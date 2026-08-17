@@ -134,7 +134,11 @@ anchor most comments on, so it belongs with the comment cut rather than with fix
 ## Verification
 
 - Momentum 87.15 and Unleashed 88.2, both from a clean object directory, zero compiler warnings.
-  `clang-format` clean.
+  `clang-format` clean. Built as `base_pack/nfc_magic` too, not only as the dev app, since the pack is
+  what you actually compile.
+- **Size: +256 bytes.** Measured by building `origin/nfc-magic-iso15693` and this branch with the same
+  toolchain — 165,216 against 165,472. Absolute figures on our toolchain will not match your 149,248, so
+  the delta is the useful number: essentially the new Details strings and one `uint16_t` in the result.
 - Host tests: **59, all green** (was 55). Five new cases: the two cut-index traces from your `:117`
   thread, the refused-vs-unattempted division a cut clone's report depends on, an uncut clone leaving
   both fields clear, and a cut clone reaching Partial.
