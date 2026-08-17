@@ -123,7 +123,7 @@ Three groups, in history order. Each commit is one decision.
    `0x14`/`0x15`. Such a card reports "not a magic tag" today, and a wipe or clone writes over those
    blocks like any other data. Declared rather than handled — supporting it is a feature and a
    third generation in the opt-in ladder, which is not a thing to start five rounds deep. Happy to open
-   it as its own issue.
+   it as its own issue, although not something I could currently work on as I have no gen3 iso15693 tag.
 3. **This round's eleven fixes.**
 
 The two Pass C items still held are the `{reason, title, body}` render table for
@@ -142,9 +142,27 @@ anchor most comments on, so it belongs with the comment cut rather than with fix
   consecutive commits, once for the flag rename and once for the wording. The audit also flags 16 lines
   in `partial_details.c`, which are `clang-format` re-wrapping byte-identical text after an indent
   change, not a rewritten decision.
-- **Not verified on hardware yet**: the "Wipe stopped" screen's new buttons and its "Stopped at block N"
-  line. Both need a card and will be checked before merge. Everything else in this delta is either
-  non-render code or covered by the host tests.
+- **Not verified on hardware, and worth being precise about why.** Every screen this round changed is
+  gated on `pass_truncated`, and a healthy gen2 card never truncates — a 64-block sweep is about a
+  second against a 10-second budget. So these six are unreachable by using the app, not merely
+  unchecked so far:
+  - the "Wipe stopped" screen's new buttons, and Back as its only exit
+  - its `Stopped at block N.` line, which replaced `Stopped at %u of %u.` (same intended width; unseen)
+  - the clone's `Stopped at block N` qualifier line
+  - the clone's Details note
+  - the cut-bounded block list
+  - the new `uid_verified` note in Details
+
+  They are covered by the host tests, which is what that harness is for, but that is source-level
+  coverage and I am not going to call it a rendered screen. The plan is to lower
+  `ISO15693_POLLER_PASS_MAX_MS` to ~200 in a local build, which cuts a healthy card a dozen blocks in
+  and makes all six render, then revert. Happy to post what they look like.
+
+  **Nothing in this delta has been on hardware yet**, including the regression side. The Round 4
+  results still stand for the code they were taken against, but this round touched the sweep's
+  tail-drop, both clone loop bounds and the backdoor test, so they need re-running rather than citing:
+  the 70/64 clone and wipe, both card-lifted exits, and Details on an uncut partial still listing the
+  full bitmap. None of that needs a gen1 card. Everything else in the delta is non-render code.
 
 ## One thing to hold me to
 
