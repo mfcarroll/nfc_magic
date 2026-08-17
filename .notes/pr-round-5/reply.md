@@ -142,42 +142,62 @@ anchor most comments on, so it belongs with the comment cut rather than with fix
   consecutive commits, once for the flag rename and once for the wording. The audit also flags 16 lines
   in `partial_details.c`, which are `clang-format` re-wrapping byte-identical text after an indent
   change, not a rewritten decision.
-- **Not verified on hardware, and worth being precise about why.** Every screen this round changed is
-  gated on `pass_truncated`, and a healthy gen2 card never truncates — a 64-block sweep is about a
-  second against a 10-second budget. So these six are unreachable by using the app, not merely
-  unchecked so far:
-  - the "Wipe stopped" screen's new buttons, and Back as its only exit
-  - its `Stopped at block N.` line, which replaced `Stopped at %u of %u.` (same intended width; unseen)
-  - the clone's `Stopped at block N` qualifier line
-  - the clone's Details note
-  - the cut-bounded block list
-  - the new `uid_verified` note in Details
+- **Verified on the 70/64 gen2 card**, re-run against this delta rather than cited from last round,
+  since it touched the sweep's tail-drop, both clone loop bounds and the backdoor test:
 
-  They are covered by the host tests, which is what that harness is for, but that is source-level
-  coverage and I am not going to call it a rendered screen. The plan is to lower
-  `ISO15693_POLLER_PASS_MAX_MS` to ~200 in a local build, which cuts a healthy card a dozen blocks in
-  and makes all six render, then revert. Happy to post what they look like.
+  | check | result |
+  |---|---|
+  | 70-block source onto the card | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`, **Finish** + Details — so an uncut partial is still non-retryable after `is_retryable` learned to read `pass_truncated` |
+  | Details on it | `Blocks not written` / `64 65 66 67 68 69` — all six, so the new list bound does not truncate an uncut run |
+  | clone, card lifted mid-write | `Card removed before the write could finish.`, Retry + **Exit** — the new right-slot rule correctly yields Exit where nothing sits behind Details |
+  | wipe | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`, Finish only — the 8-block phantom tail still drops after `i < advertised` came out |
+  | wipe, card lifted mid-sweep | `Card removed…`, Retry + Exit |
 
-  **Nothing in this delta has been on hardware yet**, including the regression side. The Round 4
-  results still stand for the code they were taken against, but this round touched the sweep's
-  tail-drop, both clone loop bounds and the backdoor test, so they need re-running rather than citing:
-  the 70/64 clone and wipe, both card-lifted exits, and Details on an uncut partial still listing the
-  full bitmap. None of that needs a gen1 card. Everything else in the delta is non-render code.
+  Also observed, and correct: the wipe's progress popup ends at 70/70 on this card while the result says
+  64 cleared. The denominator is the advertised count and blocks 64-69 genuinely were attempted, so
+  "70 of 70 attempted" is true — the operator read it as covering the claim, which is what it means.
+
+- **Six things this delta changed are NOT verified, and cannot be by using the app.** They are all gated
+  on `pass_truncated`, and a healthy gen2 card never truncates — a 64-block sweep is about a second
+  against a ten-second budget. So these are unreachable rather than merely unchecked:
+  the "Wipe stopped" screen's new buttons and Back-as-exit; its `Stopped at block N.` line; the clone's
+  `Stopped at block N` qualifier; the clone's Details note; the cut-bounded block list; and the new
+  `uid_verified` note.
+
+  The host tests cover them, which is what that harness is for, but that is source-level coverage and I
+  am not going to call it a rendered screen. Worth noting the string those two screens print is the same
+  21 characters as the one it replaced, and neither has ever been rendered, so the width is untested in
+  both directions rather than newly risky. Next local build will drop
+  `ISO15693_POLLER_PASS_MAX_MS` to ~200, which cuts a healthy card a dozen blocks in and makes all six
+  render, then revert. Happy to post what they look like.
 
 ## One thing to hold me to
 
-This delta is **+163 comment lines against +45 code lines**, and the file went from 40% comment to 43%
-against ~8% for `gen2_poller.c` and `uscuid_ul_poller.c`. Most of it is you asking for facts to be
-written down — the prefix property, the budget overlap, the rule the two predicates share — and those
-are exactly the constraints that had nowhere else to live. But it is the wrong direction, and it makes
-the comment cut more important rather than less. I am not treating that as optional.
+Both figures, since the push carries two groups and they say different things. **Round 5's own eleven
+commits are +163 comment against +45 code.** Almost all of it is you asking for facts to be written down
+— the prefix property, the budget overlap, the rule the two predicates share — which is the category
+that has nowhere else to live, but it is still the wrong direction.
+
+**The push as a whole is +170 comment against −6 code**, because Pass C takes 51 lines out. So the net
+is roughly code-neutral, and I would rather you had that number than only the flattering half or only
+the damning one.
+
+What neither number excuses is the ratio: `iso15693_poller.c` goes from 40% comment to **43%**, against
+~8% for `gen2_poller.c` and `uscuid_ul_poller.c`. That makes the comment cut more important rather than
+less, and I am not treating it as optional.
 
 ## On the tags
 
-Agreed, and thanks for saying so plainly. Nothing here waits on a gen1 card, and I would rather not hold
-a merge for one. What it would settle stays exactly where the code parks it: the armed-card wipe, the
+Agreed, and thanks for saying so plainly. Nothing here waits on a gen1 card and I would rather not hold
+a merge for one. What one would settle stays exactly where the code parks it: the armed-card wipe, the
 unlock/commit reading inferred from proxmark's send order, and a UID re-read that reports a change
 without preventing one. Arguments today, measurements later.
+
+More cards are inbound anyway — other gen2 silicon, to check the variety rather than one sample, plus
+candidates I believe are gen1 and some ordinary ISO15693 tags. None of them has been near this branch
+yet. The ordinary tags are the cheap win of the three: they reach the gen1 opt-in path by failing gen2,
+which is the only route to the source-inspection warning and the one place in this delta's dedup work
+that the gen2 card cannot exercise.
 
 ## On the harness
 

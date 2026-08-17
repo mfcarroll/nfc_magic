@@ -5,6 +5,34 @@ fully answered by the commit). Post after the push so the commit SHAs resolve.
 
 ---
 
+## `write_fail.c:341` — **blocking**, Exit opens Details
+
+Fixed, and you were right that the premise was the problem. There is one rule now, stated at the right
+slot in `on_enter` and referenced from `on_event`: the right slot means Details whenever `has_details`,
+and Exit only when it does not. I took your Retry + Details shape with Back as the exit.
+
+Checked on the card that the rule holds in the direction you can reach: a card lifted mid-write still
+renders **Retry + Exit**, because `has_details(CardLost)` is false. So the fix did not turn every
+retryable screen into a Details screen — which was the way it could have gone wrong.
+
+The `WipeStopped` side of it is not reachable on a healthy gen2 card at all; see the verification note
+in the main comment for how it gets rendered.
+
+---
+
+## `iso15693_poller.c:557` — **blocking**, the cut clone's report
+
+Fixed, and this was the good catch of the round. You are right that it is my own sentence from
+`f8eb8164` aimed at the report rather than the classifier. I stopped where the fabricated claim was
+visible and did not look at what the report did with the same blocks.
+
+Promoted to the instance, and renamed to `pass_truncated` in both the instance and the result, since
+`sweep_truncated` on a clone's data pass would be the same drift in a new place. Full list of what it
+buys is in the main comment. Three host tests, including the refused-vs-unattempted division the
+screens now depend on.
+
+---
+
 ## `write_fail.c:26` — "`instance` is unused"
 
 It was, and it is not any more — your `:557` thread is why. Fixing the cut clone means `is_retryable`
@@ -39,6 +67,10 @@ of the two, since it was making a factual claim about 170 blocks in the opposite
 truth. The sentence is now bounded by the cut, so "above that were never attempted" is true by
 construction rather than by luck.
 
+The block list is bounded the same way, and that is the half the gen2 card can check: on an uncut
+partial it still prints the full bitmap (`64 65 66 67 68 69` on the 70/64 card), so the new bound does
+not clip a run that was never cut.
+
 ---
 
 ## `iso15693_poller.c:649` — the back-fill and the repeated backdoor test
@@ -51,6 +83,14 @@ rather than incidental.
 
 The redundant bitmap bound is gone from both loop headers, and the clamp now says it is the single
 point of truth, which is what the loops rely on.
+
+Regression-checked on the 70/64 card rather than trusted: the 70-block clone still reports
+`Cloned 64/70 blocks` / `Not written: 6` / `Card too small` with all six indices in Details, and the
+wipe still reports `Cleared 64 blocks. / Card claims 70.` — the second being the one that exercises the
+dropped `i < advertised`, since that card's 8-block phantom tail is exactly what the guard was covering.
+
+The one site the gen2 card cannot reach is `source_uses_gen1_blocks`, which sits behind the gen1 opt-in
+and so needs a card that fails gen2. Ordinary ISO15693 tags are on order for it.
 
 On the downstream problem you point at: fixed in the `:557` thread. The back-fill stays — you are right
 that it is the correct record — and what changed is that the report can now tell its entries apart from

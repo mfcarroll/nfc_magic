@@ -243,19 +243,35 @@ pushing. A healthy card is then cut a dozen or so blocks in and every truncation
 Watch the **line width** on 1 and 5: `Stopped at block %u.` replaced `Stopped at %u of %u.` and should
 be no wider, but it has not been seen rendered.
 
-**With the budget at its real value**, these are regression checks over the refactors -- the backdoor
-predicate, the two loop bounds, the tail-drop's dropped `i < advertised`:
+**The regression half is DONE — all five passed, 2026-08-17**, on the 70/64 gen2 card against this
+delta (not cited from Round 4):
 
-| # | test | expect |
+| # | test | result |
 |---|---|---|
-| 7 | 70/64 clone | `Partial`, 6 blocks named, `Card too small` -- unchanged from Round 4 |
-| 8 | 70/64 wipe | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.` -- unchanged |
-| 9 | clone with the card lifted | `Card removed before the write could finish.` |
-| 10 | wipe with the card lifted | CardLost, timing line on both exits |
-| 11 | Details on a normal partial | the full block list, unbounded -- confirms `list_upto` does not truncate an uncut run |
+| 7 | 70/64 clone | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`; **Finish** + Details -- confirms an uncut partial is still non-retryable after `is_retryable` learned to read the flag |
+| 8 | Details on it | `Blocks not written` / `64 65 66 67 68 69` -- all six, so `list_upto` does not clip an uncut run |
+| 9 | clone, card lifted | `Card removed before the write could finish.`; **Retry + Exit** -- the right-slot rule correctly yields Exit where `has_details` is false |
+| 10 | 70/64 wipe | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`; Finish only -- the 8-block phantom tail still drops after `i < advertised` came out |
+| 11 | wipe, card lifted | `Card removed...`; Retry + Exit |
 
-Nothing here needs a gen1 card. Tests 7-11 are the ones that would catch a regression from this round's
-dedup work; 1-6 are the only way to see the new behaviour rendered at all.
+Also observed and correct: the wipe's progress popup ends at **70/70** while the result says 64 cleared.
+The denominator is the advertised count and blocks 64-69 were genuinely attempted, so "70 of 70
+attempted" is true. Operator read it as covering the claim, which is what it means. Not a defect, not
+touched this round -- `iso15693_poller.c:900` gates progress on `block < advertised` by design.
+
+## Backlog — needs cards we do not have yet
+
+- **The six truncation screens (1-6 above).** Need the lowered-budget build. Not blocked on cards.
+- **`source_uses_gen1_blocks`** -- the one backdoor-predicate site the gen2 card cannot reach, since it
+  sits behind the gen1 opt-in and so needs a card that FAILS gen2. **Any ordinary ISO15693/NfcV tag
+  does it** (on order as of 2026-08-17): select a source with data in 56/57/62/63, present the plain
+  tag, reach the gen1 opt-in, confirm the extra warning renders -- then **press Back, do NOT accept**.
+  Accepting writes the gen1 sequence into four blocks of an ordinary tag and destroys what is there.
+- **Other gen2 magic silicon** (inbound) -- everything verified so far is one sample. Re-run 7-11.
+- **gen1 magic candidates** (inbound, unconfirmed as gen1). What they would settle is unchanged: the
+  armed-card wipe hazard, the unlock/commit reading inferred from proxmark's send order, and the UID
+  re-read that reports a change without preventing one. He has said explicitly not to hold the merge
+  for these, and we agree.
 
 ## Mechanics
 
