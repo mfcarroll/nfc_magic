@@ -1,151 +1,85 @@
-# Next session — the clock-cut fix is PUSHED; Pass C is done locally; await his Round 5
+# Next session — Round 5 is ANSWERED, PUSHED and POSTED; await his Round 6
 
 ## Where things stand
 
-PR #250, `nfc_magic_dev` on branch `iso15693-dev`. His Round 4 review is answered, pushed and posted,
-and since then **one further fix has been pushed and an interim comment posted** (2026-08-12 01:14Z).
+PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **His Round 5 is fully answered, pushed and posted
+(2026-08-17.)** Nothing is queued and nothing is held back except the two items below.
 
-Fork `nfc-magic-iso15693` = **`f8eb8164`**, 13 commits. Awaiting his Round 5, which will be his first
-look at that fix.
+Fork `nfc-magic-iso15693` = **`5b26185c`**, 30 commits, signed and GitHub-verified. Pushed
+fast-forward from `f8eb8164`, no force. Dev branch is 44 commits, all signed, clean.
 
-- The pushed commit is the clock-cut capacity fix — see [pr-round-5/interim-comment.md](pr-round-5/interim-comment.md)
-  for exactly what was said about it, the harness, and the clone-confirm position.
-- **It is unsigned, deliberately left so.** Signing needed a machine with Touch ID; correcting it after
-  the fact would mean force-pushing the PR branch, which is not worth a signature — especially as the
-  commits are expected to be squashed at merge, which discards per-commit signatures anyway. The other
-  13 fork commits are signed; this one is the odd one out and that is a closed decision, not a to-do.
-- This machine's fork checkout is **in line** with origin at `f8eb8164`. Nothing to reset.
+What went up, in history order — three groups, each commit one decision:
 
-**One shipped-code commit is queued to go up with the Round 5 response:** `fe7305d`, a CHANGELOG line
-declaring that gen3 magic is not supported. Deliberately not pushed on its own — see
-[pr-round-5/gen3-note.md](pr-round-5/gen3-note.md) for what it covers, what it omits and why, and what to
-do if he asks for gen3 support. It is the only shipped-code change since the fix; everything else is
-`tools/` and `.notes/`.
+1. **Pass C 1-4 + the clone-confirm prose fix** (`a157cec` `0c17b2f` `b0a9952` `954a1e2` `71fa6e7`).
+   They could NOT be held back: `6eec333` edits `block_held_data`, which calls
+   `iso15693_poller_block_is_empty` — a helper Pass C item 1 introduced. 8 call sites at HEAD, 0 at the
+   old fork head. The earlier plan to push "Round 5 only" was not achievable and the reply says so.
+2. **`fe7305d`**, the gen3 CHANGELOG declaration.
+3. **This round's eleven fixes**, `b818ccc` through `27d973c`.
 
-**Pass C items 1-4 remain committed locally and NOT pushed**, plus one prose fix found while verifying
-item 4 on hardware. Five code commits, all still local:
+Posted: the reply as [#issuecomment-5321680598](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5321680598),
+plus **24 threaded replies covering 24 of his 26 threads**. The two without a reply are the two he
+marked as needing none (`write_fail.c:71`, `poller.c:58` — both him recording a verification).
+Drafts are [pr-round-5/reply.md](pr-round-5/reply.md) and
+[pr-round-5/thread-replies.md](pr-round-5/thread-replies.md); his review verbatim is in
+[pr-round-5/received/](pr-round-5/received/).
 
-| item | commit | comment | code |
-|---|---|---|---|
-| 1. retry loop + empty-block test | `2816bb5` | −2 | −13 |
-| 2. hoist ticks, name the off-by-one | `15eea79` | +2 | +2 |
-| 3. success route's two locals | `015d8cd` | +1 | −1 |
-| 4. fold the confirm scene | `04d392d` | +3 | −39 |
-| — the clone's missing-confirm claim | `d921055` | +3 (+2 CHANGELOG) | 0 |
+**Line numbers in his Round 5 comments no longer match the current diff** — `:341` renders at `:377`,
+`:855` at `:917`, `:687` at `:752`. The thread IDs are the stable handle and they are recorded beside
+each comment in `pr-round-5/received/inline-comments.md`. Use IDs, not lines, when replying.
 
-Batch: comment +9, code −51. Both firmwares rebuilt clean from scratch (85 objects, Momentum 87.15 and
-Unleashed 88.2), zero compiler warnings — the only two warnings are pre-existing fbt manifest
-complaints about Momentum's unrelated `cli_bridge` and `mtp` apps. Churn audit: **0 lines** written
-then rewritten inside the batch.
+## What is still held, and why
 
-The branch is ~25 commits ahead of `origin/iso15693-dev` (itself never pushed this round). **Six** of
-those are shipped code, in two groups, and none is up yet: the five Pass C commits above, and `fe7305d`.
-Everything else is `tools/` or `.notes/`. Regenerate that classification rather than trusting this line:
+Only two things, both flagged to him in the reply so they are not surprises:
 
-```bash
-for c in $(git log --format=%h 83e90cb..HEAD); do git show --stat --format= --name-only $c \
-  | grep -qvE '^(tools/|\.notes/)' && echo "$c SHIPPED $(git log -1 --format=%s $c)"; done
-```
-
-Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numbers), then
-[pr-round-3/STATUS.md](pr-round-3/STATUS.md) (coverage, what is verified vs reasoned-only, and the
-pre-push checks). His Round 4 verbatim is in `pr-round-3/received/`.
-
-## Sequencing from here
-
-**Pass C is local and unpushed, always.** He is reviewing `f8eb8164`; pushing into a line-anchored
-review moves the code under him and undoes the separation he asked for.
-
-When Round 5 arrives: **answer it first, as its own round, and push that.** Pass C goes up after, so he
-never reviews a diff mixing a fix with a refactor. If his fixes touch the sweep or the confirm scene,
-rebasing them over these four commits is cheap — they are small and independent — but the order matters
-and it is fixes first.
-
-## What was done, and the three judgement calls worth naming in the reply
-
-1. **The duplicated retry loop** → `iso15693_poller_write_block_retried()`. He named it
-   `iso15693_write_block_retried()`; it carries the `iso15693_poller_` prefix instead, to match all
-   twelve other statics in the file. Same for `iso15693_poller_block_is_empty()`. **Tell him**, so the
-   rename isn't a surprise.
-2. **is-buffer-all-zero had FOUR copies, not the three he counted** — the clone's non-empty test, the
-   wipe's still-holds-data test, the re-probe's, and `iso15693_poller_block_held_data`. All four now
-   call the one helper.
-3. **His bitmap set/clear duplication is NOT done.** He listed it (`|=` / `&= ~` at six sites once you
-   count the tail loops) alongside the retry loop, but proposed no helper for it, and doing it would
-   widen the diff in the file he anchors most of his comments on. It is held with items 5 and 6 below —
-   say so rather than letting him find it still there.
-
-Also fixed in passing: `226dd74` (a `notes:` commit from an earlier session) had swept an uncommitted
-`scene_write.c` edit into itself. Since `sync-to-fork.sh` skips `notes:` commits, that would have sent
-the hunk to the fork without the locals it uses and broken the fork build. Split into `2876ee2`
-(notes only, original message and author date preserved) and `015d8cd` (the code).
-
-## Hardware coverage for this batch
-
-**Verified 2026-08-11, Write UID → enter UID → confirm screen** (the one render path item 4 moved):
-title `Write UID?`, the UID as two space-separated 4-byte groups, both warning lines, centre button
-`Write`. That screen is only reachable from the new `iso15693_write_uid` branch, which sets the title,
-body, button label and 38px height together — so a correct title plus a correct label covers all four.
-
-**Verified 2026-08-11, ISO15693 → Wipe → confirm screen**: `Wipe card?`, the three-line body, `Continue`.
-
-**That is full coverage of the fold on the hardware that exists.** Only two routes reach this scene with
-an ISO15693 card, and both are checked. An ISO15693 **clone** never reaches it at all —
-`file_select.c:106` routes ISO15693 straight to `NfcMagicSceneWrite`, deliberately (the gen2 write is
-harmless on a non-magic tag and data blocks land only after the UID reads back as the target, so there
-is nothing to confirm up front).
-
-The other two variants — the plain `Risky operation` clone confirm and the USCUID-UL wipe text — need a
-**Gen1, Gen4 or USCUID-UL** magic card, and none exists on either side of this PR. They are safe by
-construction rather than by test: for a non-ISO15693 protocol `iso15693` is false, so both new
-conditions are false and control falls through the same `uscuid_ul_is_wipe_mode` / `else` chain as
-before; `title` is the identical `is_wipe ? ... : ...` expression, `confirm_label` stays `"Continue"`,
-`text_height` stays 54. Neither path reads a value the fold introduced. Say it that way in the reply
-rather than listing them as untested — the argument is stronger than the gap.
-
-Everything else in the batch is non-render code.
-
-## Raise in the reply: the clone has no consent screen on the happy path
-
-Found by using the app, not by reading it — the operator expected a warning before an ISO15693 clone and
-got none. It is **not** a regression: `20649a5` added the skip deliberately, and `CHANGELOG.md:61` has
-declared it for two rounds. Before that commit ISO15693 fell through to the shared confirm, which is why
-it feels like it used to be there. It did.
-
-`d921055` corrects the prose. What is left is a design position worth stating rather than waiting for him
-to find:
-
-> On the happy path — a genuine gen2 magic card — there is no consent screen anywhere in the ISO15693
-> clone. The gen1 opt-in fires only when gen2 *fails* to take the UID, so the one case where the card's
-> contents are certainly replaced is the case with no gate.
-
-Put both sides in. **For:** nothing is written until the UID reads back as the target, so a non-magic tag
-is untouched; the shared confirm's text is a *bricking* warning ("may not be rewritten") that does not
-apply to gen2 ISO15693; and Gen2/Classic reach the write unprompted too when their checks find nothing.
-**Against:** an ISO15693 wipe prompts and a clone does not, though both destroy what is on the card.
-
-The answer we settled on is that the asymmetry is right — a wipe's only product is destruction, a clone
-leaves the card holding a chosen image — and the behaviour stays. **The gen1 opt-in is not up for
-discussion; it carries the real consent and stays exactly as it is.** Offer the asymmetry up anyway; four
-rounds say he finds this class of thing, and it lands better volunteered.
-
-## Still held
-
-**Hold these until his Round 5 has been answered**, and say so in the reply so he knows they are not
-forgotten:
-
-5. The `{reason, title, body}` table for `nfc_magic_scene_iso15693_write_fail.c` — twelve render
-   branches now. Leave the eleven `const bool`s at the top alone; the table deletes them.
-6. The comment cut, under his ownership model: the event enum owns the outcome contract, the
+1. The `{reason, title, body}` render table for `nfc_magic_scene_iso15693_write_fail.c` — twelve render
+   branches. Leave the eleven `const bool`s at the top alone; the table deletes them.
+2. The comment cut, under his ownership model: the event enum owns the outcome contract, the
    `ISO15693_MAGIC_BLK_*` defines own the wire facts, `gen1_optin.c`'s strings own the user-facing gen1
-   consequence, `ISO15693_POLLER_WIPE_MAX_BLOCKS` owns the sweep rationale. Everything else
+   consequence, `ISO15693_POLLER_PASS_MAX_MS` owns the run-budget rationale. Everything else
    cross-references.
 
-Reason for holding: his reviews are line-anchored, and both move a lot of lines in the files he is most
-likely to comment on. If his review arrives after they land, every comment he anchored points at code
-that no longer exists.
+The bitmap set/clear duplication he listed in Round 4 belongs with item 2, not with fixes — it moves a
+lot of lines in the file he anchors most comments on. Told him that.
 
-## Rules that cost us real time this round
+**The comment cut is now more pressing, not less.** This round put `iso15693_poller.c` at **43%**
+comment against ~8% for `gen2_poller.c` and `uscuid_ul_poller.c`. Round 5's own commits were +163
+comment / +45 code; the whole push was +170 / −6 because Pass C removed 51 lines. Both figures are in
+the reply — do not quote only the flattering one.
+
+## One open question he put back to us
+
+On the `CHANGELOG.md:42` thread he raised, as our call: `blocks_total < advertised` is fake flash **or**
+dead memory and the app cannot tell which, yet it resolves that toward reassurance — success chime, the
+word "complete". **We did not change it**, deliberately: it is a behaviour change on a hardware-verified
+screen, in a delta already large.
+
+The proposal is on record in that thread: use the free third line when `blocks_total < advertised` to say
+the shortfall went unexplained ("Some claimed blocks did not answer."), staying out of the `>` case,
+which is unambiguously benign. If he says yes it goes in the next push with a hardware check; if he does
+not answer, file it so it does not evaporate.
+
+Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numbers). Round 4 and its
+answer are in `pr-round-3/` and `pr-round-4/`; Round 5 keeps both halves in `pr-round-5/`, which is the
+shape to copy.
+
+## Settled in earlier rounds — do not re-litigate
+
+- **The clone has no consent screen on the happy path, and that is correct.** He agreed explicitly in
+  Round 5: consent deferred to the moment a destructive path becomes real, naming the actual
+  consequence, beats a fixed warning describing a hazard gen2 ISO15693 does not have. The wipe/clone
+  asymmetry is answered by a wipe's only product being destruction. **The gen1 opt-in carries the real
+  consent and does not change.**
+- **The host harness is out of this PR**, and whether `base_pack` grows a test directory is xMasterX's
+  and mishamyte's call, not ours. He flagged it to them rather than answering for them.
+- **Helper names carry the `iso15693_poller_` prefix** even where he proposed a shorter name, to match
+  the other statics in the file. He has seen this and not objected.
+- **Pass C's confirm-scene fold was hardware-verified 2026-08-11** (Write UID and Wipe confirm screens);
+  the plain clone confirm and USCUID-UL wipe text need cards nobody on the PR has, and are safe by
+  construction — for a non-ISO15693 protocol the new conditions are false and control falls through the
+  pre-existing chain unchanged.
+
+## Rules that cost us real time — cumulative, all rounds
 
 - **A comment earns its place only if it records something the code cannot show AND is not already
   stated elsewhere.** The file is ~42% comment against ~10% for `gen2_poller.c` and
@@ -215,12 +149,13 @@ that no longer exists.
   unlock; do NOT extract the key from 1Password to sign with it directly, and do not silently disable
   signing. If they cannot sign, `git -c commit.gpgsign=false commit` is the stopgap — it leaves their
   config untouched so signing resumes by itself.
-  **Note the dev branch is currently unsigned from `b921c69` onward**: the reorder rewrote every commit
-  while signing was unavailable. It is private working history so it matters little, and
-  `git rebase --exec 'git commit --amend --no-edit -S' 83e90cb` re-signs the run — safe precisely because
-  none of it is pushed.
+  **The whole dev branch is signed as of 2026-08-17**, and so are all 30 fork commits except the one
+  deliberate exception (`f8eb8164`, unsigned, a closed decision). `git rebase --exec 'git commit --amend
+  --no-edit -S' <base>` re-signs a run and is safe while nothing is pushed; verify with
+  `git log --format='%h %G? %s'`, and note `U` (good signature, key not in local allowed_signers) is the
+  expected state here, not a problem — GitHub reports `verified: true`.
 
-## Hardware checks owed for Round 5 — NOT DONE, and mostly NOT REACHABLE as-is
+## Hardware: the regression half is DONE, the truncation half needs a lowered budget
 
 Round 5's headline changes are all gated on `pass_truncated`, and a healthy gen2 card never truncates:
 a 64-block sweep takes ~1s against a 10s budget. So the new screens cannot be reached by using the app
