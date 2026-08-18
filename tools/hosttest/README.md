@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-98 tests across seven files.
+99 tests across seven files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -105,7 +105,7 @@ by hand each review round:
   exist because a screen printed `blocks_total` as if it were where the sweep stopped, and the two
   figures are independent in either direction.
 
-**`test_write_fail_scene.c` — 14 cases over the two ISO15693 result screens.** A second set of fakes, no
+**`test_write_fail_scene.c` — 15 cases over the two ISO15693 result screens.** A second set of fakes, no
 radio involved: the GUI calls become recorders, so what a screen SAYS, which buttons it offers, and where
 each button navigates are all data a test can assert on. The scenes are compiled verbatim, same technique
 as the poller.

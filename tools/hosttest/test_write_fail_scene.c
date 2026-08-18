@@ -172,6 +172,68 @@ static void test_right_button_label_matches_where_it_goes(void) {
     end();
 }
 
+// Every reason code renders its OWN screen. This pins reason -> title, which is the mapping the switch
+// exists to express, and it is the guarantee a `switch` on a uint32_t cannot get from -Wswitch: give a
+// reason no arm of its own and it falls through to `default`, which renders a perfectly well-formed
+// "Write failed" screen. That is a confidently wrong message, not a crash, so only an expected-title
+// assertion catches it.
+//
+// The partial screen's title is mode-dependent, so it is checked in both modes.
+static void test_every_reason_renders_its_own_screen(void) {
+    begin("every reason code renders its own titled screen");
+    struct {
+        NfcMagicIso15693WriteFailReason reason;
+        const char* title;
+    } expected[] = {
+        {NfcMagicIso15693WriteFailReasonWipeComplete, "Wipe complete"},
+        {NfcMagicIso15693WriteFailReasonWipeStopped, "Wipe stopped"},
+        {NfcMagicIso15693WriteFailReasonOverCapacity, "Clone finished"},
+        {NfcMagicIso15693WriteFailReasonNothingWiped, "Wipe failed"},
+        {NfcMagicIso15693WriteFailReasonNothingCloned, "Clone failed"},
+        {NfcMagicIso15693WriteFailReasonWipeUidChanged, "UID changed"},
+        {NfcMagicIso15693WriteFailReasonUidUnexpected, "Unexpected UID"},
+        {NfcMagicIso15693WriteFailReasonGen1Failed, "gen1 failed"},
+        {NfcMagicIso15693WriteFailReasonUidUnverifiable, "UID unchanged"},
+        {NfcMagicIso15693WriteFailReasonEmptySource, "Nothing to clone"},
+        // Both of these are the default arm, deliberately: it has to tell them apart in its body.
+        {NfcMagicIso15693WriteFailReasonCardLost, "Write failed"},
+        {NfcMagicIso15693WriteFailReasonNotMagic, "Write failed"},
+    };
+    for(size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++) {
+        Iso15693PollerResult r = {0};
+        r.blocks_total = 64;
+        r.blocks_advertised = 70;
+        r.failed_count = 6;
+        r.over_capacity = 2;
+        r.cut_block = 23;
+        r.uid_verified = true;
+        render_write_fail_with(expected[i].reason, NfcMagicIso15693ModeWipe, &r);
+
+        const char* title = NULL;
+        for(uint16_t e = 0; e < fake_scene.element_count; e++) {
+            const FakeElement* el = &fake_scene.elements[e];
+            if(el->kind == FakeElementString && el->font == FontPrimary) {
+                title = el->text;
+                break;
+            }
+        }
+        CHECK_STR(title, expected[i].title);
+        // A left button too, so there is always a labelled way off the screen.
+        CHECK(fake_scene_button(GuiButtonTypeLeft) != NULL);
+        if(current_failed) printf("      (reason index %zu)\n", i);
+    }
+
+    // Partial titles itself by mode.
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 70;
+    r.failed_count = 6;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeWipe, &r);
+    CHECK(fake_scene_text_contains("Wipe partial"));
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    CHECK(fake_scene_text_contains("Clone partial"));
+    end();
+}
+
 // The specific shape the fix chose: a cut sweep has something behind Details, so Details takes the right
 // slot and Back is the exit. If someone puts "Exit" back here, the truncation note loses its only route.
 static void test_wipe_stopped_offers_retry_and_details(void) {
@@ -434,6 +496,7 @@ static void test_pressing_a_button_sends_its_own_type(void) {
 int main(void) {
     printf("iso15693 result screens\n");
     test_right_button_label_matches_where_it_goes();
+    test_every_reason_renders_its_own_screen();
     test_wipe_stopped_offers_retry_and_details();
     test_card_lost_offers_retry_and_exit();
     test_wipe_stopped_says_it_timed_out();
