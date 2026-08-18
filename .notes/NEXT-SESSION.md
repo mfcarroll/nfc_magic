@@ -89,13 +89,22 @@ shape to copy.
 ## Rules that cost us real time — cumulative, all rounds
 
 - **A comment earns its place only if it records something the code cannot show AND is not already
-  stated elsewhere.** The file is ~42% comment against ~10% for `gen2_poller.c` and
+  stated elsewhere.** The file is **43%** comment against ~8% for `gen2_poller.c` and
   `uscuid_ul_poller.c`. Report added/removed comment vs code per commit; a commit adding more comment
   than code is going the wrong way. The strong comment reduction is **item 6**, which is held — items
   1-4 came out at comment +4 / code −51, and the +4 is three constraints that had nowhere else to live
   (tick wraparound, don't-reuse-`is_wiping`, the widget copies its string so the early free is safe).
   Naming a value is often what makes the wrong refactor look attractive, so that is exactly where the
   constraint has to be written down.
+- **A test that has never been observed to FAIL is not evidence, and neither is a build system whose
+  dependency tracking has never been observed to fire.** Mutation-test anything new: break the fix the
+  test covers, watch the test go red, restore. On 2026-08-18 two `write_identity` tests passed against
+  deliberately broken source -- not because the tests were weak, but because `make` re-ran a stale
+  binary. `tools/hosttest`'s depfile rule compiled the test and its fake in ONE `cc` invocation sharing a
+  single `-MF`, so the fake's dependency list overwrote the test's and no depfile ever named
+  `iso15693_poller.c`. It had carried a comment asserting the opposite for weeks. Nothing was masked --
+  a from-scratch run of all 83 passed -- but several "green" claims made that day were worth less than
+  they looked. Fixed by compiling each TU separately; verify with the two greps in the Makefile.
 - **Do not leak process into artifacts that describe the present.** No "this used to be duplicated" in
   a comment, no "no longer" in a CHANGELOG for an unshipped feature. The rule goes in the comment, the
   incident in the commit message.
@@ -217,6 +226,9 @@ ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that us
   armed-card wipe hazard, the unlock/commit reading inferred from proxmark's send order, and the UID
   re-read that reports a change without preventing one. He said explicitly not to hold the merge for
   these, and we agree.
+- **Scene coverage beyond the two result screens** — the write scene's routing (including this round's
+  mode-gate, which decides whether a cut CLONE lands on the wipe-specific screen), the gen1 opt-in, and
+  the confirm screens. Dev-only work, no card needed, and the recorders already exist.
 - **The `Timed out at block N.` string has not been seen rendered** — it is one character wider than the
   `Stopped at block N.` that was. Check it on the next truncation run.
 
@@ -250,42 +262,57 @@ ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that us
   see the hardware section). More cards inbound as of 2026-08-17: other gen2 silicon, gen1 candidates,
   and ordinary ISO15693 tags. No gen1 card confirmed on either side yet.
 
-## The host test harness — READ THIS BEFORE TOUCHING THE POLLER
+## The host test harness — READ THIS BEFORE TOUCHING THE POLLER OR THE RESULT SCREENS
 
-`tools/hosttest`, **59 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
+`tools/hosttest`, **83 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
 
 ```bash
 cd tools/hosttest && make
 ```
 
-It compiles the shipped `iso15693_poller.c` **verbatim** — the test files `#include` the `.c` so the
-file-statics are reachable, and the SDK calls resolve to a fake tag via `-Ifakes`. No seam, no
-`#ifdef TEST`, nothing added to the app. Four files: the wipe sweep (15), the clone loop (14), the
-terminal-outcome contract (15), and the write state machine (15, driving the real poller callback the way
-the SDK does).
+Shipped code is compiled **verbatim**: the test files `#include` the `.c` so file-statics are reachable,
+and the firmware calls resolve to fakes via `-Ifakes`. No seam, no `#ifdef TEST`, nothing added to the
+app. `application.fam` excludes `tools/`, so none of it can ship.
 
-**Three things that matter more than the test count:**
+Two groups, six files:
 
-1. **Run it after ANY change to the poller, and before claiming anything about coverage.** It found a real
-   defect on its first run over the clone loop — the clock-cut "Card too small" claim, now `f8eb8164` on
-   the PR.
-2. **If Round 5 asks for poller changes, update the tests in the same commit.** A test that still passes
+| file | cases | drives |
+|---|---|---|
+| `test_wipe_sweep.c` | 15 | the wipe sweep, against a fake TAG |
+| `test_clone_blocks.c` | 14 | the clone loop |
+| `test_outcome.c` | 15 | the terminal-outcome contract |
+| `test_write_step.c` | 15 | the write state machine, via the real poller callback |
+| `test_write_identity.c` | 10 | the AFI/DSFID write-and-verify retry loop |
+| `test_write_fail_scene.c` | 14 | the two result screens, against fake GUI RECORDERS |
+
+**Four things that matter more than the test count:**
+
+1. **Run it after ANY change to the poller or those scenes, and before claiming anything about
+   coverage.** It found a real defect on its first run over the clone loop — the clock-cut "Card too
+   small" claim, now on the PR.
+2. **If a review asks for changes here, update the tests in the same commit.** A test that still passes
    because it was never updated is worse than no test — it reads as coverage and isn't.
-3. **The fake's semantics were verified against firmware source, with citations in the README.** If you
-   change the fake, re-check them; a wrong fake asserts wrong behaviour confidently.
+3. **The fakes' semantics were verified against firmware source, with citations in the README**, and the
+   GUI enum lists are copied from the firmware rather than invented. If you change a fake, re-check them;
+   a wrong fake asserts wrong behaviour confidently.
+4. **Mutation-test anything you add.** Break the fix the test covers and watch it fail. This is not
+   ceremony: it is how the depfile bug below was found, and two tests that looked fine were proving
+   nothing.
 
-Where the previously reasoned-only behaviours now stand — five of six tested, one honestly out of reach:
+Where the previously reasoned-only behaviours now stand:
 
 | behaviour | now |
 |---|---|
 | tail-drop fix's positive case | tested |
 | capacity gate's discriminating case | tested |
-| clock-cut clone, card present | tested — and it was wrong; that is the fix on the PR |
-| truncated sweep reporting Partial | tested at the poller; the *screens* are not |
-| `uid_verified` false | tested |
+| clock-cut clone, card present | tested — and it was wrong; that became a fix on the PR |
+| truncated sweep reporting Partial | tested at the poller **and now at the screens** |
+| `uid_verified` false | tested at the poller and on the screen |
 | the gen1 path | **modelled, not settled** — the latch behaviour is our inference from proxmark's send order, so the tests show the app is right *given the model*, not that the model is. Needs a gen1 card. |
 
-Still uncovered and worth knowing: `write_identity`'s retry mechanics, every scene and its rendering, and
-the radio layer below the SDK. [test-bench-idea.md](test-bench-idea.md) has the state of the simulator
-idea — Option B is what got built; Option A's better lead is the firmware's own listener, not the
-proxmark, with two gates recorded against it.
+Still uncovered: the scenes' LAYOUT as opposed to their content (the recorders capture x/y/font, but
+nothing asserts that N lines of FontSecondary fit above the button box — that arithmetic was measured by
+the reviewer, not by a test); the other scenes (the write scene's routing including this round's
+mode-gate, the gen1 opt-in, the confirm screens); and the radio layer below the SDK.
+[test-bench-idea.md](test-bench-idea.md) has the state of the simulator idea — Option B is what got
+built; Option A's better lead is the firmware's own listener, not the proxmark.
