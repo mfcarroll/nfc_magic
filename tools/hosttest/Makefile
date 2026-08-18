@@ -14,7 +14,7 @@ BUILD := build
 # Two groups. The poller tests drive a fake TAG; the scene tests drive fake GUI recorders and never
 # touch the radio at all, so they link a different fake.
 POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity
-SCENE_TESTS  := test_write_fail_scene
+SCENE_TESTS  := test_write_fail_scene test_write_scene
 TESTS := $(POLLER_TESTS) $(SCENE_TESTS)
 
 .PHONY: all run clean
@@ -44,7 +44,7 @@ $(BUILD)/%.o: %.c | $(BUILD)
 $(addprefix $(BUILD)/,$(POLLER_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_tag.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(addprefix $(BUILD)/,$(SCENE_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o
+$(addprefix $(BUILD)/,$(SCENE_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o $(BUILD)/fake_write.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(addprefix $(BUILD)/,$(TESTS))

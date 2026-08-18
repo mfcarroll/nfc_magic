@@ -6,10 +6,8 @@
 typedef struct Nfc Nfc;
 typedef struct NfcPoller NfcPoller;
 
-typedef enum {
-    NfcProtocolIso14443_3a,
-    NfcProtocolIso15693_3,
-} NfcProtocol;
+// NfcProtocol lives in its own header, as in the firmware, with the full enumerator list.
+#include <nfc/protocols/nfc_protocol.h>
 
 typedef enum {
     NfcCommandContinue,

@@ -11,3 +11,5 @@ typedef struct Icon {
 } Icon;
 
 extern const Icon I_WarningDolphinFlip_45x42;
+extern const Icon I_Loading_24;
+extern const Icon I_NFC_manual_60x50;

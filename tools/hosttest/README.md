@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-83 tests across six files.
+98 tests across seven files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -135,6 +135,23 @@ direction and GET SYSTEM INFO is the only thing that can. The fake therefore mod
 this. Also pinned: that holding the right value is not enough (the target must ADVERTISE the field, or
 the copy no longer reports the identity the source did), that an unreachable verify fails closed, and
 that a transient is ridden out by the retries rather than reported.
+
+**`test_write_scene.c` — 15 cases over the write scene's ROUTING.** Which screen each worker event sends
+the user to, and which of the five magic protocols swallows Back. A routing table expressed as nested
+branches, which is the shape that goes wrong quietly.
+
+Its centrepiece is the mode-gate from round 5: `pass_truncated` used to be wipe-only, and once a cut CLONE
+could set it, the branch sending a truncated run to the wipe-specific screen had to start asking which
+mode it was in. That was the one piece of new behaviour in that round with no coverage at all. Also pinned:
+that a moved UID outranks a cut sweep, that ISO15693 treats a lost card as terminal while the others resume
+searching, and that Back is swallowed ONLY for ISO15693 and only after a card is found — swallowing it for
+the other four would be a trap, since their pollers can stop advancing with the card gone.
+
+`fake_write.c` holds link-only stubs for that scene: poller lifecycle, popup text, blink, icons. Every one
+is reachable only from `on_enter`/`on_exit`, never from the routing, which reads plain fields off
+`NfcMagicApp`. That boundary is deliberate — these tests assert which screen an event routes to, not what a
+poller did to get there — and if the routing ever starts depending on a poller, the compile breaks there
+and forces the question.
 
 ## A build trap that made this suite lie
 
