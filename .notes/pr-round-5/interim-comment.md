@@ -3,7 +3,9 @@
 Not a reply to a review — this went up **before** his Round 5, because it carries a defect fix and one
 question. Posted alongside fork commit `f8eb8164`, a fast-forward from `688614e8`.
 
-Status: **POSTED AND PUSHED.** Fork `nfc-magic-iso15693` = `f8eb8164`, 13 commits. Awaiting his Round 5,
+Status: **POSTED AND PUSHED — HISTORICAL.** This records the state as of 2026-08-12; Round 5 has since
+arrived and been answered. Do not read the fork SHA or commit count below as current.
+Original note: Fork `nfc-magic-iso15693` = `f8eb8164`, 13 commits. Awaiting his Round 5,
 which will be his first sight of the fix.
 
 The pushed commit is unsigned, deliberately — see the push rules in

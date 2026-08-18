@@ -5,8 +5,9 @@
 PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **His Round 5 is fully answered, pushed and posted
 (2026-08-17.)** Nothing is queued and nothing is held back except the two items below.
 
-Fork `nfc-magic-iso15693` = **`5b26185c`**, 30 commits, signed and GitHub-verified. Pushed
-fast-forward from `f8eb8164`, no force. Dev branch is 44 commits, all signed, clean.
+Fork `nfc-magic-iso15693` = **`64326417`**, 31 commits, all signed and GitHub-verified, pushed
+fast-forward from `f8eb8164` with no force at any point. Dev `iso15693-dev` = **`800b9c8`**, 48 commits
+in the round, all signed, clean, and **pushed to `origin/iso15693-dev`** as a backup.
 
 What went up, in history order — three groups, each commit one decision:
 
@@ -16,6 +17,12 @@ What went up, in history order — three groups, each commit one decision:
    old fork head. The earlier plan to push "Round 5 only" was not achievable and the reply says so.
 2. **`fe7305d`**, the gen3 CHANGELOG declaration.
 3. **This round's eleven fixes**, `b818ccc` through `27d973c`.
+4. **`3c88cf1`**, a twelfth fix from the lowered-budget hardware run — see the follow-up comment.
+
+Two comments were posted in total. The follow-up
+([#issuecomment-5322865570](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5322865570))
+carries `3c88cf1`'s two findings; its first version went out before review and was replaced by EDITING
+that same comment, so the id is stable and there is no orphaned text on the thread.
 
 Posted: the reply as [#issuecomment-5321680598](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5321680598),
 plus **24 threaded replies covering 24 of his 26 threads**. The two without a reply are the two he
@@ -155,65 +162,63 @@ shape to copy.
   `git log --format='%h %G? %s'`, and note `U` (good signature, key not in local allowed_signers) is the
   expected state here, not a problem — GitHub reports `verified: true`.
 
-## Hardware: the regression half is DONE, the truncation half needs a lowered budget
+## Hardware: BOTH halves are done — 2026-08-17
 
-Round 5's headline changes are all gated on `pass_truncated`, and a healthy gen2 card never truncates:
-a 64-block sweep takes ~1s against a 10s budget. So the new screens cannot be reached by using the app
-normally. They are covered by the host tests instead, which is exactly what the harness exists for --
-but that is source-level coverage, not a rendered screen.
+**The card is physically 64 blocks.** "70/64" is its STATE, not its geometry: the advertised count is
+whatever the last clone's CFG frame programmed, and the worklog records one physically-64 card
+impersonating 28/56/64/70 on demand. **Run the clone before the wipe** -- the wipe reports "Card claims
+70" only because the clone left it claiming 70. A past result was traced to exactly this ordering
+artifact (worklog 2026-07-27), so it is a trap, not a detail.
 
-**To reach them on the card we have, temporarily lower the budget.** Set
-`ISO15693_POLLER_PASS_MAX_MS` to ~200 in `iso15693_poller.c`, build, flash, test, then REVERT before
-pushing. A healthy card is then cut a dozen or so blocks in and every truncation path renders.
+**Regression half, at the real budget — all five passed:**
 
-| # | with the budget lowered | expect |
-|---|---|---|
-| 1 | ISO15693 -> Wipe | title `Wipe stopped`; body `Cleared N blocks.` / `Stopped at block N.`; buttons **Retry** and **Details** (NOT Exit) |
-| 2 | press Details on it | scroll view; `Sweep hit its time limit at block N of the M this card claims. Blocks above that were never attempted and may still hold data.` |
-| 3 | press Back on it | leaves to the ISO15693 menu. This is the exit now -- there is no Exit button |
-| 4 | press Retry on it | re-runs the wipe |
-| 5 | ISO15693 -> clone a saved image | `Clone partial`; a `Stopped at block N` qualifier line; **Retry** offered, not Finish |
-| 6 | Details on that clone | the block list stops at the cut, and the note reads `Clone hit its time limit at block N. Blocks from there up were never sent to the card -- they are counted as not written, but the card did not refuse them. Running the clone again writes them.` |
+| test | result |
+|---|---|
+| clone the 70-block source (FIRST) | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`; **Finish** + Details — an uncut partial is still non-retryable after `is_retryable` learned to read the flag |
+| Details on it | `Blocks not written` / `64 65 66 67 68 69` — all six, so `list_upto` does not clip an uncut run |
+| clone, card lifted | `Card removed before the write could finish.`; **Retry + Exit** — the right-slot rule yields Exit where `has_details` is false |
+| wipe (AFTER the clone) | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`; Finish only — the 8-block phantom tail still drops after `i < advertised` came out |
+| wipe, card lifted | `Card removed...`; Retry + Exit |
 
-Watch the **line width** on 1 and 5: `Stopped at block %u.` replaced `Stopped at %u of %u.` and should
-be no wider, but it has not been seen rendered.
+**Truncation half, via a temporary `ISO15693_POLLER_PASS_MAX_MS` of 200 — all six screens rendered**, and
+the run found two real defects, now fixed in `3c88cf1`:
 
-**The regression half is DONE — all five passed, 2026-08-17**, against this delta (not cited from
-Round 4).
+- the "Wipe stopped" screen named where it stopped and never said WHY, while offering Retry. Now
+  `Timed out at block 23.` — folded into the existing line, because a fourth line at y=13 lands its
+  bottom rows inside the button box and this body already reaches three.
+- **"Running the clone again writes them" was false.** The bound is a wall clock, not a position, so a
+  consistently slow card is cut in the same place every time; only a transient clears on a retry.
+  Observed directly — a retried wipe stopped at the same block. Applied to the wipe too, whose Retry
+  button came from his Round 4 reasoning.
 
-**The card is physically 64 blocks.** "70/64" is shorthand for its STATE, not its geometry: the
-advertised count is whatever the last clone's CFG frame programmed, and the worklog records one
-physically-64 card impersonating 28/56/64/70 on demand. So **run the clone before the wipe** -- test 10
-reports "Card claims 70" only because test 7 left it claiming 70. Wipe first and the number is whatever
-the previous session left behind. A past result was traced to exactly this ordering artifact
-(worklog 2026-07-27), so it is a trap, not a detail.
+**How to run the truncation half again:** set `ISO15693_POLLER_PASS_MAX_MS` to ~200 in
+`iso15693_poller.c`, `FBT_NO_SYNC=1 ./fbt launch APPSRC=applications_user/nfc_magic_dev` from the
+Momentum tree, then **`git checkout --` the file immediately** — the device keeps the installed build, so
+the wrong constant never sits in the working tree where a concurrent session could commit it. Reinstall a
+clean build afterwards.
 
-| # | test | result |
-|---|---|---|
-| 7 | clone the 70-block source (FIRST) | `Clone partial` / `Cloned 64/70 blocks` / `Not written: 6` / `Card too small`; **Finish** + Details -- confirms an uncut partial is still non-retryable after `is_retryable` learned to read the flag |
-| 8 | Details on it | `Blocks not written` / `64 65 66 67 68 69` -- all six, so `list_upto` does not clip an uncut run |
-| 9 | clone, card lifted | `Card removed before the write could finish.`; **Retry + Exit** -- the right-slot rule correctly yields Exit where `has_details` is false |
-| 10 | wipe (AFTER the clone) | `Wipe complete` / `Cleared 64 blocks.` / `Card claims 70.`; Finish only -- the 8-block phantom tail still drops after `i < advertised` came out |
-| 11 | wipe, card lifted | `Card removed...`; Retry + Exit |
+Also observed and correct: the wipe's progress popup ends at 70/70 while the result says 64 cleared. The
+denominator is the advertised count and blocks 64-69 were genuinely attempted, so "70 of 70 attempted" is
+true. `iso15693_poller.c` gates progress on `block < advertised` by design.
 
-Also observed and correct: the wipe's progress popup ends at **70/70** while the result says 64 cleared.
-The denominator is the advertised count and blocks 64-69 were genuinely attempted, so "70 of 70
-attempted" is true. Operator read it as covering the claim, which is what it means. Not a defect, not
-touched this round -- `iso15693_poller.c:900` gates progress on `block < advertised` by design.
+Two things still unrendered, both needing a card that answers reads at every address: the cut landing
+ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that used to produce.
 
 ## Backlog — needs cards we do not have yet
 
-- **The six truncation screens (1-6 above).** Need the lowered-budget build. Not blocked on cards.
-- **`source_uses_gen1_blocks`** -- the one backdoor-predicate site the gen2 card cannot reach, since it
-  sits behind the gen1 opt-in and so needs a card that FAILS gen2. **Any ordinary ISO15693/NfcV tag
-  does it** (on order as of 2026-08-17): select a source with data in 56/57/62/63, present the plain
-  tag, reach the gen1 opt-in, confirm the extra warning renders -- then **press Back, do NOT accept**.
+- **`source_uses_gen1_blocks`** — the one backdoor-predicate site the gen2 card cannot reach, since it
+  sits behind the gen1 opt-in and so needs a card that FAILS gen2. **Any ordinary ISO15693/NfcV tag does
+  it** (on order as of 2026-08-17): select a source with data in 56/57/62/63, present the plain tag,
+  reach the gen1 opt-in, confirm the extra warning renders — then **press Back, do NOT accept**.
   Accepting writes the gen1 sequence into four blocks of an ordinary tag and destroys what is there.
-- **Other gen2 magic silicon** (inbound) -- everything verified so far is one sample. Re-run 7-11.
+- **Other gen2 magic silicon** (inbound) — everything verified so far is one sample. Re-run the
+  regression five.
 - **gen1 magic candidates** (inbound, unconfirmed as gen1). What they would settle is unchanged: the
   armed-card wipe hazard, the unlock/commit reading inferred from proxmark's send order, and the UID
-  re-read that reports a change without preventing one. He has said explicitly not to hold the merge
-  for these, and we agree.
+  re-read that reports a change without preventing one. He said explicitly not to hold the merge for
+  these, and we agree.
+- **The `Timed out at block N.` string has not been seen rendered** — it is one character wider than the
+  `Stopped at block N.` that was. Check it on the next truncation run.
 
 ## Mechanics
 
@@ -223,13 +228,31 @@ touched this round -- `iso15693_poller.c:900` gates progress on `block < adverti
 - Format: `../Momentum-Firmware/toolchain/current/bin/clang-format
   -style=file:../Momentum-Firmware/.clang-format -i <files>`
 - Fork sync: `SYNC_SRC=<dev-sha> tools/sync-to-fork.sh ../all-the-plugins`, cwd inside the dev repo,
-  one fork commit per dev commit, subject `NFC Magic ISO15693: <subject>`. Skip `notes:` commits.
-- **The user pushes and posts. Never push the PR branch without an explicit go-ahead.**
-- Hardware: one gen2 ISO15693 magic card. No gen1 card exists on either side.
+  one fork commit per dev commit. Skip `notes:` commits. **The script overlays and NEVER DELETES** --
+  so a file removed or renamed in dev must be `git rm`'d in the fork by hand, at the commit that removed
+  it. Missed once already: Pass C deleted `nfc_magic_scene_iso15693_write_confirm.c` and the fork would
+  have kept a stale copy. Check every sync with:
+  `git diff --name-status -M <last-synced-dev-sha>..HEAD -- magic scenes views helpers assets *.c *.h CHANGELOG.md | grep -v '^M'`
+- **Fork subject convention: STRIP the dev scope prefix, do not stack it.** Dev subjects are
+  `iso15693: ...` / `changelog: ...` / `nfc_magic: ...` / `scene_write: ...`; the fork subject is
+  `NFC Magic ISO15693: <subject with that prefix removed>`. Getting this wrong produces
+  `NFC Magic ISO15693: iso15693: ...`, which is what **17 of the commits pushed 2026-08-17 read** --
+  left uncorrected on purpose, because fixing them means force-pushing over a live review and an ugly
+  subject line is worth far less than his review anchors. One sed does it:
+  `sed -E 's/^(iso15693|changelog|nfc_magic|scene_write): //'`
+- Also adapt the BODY for publication: no third-person references to the reviewer ("he counted three" ->
+  "you counted three"), and drop mentions of `tools/hosttest`, whose files are not in the pack.
+- **The user pushes and posts. Never push the PR branch without an explicit go-ahead** -- and when told
+  to "post the reply", confirm the VENUE before sending. "Post it here" once meant this chat and was
+  read as the PR thread, which put an unreviewed comment in front of the maintainer. An outward-facing
+  send is not undoable by apology; ask if the target is not explicit.
+- Hardware: one **physically 64-block** gen2 ISO15693 magic card (advertised count is programmable --
+  see the hardware section). More cards inbound as of 2026-08-17: other gen2 silicon, gen1 candidates,
+  and ordinary ISO15693 tags. No gen1 card confirmed on either side yet.
 
 ## The host test harness — READ THIS BEFORE TOUCHING THE POLLER
 
-`tools/hosttest`, **55 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
+`tools/hosttest`, **59 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
 
 ```bash
 cd tools/hosttest && make
@@ -237,8 +260,8 @@ cd tools/hosttest && make
 
 It compiles the shipped `iso15693_poller.c` **verbatim** — the test files `#include` the `.c` so the
 file-statics are reachable, and the SDK calls resolve to a fake tag via `-Ifakes`. No seam, no
-`#ifdef TEST`, nothing added to the app. Four files: the wipe sweep (13), the clone loop (13), the
-terminal-outcome contract (14), and the write state machine (15, driving the real poller callback the way
+`#ifdef TEST`, nothing added to the app. Four files: the wipe sweep (15), the clone loop (14), the
+terminal-outcome contract (15), and the write state machine (15, driving the real poller callback the way
 the SDK does).
 
 **Three things that matter more than the test count:**

@@ -1,7 +1,8 @@
-# Round 5 threaded replies — DRAFT, not posted
+# Round 5 threaded replies — POSTED 2026-08-17, 24 replies
 
-Reply in-thread on his inline comments. Threads not listed here need no reply (verification-only, or
-fully answered by the commit). Post after the push so the commit SHAs resolve.
+Covers 24 of his 26 threads; the two skipped are the ones he marked as needing no reply
+(`write_fail.c:71`, `poller.c:58`). The first 15 were verified byte-identical by re-fetching each.
+Nine shorter ones were added afterwards for threads this file did not originally cover.
 
 ---
 

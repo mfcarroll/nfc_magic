@@ -1,6 +1,7 @@
-# Round 5 reply — DRAFT, not posted
+# Round 5 reply — POSTED 2026-08-17 as #issuecomment-5321680598
 
-Post as the PR comment body once the push lands. Threaded replies are in `thread-replies.md`.
+Verified byte-identical to this text bar the trailing newline GitHub adds. Threaded replies in
+`thread-replies.md`; the later follow-up in `followup-comment.md`.
 
 ---
 

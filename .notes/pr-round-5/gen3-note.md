@@ -64,8 +64,7 @@ than a surprise. One CHANGELOG line under Behaviour, e.g.:
 
 ## Status
 
-**The CHANGELOG line is WRITTEN and COMMITTED — `fe7305d`, local and unpushed.** It went into
-`### Validation (at 2.1)` rather than `### Behaviour`, because it is a limit of the feature, not a
+**PUSHED 2026-08-17** as part of the Round 5 response (`fe7305d` on dev). It went into `### Validation (at 2.1)` rather than `### Behaviour`, because it is a limit of the feature, not a
 behaviour of it, and that section already states scope the same way for the untested gen1 path.
 
 `fe7305d` is **shipped code** — the only shipped-code commit since the clock-cut fix. Everything else

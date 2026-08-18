@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-55 tests across four files.
+59 tests across four files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -69,7 +69,7 @@ behind a reset. Covers the armed-gen1 wipe reporting a UID change, a card that n
 reset still getting its wipe reported (`uid_verified` false), and that a clone writes no data at all onto
 a tag that refuses the gen2 UID.
 
-**`test_outcome.c` — 14 cases over `iso15693_poller_success_or_partial`**, the single place where "what
+**`test_outcome.c` — 15 cases over `iso15693_poller_success_or_partial`**, the single place where "what
 happened" becomes "what the user is told". A pure function of the result fields, so the tests read as the
 contract: which conditions qualify a result, which do not, and which of those are clone-only. Includes the
 two that look like oversights and are not — `uid_verified` being absent from the Partial list (making it
@@ -77,14 +77,14 @@ Partial would flag every wipe where the user lifts the card as it completes) and
 guard sparing a wipe (whose failed and accepted sets are disjoint). Both would be "fixed" by a reader who
 had not read the reasoning, and both now fail loudly if they are.
 
-**`test_clone_blocks.c` — 13 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
+**`test_clone_blocks.c` — 14 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
 set `clone_capacity_confirmed`, since that renders "Card too small". This is the file that found the
 clock-cut capacity bug. Also pins the gen1 backdoor-block arithmetic at both boundaries: a source below
 block 56 must lose nothing from its total, and a source reaching 56/57 but not 62/63 must lose exactly
 two. The first is a real geometry — magic SLIX cards ship with 32 blocks, where those addresses are
 outside the data space entirely.
 
-**`test_wipe_sweep.c` — 13 cases over `iso15693_poller_wipe_blocks`**, including the geometries re-derived
+**`test_wipe_sweep.c` — 15 cases over `iso15693_poller_wipe_blocks`**, including the geometries re-derived
 by hand each review round:
 
 - clean 64/64
@@ -100,6 +100,10 @@ by hand each review round:
 - a card refusing every write while answering reads — cut by the wall clock, unreachable on hardware
 - a card lifted mid-sweep
 - the summary log line, which also pins the `ABSENT_RUN` probe cost paid past the card's top
+- **the two cut-index traces**: a dropped trailing run leaving the cut above `blocks_total`, and a
+  read-everywhere card cut ABOVE the count it advertises -- the "Stopped at 200 of 64" shape. Both
+  exist because a screen printed `blocks_total` as if it were where the sweep stopped, and the two
+  figures are independent in either direction.
 
 ## Not covered yet
 

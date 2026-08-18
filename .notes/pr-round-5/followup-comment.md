@@ -1,6 +1,7 @@
-# Round 5 follow-up comment — DRAFT for review
+# Round 5 follow-up comment — POSTED 2026-08-18 as #issuecomment-5322865570
 
-Replaces the prematurely-posted #issuecomment-5322865570 by editing it, once `3c88cf1` is pushed.
+An earlier version of this went out prematurely and was replaced by EDITING that same comment, so the
+id is unchanged. Ships with `64326417` on the fork.
 
 ---
 
