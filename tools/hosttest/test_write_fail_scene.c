@@ -1,0 +1,452 @@
+// Host-side tests for the ISO15693 result screens -- what they say, which buttons they offer, and where
+// those buttons go.
+//
+// The shipped scenes are compiled VERBATIM: this file includes the .c files so the file-static predicates
+// are reachable, and the GUI calls resolve to the recorders in fake_scene.c. No production code is
+// modified or wrapped.
+//
+// Why this layer needed its own harness. Round 5 turned up four defects. The poller tests found the one
+// that lived in the poller; the other three lived here and were found by a person reading the review or
+// a 128x64 screen:
+//
+//   - a control labelled "Exit" that opened the Details scroll view, because on_enter branched on
+//     is_retryable and on_event branched on has_details and the two disagreed
+//   - a "Wipe stopped" screen that never said WHY it stopped, while offering Retry
+//   - a Details note promising "Running the clone again writes them", which the wall-clock bound cannot
+//     deliver
+//
+// The first of those is pure data here -- a label and a navigation target -- so it is exactly the kind of
+// thing that should fail a test rather than survive to a review. The other two are string assertions,
+// which pin them against silent drift.
+
+#include "fake_scene.h"
+
+#include "../../scenes/nfc_magic_scene_partial_details_common.c" // NOLINT -- deliberate, see above
+#include "../../scenes/nfc_magic_scene_iso15693_partial_details.c" // NOLINT
+#include "../../scenes/nfc_magic_scene_iso15693_write_fail.c" // NOLINT
+
+#include <stdio.h>
+
+static int tests_run;
+static int tests_failed;
+static const char* current_test;
+static bool current_failed;
+
+#define CHECK(cond)                                                     \
+    do {                                                                \
+        if(!(cond)) {                                                   \
+            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);    \
+            current_failed = true;                                      \
+        }                                                               \
+    } while(0)
+
+#define CHECK_STR(actual, expected)                                                        \
+    do {                                                                                   \
+        const char* a_ = (actual);                                                         \
+        if(a_ == NULL || strcmp(a_, (expected)) != 0) {                                    \
+            printf(                                                                        \
+                "  FAIL %s:%d  %s == \"%s\", expected \"%s\"\n",                           \
+                __FILE__,                                                                  \
+                __LINE__,                                                                  \
+                #actual,                                                                   \
+                a_ ? a_ : "(null)",                                                        \
+                (expected));                                                               \
+            current_failed = true;                                                         \
+        }                                                                                  \
+    } while(0)
+
+static void begin(const char* name) {
+    current_test = name;
+    current_failed = false;
+    tests_run++;
+}
+
+static void end(void) {
+    if(current_failed) {
+        tests_failed++;
+        printf("FAILED: %s\n", current_test);
+        printf("  --- what the scene drew ---\n%s  ---------------------------\n", fake_scene_all_text());
+    } else {
+        printf("  ok  %s\n", current_test);
+    }
+}
+
+// ---- harness ---------------------------------------------------------------------------------------
+
+static NfcMagicApp app;
+
+// Set the app up as the write scene would have left it, then run the write-fail screen's on_enter.
+static void render_write_fail(NfcMagicIso15693WriteFailReason reason, NfcMagicIso15693Mode mode) {
+    memset(&app, 0, sizeof(app));
+    app.protocol = NfcMagicProtocolIso15693;
+    app.iso15693_mode = mode;
+    fake_scene_reset((uint32_t)reason);
+    nfc_magic_scene_iso15693_write_fail_on_enter(&app);
+}
+
+// As above but with a result already populated by the caller.
+static void render_write_fail_with(
+    NfcMagicIso15693WriteFailReason reason,
+    NfcMagicIso15693Mode mode,
+    const Iso15693PollerResult* result) {
+    memset(&app, 0, sizeof(app));
+    app.protocol = NfcMagicProtocolIso15693;
+    app.iso15693_mode = mode;
+    app.iso15693_result = *result;
+    fake_scene_reset((uint32_t)reason);
+    nfc_magic_scene_iso15693_write_fail_on_enter(&app);
+}
+
+static void render_details(NfcMagicIso15693WriteFailReason reason, NfcMagicIso15693Mode mode) {
+    // Details is pushed on top of the write-fail scene and reads the SAME scene state for its reason,
+    // so the fake keeps the state across the transition, exactly as the scene manager would.
+    const uint32_t keep = fake_scene.scene_state;
+    const Iso15693PollerResult result = app.iso15693_result;
+    memset(&app, 0, sizeof(app));
+    app.protocol = NfcMagicProtocolIso15693;
+    app.iso15693_mode = mode;
+    app.iso15693_result = result;
+    fake_scene_reset(keep ? keep : (uint32_t)reason);
+    nfc_magic_scene_iso15693_partial_details_on_enter(&app);
+}
+
+// Send a button through on_event the way the dispatcher does, and report where it navigated.
+static FakeNav route_of(GuiButtonType button) {
+    const uint16_t before = fake_scene.nav_count;
+    SceneManagerEvent ev = {.type = SceneManagerEventTypeCustom, .event = (uint32_t)button};
+    nfc_magic_scene_iso15693_write_fail_on_event(&app, ev);
+    if(fake_scene.nav_count == before) {
+        FakeNav none = {.kind = FakeNavNone, .scene_id = 0};
+        return none;
+    }
+    return fake_scene.navs[fake_scene.nav_count - 1];
+}
+
+// ---- the cases -------------------------------------------------------------------------------------
+
+// THE ROUND-5 BLOCKING BUG, as a test. on_enter chose the right-slot label from is_retryable while
+// on_event routed it from has_details. WipeStopped is in both, so the label said Exit and the button
+// opened Details. The invariant is that the label and the destination agree -- checked here for every
+// reason code, so adding one to either predicate cannot reintroduce it silently.
+static void test_right_button_label_matches_where_it_goes(void) {
+    begin("every right-slot label agrees with where on_event sends it");
+    const NfcMagicIso15693WriteFailReason reasons[] = {
+        NfcMagicIso15693WriteFailReasonCardLost,
+        NfcMagicIso15693WriteFailReasonNotMagic,
+        NfcMagicIso15693WriteFailReasonPartial,
+        NfcMagicIso15693WriteFailReasonOverCapacity,
+        NfcMagicIso15693WriteFailReasonNothingWiped,
+        NfcMagicIso15693WriteFailReasonNothingCloned,
+        NfcMagicIso15693WriteFailReasonEmptySource,
+        NfcMagicIso15693WriteFailReasonUidUnexpected,
+        NfcMagicIso15693WriteFailReasonGen1Failed,
+        NfcMagicIso15693WriteFailReasonUidUnverifiable,
+        NfcMagicIso15693WriteFailReasonWipeUidChanged,
+        NfcMagicIso15693WriteFailReasonWipeComplete,
+        NfcMagicIso15693WriteFailReasonWipeStopped,
+    };
+    for(size_t i = 0; i < sizeof(reasons) / sizeof(reasons[0]); i++) {
+        // A populated result, so reasons gated on failed_count still offer their button.
+        Iso15693PollerResult r = {0};
+        r.blocks_total = 64;
+        r.blocks_advertised = 70;
+        r.failed_count = 6;
+        r.cut_block = 23;
+        r.uid_verified = true;
+        if(reasons[i] == NfcMagicIso15693WriteFailReasonWipeStopped) r.pass_truncated = true;
+
+        render_write_fail_with(reasons[i], NfcMagicIso15693ModeWipe, &r);
+        const char* label = fake_scene_button(GuiButtonTypeRight);
+        if(label == NULL) continue; // no right button on this screen at all
+        const FakeNav nav = route_of(GuiButtonTypeRight);
+        if(strcmp(label, "Details") == 0) {
+            CHECK(nav.kind == FakeNavNext);
+            CHECK(nav.scene_id == NfcMagicSceneIso15693PartialDetails);
+        } else {
+            // Anything not labelled Details must LEAVE, never navigate deeper.
+            CHECK(nav.kind == FakeNavSearchPrevious);
+            CHECK(nav.scene_id == NfcMagicSceneIso15693);
+        }
+        if(current_failed) printf("      (reason index %zu, label \"%s\")\n", i, label);
+    }
+    end();
+}
+
+// The specific shape the fix chose: a cut sweep has something behind Details, so Details takes the right
+// slot and Back is the exit. If someone puts "Exit" back here, the truncation note loses its only route.
+static void test_wipe_stopped_offers_retry_and_details(void) {
+    begin("a cut sweep offers Retry + Details, not Retry + Exit");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 23;
+    r.blocks_advertised = 70;
+    r.cut_block = 23;
+    r.pass_truncated = true;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Retry");
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Details");
+    end();
+}
+
+// A card lifted mid-write has nothing behind Details, so the same rule yields Exit there. This is the
+// direction the fix could have over-applied in.
+static void test_card_lost_offers_retry_and_exit(void) {
+    begin("card lost offers Retry + Exit, since it has no details");
+    render_write_fail(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeClone);
+
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Retry");
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Exit");
+    end();
+}
+
+// Found on hardware: the screen named where the sweep stopped and never said why, while offering a
+// Retry button -- so the user was asked to retry against a cause the screen withheld.
+static void test_wipe_stopped_says_it_timed_out(void) {
+    begin("a cut sweep says it TIMED OUT, not just where it stopped");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 23;
+    r.blocks_advertised = 70;
+    r.cut_block = 23;
+    r.pass_truncated = true;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK(fake_scene_text_contains("Timed out at block 23."));
+    CHECK(fake_scene_text_contains("Wipe stopped"));
+    end();
+}
+
+// The cut index, not blocks_total. On this trace they differ, which is the whole point: blocks_total is
+// the highest block that ANSWERED and sits at or below the cut.
+static void test_wipe_stopped_prints_the_cut_not_the_total(void) {
+    begin("a cut sweep prints the cut index, never blocks_total");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 50; // proved present
+    r.blocks_advertised = 64;
+    r.cut_block = 55; // actually attempted this far
+    r.pass_truncated = true;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK(fake_scene_text_contains("Timed out at block 55."));
+    CHECK(!fake_scene_text_contains("block 50"));
+    // And no "%u of %u" fraction, which read as "fell short of 64" when the cut had passed it.
+    CHECK(!fake_scene_text_contains(" of 64"));
+    end();
+}
+
+// A cut sweep is a partial outcome, so it must carry the error tone rather than the success chime.
+static void test_cut_sweep_plays_the_error_tone(void) {
+    begin("a cut sweep plays the error tone, a clean wipe the success tone");
+    Iso15693PollerResult r = {0};
+    r.pass_truncated = true;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    CHECK(fake_scene.played_error);
+    CHECK(!fake_scene.played_success);
+
+    render_write_fail(NfcMagicIso15693WriteFailReasonWipeComplete, NfcMagicIso15693ModeWipe);
+    CHECK(fake_scene.played_success);
+    CHECK(!fake_scene.played_error);
+    end();
+}
+
+// A wipe whose identity check never reached an answer must say so. It had a line on "Wipe complete" and
+// nowhere else, which is why it moved into Details.
+static void test_unverified_uid_is_stated_on_wipe_complete(void) {
+    begin("a wipe that could not re-check the UID says so");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 64;
+    r.blocks_advertised = 70;
+    r.uid_verified = false;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeComplete, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK(fake_scene_text_contains("UID not re-checked."));
+
+    // ...and stays quiet when the check did run.
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeComplete, NfcMagicIso15693ModeWipe, &r);
+    CHECK(!fake_scene_text_contains("UID not re-checked."));
+    end();
+}
+
+// Found on hardware: the note promised that re-running writes the unsent blocks. The bound is a wall
+// clock, so a consistently slow card is cut in the same place every time.
+static void test_cut_clone_note_promises_nothing(void) {
+    begin("the cut-clone note does not promise a retry will finish");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 256;
+    r.failed_count = 246;
+    r.cut_block = 10;
+    r.pass_truncated = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "Running the clone again writes them") == NULL);
+        CHECK(strstr(scroll, "the card did not refuse them") != NULL);
+        CHECK(strstr(scroll, "may get further") != NULL);
+    }
+    end();
+}
+
+// The Details list must stop at the cut: below it are blocks the card refused, at and above it are
+// blocks nothing was sent to, and listing them together names the second group as refusals.
+static void test_cut_clone_lists_only_blocks_below_the_cut(void) {
+    begin("a cut clone lists only the blocks below the cut");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 256;
+    r.cut_block = 10;
+    r.pass_truncated = true;
+    // Block 3 genuinely refused; 10 and 200 are back-filled as unattempted.
+    r.failed_bitmap[3 / 8] |= (uint8_t)(1u << (3 % 8));
+    r.failed_bitmap[10 / 8] |= (uint8_t)(1u << (10 % 8));
+    r.failed_bitmap[200 / 8] |= (uint8_t)(1u << (200 % 8));
+    r.failed_count = 3;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "3") != NULL); // the real refusal is listed
+        CHECK(strstr(scroll, "200") == NULL); // the unattempted one is not
+    }
+    end();
+}
+
+// An UNCUT partial must keep listing the whole bitmap -- the new bound must not clip a run that was
+// never cut. This is the half the gen2 card confirmed on hardware.
+static void test_uncut_partial_lists_the_whole_bitmap(void) {
+    begin("an uncut partial still lists every failed block");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 70;
+    r.failed_count = 6;
+    r.capacity_confirmed = true;
+    for(uint16_t b = 64; b <= 69; b++) r.failed_bitmap[b / 8] |= (uint8_t)(1u << (b % 8));
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        for(int b = 64; b <= 69; b++) {
+            char want[8];
+            snprintf(want, sizeof(want), "%d", b);
+            CHECK(strstr(scroll, want) != NULL);
+        }
+    }
+    end();
+}
+
+// The wipe's Details note picks its sentence from which side of the advertised count the cut fell on,
+// because which side it is changes what is true.
+static void test_wipe_note_switches_on_which_side_of_the_claim(void) {
+    begin("the wipe note reads differently above and below the card's claim");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 50;
+    r.blocks_advertised = 64;
+    r.cut_block = 55; // inside the claim
+    r.pass_truncated = true;
+    r.failed_count = 1;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe);
+    const char* inside = fake_scene_scroll_text();
+    CHECK(inside && strstr(inside, "of the 64 this card claims") != NULL);
+
+    r.cut_block = 200; // past the claim -- the "Stopped at 200 of 64" case
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe);
+    const char* past = fake_scene_scroll_text();
+    CHECK(past && strstr(past, "past the 64 this card claims") != NULL);
+    CHECK(past && strstr(past, "Every claimed block was attempted") != NULL);
+    end();
+}
+
+// The left button is the primary action and its meaning differs: Retry re-runs the write, Finish and
+// Back leave. Getting these crossed would either strand the user or silently repeat a destructive write.
+static void test_left_button_routes_by_retryability(void) {
+    begin("the left button re-runs only where it says Retry");
+    Iso15693PollerResult r = {0};
+    r.pass_truncated = true;
+    r.uid_verified = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Retry");
+    CHECK(route_of(GuiButtonTypeLeft).kind == FakeNavPrevious); // back to the write scene
+
+    render_write_fail(NfcMagicIso15693WriteFailReasonWipeComplete, NfcMagicIso15693ModeWipe);
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Finish");
+    const FakeNav nav = route_of(GuiButtonTypeLeft);
+    CHECK(nav.kind == FakeNavSearchPrevious);
+    CHECK(nav.scene_id == NfcMagicSceneIso15693);
+    end();
+}
+
+// Back must always leave, from any of these screens -- it is the exit on the screen that spends both
+// button slots.
+static void test_back_always_leaves(void) {
+    begin("Back leaves from the write-fail screen whatever the reason");
+    Iso15693PollerResult r = {0};
+    r.pass_truncated = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    SceneManagerEvent back = {.type = SceneManagerEventTypeBack, .event = 0};
+    nfc_magic_scene_iso15693_write_fail_on_event(&app, back);
+    CHECK(fake_scene.nav_count > 0);
+    if(fake_scene.nav_count) {
+        CHECK(fake_scene.navs[fake_scene.nav_count - 1].kind == FakeNavSearchPrevious);
+        CHECK(fake_scene.navs[fake_scene.nav_count - 1].scene_id == NfcMagicSceneIso15693);
+    }
+    end();
+}
+
+// A pressed button reaches on_event as its own type, via the widget callback. If this round-trip broke,
+// every routing test above would be vacuous.
+static void test_pressing_a_button_sends_its_own_type(void) {
+    begin("pressing a button sends that button's type as the custom event");
+    render_write_fail(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeClone);
+
+    CHECK(fake_scene_press(GuiButtonTypeLeft, &app));
+    CHECK(fake_scene.custom_event_sent);
+    CHECK(fake_scene.custom_event == GuiButtonTypeLeft);
+
+    CHECK(fake_scene_press(GuiButtonTypeRight, &app));
+    CHECK(fake_scene.custom_event == GuiButtonTypeRight);
+    end();
+}
+
+int main(void) {
+    printf("iso15693 result screens\n");
+    test_right_button_label_matches_where_it_goes();
+    test_wipe_stopped_offers_retry_and_details();
+    test_card_lost_offers_retry_and_exit();
+    test_wipe_stopped_says_it_timed_out();
+    test_wipe_stopped_prints_the_cut_not_the_total();
+    test_cut_sweep_plays_the_error_tone();
+    test_unverified_uid_is_stated_on_wipe_complete();
+    test_cut_clone_note_promises_nothing();
+    test_cut_clone_lists_only_blocks_below_the_cut();
+    test_uncut_partial_lists_the_whole_bitmap();
+    test_wipe_note_switches_on_which_side_of_the_claim();
+    test_left_button_routes_by_retryability();
+    test_back_always_leaves();
+    test_pressing_a_button_sends_its_own_type();
+    printf("\n%d run, %d failed\n", tests_run, tests_failed);
+    return tests_failed ? 1 : 0;
+}

@@ -17,6 +17,11 @@ extern uint32_t fake_tick;
 
 #define furi_ms_to_ticks(ms) ((uint32_t)(ms))
 
+// Layout attribute only; nothing here inspects a packed struct's representation.
+#define FURI_PACKED __attribute__((packed))
+
+#define UNUSED(x) ((void)(x))
+
 static inline uint32_t furi_get_tick(void) {
     return fake_tick;
 }
@@ -55,3 +60,20 @@ void fake_log(char level, const char* fmt, ...);
 #define FURI_LOG_W(tag, fmt, ...) fake_log('W', fmt, ##__VA_ARGS__)
 #define FURI_LOG_I(tag, fmt, ...) fake_log('I', fmt, ##__VA_ARGS__)
 #define FURI_LOG_D(tag, fmt, ...) fake_log('D', fmt, ##__VA_ARGS__)
+
+// ---- FuriString ---------------------------------------------------------------------------------
+// A real (if simple) growable string, because every user-visible string in the scenes is built with
+// these and the tests assert on the result. Semantics match the firmware's for the calls used:
+// printf REPLACES, cat_* APPEND, get_cstr returns a NUL-terminated view, size is bytes not glyphs.
+
+typedef struct FuriString FuriString;
+
+FuriString* furi_string_alloc(void);
+void furi_string_free(FuriString* s);
+void furi_string_printf(FuriString* s, const char* fmt, ...);
+void furi_string_cat_printf(FuriString* s, const char* fmt, ...);
+void furi_string_cat_str(FuriString* s, const char* str);
+void furi_string_set_str(FuriString* s, const char* str);
+void furi_string_push_back(FuriString* s, char c);
+const char* furi_string_get_cstr(const FuriString* s);
+size_t furi_string_size(const FuriString* s);

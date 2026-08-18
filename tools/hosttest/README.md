@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-59 tests across four files.
+73 tests across five files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -105,13 +105,34 @@ by hand each review round:
   exist because a screen printed `blocks_total` as if it were where the sweep stopped, and the two
   figures are independent in either direction.
 
+**`test_write_fail_scene.c` — 14 cases over the two ISO15693 result screens.** A second set of fakes, no
+radio involved: the GUI calls become recorders, so what a screen SAYS, which buttons it offers, and where
+each button navigates are all data a test can assert on. The scenes are compiled verbatim, same technique
+as the poller.
+
+This exists because of how round 5 broke down. Four defects: the poller tests found the one in the poller,
+and the other three were in this layer — a control labelled `Exit` that opened Details, a screen that
+never said why it stopped, and a Details note promising something the wall-clock bound cannot deliver.
+Two of those were only ever going to be caught by a person reading a 128x64 screen.
+
+The load-bearing case is `test_right_button_label_matches_where_it_goes`, which asserts the invariant
+rather than the instance: for **every** reason code, the right slot's label agrees with where `on_event`
+sends it. Adding a reason to `is_retryable` or `has_details` cannot silently reintroduce the round-5
+blocking bug — reintroducing it fails that test and names the reason index and the offending label.
+
+All three of those defects were mutation-tested after the fact: reverting each fix in the shipped source
+fails the corresponding test. A test suite that has never been seen to fail is not evidence of anything.
+
 ## Not covered yet
 
 - `iso15693_poller_write_identity` — the AFI/DSFID write-then-read-back-and-compare retry loop. Its
   *outcome* is covered (a rejected field is Partial, clone-only) and the state-machine tests use sources
   that advertise neither field, so it returns early. The retry mechanics are untested, and the fake's
   `get_system_info` would need to report AFI/DSFID for that.
-- Anything above the poller: the scenes and their rendering.
+- The scenes' LAYOUT, as opposed to their content: the recorders capture x/y, font and alignment, but
+  nothing asserts that N lines of FontSecondary actually fit above the button box. That arithmetic is
+  documented in the write-fail scene and was measured by the reviewer, not by a test.
+- The other scenes: the write scene's routing, the gen1 opt-in, the confirm screens.
 - The gen1 path on the wire. Its block-skipping arithmetic is covered in `test_clone_blocks.c` and its
   latch-on-power-up behaviour is *modelled* in `test_write_step.c` — but the model is our inference from
   proxmark's send order, not a documented contract, so those tests confirm the app behaves correctly
