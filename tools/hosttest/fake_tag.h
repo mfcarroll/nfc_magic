@@ -54,6 +54,29 @@ typedef struct {
     bool is_gen2_magic;
     bool is_gen1_magic;
 
+    // AFI / DSFID, the two identity fields a clone reproduces with WRITE AFI / WRITE DSFID. Modelled
+    // separately from "does the tag ADVERTISE them", because iso15693_poller_write_identity requires
+    // both -- a copy holding the right AFI while no longer reporting one is not a faithful clone, and
+    // that distinction is the only thing standing between the verify and a false pass.
+    uint8_t afi;
+    uint8_t dsfid;
+    bool advertises_afi;
+    bool advertises_dsfid;
+
+    // A tag that refuses the write IN BAND: it answers with a well-formed error frame, so
+    // iso15693_3_poller_send_frame returns None and the refusal is invisible to the caller. This is the
+    // exact failure the read-back exists to catch, and it cannot be produced by returning an error.
+    bool refuses_afi;
+    bool refuses_dsfid;
+
+    // Refuse the first N identity writes, then start accepting -- a transient, which the retry loop is
+    // supposed to ride out. 0 means never refuse for this reason.
+    uint32_t identity_writes_refused;
+    uint32_t identity_writes_seen;
+
+    // Get System Info fails outright, so the verify never reaches an answer at all.
+    bool sysinfo_fails;
+
     // Counters, for assertions and for ops_until_lifted.
     uint32_t ops;
     uint32_t writes_attempted;

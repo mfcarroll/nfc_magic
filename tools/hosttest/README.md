@@ -53,7 +53,7 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-73 tests across five files.
+83 tests across six files.
 
 **`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
@@ -123,12 +123,43 @@ blocking bug — reintroducing it fails that test and names the reason index and
 All three of those defects were mutation-tested after the fact: reverting each fix in the shipped source
 fails the corresponding test. A test suite that has never been seen to fail is not evidence of anything.
 
+**`test_write_identity.c` — 10 cases over `iso15693_poller_write_identity`**, the AFI / DSFID
+write-then-read-back-and-verify retry loop. The outcome was already covered in `test_outcome.c`; these
+cover the mechanics, which is where the load-bearing claim lives.
+
+`iso15693_3_poller_send_frame` returns `Iso15693_3ErrorNone` whether or not the tag applied the write. A
+tag refusing in band answers with a well-formed, CRC-valid error frame, and the SDK has no response
+parser for these two commands the way `write_block` has one. So the send tells you nothing in either
+direction and GET SYSTEM INFO is the only thing that can. The fake therefore models a refusal as
+"swallow the write and still answer None" — a fake that reported refusals as errors could not test any of
+this. Also pinned: that holding the right value is not enough (the target must ADVERTISE the field, or
+the copy no longer reports the identity the source did), that an unreachable verify fails closed, and
+that a transient is ridden out by the retries rather than reported.
+
+## A build trap that made this suite lie
+
+`-MMD -MP -MF` was in place from the start, with a comment saying it exists to make an edit to the code
+under test trigger a rebuild. **It did not work, and the failure was silent.**
+
+The rule compiled the test and its fake in ONE `cc` invocation sharing a single `-MF`, so the fake's
+dependency list overwrote the test's. Every depfile named only the fake and its headers — never the test,
+never `iso15693_poller.c`, never a scene. `make` after a poller-only edit re-ran a **stale binary** and
+printed a pass that meant nothing. It was found by mutation testing: two deliberately broken versions of
+`write_identity` both "passed".
+
+Fixed by compiling every translation unit separately, each with its own depfile. If you touch the
+Makefile, check it still holds:
+
+```bash
+grep -c iso15693_poller.c build/test_write_identity.d   # must be non-zero
+grep -c scenes/ build/test_write_fail_scene.d           # must be non-zero
+```
+
+The lesson generalises past this repo: a test suite that has never been observed to fail is not evidence,
+and neither is a build system whose dependency tracking has never been observed to fire.
+
 ## Not covered yet
 
-- `iso15693_poller_write_identity` — the AFI/DSFID write-then-read-back-and-compare retry loop. Its
-  *outcome* is covered (a rejected field is Partial, clone-only) and the state-machine tests use sources
-  that advertise neither field, so it returns early. The retry mechanics are untested, and the fake's
-  `get_system_info` would need to report AFI/DSFID for that.
 - The scenes' LAYOUT, as opposed to their content: the recorders capture x/y, font and alignment, but
   nothing asserts that N lines of FontSecondary actually fit above the button box. That arithmetic is
   documented in the write-fail scene and was measured by the reviewer, not by a test.

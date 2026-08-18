@@ -192,7 +192,14 @@ Iso15693_3Error
     if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
         return Iso15693_3ErrorTimeout;
     }
+    if(fake_tag.sysinfo_fails) return Iso15693_3ErrorTimeout;
     data->flags = ISO15693_3_SYSINFO_FLAG_MEMORY;
+    // Advertising a field and holding a value are independent, deliberately: write_identity requires
+    // both, so a fake that coupled them could never exercise the half that matters.
+    if(fake_tag.advertises_dsfid) data->flags |= ISO15693_3_SYSINFO_FLAG_DSFID;
+    if(fake_tag.advertises_afi) data->flags |= ISO15693_3_SYSINFO_FLAG_AFI;
+    data->dsfid = fake_tag.dsfid;
+    data->afi = fake_tag.afi;
     data->block_count = fake_tag.advertised;
     data->block_size = fake_tag.block_size;
     return Iso15693_3ErrorNone;
@@ -235,6 +242,29 @@ Iso15693_3Error iso15693_3_poller_send_frame(
 
     const BitBuffer* buf = tx;
     if(buf == NULL || buf->size < 3 || buf->data[0] != 0x02) return Iso15693_3ErrorNone;
+
+    // WRITE DSFID: 02 29 <value>.  WRITE AFI: 02 27 <value>.
+    // Both return None whatever happens, which is the point: the SDK has no response parser for these,
+    // so an in-band refusal is indistinguishable from success at this layer. Only the read-back tells
+    // them apart, and that is what write_identity is built around.
+    if((buf->data[1] == 0x29 || buf->data[1] == 0x27) && buf->size >= 3) {
+        const bool is_dsfid = (buf->data[1] == 0x29);
+        fake_tag.identity_writes_seen++;
+        const bool transient_refusal =
+            fake_tag.identity_writes_seen <= fake_tag.identity_writes_refused;
+        const bool refused = transient_refusal || (is_dsfid ? fake_tag.refuses_dsfid :
+                                                             fake_tag.refuses_afi);
+        if(!refused) {
+            if(is_dsfid) {
+                fake_tag.dsfid = buf->data[2];
+                fake_tag.advertises_dsfid = true;
+            } else {
+                fake_tag.afi = buf->data[2];
+                fake_tag.advertises_afi = true;
+            }
+        }
+        return Iso15693_3ErrorNone;
+    }
 
     // gen1: 02 21 <block> d0 d1 d2 d3
     if(buf->data[1] == 0x21 && buf->size >= 7) {
