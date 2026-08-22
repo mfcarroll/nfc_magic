@@ -64,6 +64,10 @@ Also in that pass, per his notes:
   Round 6: those y values carry the line-budget arithmetic he measured for us in Round 4, and they should
   move in the comment cut rather than be buried in a table.
 
+**The plan is written up in [pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md)** — the
+measured per-file ratios, the seven known duplicated facts as a work list, what must NOT be cut, and how to
+verify it. Start there rather than from this section.
+
 **Tests first, then the cut.** `tools/hosttest` now covers the result screens and the write scene's
 routing, so a comment-only pass is verifiable as behaviour-preserving rather than read-and-hoped. If the
 cut touches code, update the tests in the same commit.
