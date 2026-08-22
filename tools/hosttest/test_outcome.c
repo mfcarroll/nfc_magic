@@ -192,6 +192,34 @@ static void test_truncated_sweep_is_partial(void) {
     end();
 }
 
+// His round-6 blocking finding. The all-rejected guard sits AHEAD of the Partial test and judges on
+// counts alone -- and on a cut clone the back-fill has already recorded every block above the cut as a
+// failure, so failed_count reaches blocks_total whether the card refused those blocks or nothing was
+// ever sent to them. Judged there, the run reported "no data block took" about a source the radio never
+// addressed: no cut note, no Details, no Retry, on the outcome with the MOST blocks above the cut.
+static void test_cut_clone_that_accepted_nothing_is_partial_not_fail(void) {
+    begin("a cut clone that accepted nothing is Partial, not Fail");
+    Iso15693Poller inst = clean_clone();
+    inst.clone_blocks_total = 256;
+    inst.clone_failed_count = 256; // every block accounted a failure: some refused, most never sent
+    inst.pass_truncated = true;
+    inst.pass_cut_block = 40;
+    CHECK_OUTCOME(&inst, Iso15693PollerEventPartial);
+    end();
+}
+
+// The guard's own purpose has to survive the exclusion: an UNCUT clone that accepted nothing is still a
+// Fail, because there a full count really does mean the card refused every block.
+static void test_uncut_clone_that_accepted_nothing_is_still_fail(void) {
+    begin("an uncut clone that accepted nothing is still Fail");
+    Iso15693Poller inst = clean_clone();
+    inst.clone_blocks_total = 28;
+    inst.clone_failed_count = 28;
+    inst.pass_truncated = false;
+    CHECK_OUTCOME(&inst, Iso15693PollerEventFail);
+    end();
+}
+
 // The same flag on a clone. It used to be wipe-only, which is how a cut clone reached the report with
 // nothing marking it as cut -- so its unattempted blocks arrived indistinguishable from refused ones.
 // It qualifies for the same reason a sweep does: the operation's own job is left undone.
@@ -273,6 +301,8 @@ int main(void) {
     test_uid_changed_is_partial();
     test_truncated_sweep_is_partial();
     test_truncated_clone_is_partial();
+    test_cut_clone_that_accepted_nothing_is_partial_not_fail();
+    test_uncut_clone_that_accepted_nothing_is_still_fail();
     test_unverified_uid_alone_is_not_a_downgrade();
     test_clone_with_every_block_rejected_is_fail();
     test_one_block_written_is_partial_not_fail();
