@@ -1,76 +1,93 @@
-# Next session — Round 5 is ANSWERED, PUSHED and POSTED; await his Round 6
+# Next session — Round 6 is ANSWERED, PUSHED and POSTED. Next round is THE COMMENT CUT.
 
 ## Where things stand
 
-PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **His Round 5 is fully answered, pushed and posted
-(2026-08-17.)** Nothing is queued and nothing is held back except the two items below.
+PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted 2026-08-20.**
 
-Fork `nfc-magic-iso15693` = **`64326417`**, 31 commits, all signed and GitHub-verified, pushed
-fast-forward from `f8eb8164` with no force at any point. Dev `iso15693-dev` = **`800b9c8`**, 48 commits
-in the round, all signed, clean, and **pushed to `origin/iso15693-dev`** as a backup.
+Fork `nfc-magic-iso15693` = **`049029c9`**, 41 commits, all signed and GitHub-verified, fast-forward with
+no force at any point. PR shows 72 commits. Dev `iso15693-dev` = **`9da594f`**, clean, all signed.
 
-What went up, in history order — three groups, each commit one decision:
+**His Round 6 was `COMMENTED`, not `CHANGES_REQUESTED`** — the first time in six rounds. He verified all
+three Round 5 blockers by tracing them, tabulated all thirteen reason codes through the button rule, and
+answered our open question: keep the capacity guard AND keep 10s, because a clone-specific budget is the
+real fix and not this PR's.
 
-1. **Pass C 1-4 + the clone-confirm prose fix** (`a157cec` `0c17b2f` `b0a9952` `954a1e2` `71fa6e7`).
-   They could NOT be held back: `6eec333` edits `block_held_data`, which calls
-   `iso15693_poller_block_is_empty` — a helper Pass C item 1 introduced. 8 call sites at HEAD, 0 at the
-   old fork head. The earlier plan to push "Round 5 only" was not achievable and the reply says so.
-2. **`fe7305d`**, the gen3 CHANGELOG declaration.
-3. **This round's eleven fixes**, `b818ccc` through `27d973c`.
-4. **`3c88cf1`**, a twelfth fix from the lowered-budget hardware run — see the follow-up comment.
+Posted: [#issuecomment-5381850091](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5381850091)
+plus **22 threaded replies covering all 22 of his threads** — every one verified byte-identical by
+re-fetching. Drafts in [pr-round-6/reply.md](pr-round-6/reply.md) and
+[pr-round-6/thread-replies.md](pr-round-6/thread-replies.md); his review verbatim in
+[pr-round-6/received/](pr-round-6/received/).
 
-Two comments were posted in total. The follow-up
-([#issuecomment-5322865570](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5322865570))
-carries `3c88cf1`'s two findings; its first version went out before review and was replaced by EDITING
-that same comment, so the id is stable and there is no orphaned text on the thread.
+What went up — ten commits, one decision each, **zero intra-batch churn**:
 
-Posted: the reply as [#issuecomment-5321680598](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5321680598),
-plus **24 threaded replies covering 24 of his 26 threads**. The two without a reply are the two he
-marked as needing none (`write_fail.c:71`, `poller.c:58` — both him recording a verification).
-Drafts are [pr-round-5/reply.md](pr-round-5/reply.md) and
-[pr-round-5/thread-replies.md](pr-round-5/thread-replies.md); his review verbatim is in
-[pr-round-5/received/](pr-round-5/received/).
+1. `d43c0a8` **blocking** — the Fail guard judged on counts alone, so a cut clone that accepted nothing
+   reported "no data block took". One conjunct: `!instance->pass_truncated`.
+2. `8c9f9b3` the fourth `block_is_empty` site, the dead `+ over_capacity` term, the `cut == advertised`
+   off-by-one
+3. `79f1629` the bitmap set/clear pair
+4. `08c45ac` `{reason -> title}` — the re-scoped render table
+5. `8f64fa7` the back-fill is clone-only; two truncation archetypes unfused
+6. `3171e66` the budget's cost arithmetic (it inverts), and `COUNT_OF`
+7. `8b40231` three result-screen claims, and why `WipeUidChanged` withholds Retry
+8. `bc0dc69` three user-facing CHANGELOG errors
+9. `0850837` two minor claims and a 155-column comment line
+10. `9da594f` cite #255 from the gen1 open question and the gen3 entry
 
-**Line numbers in his Round 5 comments no longer match the current diff** — `:341` renders at `:377`,
-`:855` at `:917`, `:687` at `:752`. The thread IDs are the stable handle and they are recorded beside
-each comment in `pr-round-5/received/inline-comments.md`. Use IDs, not lines, when replying.
+## THE NEXT ROUND IS THE COMMENT CUT
 
-## What is still held, and why
+This is committed to, in writing, at the end of the posted reply. It is the last item on the deferred
+queue and the round's own evidence made it the priority:
 
-Only two things, both flagged to him in the reply so they are not surprises:
+**Fixing eleven false comments cost +117 comment against +28 code, and took `iso15693_poller.c` from 43%
+to 44%.** Every round that corrects a claim adds the explanation that makes it correct, so the metric moves
+the wrong way even when each edit is right. Three of his eleven threads were comments contradicting *other
+comments in the same delta*; two were user-facing. **That is a duplication problem, not a density one** —
+the same fact in three places drifts in two.
 
-1. The `{reason, title, body}` render table for `nfc_magic_scene_iso15693_write_fail.c` — twelve render
-   branches. Leave the eleven `const bool`s at the top alone; the table deletes them.
-2. The comment cut, under his ownership model: the event enum owns the outcome contract, the
-   `ISO15693_MAGIC_BLK_*` defines own the wire facts, `gen1_optin.c`'s strings own the user-facing gen1
-   consequence, `ISO15693_POLLER_PASS_MAX_MS` owns the run-budget rationale. Everything else
-   cross-references.
+The reply asked him to choose the scope and stated a preference. Read his answer first; if he has not
+answered, the stated preference is option 1:
 
-The bitmap set/clear duplication he listed in Round 4 belongs with item 2, not with fixes — it moves a
-lot of lines in the file he anchors most comments on. Told him that.
+1. **The full ownership model.** The event enum owns the outcome contract, the `ISO15693_MAGIC_BLK_*`
+   defines own the wire facts, `gen1_optin.c`'s strings own the user-facing gen1 consequence,
+   `ISO15693_POLLER_PASS_MAX_MS` owns the budget rationale. Everything else cross-references instead of
+   restating. This targets the mechanism that produced Round 6.
+2. **Narrow** — only the facts that have already drifted twice: the back-fill's scope, the two truncation
+   archetypes, the prefix property, the cost figures. Leaves the mechanism intact.
 
-**The comment cut is now more pressing, not less.** This round put `iso15693_poller.c` at **43%**
-comment against ~8% for `gen2_poller.c` and `uscuid_ul_poller.c`. Round 5's own commits were +163
-comment / +45 code; the whole push was +170 / −6 because Pass C removed 51 lines. Both figures are in
-the reply — do not quote only the flattering one.
+**Do it as its own delta with nothing else in it**, so the diff reads as one decision. That was promised in
+the reply.
 
-## One open question he put back to us
+Also in that pass, per his notes:
+- the **compact-UID formatter's four copies** (`iso15693_info.c:18`, `write_fail.c:287`, `:305`,
+  `write_confirm.c:39`). The fold relocated one, it did not add one — so it is not against this delta.
+- the twelve `widget_add_string_multiline_element` calls varying only in `(x, y)`. Deliberately left in
+  Round 6: those y values carry the line-budget arithmetic he measured for us in Round 4, and they should
+  move in the comment cut rather than be buried in a table.
 
-On the `CHANGELOG.md:42` thread he raised, as our call: `blocks_total < advertised` is fake flash **or**
-dead memory and the app cannot tell which, yet it resolves that toward reassurance — success chime, the
-word "complete". **We did not change it**, deliberately: it is a behaviour change on a hardware-verified
-screen, in a delta already large.
+**Tests first, then the cut.** `tools/hosttest` now covers the result screens and the write scene's
+routing, so a comment-only pass is verifiable as behaviour-preserving rather than read-and-hoped. If the
+cut touches code, update the tests in the same commit.
 
-The proposal is on record in that thread: use the free third line when `blocks_total < advertised` to say
-the shortfall went unexplained ("Some claimed blocks did not answer."), staying out of the `>` case,
-which is unambiguously benign. If he says yes it goes in the next push with a hardware check; if he does
-not answer, file it so it does not evaporate.
+## Open, waiting on him
 
-Read first: [pr-rounds.md](pr-rounds.md) (directory names are NOT his round numbers). Round 4 and its
-answer are in `pr-round-3/` and `pr-round-4/`; Round 5 keeps both halves in `pr-round-5/`, which is the
-shape to copy.
+- **The comment cut's scope** — asked at the end of the reply.
+- **Whether he wants the gen3 pre-flight probe as its own PR.** Filed as
+  [#255](https://github.com/xMasterX/all-the-plugins/issues/255) (`type/enhancement`, filed 2026-08-20)
+  carrying both register hazards: gen3 is detectable via the `0x14`/`0x15` signature, armed gen1 is not.
+  The code cites it from both sites.
 
 ## Settled in earlier rounds — do not re-litigate
+
+- **The capacity guard stays, and so does 10s.** He answered this in Round 6: dropping the guard trades a
+  fabrication the user cannot check for one they can, and 20s doubles the Back-swallowed window on every
+  card to buy a diagnosis on one shape of card. A clone-specific budget is the real fix and not this PR's.
+- **The render table is `{reason -> title}` and it is DONE.** The fuller `{reason, title, body}` form is
+  dead and he agrees: only four of twelve bodies are static, and `wipe_stopped` arriving dynamic moved the
+  ratio further away. Do not revisit it.
+- **`WipeUidChanged` withholds Retry deliberately**, and the reasoning lives at the branch ordering in
+  `scene_write.c` where a reader will look for it. Not an oversight.
+- **`NothingWiped` has no `uid_verified` route, and that is filed rather than fixed** — gen1, no card, and
+  the `wiped == 0` short-circuit predates this PR.
 
 - **The clone has no consent screen on the happy path, and that is correct.** He agreed explicitly in
   Round 5: consent deferred to the moment a destructive path becomes real, naming the actual
@@ -275,7 +292,7 @@ ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that us
 
 ## The host test harness — READ THIS BEFORE TOUCHING THE POLLER OR THE RESULT SCREENS
 
-`tools/hosttest`, **83 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
+`tools/hosttest`, **101 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
 
 ```bash
 cd tools/hosttest && make
@@ -285,16 +302,17 @@ Shipped code is compiled **verbatim**: the test files `#include` the `.c` so fil
 and the firmware calls resolve to fakes via `-Ifakes`. No seam, no `#ifdef TEST`, nothing added to the
 app. `application.fam` excludes `tools/`, so none of it can ship.
 
-Two groups, six files:
+Two groups, seven files:
 
 | file | cases | drives |
 |---|---|---|
 | `test_wipe_sweep.c` | 15 | the wipe sweep, against a fake TAG |
 | `test_clone_blocks.c` | 14 | the clone loop |
-| `test_outcome.c` | 15 | the terminal-outcome contract |
+| `test_outcome.c` | 17 | the terminal-outcome contract |
 | `test_write_step.c` | 15 | the write state machine, via the real poller callback |
 | `test_write_identity.c` | 10 | the AFI/DSFID write-and-verify retry loop |
-| `test_write_fail_scene.c` | 14 | the two result screens, against fake GUI RECORDERS |
+| `test_write_fail_scene.c` | 15 | the two result screens, against fake GUI RECORDERS |
+| `test_write_scene.c` | 15 | the write scene's ROUTING, including the round-5 mode gate |
 
 **Four things that matter more than the test count:**
 

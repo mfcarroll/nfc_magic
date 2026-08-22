@@ -1,4 +1,6 @@
-# Round 6 threaded replies — DRAFT, not posted
+# Round 6 threaded replies — POSTED 2026-08-20, all 22 threads
+
+Every one verified byte-identical by re-fetching. Keyed by his comment id.
 
 Keyed by his comment id. 22 threads, all answered.
 

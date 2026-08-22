@@ -1,4 +1,7 @@
-# DRAFT issue — NOT FILED
+# FILED as #255 — https://github.com/xMasterX/all-the-plugins/issues/255
+
+Enhancement form, `type/enhancement`, 2026-08-20. Cited from the poller's gen1 OPEN QUESTION and the
+CHANGELOG's gen3 entry.
 
 Target: `xMasterX/all-the-plugins`. Use the **Enhancement** form
 (`.github/ISSUE_TEMPLATE/03_enhancement.yml`), which auto-applies `type/enhancement`.

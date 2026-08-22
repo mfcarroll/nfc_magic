@@ -1,4 +1,6 @@
-# Round 6 reply — DRAFT, not posted
+# Round 6 reply — POSTED 2026-08-20 as #issuecomment-5381850091
+
+Verified identical to this text bar the trailing newline GitHub adds.
 
 ---
 
