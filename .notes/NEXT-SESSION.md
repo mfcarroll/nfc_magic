@@ -149,8 +149,19 @@ shape to copy.
 - **Never reset the fork to `d659a919`.** Always reset to `origin/nfc-magic-iso15693` before replaying,
   then verify `git merge-base --is-ancestor origin/nfc-magic-iso15693 HEAD`. Resetting to the old base
   silently drops pushed commits and turns the next push into a force-push over his review threads.
-- **Use exact-match, asserted string replacements when editing.** Index-based slicing broke a file
-  mid-edit, and an unasserted replacement silently no-matched and cost a build cycle.
+- **Use exact-match, asserted string replacements when editing. Never a regex sweep over an
+  identifier.** Index-based slicing broke a file mid-edit, an unasserted replacement silently
+  no-matched and cost a build cycle, and on 2026-08-18 a `\bover_capacity\b` substitution also
+  rewrote `instance->iso15693_result.over_capacity` into
+  `instance->iso15693_result.reason == ...`, producing a file that had to be thrown away. A local and
+  a struct member can share a name; `\b` does not know the difference. Match the whole expression,
+  assert the count is 1.
+- **Commit the baseline BEFORE mutation-testing it.** The restore step is `git checkout -- <file>`,
+  which does not distinguish the mutation from the uncommitted work underneath it. On 2026-08-18 that
+  destroyed a finished, passing refactor of the write-fail render chain -- recoverable only because the
+  whole transformation had been scripted rather than hand-edited. Commit (or `git stash`) first, then
+  break things. A corollary: if a mutation appears NOT to be caught, suspect a stale binary or a
+  reverted baseline before concluding the test is weak -- both have happened, one on each side.
 - **`cd` in a compound shell command aims the git commit at the wrong repo.** Keep them separate.
 - **`touch` does not force an fbt rebuild.** SCons decides by content signature, not mtime, so a
   touched file recompiles nothing and a "warning-free" claim from that run proves nothing. To actually
