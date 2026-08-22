@@ -81,7 +81,7 @@ reader still sees only the generic "Wipe card?" confirm. The post-power-cycle UI
 `uid_changed` afterwards, but it is incidental and gen3-unaware — it fires for any card whose UID shifts —
 and nothing speaks for `0x14`/`0x15` at all.
 
-So I have **filed it rather than let it evaporate** — ISSUE_PLACEHOLDER — and it carries the armed-gen1
+So I have **filed it rather than let it evaporate** — [#255](https://github.com/xMasterX/all-the-plugins/issues/255) — and it carries the armed-gen1
 case with it, because
 they are the same class: a magic generation whose registers live in ordinary data space, on a card the wipe
 cannot identify. The asymmetry between them is the substance of the issue rather than a caveat on it:

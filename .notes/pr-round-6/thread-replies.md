@@ -1,6 +1,6 @@
 # Round 6 threaded replies — DRAFT, not posted
 
-Keyed by his comment id. ISSUE_PLACEHOLDER is substituted once the issue is filed.
+Keyed by his comment id. 22 threads, all answered.
 
 ---
 
@@ -109,7 +109,7 @@ reads release notes is now warned, and someone who picks Wipe with a gen3 card o
 only the generic "Wipe card?" confirm. The UID re-check catches the identity half afterwards, but it is
 gen3-unaware -- it fires for any card whose UID shifts -- and nothing speaks for 0x14/0x15.
 
-Filed as ISSUE_PLACEHOLDER rather than left to evaporate. Not in this PR, but it is cheap: read 0x14/0x15,
+Filed as #255 rather than left to evaporate. Not in this PR, but it is cheap: read 0x14/0x15,
 compare the signature, and it only exists while the card is un-finalized -- exactly when the hazard
 exists. Two block reads, then a warning naming what the sweep is about to overwrite.
 
