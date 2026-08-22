@@ -81,7 +81,8 @@ reader still sees only the generic "Wipe card?" confirm. The post-power-cycle UI
 `uid_changed` afterwards, but it is incidental and gen3-unaware — it fires for any card whose UID shifts —
 and nothing speaks for `0x14`/`0x15` at all.
 
-So I have **filed it rather than let it evaporate**, and it carries the armed-gen1 case with it, because
+So I have **filed it rather than let it evaporate** — ISSUE_PLACEHOLDER — and it carries the armed-gen1
+case with it, because
 they are the same class: a magic generation whose registers live in ordinary data space, on a card the wipe
 cannot identify. The asymmetry between them is the substance of the issue rather than a caveat on it:
 
@@ -92,9 +93,8 @@ cannot identify. The asymmetry between them is the substance of the issue rather
   without writing to it, which is why this branch carries it as an open question with the post-wipe UID
   re-read as the only mitigation available.
 
-Not in this PR either way — I would rather close this one out. Tell me if you would rather the gen3 half
-came in as its own PR and I will take it; if you would rather leave both declared, the issue still stands
-as the record.
+Not in this PR either way — I would rather close this one out. Tell me if you want the gen3 half as its
+own PR and I will take it; if you would rather leave both declared, the issue stands as the record.
 
 **`NothingWiped` and `uid_verified`.** Count corrected to six reachable reason codes, and the one with no
 route now carries the reasoning you drew out: `uid_verified` is false there *by construction*, and the

@@ -1,6 +1,6 @@
 # Round 6 threaded replies — DRAFT, not posted
 
-Keyed by his comment id. Post after the push.
+Keyed by his comment id. ISSUE_PLACEHOLDER is substituted once the issue is filed.
 
 ---
 
@@ -109,12 +109,12 @@ reads release notes is now warned, and someone who picks Wipe with a gen3 card o
 only the generic "Wipe card?" confirm. The UID re-check catches the identity half afterwards, but it is
 gen3-unaware -- it fires for any card whose UID shifts -- and nothing speaks for 0x14/0x15.
 
-**Do you want a pre-flight probe as a follow-up?** Not in this PR. But it is cheap: read 0x14/0x15,
+Filed as ISSUE_PLACEHOLDER rather than left to evaporate. Not in this PR, but it is cheap: read 0x14/0x15,
 compare the signature, and it only exists while the card is un-finalized -- exactly when the hazard
 exists. Two block reads, then a warning naming what the sweep is about to overwrite.
 
-If you want it I will file one issue covering both register hazards, since they are the same class -- a
-magic generation whose registers sit in ordinary data space on a card the wipe cannot identify. gen3 is
+It covers both register hazards, since they are the same class -- a magic generation whose registers sit
+in ordinary data space on a card the wipe cannot identify. gen3 is
 detectable via the signature; the **armed gen1** case at 56/57/62/63 is not, since there is nothing to
 read and an armed card is indistinguishable from any other without writing to it. That asymmetry is the
 substance of the issue rather than a caveat on it: one half can be checked before the sweep, the other can
