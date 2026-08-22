@@ -1,8 +1,10 @@
 # The comment cut — starting point for Round 7
 
-Committed to in writing at the end of the Round 6 reply. **Read his answer on scoping first** — the reply
-asked him to choose between the full ownership model and a narrow drifted-twice list, and stated a
-preference for the former. If he has not answered, proceed with option 1.
+Committed to in writing at the end of the Round 6 reply.
+
+**Option 1, the ownership model, is the intended path** — decided on our side 2026-08-20, independently of
+his answer. Still read his reply first: if he asks for the narrow version instead, that governs, and
+option 2 is recorded below for that case. But do not treat the choice as open by default.
 
 Do it as **its own delta with nothing else in it**, so the diff reads as one decision. That was promised.
 
@@ -32,7 +34,7 @@ percentage.
 duplicated sentence there is duplicated *away from* the code that implements it, which is the drift
 mechanism in its purest form. `gen2_poller.c` and `uscuid_ul_poller.c` sit at ~8% for comparison.
 
-## Option 1 — the ownership model (stated preference)
+## Option 1 — the ownership model (THE PLAN)
 
 One owner per fact. Everything else cross-references instead of restating.
 
@@ -55,10 +57,10 @@ The known duplicated facts, from six rounds of his findings — these are the co
 - **the right-slot button rule** — stated in two functions, was two-way in one of them
 - **the gen1 56/57/62/63 hazard** — appears in the poller, `app_i.h`, the CHANGELOG and now #255
 
-## Option 2 — narrow
+## Option 2 — narrow (fallback, only if he asks for it)
 
-Only the six facts above, left where they are, corrected and cross-referenced. Cheaper, and leaves the
-mechanism intact. Recorded because he may prefer the smaller diff at round seven.
+Only the seven facts above, left where they are, corrected and cross-referenced. Cheaper, and leaves the
+mechanism intact — which is why it is the fallback rather than the plan.
 
 ## Also in this pass, per his Round 6 notes
 

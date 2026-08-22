@@ -232,6 +232,9 @@ the run found two real defects, now fixed in `3c88cf1`:
   Observed directly — a retried wipe stopped at the same block. Applied to the wipe too, whose Retry
   button came from his Round 4 reasoning.
 
+**The device is clean** as of 2026-08-20 — re-flashed from another project, carrying the app with it, so
+the lowered-budget build is gone and nothing is owed there.
+
 **How to run the truncation half again:** set `ISO15693_POLLER_PASS_MAX_MS` to ~200 in
 `iso15693_poller.c`, `FBT_NO_SYNC=1 ./fbt launch APPSRC=applications_user/nfc_magic_dev` from the
 Momentum tree, then **`git checkout --` the file immediately** — the device keeps the installed build, so
