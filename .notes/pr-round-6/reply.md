@@ -72,8 +72,29 @@ alone, in the CHANGELOG and in `file_select.c`.
 
 **The gen3 wipe.** The sharpest of the eleven. The wipe has no magic check at all — menu, confirm, sweep
 — so an un-finalized gen3 card gets its UID registers *and* its configuration signature zeroed, and comes
-out no longer identifying as re-writable. The entry now says that explicitly. Still declared rather than
-handled, and I have kept your framing that the reader it is written for is the person about to wipe one.
+out no longer identifying as re-writable. The entry now says that explicitly, and I have kept your framing
+that the reader it is written for is the person about to wipe one.
+
+Worth being blunt about what that leaves, because the CHANGELOG protects a different person from the one
+at risk. Someone who reads release notes is now warned. Someone who picks Wipe with a gen3 card on the
+reader still sees only the generic "Wipe card?" confirm. The post-power-cycle UID re-check surfaces
+`uid_changed` afterwards, but it is incidental and gen3-unaware — it fires for any card whose UID shifts —
+and nothing speaks for `0x14`/`0x15` at all.
+
+So I have **filed it rather than let it evaporate**, and it carries the armed-gen1 case with it, because
+they are the same class: a magic generation whose registers live in ordinary data space, on a card the wipe
+cannot identify. The asymmetry between them is the substance of the issue rather than a caveat on it:
+
+- **gen3** is *detectable*. Read `0x14`/`0x15`, compare the signature, and it exists only while the card is
+  un-finalized — exactly when the hazard exists. Two block reads before the sweep buys a warning naming
+  what is about to be overwritten.
+- **armed gen1** is *not*. There is no signature, and an armed card is indistinguishable from any other
+  without writing to it, which is why this branch carries it as an open question with the post-wipe UID
+  re-read as the only mitigation available.
+
+Not in this PR either way — I would rather close this one out. Tell me if you would rather the gen3 half
+came in as its own PR and I will take it; if you would rather leave both declared, the issue still stands
+as the record.
 
 **`NothingWiped` and `uid_verified`.** Count corrected to six reachable reason codes, and the one with no
 route now carries the reasoning you drew out: `uid_verified` is false there *by construction*, and the
