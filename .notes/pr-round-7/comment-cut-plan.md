@@ -100,3 +100,94 @@ The rules that earned their place, which he has never objected to:
 Settled in Round 6 and listed in the brief: the capacity guard and 10s, the render table's shape
 (`{reason -> title}`, done), `WipeUidChanged` withholding Retry, and `NothingWiped` having no
 `uid_verified` route.
+
+---
+
+# EXECUTED 2026-08-22 — eight commits, local only, NOT pushed
+
+Option 1 as planned. mishamyte had not replied when this was done, so the stated preference governed.
+Dev `iso15693-dev`, eight commits on top of `04d5f8a`, all signed, **zero intra-batch churn**.
+
+| commit | comment | code | |
+|---|---|---|---|
+| `3199bb9` | −27 | +0 | the header states each fact once |
+| `dc6d749` | −37 | +0 | the private struct stops re-documenting the public one |
+| `58de6ba` | −10 | +0 | the constants stop deriving each other's figures |
+| `9ca8201` | −10 | +0 | #255 owns the gen1 hazard argument |
+| `99eae6f` | −1 | +0 | three facts inside the poller that had two homes each |
+| `805a716` | −15 | +0 | the scenes stop restating the poller's contract |
+| `16f5c14` | +5 | **+11** | one UID formatter for the four screens that print one |
+| `4f47bc0` | +0 | +0 | give the retry-is-not-a-promise fact an owner |
+| **total** | **−95** | **+11** | |
+
+Seven of the eight are comment-only, **proven** rather than asserted: with comments stripped each file is
+byte-identical, and the host tests read exactly 101 before and after every one of them.
+
+## The finding that matters more than the delta
+
+**The ratio is the wrong metric and it should be said out loud.** On the plan's own eight files:
+
+| | lines | comment | % |
+|---|---|---|---|
+| before | 3776 | 1411 | 37% |
+| after | 3672 | 1309 | **36%** |
+
+−102 comment lines moved the ratio **one point**, because removing comment lowers the numerator and the
+denominator together. Chasing 8% by deduplication is arithmetically impossible: `iso15693_poller.c` would
+need to drop from 698 comment lines to about 236, and what is left after this pass is the hardware
+measurements, the view_dispatcher deadlock argument, the read-back classification table and the
+don't-de-arm constraint — documentation, not duplication.
+
+**The metric that does track the defect** is how many places state the same fact. Counting repeated
+6-word comment phrases across the nine ISO15693 files:
+
+- **before: 135**
+- **after: 34** — and the residue is parallel structure in the header (the two gen1 entry points),
+  cross-references naming the same owner twice, and ordinary English like "contiguous run at the top of
+  the card".
+
+Sites per fact, before → after: `56/57/62/63` **10 → 1**, "first activation" **6 → 1**, the gen2 CFG
+frame **2 → 1**.
+
+For honesty: `gen2_poller.c` is 875 lines at 9% and `uscuid_ul_poller.c` 515 at 8%, so the gap is not a
+size artefact — ISO15693 carries roughly 9x the comment per line of code. That is a real difference and
+worth conceding as one. The defensible claim is about WHAT the residue is, not that the gap is imaginary.
+
+## What was found along the way
+
+- **The private struct was the single biggest duplication in the PR.** `struct Iso15693Poller` carries a
+  reporting field for all but one member of `Iso15693PollerResult`, and every one had its own paragraph
+  restating the header's. `get_result` is already the mapping — one assignment per field — so the prose
+  mapping was redundant with code. Two parallel doc sets is the Round 6 mechanism in its purest form.
+- **Two duplicates were inside a single comment.** `start_clone_gen1` said "the gen1 registers now hold
+  the UID, so they cannot match the source" twice in one block.
+- **An eighth duplicated fact, not on the list above**: the header explained why
+  `has_details(WipeStopped)` is unconditional, which the scene already says at its own `has_details`.
+- **A drift the cut exposed**: `ISO15693_POLLER_WRITE_ATTEMPTS` said "a failed *clone* WRITE BLOCK" while
+  both passes use it — contradicted by the first line of the function it governs.
+- **The retry-is-not-a-promise fact had no owner at all.** The hardware-derived finding from Round 5
+  (a retried wipe stops at the same block) was independently DERIVED in `is_retryable` and in the
+  Details note. It now belongs to `pass_truncated`.
+
+## The one code change, and the one thing deliberately not done
+
+`16f5c14` folds four hand-rolled UID loops into `iso15693_info_cat_uid`. The interesting part: three of
+the four implemented the *same* two-group layout in two different spellings (`i == 4` before the byte,
+`i == 3` after it), and the reason for it — 23 characters against 17 on a 128px line — was written at
+one of the four. It costs **+11 code**, reported not dressed up. What justifies it is that the format is
+now TESTED: `test_uid_format.c`, five cases, **mutation-verified three ways** (move the group break →
+3 fail; drop the zero-padding → 5 fail; drop the leading-separator guard → 3 fail). Host tests 101 → 106.
+
+**NOT done: folding the twelve `widget_add_string_multiline_element` calls into a table.** Layout is the
+one thing the host tests do not cover, so that change would be unverifiable here — and it is a code
+change in a delta that promised to be a comment cut. The line-budget arithmetic it depends on now has
+one owner at the top of `write_fail.c`, which is the part that was actually duplicated.
+
+## Verification
+
+Momentum 87.15 and Unleashed 88.2, both from a deleted object dir, **zero warnings** from the app.
+`clang-format` clean. 106 host tests green. Churn audit across all eight commits: **zero**.
+
+Note on width: `ReflowComments: false` means clang-format never rewraps comments, so the file's de-facto
+comment width is 106, not the 99 `ColumnLimit`. New lines were held at 106 rather than rewrapping the
+file to 99 — that would have moved every line and buried the cut in churn.

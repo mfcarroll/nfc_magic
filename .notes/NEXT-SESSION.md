@@ -1,8 +1,32 @@
-# Next session — Round 6 is ANSWERED, PUSHED and POSTED. Next round is THE COMMENT CUT.
+# Next session — THE COMMENT CUT IS DONE LOCALLY AND NOT PUSHED. Awaiting a go-ahead.
 
 ## Where things stand
 
-PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted 2026-08-20.**
+PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted** —
+GitHub records the reply at 2026-08-22T18:08Z, so use that date, not the 08-20 some of these notes carry.
+
+**The comment cut is BUILT: eight commits on dev, on top of `04d5f8a`, all signed, nothing pushed and
+nothing posted.** Results and the full argument are in
+[pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md) under "EXECUTED". Headline: comment
+**−95**, code **+11**, seven of eight commits comment-only and proven so, zero intra-batch churn, both
+firmwares warning-free, host tests **101 → 106**.
+
+**mishamyte has NOT replied.** He was asked to pick the cut's scope and whether he wants the gen3
+pre-flight probe (#255) as its own PR. The cut was done on the stated preference (option 1) rather than
+waiting, which was the plan. If he asks for the narrow version, this delta is wider than he wanted —
+that is the known risk and it was taken deliberately.
+
+**The open decision is WHEN to send it:** push now as an unprompted round, or hold until he replies so
+the delta can be framed as an answer. Not a technical question; the work is finished either way.
+
+### The finding to lead with, whenever it goes
+
+The ratio is the wrong metric and this pass has the numbers to say so: **−102 comment lines moved the
+surface from 37% to 36%**, because removing comment lowers numerator and denominator together. Reaching
+`gen2_poller.c`'s 9% by deduplication is arithmetically impossible. The metric that DOES track the
+defect is how many places state the same fact — **repeated comment phrases went 135 → 34**. Concede the
+real part: ISO15693 carries ~9x the comment per line of code, and `gen2_poller.c` is 875 lines, so the
+gap is not a size artefact. Argue about what the residue IS, not that the gap is imaginary.
 
 Fork `nfc-magic-iso15693` = **`049029c9`**, 41 commits, all signed and GitHub-verified, fast-forward with
 no force at any point. PR shows 72 commits. Dev `iso15693-dev` = **`9da594f`**, clean, all signed.
@@ -33,9 +57,9 @@ What went up — ten commits, one decision each, **zero intra-batch churn**:
 9. `0850837` two minor claims and a 155-column comment line
 10. `9da594f` cite #255 from the gen1 open question and the gen3 entry
 
-## THE NEXT ROUND IS THE COMMENT CUT
+## The comment cut — what it was, now that it is built
 
-This is committed to, in writing, at the end of the posted reply. It is the last item on the deferred
+This was committed to, in writing, at the end of the posted reply. It is the last item on the deferred
 queue and the round's own evidence made it the priority:
 
 **Fixing eleven false comments cost +117 comment against +28 code, and took `iso15693_poller.c` from 43%
@@ -44,8 +68,8 @@ the wrong way even when each edit is right. Three of his eleven threads were com
 comments in the same delta*; two were user-facing. **That is a duplication problem, not a density one** —
 the same fact in three places drifts in two.
 
-The reply asked him to choose the scope and stated a preference. Read his answer first; if he has not
-answered, the stated preference is option 1:
+The reply asked him to choose the scope and stated a preference. **Option 1 is what was built**, on the
+stated preference, because he had not answered:
 
 1. **The full ownership model.** The event enum owns the outcome contract, the `ISO15693_MAGIC_BLK_*`
    defines own the wire facts, `gen1_optin.c`'s strings own the user-facing gen1 consequence,
@@ -110,9 +134,11 @@ cut touches code, update the tests in the same commit.
 ## Rules that cost us real time — cumulative, all rounds
 
 - **A comment earns its place only if it records something the code cannot show AND is not already
-  stated elsewhere.** The file is **43%** comment against ~8% for `gen2_poller.c` and
-  `uscuid_ul_poller.c`. Report added/removed comment vs code per commit; a commit adding more comment
-  than code is going the wrong way. The strong comment reduction is **item 6**, which is held — items
+  stated elsewhere.** Report added/removed comment vs code per commit with `tools/comment-ratio.py`;
+  a commit adding more comment than code is going the wrong way. **But do not use the ratio as the
+  target** — the 2026-08-22 cut removed 102 comment lines and moved the surface 37% -> 36%, because
+  removing comment lowers numerator and denominator together. Count SITES PER FACT instead; the
+  duplicate-phrase scan in the round-7 plan is the tool for it (135 -> 34 over that pass). The strong comment reduction is **item 6**, which is held — items
   1-4 came out at comment +4 / code −51, and the +4 is three constraints that had nowhere else to live
   (tick wraparound, don't-reuse-`is_wiping`, the widget copies its string so the early free is safe).
   Naming a value is often what makes the wrong refactor look attractive, so that is exactly where the
@@ -299,7 +325,7 @@ ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that us
 
 ## The host test harness — READ THIS BEFORE TOUCHING THE POLLER OR THE RESULT SCREENS
 
-`tools/hosttest`, **101 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
+`tools/hosttest`, **106 tests, dev-only**. Full detail in [../tools/hosttest/README.md](../tools/hosttest/README.md).
 
 ```bash
 cd tools/hosttest && make
@@ -309,7 +335,8 @@ Shipped code is compiled **verbatim**: the test files `#include` the `.c` so fil
 and the firmware calls resolve to fakes via `-Ifakes`. No seam, no `#ifdef TEST`, nothing added to the
 app. `application.fam` excludes `tools/`, so none of it can ship.
 
-Two groups, seven files:
+Three groups, eight files. The third (`PLAIN_TESTS`) needs neither radio nor GUI, but still links
+`fake_scene.o`, because that is where the real FuriString implementation lives:
 
 | file | cases | drives |
 |---|---|---|
@@ -320,6 +347,7 @@ Two groups, seven files:
 | `test_write_identity.c` | 10 | the AFI/DSFID write-and-verify retry loop |
 | `test_write_fail_scene.c` | 15 | the two result screens, against fake GUI RECORDERS |
 | `test_write_scene.c` | 15 | the write scene's ROUTING, including the round-5 mode gate |
+| `test_uid_format.c` | 5 | the shared UID formatter's two policies AND their widths |
 
 **Four things that matter more than the test count:**
 
