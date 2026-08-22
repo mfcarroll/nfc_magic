@@ -22,6 +22,9 @@ extern uint32_t fake_tick;
 
 #define UNUSED(x) ((void)(x))
 
+// Copied from furi/core/core_defines.h.
+#define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
+
 static inline uint32_t furi_get_tick(void) {
     return fake_tick;
 }
