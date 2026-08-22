@@ -11,11 +11,14 @@ CFLAGS ?= -std=gnu11 -g -O0 -Wall -Wextra -Wno-unused-parameter
 INCLUDES := -Ifakes -I. -I../..
 BUILD := build
 
-# Two groups. The poller tests drive a fake TAG; the scene tests drive fake GUI recorders and never
+# Three groups. The poller tests drive a fake TAG; the scene tests drive fake GUI recorders and never
 # touch the radio at all, so they link a different fake.
 POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity
 SCENE_TESTS  := test_write_fail_scene test_write_scene
-TESTS := $(POLLER_TESTS) $(SCENE_TESTS)
+# The third group drives a pure string function -- no radio and no GUI. It still links fake_scene.o,
+# which is where the real FuriString implementation lives; that is the only thing it wants from there.
+PLAIN_TESTS  := test_uid_format
+TESTS := $(POLLER_TESTS) $(SCENE_TESTS) $(PLAIN_TESTS)
 
 .PHONY: all run clean
 all: run
@@ -44,7 +47,16 @@ $(BUILD)/%.o: %.c | $(BUILD)
 $(addprefix $(BUILD)/,$(POLLER_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_tag.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(addprefix $(BUILD)/,$(SCENE_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o $(BUILD)/fake_write.o
+# The result screens call iso15693_info_cat_uid, which lives outside this directory, so it needs its own
+# rule -- the pattern rule above only matches sources here. Its depfile is separate for the same reason
+# every other one is.
+$(BUILD)/iso15693_info.o: ../../magic/protocols/iso15693/iso15693_info.c | $(BUILD)
+	$(CC) $(CFLAGS) -MMD -MP -MF $(BUILD)/iso15693_info.d $(INCLUDES) -c -o $@ $<
+
+$(addprefix $(BUILD)/,$(SCENE_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o $(BUILD)/fake_write.o $(BUILD)/iso15693_info.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(addprefix $(BUILD)/,$(PLAIN_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(addprefix $(BUILD)/,$(TESTS))
