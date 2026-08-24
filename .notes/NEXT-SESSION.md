@@ -96,6 +96,35 @@ verify it. Start there rather than from this section.
 routing, so a comment-only pass is verifiable as behaviour-preserving rather than read-and-hoped. If the
 cut touches code, update the tests in the same commit.
 
+## Deferred DELIBERATELY, not forgotten — 2026-08-22
+
+**A full `/code-review` pass over the PR was scoped and NOT run**, to save tokens in a fresh weekly
+window. Revisit in a burn window, ideally after the next round lands so it reviews the final code once
+rather than twice. The scope decided at the time, and the reasoning, so it does not need re-deriving:
+
+- **Run it over the ISO15693 surface, max effort** — `iso15693_poller.c/.h`, `iso15693_info.c/.h`, the
+  six ISO15693 scenes, `scene_write.c`, `write_confirm.c`, `file_select.c`, `nfc_magic_app_i.h`. About
+  4,000 lines.
+- **Not the full `origin/main..HEAD` range** (74 files, 7,146 insertions, 221 commits): most of the rest
+  is light touches on gen2/gen4/USCUID-UL that six rounds have already passed, so it roughly doubles the
+  spend to re-review code that is not new.
+
+### Two documentary items found on 2026-08-22 and NOT yet done
+
+Both were surfaced while checking whether any code change was outstanding. Neither is a functional fix.
+
+1. **#255's mitigation claim has a hole.** It says the post-wipe UID re-read is "the mitigation already
+   implemented" without qualification, but `iso15693_poller.c`'s `wiped == 0` short-circuit skips it
+   entirely. The code and the CHANGELOG were both corrected (`65e741a`, `7570ef7`); the ISSUE was not,
+   because posting to it is outward-facing and needs a go-ahead. **A comment on #255 is owed** — it is
+   also the thing mishamyte asked for when he said "file it rather than fix it".
+2. **#251 is cited nowhere in shipped code or the CHANGELOG**, while #252, #253 and #255 all are. It is
+   the most reachable hazard of the four: two ordinary ISO15693 tags in the field (a wallet), unaddressed
+   WRITE BLOCKs zero the bystander, and the post-wipe inventory can print the BYSTANDER's UID as the
+   card's. Scope is settled — the issue records "split out at his request for future work" — so what is
+   owed is a citation, and a decision on whether a known destructive limitation belongs in the shipped
+   release notes now or in the follow-up PR. **That decision is the user's and has not been made.**
+
 ## Open, waiting on him
 
 - **The comment cut's scope** — asked at the end of the reply.
