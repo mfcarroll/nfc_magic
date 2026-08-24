@@ -1,4 +1,6 @@
-# DRAFT — follow-up comment for #255. NOT POSTED.
+# POSTED 2026-08-24 as comment 5389538269 — verified byte-identical to the body below.
+
+https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5389538269
 
 Target: https://github.com/xMasterX/all-the-plugins/issues/255 (our own issue, so a plain comment).
 
@@ -79,9 +81,8 @@ answer it never got. They are not alternatives — the first makes the second un
 
 ---
 
-## Then, once posted
+## Checked after posting
 
-Update the citation in `iso15693_poller.c` at the `wiped == 0` comment: it currently says "the one path
-where the mitigation #255 describes does not run at all", which is accurate but reads as if #255 records
-the gap. Once this comment is up, #255 does record it, and no code change is needed. Check the wording
-still reads correctly rather than editing reflexively.
+The citation in `iso15693_poller.c` at the `wiped == 0` comment reads "the one path where the mitigation
+#255 describes does not run at all". Before this comment existed that was accurate but forward-looking;
+now #255 records the gap explicitly, so it reads correctly as written. **Deliberately not edited.**

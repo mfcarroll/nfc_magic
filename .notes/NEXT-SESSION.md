@@ -5,8 +5,8 @@
 PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted** —
 GitHub records the reply at 2026-08-22T18:08Z, so use that date, not the 08-20 some of these notes carry.
 
-**The comment cut is BUILT: eight commits on dev, on top of `04d5f8a`, all signed, nothing pushed and
-nothing posted.** Results and the full argument are in
+**The comment cut is BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed, nothing pushed.**
+Eight of them are the cut itself; the rest are the corrections and citations found afterwards, plus notes. Results and the full argument are in
 [pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md) under "EXECUTED". Headline: comment
 **−95**, code **+11**, seven of eight commits comment-only and proven so, zero intra-batch churn, both
 firmwares warning-free, host tests **101 → 106**.
@@ -109,21 +109,28 @@ rather than twice. The scope decided at the time, and the reasoning, so it does 
   is light touches on gen2/gen4/USCUID-UL that six rounds have already passed, so it roughly doubles the
   spend to re-review code that is not new.
 
-### Two documentary items found on 2026-08-22 and NOT yet done
+### Both documentary items are now CLOSED — 2026-08-24
 
-Both were surfaced while checking whether any code change was outstanding. Neither is a functional fix.
+Surfaced 2026-08-22 while checking whether any code change was outstanding. Neither was a functional fix
+and both are done.
 
-1. **#255's mitigation claim has a hole.** It says the post-wipe UID re-read is "the mitigation already
-   implemented" without qualification, but `iso15693_poller.c`'s `wiped == 0` short-circuit skips it
-   entirely. The code and the CHANGELOG were both corrected (`65e741a`, `7570ef7`); the ISSUE was not,
-   because posting to it is outward-facing and needs a go-ahead. **A comment on #255 is owed** — it is
-   also the thing mishamyte asked for when he said "file it rather than fix it".
-2. **#251 is cited nowhere in shipped code or the CHANGELOG**, while #252, #253 and #255 all are. It is
-   the most reachable hazard of the four: two ordinary ISO15693 tags in the field (a wallet), unaddressed
-   WRITE BLOCKs zero the bystander, and the post-wipe inventory can print the BYSTANDER's UID as the
-   card's. Scope is settled — the issue records "split out at his request for future work" — so what is
-   owed is a citation, and a decision on whether a known destructive limitation belongs in the shipped
-   release notes now or in the follow-up PR. **That decision is the user's and has not been made.**
+1. **#255's mitigation claim had a hole** — it described the post-wipe UID re-read as unconditional while
+   `iso15693_poller.c`'s `wiped == 0` short-circuit skips it entirely, which is the path an armed gen1
+   card would need it on. Fixed in three places: the comment at the short-circuit (`65e741a`), the
+   CHANGELOG's wipe entry (`7570ef7`), and the issue itself —
+   [#255 comment 5389538269](https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5389538269),
+   posted 2026-08-24 and verified byte-identical to
+   [pr-round-7/issue-255-followup.md](pr-round-7/issue-255-followup.md). That comment also discharges
+   mishamyte's Round 6 "file it rather than fix it" ask, which the Round 6 reply had answered with a code
+   note while saying "Filed" — a loose end he could have found.
+2. **#251 is now cited**, at the two choke points where its frames are built rather than at the functions
+   the issue names: `write_block_retried` (every block write; the SDK sets no ADDRESSED flag and no UID)
+   and `verify_inventory` (every UID read-back; single-slot, so a bystander can answer). `27d939b`. The
+   release-notes half was decided in favour of shipping it — `8e9ba69` adds it to "Validation (at 2.1)"
+   beside the gen3 entry. Re-verified against the current SDK rather than trusting the Round 2 report:
+   `iso15693_3_poller_i.c:237` write_block, `:132` inventory, both still as filed.
+
+**Nothing is owed outward now.** Everything else waits on him.
 
 ## Open, waiting on him
 
