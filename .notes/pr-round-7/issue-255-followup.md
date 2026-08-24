@@ -60,17 +60,21 @@ the comment at the short-circuit now states what skipping the check costs instea
 nothing, and the CHANGELOG's wipe entry carries a `Limit:` clause naming the case. The short-circuit
 itself is untouched.
 
-**What this means for the proposed fix.** It does not change the gen3 half. It does change the armed-gen1
-half of the table above: "post-wipe UID re-check reports a change" should read *reports a change on every
-path except a wipe that cleared nothing*. Two candidate fixes, neither in scope here:
+**What this means for the fix this issue proposes.** Nothing for the gen3 half — the pre-flight
+signature check is unaffected. It does change the armed-gen1 half of the table above: "post-wipe UID
+re-check reports a change" should read *reports a change on every path except a wipe that cleared
+nothing*.
+
+Two things would close that gap. Recording them for whoever picks this up rather than asking for either
+in #250:
 
 - run the power-cycle and the UID re-read even when `wiped == 0`, which costs one reset and one inventory
   on a path that is already a failure; or
 - leave the short-circuit and give `NothingWiped` a route to the "UID not re-checked" note, so the
   absence of the check is at least stated.
 
-The first is the one that actually detects the hazard. The second only stops the report from implying an
-answer it never got. Worth noting they are not alternatives — the first makes the second unnecessary.
+The first is the one that actually detects the hazard; the second only stops the report from implying an
+answer it never got. They are not alternatives — the first makes the second unnecessary.
 ~~~~
 
 ---
