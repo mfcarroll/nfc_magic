@@ -20,6 +20,7 @@
         "total_bytes": 256
       },
       "form_factor": "tag",
+      "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
@@ -62,6 +63,7 @@
         "total_bytes": 256
       },
       "form_factor": "coin",
+      "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
@@ -87,9 +89,11 @@
     },
     "white-tag-1": {
       "classification": {
-        "campaign": "20260824_225620",
+        "campaign": "20260824_233604",
+        "gen1_write": false,
+        "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "non-magic"
       },
       "count_owned": 3,
       "expected": {
@@ -104,6 +108,7 @@
         "total_bytes": 112
       },
       "form_factor": "tag",
+      "note": "The probed representative of the three. Classified non-magic on hardware 2026-08-24; the gen1 attempt sent ordinary WRITE BLOCKs at 56/57/62/63, all out of range on a 28-block tag, and block 27 still read its factory 57 5F 4F 4B afterwards -- so no aliasing, and the tag is byte-identical to its baseline.",
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
@@ -148,6 +153,7 @@
         "total_bytes": 112
       },
       "form_factor": "tag",
+      "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
@@ -192,6 +198,7 @@
         "total_bytes": 112
       },
       "form_factor": "tag",
+      "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
@@ -218,5 +225,5 @@
       }
     }
   },
-  "updated": "2026-08-24T23:28:10"
+  "updated": "2026-08-24"
 }

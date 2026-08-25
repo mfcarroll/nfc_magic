@@ -310,15 +310,35 @@ true. `iso15693_poller.c` gates progress on `block < advertised` by design.
 Two things still unrendered, both needing a card that answers reads at every address: the cut landing
 ABOVE the advertised count, and the `Stopped at 200 of 64`-shaped string that used to produce.
 
+**Out-of-range writes do not alias, on either silicon we have — 2026-08-24.** Previously this was known
+only for the gen2 card, from the probe suite's `edgepages` test (phantom writes rejected, phantom reads
+failing, block 0 unchanged across four runs). It now also holds for plain NXP SLI: a full gen1 UID
+attempt against a 28-block white-tag sends ordinary WRITE BLOCKs at 56/57/62/63, all past the end, and
+block 27 still read its factory `57 5F 4F 4B` afterwards. This is what makes the gen1 opt-in test safe
+on a small tag, and it is the assumption that had to hold for that to be true.
+
 ## Backlog — needs cards we do not have yet
 
 - **`source_uses_gen1_blocks`** — the one backdoor-predicate site the gen2 card cannot reach, since it
   sits behind the gen1 opt-in and so needs a card that FAILS gen2. **Any ordinary ISO15693/NfcV tag does
-  it** (on order as of 2026-08-17): select a source with data in 56/57/62/63, present the plain tag,
-  reach the gen1 opt-in, confirm the extra warning renders — then **press Back, do NOT accept**.
-  Accepting writes the gen1 sequence into four blocks of an ordinary tag and destroys what is there.
-- **Other gen2 magic silicon** (inbound) — everything verified so far is one sample. Re-run the
-  regression five.
+  it**. **THE TAGS ARRIVED 2026-08-24 and this is now UNBLOCKED** — three plain NXP SLI, 28 blocks,
+  fully unlocked, classified non-magic on hardware. See [tag-inventory.md](tag-inventory.md).
+  Select a source with data in 56/57/62/63, present a white-tag, reach the gen1 opt-in, confirm the
+  extra warning renders.
+  **And then you may ACCEPT, which the old version of this note said not to do.** The correction:
+  those tags are 28 blocks, so 56/57/62/63 do not exist on them, and the gen1 writes go out of range.
+  That was an assumption until it was tested — an out-of-range write could in principle alias onto a
+  real block — so it was checked: after a full gen1 UID attempt against white-tag-1, block 27 still
+  read `57 5F 4F 4B`, its untouched factory value. **No aliasing on SLI silicon.** So accepting is
+  safe HERE and exercises the whole gen1-failure path end to end (Fail, gen1_attempted, and the
+  "56/57/62/63 may be overwritten" screen) rather than stopping at the warning.
+  Note what does NOT generalise: on a plain tag of 64 blocks or more those four blocks are real, and
+  accepting there destroys them. The safety comes from the tag being SMALL, not from gen1 being gentle.
+- **Other gen2 magic silicon** — **ARRIVED 2026-08-24: two samples, both confirmed gen2 on hardware.**
+  white-coin and black-tag, TI Tag-it HF-I Plus presentation, IC ref 0x8B, 64x4, physical 64, in
+  proxmark's default CFG state — so the gen2 probe was geometry-neutral on both. Different silicon
+  from the original test card, which presents EM-Marin at IC ref 0x0F and advertises 66 against 64
+  physical. **Re-run the regression five on one of them**; that is the outstanding piece.
 - **gen1 magic candidates** (inbound, unconfirmed as gen1). What they would settle is unchanged: the
   armed-card wipe hazard, the unlock/commit reading inferred from proxmark's send order, and the UID
   re-read that reports a change without preventing one. He said explicitly not to hold the merge for
