@@ -525,20 +525,48 @@ def probe_magictype(ctx):
                 # the four backdoor blocks for no new information.
                 print(C("dim", "   (stopping here -- no need to try the destructive method)"))
                 break
-        # ALWAYS restore -- try every method until the UID reads back as the original.
+        # Restore, but only what actually needs restoring, and only with the method that demonstrably
+        # works on this card. The old form looped ("gen2", "gen1") unconditionally, which had two bad
+        # consequences neither of which is hypothetical:
+        #
+        #   on a NON-MAGIC tag no write moved the UID, so there was nothing to restore -- yet it still
+        #     sent a gen1 csetuid, i.e. four more ordinary WRITE BLOCKs at 56/57/62/63, and then
+        #     reported "FAILED -- re-clone this card from its .nfc" about a UID that never changed.
+        #   on a GEN2 card whose gen2 restore came back flaky, the gen1 fallback would write those same
+        #     four blocks -- which on gen2 are ordinary user data. That is the identical hazard the
+        #     classification order above exists to avoid, sitting in the recovery path.
         if orig_compact:
-            restored = False
-            for gen in ("gen2", "gen1"):
-                _, rraw = pm15_csetuid(ctx["pm3"], orig_compact, gen, ctx["split"])
-                chk, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
-                ctx["save_raw"]("magictype_restore_%s" % gen, rraw + "\n---info---\n" + iraw)
-                if (chk.get("uid") or "").replace(" ", "").upper() == orig_compact.upper():
-                    restored = True
-                    break
-            res["uid_restored"] = restored
-            print("   restore original UID %s: %s"
-                  % (orig, C("ok", "ok") if restored else
-                     C("err", "FAILED -- re-clone this card from its .nfc to fix the UID")))
+            chk, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
+            ctx["save_raw"]("magictype_restore_check", iraw)
+            now = (chk.get("uid") or "").replace(" ", "").upper()
+            if now == orig_compact.upper():
+                res["uid_restored"] = True
+                res["restore_needed"] = False
+                print("   restore original UID: %s" % C("ok", "not needed -- UID never moved"))
+            elif res["magic_method"] is None:
+                # The UID differs but nothing we sent could have moved it. Do NOT start writing blocks
+                # on a guess; say what was seen and let a human decide.
+                res["uid_restored"] = False
+                res["restore_needed"] = True
+                print(C("err", "   UID reads %s, expected %s, and no write method worked here."
+                               " NOT attempting a blind restore -- check the card and the raw logs."
+                        % (now or "?", orig)))
+            else:
+                gen = res["magic_method"]
+                restored = False
+                for attempt in range(2):
+                    _, rraw = pm15_csetuid(ctx["pm3"], orig_compact, gen, ctx["split"])
+                    chk, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
+                    ctx["save_raw"]("magictype_restore_%s_%d" % (gen, attempt), rraw + "\n---info---\n" + iraw)
+                    if (chk.get("uid") or "").replace(" ", "").upper() == orig_compact.upper():
+                        restored = True
+                        break
+                res["uid_restored"] = restored
+                res["restore_needed"] = True
+                print("   restore original UID %s via %s: %s"
+                      % (orig, gen, C("ok", "ok") if restored else
+                         C("err", "FAILED -- re-clone this card from its .nfc. Deliberately NOT falling"
+                                  " back to the other generation, which would write 56/57/62/63.")))
         else:
             res["uid_restored"] = False
             print(C("err", "   could not snapshot the original UID -- cannot restore; re-clone the card."))

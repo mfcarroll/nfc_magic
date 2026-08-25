@@ -3,9 +3,10 @@
   "tags": {
     "black-tag": {
       "classification": {
-        "campaign": "20260824_225620",
+        "campaign": "20260824_232750",
+        "gen2_write": true,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "gen2 magic"
       },
       "count_owned": 1,
       "expected": {
@@ -217,5 +218,5 @@
       }
     }
   },
-  "updated": "2026-08-24T23:20:01"
+  "updated": "2026-08-24T23:28:10"
 }
