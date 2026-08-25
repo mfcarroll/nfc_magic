@@ -7,11 +7,18 @@ one answers the questions you actually have about a *magic* 15693 card before/af
 nfc_magic app:
 
   info        (safe)        `hf 15 info`  -> UID, chip TYPE, IC ref, DSFID, AFI, reported block geometry
+  baseline    (safe)        the PRISTINE snapshot: every block read with retries, plus a ready-to-paste
+                            `hf 15 wrbl` restore script and the CFG frame that puts the advertised
+                            geometry back. Run this BEFORE anything destructive -- a gen1 UID attempt
+                            overwrites four blocks and cannot be undone without this record.
   capacity    (safe)        read blocks upward until a read FAILS -> the PHYSICAL block count, and how
                             many the card OVER-reports (the "fake-flash" phantom tail). Reads only.
   magictype   (safe + opt)  V3 config-mode signature read (blocks 0x14/0x15); with --destructive also
-                            tries gen1 and gen2 `csetuid` to see which UID-write the card accepts, then
-                            restores the original UID.
+                            tries gen2 then gen1 `csetuid` to see which UID-write the card accepts, then
+                            restores the original UID. GEN2 FIRST, stopping on success: gen2 sends custom
+                            0xE0 frames a non-magic tag simply refuses, while gen1 sends ordinary WRITE
+                            BLOCKs that ANY writable tag accepts -- so gen1-first destroys blocks
+                            56/57/62/63 on every card that turns out not to be gen1.
   edgepages   (--destructive)  write non-zero to the last real block and the first phantom block, read
                             back, and check for aliasing (does writing block N wrap onto block 0?).
                             Restores the block afterwards.
@@ -26,9 +33,21 @@ care about as at-risk and use a blank first.
 Outputs a campaign dir: human `campaign.log`, machine `manifest.json`, and `raw/*.txt` with the exact
 pm3 output of every command (self-labelled with card/probe/timestamp/fw-commit) so nothing is ambiguous.
 
+It also folds each card into a STANDING INVENTORY -- `tools/tag-inventory.json` plus a rendered
+`.notes/tag-inventory.md`. A campaign says what happened in one run; the inventory says what a given
+physical tag IS, across runs, which is what a validation claim has to cite. The `original` section of
+each entry is WRITE-ONCE: once a tag's pre-write state is recorded, no later run may replace it, because
+by then this tool's own probes have written to the card.
+
 Examples:
-    # full safe characterization of one card:
-    python3 tools/iso15693_magic_probe.py --card "aliexpress-64blk" --probes info,capacity,magictype
+    # full safe characterization of one card -- no writes at all, and enough to rule gen3 in or out:
+    python3 tools/iso15693_magic_probe.py --card "aliexpress-64blk" --probes info,baseline,capacity,magictype
+
+    # then classify gen1 vs gen2 vs non-magic, which needs a UID write (gen2 tried first):
+    python3 tools/iso15693_magic_probe.py --card "aliexpress-64blk" --probes magictype --destructive
+
+    # re-render the inventory table from the JSON, touching no hardware:
+    python3 tools/iso15693_magic_probe.py --render-inventory
 
     # deep test on a BLANK magic card (writes!):
     python3 tools/iso15693_magic_probe.py --card blank1 --probes info,capacity,magictype,edgepages,impersonate --destructive
@@ -133,7 +152,8 @@ def parse_info(text):
     """Pull identity fields out of `hf 15 info`. Missing fields -> None."""
     t = clean(text)
     d = {"uid": None, "type": None, "ic_ref": None, "dsfid": None, "afi": None,
-         "block_count": None, "block_size": None, "no_tag": ("no tag found" in t.lower())}
+         "block_count": None, "block_size": None, "sysinfo": None, "mfg_byte": None,
+         "no_tag": ("no tag found" in t.lower())}
 
     m = re.search(r"UID\.*\s*([0-9A-Fa-f]{2}(?:[ ]?[0-9A-Fa-f]{2}){3,})", t)
     if m:
@@ -156,6 +176,21 @@ def parse_info(text):
     m = re.search(r"(\d+)\s*\(\s*or\s*\d+\s*\)\s*bytes/blocks", t)
     if m:
         d["block_size"] = int(m.group(1))
+    # The raw GET SYSTEM INFO response, kept verbatim: it is the authoritative record of what the card
+    # actually answered, and every parsed field above is a lossy reading of it.
+    m = re.search(r"SYSINFO\.*\s*((?:[0-9A-Fa-f]{2}[ ]?)+)", t)
+    if m:
+        d["sysinfo"] = re.sub(r"\s+", " ", m.group(1).strip().upper())
+    # uid[1] is the ISO/IEC 7816-6 manufacturer code. Recorded as the byte rather than decoded here:
+    # proxmark's TYPE line already names the vendor, and a second copy of that table would be a second
+    # copy to keep correct.
+    if d["uid"]:
+        parts = d["uid"].split()
+        if len(parts) >= 2:
+            try:
+                d["mfg_byte"] = int(parts[1], 16)
+            except ValueError:
+                pass
     return d
 
 
@@ -329,6 +364,87 @@ def probe_capacity(ctx):
             "boundary_probes": probes, "nonzero_blocks": nonzero, "dump": dump}
 
 
+def probe_baseline(ctx):
+    """Capture the card's PRISTINE state, and the commands to put it back. Reads only.
+
+    Run this before any destructive probe. The reason it exists separately from `capacity` -- which also
+    dumps -- is that `capacity`'s dump is informational and single-attempt, while this one is the undo
+    record: retried per block so a marginal read is not silently recorded as zeros, and emitted as a
+    ready-to-paste `hf 15 wrbl` script rather than a table a human has to retype under pressure.
+
+    What it cannot promise: a locked block cannot be restored at all, so those are called out here rather
+    than discovered during a failed restore. `hf 15 dump` zero-fills blocks it cannot read, which is why
+    the per-block read below is the one that decides what is real."""
+    info = ctx["state"].get("info")
+    if info is None:
+        info, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])
+        ctx["save_raw"]("baseline_info", iraw)
+        ctx["state"]["info"] = info
+    if info.get("uid") is None:
+        print(C("err", "   no tag -- cannot take a baseline."))
+        return {"ok": False}
+    remember_geometry(ctx, info)
+
+    reported = info.get("block_count") or 0
+    if not reported:
+        print(C("err", "   card reports no block count -- nothing to bound the snapshot with."))
+        return {"ok": False}
+
+    blocks, locked, unreadable = {}, [], []
+    for b in range(reported):
+        ok, data, is_locked, raw = pm15_rdbl(ctx["pm3"], b, ctx["split"], tries=ctx["read_tries"])
+        ctx["save_raw"]("baseline_b%03d" % b, raw)
+        if ok:
+            blocks["%d" % b] = data
+            if is_locked:
+                locked.append(b)
+        else:
+            unreadable.append(b)
+
+    # The restore script. Locked blocks are emitted commented-out: a write to them will fail, and a
+    # restore run that reports failures nobody expected is worse than one that says up front what it
+    # cannot do.
+    lines = ["# Restore card '%s' to the state recorded %s." % (ctx["card"], datetime.now().isoformat(timespec="seconds")),
+             "# UID at capture: %s" % info["uid"],
+             "# Paste into the pm3 client. Verify with `hf 15 info` + `hf 15 dump` afterwards.",
+             "#",
+             "# The UID itself is NOT restored here -- that needs `hf 15 csetuid` and the right",
+             "# generation for this card. See the magictype result / the inventory entry."]
+    if info.get("block_count") and info.get("block_size") and info.get("ic_ref") is not None:
+        lines += ["#",
+                  "# Advertised geometry, if a gen2 CFG frame moved it (max-block and size are one LESS",
+                  "# than the reported counts, which is the off-by-one that makes this worth writing down):",
+                  "#   hf 15 raw -c -w -d 02E00947%02X%02X%02X00"
+                  % ((info["block_count"] - 1) & 0xFF, (info["block_size"] - 1) & 0xFF, info["ic_ref"] & 0xFF)]
+    lines.append("")
+    for b in range(reported):
+        key = "%d" % b
+        if key not in blocks:
+            lines.append("# block %d: UNREADABLE at capture -- nothing to restore" % b)
+            continue
+        cmd = "hf 15 wrbl -b %d -d %s" % (b, blocks[key].replace(" ", ""))
+        lines.append(("# LOCKED, write will fail: " + cmd) if b in locked else cmd)
+    ctx["save_raw"]("baseline_restore_script", "\n".join(lines))
+
+    nonzero = sorted(int(k) for k, v in blocks.items() if not block_is_zero(v))
+    print("   snapshot... %d/%d blocks read%s"
+          % (len(blocks), reported, (C("warn", "  (%d UNREADABLE: %s)" % (len(unreadable), unreadable))
+                                     if unreadable else "")))
+    if locked:
+        print(C("warn", "   LOCKED blocks (cannot be restored if something writes them): %s" % locked))
+    print("   non-zero at capture: %s" % (nonzero or "none -- looks blank"))
+    print(C("ok", "   restore script -> raw/%s_baseline_restore_script.txt" % slug(ctx["card"])))
+
+    snap = {"ok": True, "uid": info["uid"], "sysinfo": info.get("sysinfo"),
+            "reported_blocks": reported, "block_size": info.get("block_size"),
+            "ic_ref": info.get("ic_ref"), "dsfid": info.get("dsfid"), "afi": info.get("afi"),
+            "type": info.get("type"), "mfg_byte": info.get("mfg_byte"),
+            "blocks": blocks, "locked_blocks": locked, "unreadable_blocks": unreadable,
+            "nonzero_blocks": nonzero}
+    ctx["state"]["baseline"] = snap
+    return snap
+
+
 def probe_magictype(ctx):
     res = {"v3_config_mode": None, "gen1_write": None, "gen2_write": None, "magic_method": None}
     # 1) V3 config-mode signature (non-destructive read of 0x14 / 0x15)
@@ -340,15 +456,32 @@ def probe_magictype(ctx):
           % (C("ok", "PRESENT (un-finalized V3 card)") if res["v3_config_mode"] else C("dim", "no"),
              ("  [%s / %s]" % (da, db)) if (ok_a and ok_b) else ""))
 
-    # 2) gen1 / gen2 UID-write test (destructive: changes the UID). We ALWAYS restore afterwards,
+    # 2) gen2 / gen1 UID-write test (destructive: changes the UID). We ALWAYS restore afterwards,
     #    trying both methods, because a flaky verify must never leave the card on a test UID.
+    #
+    #    GEN2 IS TRIED FIRST, AND A SUCCESS STOPS THERE. That order is a data-safety requirement, not a
+    #    preference, and it is the opposite of what this probe did until 2026-08-24:
+    #
+    #      gen2 (armsrc/iso15693.c:3216, SetTag15693Uid_v2) sends four CUSTOM 0xE0 frames. A tag that
+    #        does not implement the magic command simply refuses them: nothing is written anywhere.
+    #      gen1 (armsrc/iso15693.c:3166, SetTag15693Uid) sends four ORDINARY WRITE BLOCK frames, at
+    #        blocks 0x3E, 0x3F, 0x38 and 0x39. Any writable ISO15693 tag accepts an ordinary write, so on
+    #        a non-magic tag this DESTROYS blocks 56, 57, 62 and 63 -- and on a gen2 card those four are
+    #        ordinary user data.
+    #
+    #    So gen1-first spends four data blocks on every card that is not gen1, to learn something the
+    #    harmless probe would have told us. Run the `baseline` probe before this one either way: a gen1
+    #    write cannot be undone without a record of what was there.
     if ctx["destructive"]:
         orig_info, _ = pm15_info_retry(ctx["pm3"], ctx["split"])  # snapshot the real UID reliably
         orig = orig_info.get("uid")
         orig_compact = orig.replace(" ", "") if orig else None
         geo_before = remember_geometry(ctx, orig_info)  # capture geometry BEFORE gen2 clobbers the CFG
         print("   original UID (to restore): %s" % (orig or C("warn", "UNKNOWN -- restore may be impossible")))
-        for gen, test_uid in (("gen1", TEST_UID_GEN1), ("gen2", TEST_UID_GEN2)):
+        if not ctx["state"].get("baseline"):
+            print(C("warn", "   ! no baseline snapshot for this card -- a gen1 attempt below is"
+                            " unrecoverable. Ctrl-C now and run --probes baseline first if that matters."))
+        for gen, test_uid in (("gen2", TEST_UID_GEN2), ("gen1", TEST_UID_GEN1)):
             _, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
             info2, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])  # retried read-back
             ctx["save_raw"]("magictype_%s" % gen, sraw + "\n---info---\n" + iraw)
@@ -359,6 +492,11 @@ def probe_magictype(ctx):
                   % (gen, C("ok", "WORKS") if worked else C("dim", "no"), test_uid, got or "?"))
             if worked and res["magic_method"] is None:
                 res["magic_method"] = gen
+            if worked:
+                # Stop at the first method that works. On a gen2 card, going on to try gen1 would write
+                # the four backdoor blocks for no new information.
+                print(C("dim", "   (stopping here -- no need to try the destructive method)"))
+                break
         # ALWAYS restore -- try every method until the UID reads back as the original.
         if orig_compact:
             restored = False
@@ -614,12 +752,169 @@ def probe_writespan(ctx):
 
 PROBES = {
     "info": (probe_info, False, "identity: UID / chip TYPE / IC ref / DSFID / AFI / reported geometry"),
+    "baseline": (probe_baseline, False, "PRISTINE snapshot + a ready-to-paste restore script (run before any write)"),
     "capacity": (probe_capacity, False, "physical block count vs reported (finds the phantom tail)"),
     "magictype": (probe_magictype, False, "V3 signature; gen1/gen2 UID-write test (write part needs --destructive)"),
     "edgepages": (probe_edgepages, True, "write/read the last-real & first-phantom block; aliasing check"),
     "impersonate": (probe_impersonate, True, "does the card accept a standalone CFG frame for another geometry?"),
     "writespan": (probe_writespan, True, "does WRITE BLOCK obey the advertised count or physical capacity?"),
 }
+
+
+# =============================================================== inventory
+#
+# A campaign dir answers "what happened in that run". The inventory answers "what IS this tag", across
+# runs and across months, which is the question an upstream submission needs: which physical tag was a
+# given result measured on, and what was it before anybody wrote to it.
+#
+# One rule makes it trustworthy: THE ORIGINAL SECTION IS WRITE-ONCE. A later run may add a
+# classification, or correct a classification, but it may never restate what the tag looked like
+# originally -- by then the tool's own probes have written to it, so a fresh read is not the original.
+INVENTORY_JSON = os.path.join(HERE, "tag-inventory.json")
+INVENTORY_MD = os.path.join(os.path.dirname(HERE), ".notes", "tag-inventory.md")
+
+
+def inventory_load(path=None):
+    path = path or INVENTORY_JSON
+    if not os.path.exists(path):
+        return {"tags": {}}
+    try:
+        with open(path) as f:
+            d = json.load(f)
+        d.setdefault("tags", {})
+        return d
+    except Exception as e:
+        print(C("warn", "note: could not read %s (%s) -- not overwriting it." % (path, e)))
+        return None
+
+
+def inventory_update(card, results, campaign, path=None):
+    """Fold one card's probe results into the inventory. Returns (entry, what_changed) or (None, why)."""
+    path = path or INVENTORY_JSON
+    inv = inventory_load(path)
+    if inv is None:
+        return None, "inventory unreadable"
+
+    entry = inv["tags"].setdefault(card, {})
+    changed = []
+
+    base = results.get("baseline") or {}
+    info = (results.get("info") or {}).get("info") or {}
+    cap = results.get("capacity") or {}
+    mag = results.get("magictype") or {}
+
+    # --- original: write-once, and only from a source that was read before anything wrote
+    if "original" not in entry:
+        src = base if base.get("ok") else (info if info.get("uid") else None)
+        if src:
+            entry["original"] = {
+                "uid": src.get("uid"),
+                "type": src.get("type"),
+                "mfg_byte": src.get("mfg_byte"),
+                "sysinfo": src.get("sysinfo"),
+                "advertised_blocks": src.get("reported_blocks") or src.get("block_count"),
+                "block_size": src.get("block_size"),
+                "ic_ref": src.get("ic_ref"),
+                "dsfid": src.get("dsfid"),
+                "afi": src.get("afi"),
+                "locked_blocks": base.get("locked_blocks"),
+                "nonzero_blocks": base.get("nonzero_blocks", cap.get("nonzero_blocks")),
+                "captured": datetime.now().isoformat(timespec="seconds"),
+                "campaign": campaign,
+                "from_baseline_probe": bool(base.get("ok")),
+            }
+            changed.append("original")
+    elif base.get("ok") or info.get("uid"):
+        # Do not touch it -- but say so, because silently ignoring a fresh read looks like a bug.
+        changed.append("original kept (already recorded %s)" % entry["original"].get("captured", "?"))
+
+    if cap.get("ok"):
+        phys = {"physical_blocks": cap.get("physical_blocks"), "phantom_blocks": cap.get("phantom"),
+                "measured": datetime.now().isoformat(timespec="seconds"), "campaign": campaign}
+        if entry.get("physical") != phys:
+            entry.setdefault("physical", phys)
+            changed.append("physical")
+
+    if mag.get("ok") is not False and mag:
+        cls = entry.setdefault("classification", {})
+        if mag.get("v3_config_mode") is not None:
+            cls["gen3_signature"] = mag["v3_config_mode"]
+        for k in ("gen1_write", "gen2_write"):
+            if mag.get(k) is not None:
+                cls[k] = mag[k]
+        verdict = classify(cls)
+        if verdict != cls.get("verdict"):
+            cls["verdict"] = verdict
+            cls["campaign"] = campaign
+            changed.append("classification -> %s" % verdict)
+
+    inv["updated"] = datetime.now().isoformat(timespec="seconds")
+    with open(path, "w") as f:
+        json.dump(inv, f, indent=2, sort_keys=True)
+    inventory_render(inv)
+    return entry, ", ".join(changed) if changed else "no change"
+
+
+def classify(cls):
+    """Turn the probe flags into a verdict, and be explicit about what is NOT yet decidable.
+
+    gen1 deliberately does not resolve on the write alone: an ordinary writable tag accepts the same
+    four WRITE BLOCK frames, so a gen1 write that "works" only means the frames landed. What separates a
+    gen1 magic tag from a tag whose blocks 56/57 just got overwritten is whether the UID MOVED, and the
+    probe reads that back -- so gen1_write True already means the UID changed. A tag that took the writes
+    without moving its UID shows up as gen1_write False, which is why that case reads as non-magic rather
+    than unknown."""
+    if cls.get("gen3_signature"):
+        return "gen3 (un-finalized, config mode)"
+    if cls.get("gen2_write"):
+        return "gen2 magic"
+    if cls.get("gen1_write"):
+        return "gen1 magic"
+    if cls.get("gen2_write") is False and cls.get("gen1_write") is False:
+        return "non-magic"
+    if cls.get("gen2_write") is False:
+        return "not gen2; gen1 untested"
+    return "unclassified (no write probe run)"
+
+
+def inventory_render(inv, path=None):
+    path = path or INVENTORY_MD
+    rows = []
+    for card in sorted(inv.get("tags", {})):
+        e = inv["tags"][card]
+        o = e.get("original", {})
+        ph = e.get("physical", {})
+        cl = e.get("classification", {})
+        adv = o.get("advertised_blocks")
+        phys = ph.get("physical_blocks")
+        geo = "%s adv" % (adv if adv is not None else "?")
+        if phys is not None:
+            geo += " / %d phys" % phys
+            if adv is not None and phys != adv:
+                geo += " (%+d)" % (phys - adv)
+        rows.append((card, cl.get("verdict", "unclassified"), o.get("uid") or "?",
+                     (o.get("type") or "?"), geo,
+                     "%s / %s / %s" % (_hx(o.get("ic_ref")), _hx(o.get("dsfid")), _hx(o.get("afi"))),
+                     str(o.get("nonzero_blocks") if o.get("nonzero_blocks") else "blank"),
+                     "yes" if o.get("from_baseline_probe") else "no"))
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write("# ISO15693 tag inventory\n\n")
+            f.write("Generated by `tools/iso15693_magic_probe.py`; source of truth is\n")
+            f.write("`tools/tag-inventory.json`. Do not hand-edit this file -- it is rewritten on every run.\n\n")
+            f.write("The **original** columns are write-once, recorded before any probe wrote to the tag.\n")
+            f.write("A blank restore column means the snapshot came from `info`/`capacity` rather than the\n")
+            f.write("`baseline` probe, so there is no per-block record to restore from.\n\n")
+            f.write("| tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable |\n")
+            f.write("|---|---|---|---|---|---|---|---|\n")
+            for r in rows:
+                f.write("| " + " | ".join("`%s`" % r[2] if i == 2 else str(r[i]) for i in range(len(r))) + " |\n")
+            if not rows:
+                f.write("| _(none recorded yet)_ | | | | | | | |\n")
+            f.write("\nUpdated %s\n" % inv.get("updated", "?"))
+    except Exception as e:
+        print(C("warn", "note: could not write %s (%s)." % (path, e)))
 
 
 # =============================================================== helpers
@@ -672,9 +967,24 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="print the plan + exact commands, touch nothing.")
     ap.add_argument("--no-color", action="store_true")
     ap.add_argument("--list-probes", action="store_true")
+    ap.add_argument("--no-inventory", action="store_true",
+                    help="do not fold results into tools/tag-inventory.json / .notes/tag-inventory.md.")
+    ap.add_argument("--inventory", default=None,
+                    help="path to the inventory JSON (default: tools/tag-inventory.json).")
+    ap.add_argument("--render-inventory", action="store_true",
+                    help="rewrite .notes/tag-inventory.md from the JSON and exit; touches no hardware.")
     args = ap.parse_args()
 
     C.enabled = (sys.stdout.isatty() and not args.no_color and os.environ.get("NO_COLOR") is None)
+
+    if args.render_inventory:
+        inv = inventory_load(args.inventory)
+        if inv is None:
+            sys.exit(1)
+        inventory_render(inv)
+        print("rendered %s (%d tag%s)"
+              % (INVENTORY_MD, len(inv.get("tags", {})), "" if len(inv.get("tags", {})) == 1 else "s"))
+        return
 
     if args.list_probes:
         print("Probes (name : destructive? : what it does):")
@@ -752,7 +1062,7 @@ def main():
 
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
                    "destructive": args.destructive, "read_tries": args.read_tries,
-                   "writespan_max": args.writespan_max,
+                   "writespan_max": args.writespan_max, "card": card,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
@@ -771,6 +1081,15 @@ def main():
                 crec["results"][p] = r
                 wlog(json.dumps({p: r}, default=str))
                 save_manifest()
+
+            if not args.no_inventory and not args.dry_run:
+                entry, what = inventory_update(card, crec["results"], stamp, args.inventory)
+                if entry is None:
+                    print(C("warn", "\n  inventory: skipped (%s)" % what))
+                else:
+                    v = (entry.get("classification") or {}).get("verdict", "unclassified")
+                    print(C("ok", "\n  inventory: '%s' -> %s   [%s]" % (card, v, what)))
+                    crec["inventory"] = {"verdict": v, "changed": what}
 
             if args.flipper_note and not args.dry_run:
                 print(C("flip", "\n  [Flipper] now read card '%s' in the Flipper NFC app (or its NFC CLI)." % card))
