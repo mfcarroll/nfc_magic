@@ -61,6 +61,7 @@ Examples:
 Requires: Proxmark3 `pm3` client on PATH (or PM3=/path). No pip needed.
 """
 import argparse
+import glob
 import json
 import os
 import re
@@ -496,10 +497,19 @@ def probe_magictype(ctx):
         orig_compact = orig.replace(" ", "") if orig else None
         geo_before = remember_geometry(ctx, orig_info)  # capture geometry BEFORE gen2 clobbers the CFG
         print("   original UID (to restore): %s" % (orig or C("warn", "UNKNOWN -- restore may be impossible")))
-        if not ctx["state"].get("baseline"):
-            print(C("warn", "   ! no baseline snapshot for this card -- a gen1 attempt below is"
-                            " unrecoverable. Ctrl-C now and run --probes baseline first if that matters."))
         for gen, test_uid in (("gen2", TEST_UID_GEN2), ("gen1", TEST_UID_GEN1)):
+            if gen == "gen1":
+                # Checked HERE rather than before gen2, because until gen2 has failed there is nothing
+                # to warn about: gen2 writes no data blocks, and a success breaks out below.
+                found = find_baseline(ctx["card"], ctx["state"])
+                if found:
+                    print(C("dim", "   gen1 undo record: %s" % found))
+                else:
+                    print(C("warn", "   ! NO baseline snapshot for this card. The gen1 attempt writes"
+                                    " blocks 56/57/62/63 with ordinary WRITE BLOCKs, which any writable"
+                                    "\n     tag accepts -- with no snapshot that is unrecoverable."))
+                    ask(C("warn", "     Enter to go ahead anyway, Ctrl-C to stop and run"
+                                  " --probes baseline first... "))
             _, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
             info2, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])  # retried read-back
             ctx["save_raw"]("magictype_%s" % gen, sraw + "\n---info---\n" + iraw)
@@ -961,6 +971,25 @@ def classify(cls):
     if cls.get("gen2_write") is False:
         return "not gen2; gen1 untested"
     return "unclassified (no write probe run)"
+
+
+def find_baseline(card, state=None):
+    """Where this card's undo record lives, if anywhere.
+
+    ctx["state"] is per-INVOCATION, so a baseline taken in an earlier campaign is invisible to it -- which
+    is exactly the recommended workflow (safe pass in one run, destructive probe in another) and made the
+    first real use of this warning a false alarm. So look on disk too, and name the file: "a baseline
+    exists" is worth much less to someone about to lose four blocks than the path to the restore script."""
+    if state and state.get("baseline"):
+        return "captured in this run"
+    hits = sorted(glob.glob(os.path.join(HERE, "campaigns", "*", "raw",
+                                         "%s_baseline_restore_script.txt" % slug(card))))
+    if hits:
+        return hits[-1]  # campaign dirs sort chronologically by name
+    inv = inventory_load()
+    if inv and ((inv.get("tags", {}).get(card, {}) or {}).get("original") or {}).get("from_baseline_probe"):
+        return "recorded in the inventory, but the campaign file is missing"
+    return None
 
 
 def _data_cell(nonzero):
