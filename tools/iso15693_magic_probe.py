@@ -797,6 +797,8 @@ def inventory_update(card, results, campaign, path=None):
 
     entry = inv["tags"].setdefault(card, {})
     changed = []
+    # `expected` is hand-seeded and never written here. It records what the LISTING claimed, which is a
+    # fact about the listing, not about the tag -- so a probe can disagree with it and both stay true.
 
     base = results.get("baseline") or {}
     info = (results.get("info") or {}).get("info") or {}
@@ -855,6 +857,68 @@ def inventory_update(card, results, campaign, path=None):
     return entry, ", ".join(changed) if changed else "no change"
 
 
+def check_expected(entry):
+    """Compare the seller's claim against what was measured. Returns (verdict, [notes]).
+
+    A mismatch is a RESULT, not an error: a tag advertising fewer blocks than the listing says is the
+    fake-flash / programmed-count case this whole project exists around, and one advertising more is the
+    phantom tail. So this reports the difference and never "corrects" either side."""
+    exp = entry.get("expected")
+    if not exp:
+        return "no claim recorded", []
+    o = entry.get("original", {})
+    ph = entry.get("physical", {})
+    cl = entry.get("classification", {})
+    notes, bad = [], False
+
+    # PHYSICAL capacity is what a listing's block count is really a claim about, so that is the one that
+    # can be a mismatch. The ADVERTISED count differing is not a fault on magic silicon at all -- the
+    # gen2 CFG frame programs it, so a card cloned from a smaller source under-reports and one with fake
+    # flash over-reports. Scoring that as MISMATCH would flag the normal case on every magic tag and
+    # teach a reader to ignore the column, so it is recorded as a note and left out of the verdict.
+    adv, phys, want = o.get("advertised_blocks"), ph.get("physical_blocks"), exp.get("blocks")
+    if want is not None and phys is not None and phys != want:
+        notes.append("physical %d, listed %d" % (phys, want)); bad = True
+    if want is not None and adv is not None and adv != want:
+        if phys is None:
+            notes.append("advertises %d, listed %d (physical not measured yet)" % (adv, want))
+        elif phys == want:
+            notes.append("advertises %d but physically %d as listed -- programmed count" % (adv, phys))
+        else:
+            notes.append("advertises %d, listed %d" % (adv, want))
+
+    bs, want_bs = o.get("block_size"), exp.get("block_size")
+    if want_bs is not None and bs is not None and bs != want_bs:
+        notes.append("block size %d, listed %d" % (bs, want_bs)); bad = True
+
+    verdict = cl.get("verdict")
+    want_magic = exp.get("magic")
+    if want_magic is not None and verdict and not verdict.startswith("unclassified"):
+        is_magic = verdict != "non-magic" and not verdict.startswith("not gen2")
+        if want_magic and not is_magic:
+            notes.append("listed as UID-changeable but classifies %s" % verdict); bad = True
+        elif not want_magic and is_magic:
+            notes.append("listed as plain but classifies %s" % verdict); bad = True
+
+    # "matches listing" has to mean every claim was CHECKED, not just that nothing contradicted one.
+    # A tag whose magic status was never probed matches nothing yet, and saying otherwise is the same
+    # overclaim as a coverage note that counts untested cases as passing.
+    untested = []
+    if want is not None and phys is None:
+        untested.append("physical capacity")
+    if want_magic is not None and (not verdict or verdict.startswith("unclassified")):
+        untested.append("magic")
+    if bad:
+        return "MISMATCH", notes
+    if notes:
+        return "differs", notes
+    if untested and (adv is not None or verdict):
+        return "matches so far", ["%s not tested" % " and ".join(untested)]
+    if untested:
+        return "not yet measured", []
+    return "matches listing", []
+
+
 def classify(cls):
     """Turn the probe flags into a verdict, and be explicit about what is NOT yet decidable.
 
@@ -892,11 +956,14 @@ def inventory_render(inv, path=None):
             geo += " / %d phys" % phys
             if adv is not None and phys != adv:
                 geo += " (%+d)" % (phys - adv)
+        exp_verdict, exp_notes = check_expected(e)
+        exp_cell = exp_verdict if not exp_notes else "%s — %s" % (exp_verdict, "; ".join(exp_notes))
         rows.append((card, cl.get("verdict", "unclassified"), o.get("uid") or "?",
                      (o.get("type") or "?"), geo,
                      "%s / %s / %s" % (_hx(o.get("ic_ref")), _hx(o.get("dsfid")), _hx(o.get("afi"))),
                      str(o.get("nonzero_blocks") if o.get("nonzero_blocks") else "blank"),
-                     "yes" if o.get("from_baseline_probe") else "no"))
+                     "yes" if o.get("from_baseline_probe") else "no",
+                     exp_cell))
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
@@ -906,12 +973,15 @@ def inventory_render(inv, path=None):
             f.write("The **original** columns are write-once, recorded before any probe wrote to the tag.\n")
             f.write("A blank restore column means the snapshot came from `info`/`capacity` rather than the\n")
             f.write("`baseline` probe, so there is no per-block record to restore from.\n\n")
-            f.write("| tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable |\n")
-            f.write("|---|---|---|---|---|---|---|---|\n")
+            f.write("**vs listing** compares what the seller claimed against what was measured. A mismatch is a\n")
+            f.write("result, not an error -- an advertised count below the listing is the programmed-count case and\n")
+            f.write("one above it is the phantom tail. Neither side gets corrected.\n\n")
+            f.write("| tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable | vs listing |\n")
+            f.write("|---|---|---|---|---|---|---|---|---|\n")
             for r in rows:
                 f.write("| " + " | ".join("`%s`" % r[2] if i == 2 else str(r[i]) for i in range(len(r))) + " |\n")
             if not rows:
-                f.write("| _(none recorded yet)_ | | | | | | | |\n")
+                f.write("| _(none recorded yet)_ | | | | | | | | |\n")
             f.write("\nUpdated %s\n" % inv.get("updated", "?"))
     except Exception as e:
         print(C("warn", "note: could not write %s (%s)." % (path, e)))

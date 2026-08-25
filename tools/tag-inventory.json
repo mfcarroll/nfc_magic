@@ -1,0 +1,79 @@
+{
+  "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten.",
+  "tags": {
+    "black-tag": {
+      "count_owned": 1,
+      "expected": {
+        "block_size": 4,
+        "blocks": 64,
+        "listing_text": "as white-coin, different form factor",
+        "magic": true,
+        "note": "Same silicon expected as white-coin. If the two measure differently that is the interesting result, since the listings claim they are the same part.",
+        "recorded": "2026-08-24",
+        "source": "seller listing",
+        "total_bytes": 256
+      },
+      "form_factor": "tag"
+    },
+    "white-coin": {
+      "count_owned": 1,
+      "expected": {
+        "block_size": 4,
+        "blocks": 64,
+        "listing_text": "64 block / 256 byte / 2k, 8 bytes UID changeable",
+        "magic": true,
+        "note": "64 x 4 = 256 bytes = 2048 bits; the three figures agree. UID-changeable means magic; gen2 is the expectation, but the listing does not say which generation.",
+        "recorded": "2026-08-24",
+        "source": "seller listing",
+        "total_bytes": 256
+      },
+      "form_factor": "coin"
+    },
+    "white-tag-1": {
+      "count_owned": 3,
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+        "magic": false,
+        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+        "recorded": "2026-08-24",
+        "source": "seller listing",
+        "total_bytes": 112
+      },
+      "form_factor": "tag"
+    },
+    "white-tag-2": {
+      "count_owned": 3,
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+        "magic": false,
+        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+        "recorded": "2026-08-24",
+        "source": "seller listing",
+        "total_bytes": 112
+      },
+      "form_factor": "tag"
+    },
+    "white-tag-3": {
+      "count_owned": 3,
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+        "magic": false,
+        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+        "recorded": "2026-08-24",
+        "source": "seller listing",
+        "total_bytes": 112
+      },
+      "form_factor": "tag"
+    }
+  },
+  "updated": "2026-08-24"
+}
