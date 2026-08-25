@@ -2,6 +2,11 @@
   "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten.",
   "tags": {
     "black-tag": {
+      "classification": {
+        "campaign": "20260824_225620",
+        "gen3_signature": false,
+        "verdict": "unclassified (no write probe run)"
+      },
       "count_owned": 1,
       "expected": {
         "block_size": 4,
@@ -13,9 +18,36 @@
         "source": "seller listing",
         "total_bytes": 256
       },
-      "form_factor": "tag"
+      "form_factor": "tag",
+      "original": {
+        "advertised_blocks": 64,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260824_225620",
+        "captured": "2026-08-24T23:05:01",
+        "dsfid": 0,
+        "from_baseline_probe": true,
+        "ic_ref": 139,
+        "locked_blocks": [],
+        "mfg_byte": 7,
+        "nonzero_blocks": [],
+        "sysinfo": "00 0F 07 42 14 AF B8 81 07 E0 00 00 3F 03 8B",
+        "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
+        "uid": "E0 07 81 B8 AF 14 42 07"
+      },
+      "physical": {
+        "campaign": "20260824_225620",
+        "measured": "2026-08-24T23:05:01",
+        "phantom_blocks": 0,
+        "physical_blocks": 64
+      }
     },
     "white-coin": {
+      "classification": {
+        "campaign": "20260824_225620",
+        "gen3_signature": false,
+        "verdict": "unclassified (no write probe run)"
+      },
       "count_owned": 1,
       "expected": {
         "block_size": 4,
@@ -27,9 +59,36 @@
         "source": "seller listing",
         "total_bytes": 256
       },
-      "form_factor": "coin"
+      "form_factor": "coin",
+      "original": {
+        "advertised_blocks": 64,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260824_225620",
+        "captured": "2026-08-24T22:58:56",
+        "dsfid": 0,
+        "from_baseline_probe": true,
+        "ic_ref": 139,
+        "locked_blocks": [],
+        "mfg_byte": 7,
+        "nonzero_blocks": [],
+        "sysinfo": "00 0F 29 3A E7 E2 3D 80 07 E0 00 00 3F 03 8B",
+        "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
+        "uid": "E0 07 80 3D E2 E7 3A 29"
+      },
+      "physical": {
+        "campaign": "20260824_225620",
+        "measured": "2026-08-24T22:58:56",
+        "phantom_blocks": 0,
+        "physical_blocks": 64
+      }
     },
     "white-tag-1": {
+      "classification": {
+        "campaign": "20260824_225620",
+        "gen3_signature": false,
+        "verdict": "unclassified (no write probe run)"
+      },
       "count_owned": 3,
       "expected": {
         "block_size": 4,
@@ -42,9 +101,38 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "tag"
+      "form_factor": "tag",
+      "original": {
+        "advertised_blocks": 28,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260824_225620",
+        "captured": "2026-08-24T23:07:00",
+        "dsfid": 0,
+        "from_baseline_probe": true,
+        "ic_ref": 1,
+        "locked_blocks": [],
+        "mfg_byte": 4,
+        "nonzero_blocks": [
+          27
+        ],
+        "sysinfo": "00 0F 16 E2 AB 84 00 01 04 E0 00 00 1B 03 01",
+        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+        "uid": "E0 04 01 00 84 AB E2 16"
+      },
+      "physical": {
+        "campaign": "20260824_225620",
+        "measured": "2026-08-24T23:07:00",
+        "phantom_blocks": 0,
+        "physical_blocks": 28
+      }
     },
     "white-tag-2": {
+      "classification": {
+        "campaign": "20260824_225620",
+        "gen3_signature": false,
+        "verdict": "unclassified (no write probe run)"
+      },
       "count_owned": 3,
       "expected": {
         "block_size": 4,
@@ -57,9 +145,38 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "tag"
+      "form_factor": "tag",
+      "original": {
+        "advertised_blocks": 28,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260824_225620",
+        "captured": "2026-08-24T23:09:38",
+        "dsfid": 0,
+        "from_baseline_probe": true,
+        "ic_ref": 1,
+        "locked_blocks": [],
+        "mfg_byte": 4,
+        "nonzero_blocks": [
+          27
+        ],
+        "sysinfo": "00 0F A5 E1 AB 84 00 01 04 E0 00 00 1B 03 01",
+        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+        "uid": "E0 04 01 00 84 AB E1 A5"
+      },
+      "physical": {
+        "campaign": "20260824_225620",
+        "measured": "2026-08-24T23:09:38",
+        "phantom_blocks": 0,
+        "physical_blocks": 28
+      }
     },
     "white-tag-3": {
+      "classification": {
+        "campaign": "20260824_225620",
+        "gen3_signature": false,
+        "verdict": "unclassified (no write probe run)"
+      },
       "count_owned": 3,
       "expected": {
         "block_size": 4,
@@ -72,8 +189,32 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "tag"
+      "form_factor": "tag",
+      "original": {
+        "advertised_blocks": 28,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260824_225620",
+        "captured": "2026-08-24T23:11:13",
+        "dsfid": 0,
+        "from_baseline_probe": true,
+        "ic_ref": 1,
+        "locked_blocks": [],
+        "mfg_byte": 4,
+        "nonzero_blocks": [
+          27
+        ],
+        "sysinfo": "00 0F C5 DF AB 84 00 01 04 E0 00 00 1B 03 01",
+        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+        "uid": "E0 04 01 00 84 AB DF C5"
+      },
+      "physical": {
+        "campaign": "20260824_225620",
+        "measured": "2026-08-24T23:11:13",
+        "phantom_blocks": 0,
+        "physical_blocks": 28
+      }
     }
   },
-  "updated": "2026-08-24"
+  "updated": "2026-08-24T23:11:13"
 }

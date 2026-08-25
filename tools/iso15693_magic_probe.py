@@ -346,10 +346,16 @@ def probe_capacity(ctx):
     physical = last_ok + 1
     phantom = max(0, reported - physical) if reported else None
 
-    # informational only: one dump for the data content (remember it zero-fills any phantom tail)
+    # Informational only: one dump for the data content. TWO things make this weaker evidence than it
+    # looks, and both bit on 2026-08-24 -- `hf 15 dump` zero-fills any block it cannot read, and the
+    # whole command can fail outright, which on white-tag-1 produced an empty dump reported as
+    # "non-zero: none". An empty result is the ABSENCE of a reading, not a reading of zeros, so it is
+    # reported as unknown. The `baseline` probe is the authority here: it reads per block with retries.
     dump, draw = pm15_dump(ctx["pm3"], ctx["split"], tries=1)
     ctx["save_raw"]("capacity_dump", draw)
     nonzero = sorted(b for b, v in dump.items() if not block_is_zero(v))
+    dump_read = len(dump)
+    dump_ok = dump_read > 0
 
     print("   reported %s blocks; physical boundary via retried reads (%d probes) -> %d real blocks"
           % (reported or "?", probes, physical))
@@ -358,10 +364,22 @@ def probe_capacity(ctx):
                 % (phantom, physical, reported - 1)))
     elif reported and physical == reported:
         print(C("ok", "   physical matches reported (%d)" % reported))
-    print("   non-zero data blocks (dump; note dump zero-fills phantom): %s" % (nonzero or "none"))
+    base = ctx["state"].get("baseline")
+    if not dump_ok:
+        print(C("warn", "   data content: dump FAILED -- nothing is known about which blocks hold data"
+                        "%s" % (", but the baseline probe read them: %s"
+                                % (base.get("nonzero_blocks") or "none") if base else "")))
+    elif dump_read < physical:
+        print(C("warn", "   non-zero data blocks: %s  (dump read only %d of %d blocks; the rest are"
+                        " UNKNOWN, not zero)" % (nonzero or "none", dump_read, physical)))
+    else:
+        print("   non-zero data blocks (dump; note dump zero-fills phantom): %s" % (nonzero or "none"))
     ctx["state"]["physical_blocks"] = physical
     return {"ok": True, "reported": reported, "physical_blocks": physical, "phantom": phantom,
-            "boundary_probes": probes, "nonzero_blocks": nonzero, "dump": dump}
+            "boundary_probes": probes, "dump": dump, "dump_ok": dump_ok, "dump_blocks_read": dump_read,
+            # Only claim this when the dump actually read the whole card. inventory_update prefers the
+            # baseline probe's figure anyway; this keeps the fallback from asserting a blank card.
+            "nonzero_blocks": (nonzero if (dump_ok and dump_read >= physical) else None)}
 
 
 def probe_baseline(ctx):
@@ -820,7 +838,11 @@ def inventory_update(card, results, campaign, path=None):
                 "dsfid": src.get("dsfid"),
                 "afi": src.get("afi"),
                 "locked_blocks": base.get("locked_blocks"),
-                "nonzero_blocks": base.get("nonzero_blocks", cap.get("nonzero_blocks")),
+                # None means NOT KNOWN, [] means read and found empty. dict.get's default only fires
+                # when the key is absent, so pick explicitly: the baseline probe reads per block with
+                # retries and is the authority; capacity's dump can fail and return None.
+                "nonzero_blocks": (base.get("nonzero_blocks") if base.get("ok")
+                                   else cap.get("nonzero_blocks")),
                 "captured": datetime.now().isoformat(timespec="seconds"),
                 "campaign": campaign,
                 "from_baseline_probe": bool(base.get("ok")),
@@ -941,6 +963,14 @@ def classify(cls):
     return "unclassified (no write probe run)"
 
 
+def _data_cell(nonzero):
+    """None is NOT KNOWN; [] is read-and-empty. Collapsing the two is how a failed dump gets reported
+    as a blank card, which is what happened on 2026-08-24 before probe_capacity learned the difference."""
+    if nonzero is None:
+        return "unknown"
+    return str(nonzero) if nonzero else "blank"
+
+
 def inventory_render(inv, path=None):
     path = path or INVENTORY_MD
     rows = []
@@ -961,7 +991,7 @@ def inventory_render(inv, path=None):
         rows.append((card, cl.get("verdict", "unclassified"), o.get("uid") or "?",
                      (o.get("type") or "?"), geo,
                      "%s / %s / %s" % (_hx(o.get("ic_ref")), _hx(o.get("dsfid")), _hx(o.get("afi"))),
-                     str(o.get("nonzero_blocks") if o.get("nonzero_blocks") else "blank"),
+                     _data_cell(o.get("nonzero_blocks")),
                      "yes" if o.get("from_baseline_probe") else "no",
                      exp_cell))
     try:

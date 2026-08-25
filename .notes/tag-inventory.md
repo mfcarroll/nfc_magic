@@ -13,10 +13,10 @@ one above it is the phantom tail. Neither side gets corrected.
 
 | tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable | vs listing |
 |---|---|---|---|---|---|---|---|---|
-| black-tag | unclassified | `?` | ? | ? adv | ? / ? / ? | blank | no | not yet measured |
-| white-coin | unclassified | `?` | ? | ? adv | ? / ? / ? | blank | no | not yet measured |
-| white-tag-1 | unclassified | `?` | ? | ? adv | ? / ? / ? | blank | no | not yet measured |
-| white-tag-2 | unclassified | `?` | ? | ? adv | ? / ? / ? | blank | no | not yet measured |
-| white-tag-3 | unclassified | `?` | ? | ? adv | ? / ? / ? | blank | no | not yet measured |
+| black-tag | unclassified (no write probe run) | `E0 07 81 B8 AF 14 42 07` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
+| white-coin | unclassified (no write probe run) | `E0 07 80 3D E2 E7 3A 29` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
+| white-tag-1 | unclassified (no write probe run) | `E0 04 01 00 84 AB E2 16` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
+| white-tag-2 | unclassified (no write probe run) | `E0 04 01 00 84 AB E1 A5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
+| white-tag-3 | unclassified (no write probe run) | `E0 04 01 00 84 AB DF C5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 
-Updated 2026-08-24
+Updated 2026-08-24T23:11:13
