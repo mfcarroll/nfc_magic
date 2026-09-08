@@ -46,6 +46,30 @@ Why the order matters, verified against proxmark source rather than assumed:
 | gen2 — `armsrc/iso15693.c:3216` | four **custom** `E0 09 …` | `0xE0` unimplemented → refused, nothing written |
 | gen1 — `armsrc/iso15693.c:3166` | four **ordinary** `WRITE BLOCK` → 0x3E, 0x3F, 0x38, 0x39 | any writable tag **accepts** → blocks 56/57/62/63 destroyed |
 
+### The gen1 gate
+
+`magictype --destructive` no longer sends gen1's four frames as a block. It probes the range first, with
+gen1's OWN first frame -- block `0x3E` (62, the unlock register) written to zero, which is the value gen1
+writes there anyway -- and only then asks to send the rest.
+
+That frame is chosen because it is the one that cannot do harm. It carries no arming value, and it
+cannot move a UID even on an already-armed card: the UID moves when 56/57 are written, not the unlock
+register. Block 56 would be the move on an armed card, and block 63 is the arming frame itself.
+
+  refused    gen1 CANNOT work here, established without sending the arming frame. Recorded as a
+             reasoned negative, which is stronger than an untested skip.
+  accepted   the range is writable, so the next frame is `0x6996` into block 63. Requires confirmation
+             (or `--allow-arming`), and REFUSES on a non-tty rather than proceeding silently.
+
+Two costs it avoids when the answer is "refused". Nothing ever clears the commit register -- not this
+app, not proxmark -- so a partial gen1 attempt can leave a card whose UID moves on any later write to
+56/57, with no way to de-arm it and no way to read the register back (see #255). And on a card whose
+user range stops below 56, what lives at 56-63 is simply unknown: an LRi2K's 56 user blocks are 1792
+bits against a "2K" part, leaving eight blocks at exactly 56-63, exactly where gen1 writes. If those are
+a system area reachable by WRITE BLOCK, a blind write there could be irreversible.
+
+If the range read before being written, its prior content is put back.
+
 And the gen1 result needs care: a gen1 write landing does **not** prove gen1 magic, because an ordinary
 writable tag takes the same four frames. The distinguisher is whether the UID *moved*, which is what the
 probe reads back — so `gen1_write: true` already means the UID changed, and a tag that accepted the

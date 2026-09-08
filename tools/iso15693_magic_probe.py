@@ -500,6 +500,60 @@ def probe_baseline(ctx):
     return snap
 
 
+# gen1's four frames, as SetTag15693Uid builds them (armsrc/iso15693.c:3166) and as Iceman's
+# client/luascripts/hf_15_magic.lua sends them verbatim. Only ONE of them arms anything.
+GEN1_BLK_UNLOCK = 0x3E  # 62 -- written to zero. Carries no arming value.
+GEN1_BLK_COMMIT = 0x3F  # 63 -- written 0x6996. THIS is the arming frame.
+GEN1_BLK_UID_HI = 0x38  # 56 -- on an ALREADY-ARMED card, writing this is what moves the UID.
+GEN1_BLK_UID_LO = 0x39  # 57
+
+
+def gen1_range_gate(ctx):
+    """Is the gen1 register range writable at all? Answered WITHOUT sending the arming value.
+
+    Why this exists. A full gen1 attempt has two costs beyond the obvious one, and both are avoidable
+    when the range turns out not to be writable at all:
+
+      the ARMING hazard. 0x6996 goes into GEN1_BLK_COMMIT and, per #255 and the OPEN QUESTION in
+        iso15693_poller_wipe_blocks, NOTHING ever clears it -- not this app, not proxmark. A partial
+        gen1 attempt can leave a card whose UID moves on any later write to 56/57, with no way to
+        de-arm it and no way to read what that register currently holds.
+      an UNCHARACTERISED address range. On a card whose user range stops below 56, what lives at
+        56-63 is unknown. The LRi2K case makes the point: 56 user blocks is 1792 bits against a "2K"
+        part, leaving 256 bits -- eight blocks, at exactly 56-63, exactly where gen1 writes. If those
+        are a system area reachable by WRITE BLOCK, a blind write there could be irreversible.
+
+    So probe with the FIRST frame only: GEN1_BLK_UNLOCK written to zero, which is the value gen1 writes
+    there anyway. It cannot arm anything, and it cannot move a UID even on an already-armed card --
+    the UID moves when 56/57 are written, not when the unlock register is. Deliberately NOT block 56
+    (on an armed card that IS the move) and NOT block 63 (that is the arming frame).
+
+    A refusal here is a REASONED negative: gen1 cannot work on a card that will not take its first
+    frame. That is stronger evidence than an untested skip.
+
+    Returns (writable, note)."""
+    before_ok, before, _, braw = pm15_rdbl(ctx["pm3"], GEN1_BLK_UNLOCK, ctx["split"], tries=2)
+    ok, wraw = pm15_wrbl(ctx["pm3"], GEN1_BLK_UNLOCK, "00000000", ctx["split"])
+    ctx["save_raw"]("gen1_gate_unlock", "--- read before ---\n" + braw + "\n--- write ---\n" + wraw)
+
+    if not ok:
+        return False, "block %d (unlock) refused the write" % GEN1_BLK_UNLOCK
+
+    note = "block %d (unlock) accepted a zero write" % GEN1_BLK_UNLOCK
+    if before_ok:
+        # It read before, so it is addressable memory and we know what was there. Put it back: this
+        # probe is meant to answer a question, not to leave a mark.
+        if before != "00 00 00 00":
+            restored, rraw = pm15_wrbl(ctx["pm3"], GEN1_BLK_UNLOCK, before, ctx["split"])
+            ctx["save_raw"]("gen1_gate_restore", rraw)
+            note += "; prior content %s %s" % (before, "restored" if restored else "NOT RESTORED")
+        else:
+            note += "; it already held zeros, so nothing changed"
+    else:
+        note += "; it does not answer reads, so there is no way to tell what it held"
+    return True, note
+
+
 def probe_magictype(ctx):
     res = {"v3_config_mode": None, "gen1_write": None, "gen2_write": None, "magic_method": None}
     # 1) V3 config-mode signature (non-destructive read of 0x14 / 0x15)
@@ -546,6 +600,37 @@ def probe_magictype(ctx):
                                     "\n     tag accepts -- with no snapshot that is unrecoverable."))
                     ask(C("warn", "     Enter to go ahead anyway, Ctrl-C to stop and run"
                                   " --probes baseline first... "))
+
+                writable, gate_note = gen1_range_gate(ctx)
+                res["gen1_range_writable"] = writable
+                res["gen1_gate_note"] = gate_note
+                if not writable:
+                    # A reasoned negative, and the arming frame is never sent.
+                    print(C("ok", "   gen1 gate: %s" % gate_note))
+                    print(C("ok", "   -> gen1 CANNOT work here, established without sending the arming"
+                                  " frame. Registers 56/57/62/63 are untouched."))
+                    res["gen1_write"] = False
+                    res["gen1_skipped"] = "register range refuses writes"
+                    continue
+                print(C("warn", "   gen1 gate: %s" % gate_note))
+                print(C("warn", "   -> the range IS writable, so the next frame is the ARMING one:"
+                                " 0x6996 into block %d." % GEN1_BLK_COMMIT))
+                if ctx.get("allow_arming"):
+                    print(C("dim", "      proceeding: --allow-arming was passed."))
+                elif not sys.stdin.isatty():
+                    # ask() swallows EOFError, so a prompt on a non-tty would proceed silently. For a
+                    # safety gate that is the wrong default: refuse and make the caller say so.
+                    print(C("err", "      No terminal to confirm at, so NOT sending the arming frame."
+                                   " Re-run interactively, or pass --allow-arming to mean it."))
+                    res["gen1_skipped"] = "arming frame needs confirmation; no tty and no --allow-arming"
+                    continue
+                else:
+                    print(C("warn", "      Nothing clears that register afterwards (#255), so this card"
+                                    " may be left ARMED -- its UID could move on any"
+                                    "\n      later write to 56/57, with no way to de-arm it and no way"
+                                    " to read the register back."))
+                    ask(C("warn", "      Enter to send the arming frame, Ctrl-C to stop here"
+                                  " (--allow-arming skips this)... "))
             _, sraw = pm15_csetuid(ctx["pm3"], test_uid, gen, ctx["split"])
             info2, iraw = pm15_info_retry(ctx["pm3"], ctx["split"])  # retried read-back
             ctx["save_raw"]("magictype_%s" % gen, sraw + "\n---info---\n" + iraw)
@@ -1271,6 +1356,9 @@ def main():
                          "They snapshot + best-effort restore, but use a blank card first.")
     ap.add_argument("--writespan-max", type=int, default=None,
                     help="highest block index the writespan probe tries (default: max(advertised,physical)+4).")
+    ap.add_argument("--allow-arming", action="store_true",
+                    help="skip the confirmation before gen1's arming frame (0x6996 into block 63). "
+                         "Nothing ever clears that register, so a card may be left ARMED -- see #255.")
     ap.add_argument("--capacity-max", type=int, default=None,
                     help="top of the capacity search (default: advertised + 2, or 255 if unknown). Raise "
                          "it for a card that answers reads past its advertised count -- otherwise the "
@@ -1399,7 +1487,7 @@ def main():
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
                    "destructive": args.destructive, "read_tries": args.read_tries,
                    "writespan_max": args.writespan_max, "card": card,
-                   "capacity_max": args.capacity_max,
+                   "capacity_max": args.capacity_max, "allow_arming": args.allow_arming,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
