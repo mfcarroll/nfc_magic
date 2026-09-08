@@ -174,6 +174,18 @@ and both are done.
 
 ## Rules that cost us real time — cumulative, all rounds
 
+- **A read-based capacity measurement is a LOWER BOUND, not a capacity, and so is a search that hits its
+  own ceiling.** Proven twice on 2026-09-08. `tools/iso15693_magic_probe.py`'s capacity probe reported
+  "82 real blocks" on a card advertising 79 when every block up to its search bound answered — 82 was
+  `advertised + 2 + 1`, the probe's own limit. And on the gen1 card it measured 56/56 while the app's
+  write-based wipe found 58, under-detecting by two. `ISO15693_POLLER_WIPE_MAX_BLOCKS` says exactly why:
+  only a WRITE settles whether a block exists. The tool now says "lower bound" in both cases.
+- **A no-ACK is not a refusal on the gen1 backdoor registers.** They accept writes without answering —
+  observed 2026-09-08, previously an inference from proxmark's source. So no write-based probe of those
+  registers can have a meaningful negative, and a gate built on one will confidently mislead: that cost
+  two wrong answers on the same card before it was understood. Only the full sequence plus a
+  power-cycled UID re-read is conclusive.
+
 - **A comment earns its place only if it records something the code cannot show AND is not already
   stated elsewhere.** Report added/removed comment vs code per commit with `tools/comment-ratio.py`;
   a commit adding more comment than code is going the wrong way. **But do not use the ratio as the
@@ -366,6 +378,10 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   armed-gen1 case describes, and it has never been reproducible before. **The highest-value hardware
   test now available: run the app's WIPE on it.** It should zero 56/57, move the UID, and report
   `uid_changed` as Partial — the mitigation this PR ships and has never exercised on real gen1 silicon.
+  **Everything from that session, plus the work list it implies, is in
+  [gen1-hardware-findings.md](gen1-hardware-findings.md).** Read that rather than this bullet; the
+  corrections it lists belong in a delta AFTER the comment cut, which was promised as one decision with
+  nothing else in it.
 - **The earlier gen1 candidate note, superseded:** The listing it was ordered from
   is titled "15693 UID Changeable + **Lua Script by Iceman** Compatible ST LRi 2K (0-55 block)", and
   `proxmark3/client/luascripts/hf_15_magic.lua` sends `02213E00000000`, `02213F69960000`,
@@ -473,7 +489,7 @@ Where the previously reasoned-only behaviours now stand:
 | clock-cut clone, card present | tested — and it was wrong; that became a fix on the PR |
 | truncated sweep reporting Partial | tested at the poller **and now at the screens** |
 | `uid_verified` false | tested at the poller and on the screen |
-| the gen1 path | **modelled, not settled** — the latch behaviour is our inference from proxmark's send order, so the tests show the app is right *given the model*, not that the model is. Needs a gen1 card. |
+| the gen1 path | **partly settled on hardware 2026-09-08** — the four-frame sequence works, the backdoor registers accept writes without acknowledging, and the armed-card wipe hazard is reproduced. **The LATCH specifically is still the inference**: every read-back sits behind a field power-cycle, so "latches on power-up" and "changes immediately" remain indistinguishable. See [gen1-hardware-findings.md](gen1-hardware-findings.md). |
 
 Still uncovered: the scenes' LAYOUT as opposed to their content (the recorders capture x/y/font, but
 nothing asserts that N lines of FontSecondary fit above the button box — that arithmetic was measured by

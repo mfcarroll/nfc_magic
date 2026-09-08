@@ -91,6 +91,15 @@ One caveat it prints for itself: a magic card's UID is not an identity. If a pro
 magic card carrying a different UID, it will not match its own entry -- which is a reason to restore the
 UID after any test, and a reason the `original` section records the UID it had when first seen.
 
+### `physical_blocks` is a LOWER BOUND
+
+Two ways, both seen on 2026-09-08. If every block up to the search ceiling answers a read, the binary
+search terminates at its own bound and the figure is the probe's limit rather than the card's — the tool
+now says so and `--capacity-max` pushes it out. And a card can hold blocks that take writes without
+answering reads at all: this probe measured 56/56 on the gen1 card while the app's write-based wipe
+cleared 58. `ISO15693_POLLER_WIPE_MAX_BLOCKS` states the rule — only a WRITE settles whether a block
+exists — so a read-based probe under-detects by construction.
+
 ### The inventory
 
 `tools/tag-inventory.json` is the source of truth; `.notes/tag-inventory.md` is a rendered table, rewritten

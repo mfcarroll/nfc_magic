@@ -26,6 +26,11 @@ This single result settles findings #2 and #3 together.
       Re-scan via **Info** → UID matches. If the same-session verify reports Fail but a re-scan shows
       the new UID, the card needs the power-cycle → confirm the `NfcCommandReset`-before-verify fix
       is doing its job (it should already be).
+- [x] **DONE 2026-09-08 on `lri2k-keychain`, the project's first gen1 card** — the four-frame sequence
+      works and is reversible, the backdoor registers accept writes without acknowledging, and the
+      armed-card wipe hazard is reproduced with the shipped mitigation firing correctly. The LATCH is
+      still unmeasured. Full record and the work list it implies:
+      [gen1-hardware-findings.md](gen1-hardware-findings.md).
 - [ ] With a known **magic gen1** card: same test. gen1 runs only after gen2 is a no-op — confirm
       that path reaches it and succeeds.
 - [ ] Cross-check the written UID against proxmark `hf 15 info` if a PM3 is available.
