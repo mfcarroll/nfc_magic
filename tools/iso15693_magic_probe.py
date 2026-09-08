@@ -81,7 +81,12 @@ TEST_UID_GEN2 = "E0A1B2C3D4E5F607"
 # Identity profiles the impersonate probe tries to make the card advertise (blocks, block_size, ic_ref).
 IMPERSONATE_TARGETS = [
     ("SLIX-28", 28, 4, 0x01),
-    ("LRi2K-56", 56, 4, 0x02),
+    # 0x22 with 56 blocks, as presented by a tag sold as LRi2K-compatible and measured 2026-09-08. It
+    # is NOT known to be genuine ST silicon -- the bag says "compatible with", so this is what an
+    # emulator in the wild claims, which is the right thing for an impersonation target to copy anyway.
+    # It said 0x02 until then, which is ST's MANUFACTURER code (uid[1]) and not an IC reference at all;
+    # that conflation is the actual bug being fixed here, independently of which value is genuine.
+    ("LRi2K-56", 56, 4, 0x22),
     ("default-64", 64, 4, 0x8B),
     ("oversize-100", 100, 4, 0x8B),
 ]
@@ -334,7 +339,14 @@ def probe_capacity(ctx):
                        " reseat the card on the antenna." % tries))
         return {"ok": False, "skipped": "block 0 unreadable (coupling)"}
 
-    lo, hi, last_ok, probes = 0, ((reported + 2) if reported else 255), 0, 0
+    # The ceiling is a SEARCH BOUND, not a belief about the card. A tag that answers a read at every
+    # address the search tries makes the binary search terminate at this number, and reporting that as
+    # the capacity is reporting the probe's own limit -- which is exactly what happened to
+    # slix2-gold-30mm on 2026-09-08: it advertises 79, every probe from 0 to 81 answered, and the result
+    # came out as "82 real blocks". 82 is reported + 2 + 1. The card's real capacity was never measured.
+    ceiling = ctx.get("capacity_max") or ((reported + 2) if reported else 255)
+    ceiling = max(1, min(255, ceiling))
+    lo, hi, last_ok, probes = 0, ceiling, 0, 0
     while lo <= hi:
         mid = (lo + hi) // 2
         ok, _, _, raw = pm15_rdbl(ctx["pm3"], mid, ctx["split"], tries=tries)
@@ -345,7 +357,10 @@ def probe_capacity(ctx):
         else:
             hi = mid - 1
     physical = last_ok + 1
-    phantom = max(0, reported - physical) if reported else None
+    # Did the search run out of room rather than finding an edge? Then `physical` is a LOWER BOUND.
+    hit_ceiling = (last_ok >= ceiling)
+    phantom = None if (hit_ceiling or not reported) else max(0, reported - physical)
+    over_advertised = (physical - reported) if (reported and physical > reported) else None
 
     # Informational only: one dump for the data content. TWO things make this weaker evidence than it
     # looks, and both bit on 2026-08-24 -- `hf 15 dump` zero-fills any block it cannot read, and the
@@ -358,13 +373,25 @@ def probe_capacity(ctx):
     dump_read = len(dump)
     dump_ok = dump_read > 0
 
-    print("   reported %s blocks; physical boundary via retried reads (%d probes) -> %d real blocks"
-          % (reported or "?", probes, physical))
-    if reported and phantom:
-        print(C("warn", "   OVER-reports %d: blocks %d-%d exist only in Get-System-Info -- rdbl/wrbl FAIL there"
-                % (phantom, physical, reported - 1)))
-    elif reported and physical == reported:
-        print(C("ok", "   physical matches reported (%d)" % reported))
+    if hit_ceiling:
+        print(C("warn", "   reported %s blocks, and EVERY block up to the search ceiling (%d) answered a"
+                        " read." % (reported or "?", ceiling)))
+        print(C("warn", "   -> capacity NOT measured: it is >= %d blocks. The number above is this"
+                        " probe's bound, not the card's." % physical))
+        print(C("warn", "      Re-run with --capacity-max 255 to push the bound out. A card that answers"
+                        " reads everywhere is the shape ISO15693_POLLER_PASS_MAX_MS exists for."))
+    else:
+        print("   reported %s blocks; physical boundary via retried reads (%d probes) -> %d real blocks"
+              % (reported or "?", probes, physical))
+        if reported and phantom:
+            print(C("warn", "   OVER-reports %d: blocks %d-%d exist only in Get-System-Info -- rdbl/wrbl FAIL there"
+                    % (phantom, physical, reported - 1)))
+        elif over_advertised:
+            print(C("warn", "   UNDER-reports %d: it answers %d blocks while advertising %d. Programmed"
+                            " count, not capacity -- the case the wipe sweeps above the claim for."
+                    % (over_advertised, physical, reported)))
+        elif reported and physical == reported:
+            print(C("ok", "   physical matches reported (%d)" % reported))
     base = ctx["state"].get("baseline")
     if not dump_ok:
         print(C("warn", "   data content: dump FAILED -- nothing is known about which blocks hold data"
@@ -377,6 +404,8 @@ def probe_capacity(ctx):
         print("   non-zero data blocks (dump; note dump zero-fills phantom): %s" % (nonzero or "none"))
     ctx["state"]["physical_blocks"] = physical
     return {"ok": True, "reported": reported, "physical_blocks": physical, "phantom": phantom,
+            "physical_is_lower_bound": hit_ceiling, "search_ceiling": ceiling,
+            "over_advertised": over_advertised,
             "boundary_probes": probes, "dump": dump, "dump_ok": dump_ok, "dump_blocks_read": dump_read,
             # Only claim this when the dump actually read the whole card. inventory_update prefers the
             # baseline probe's figure anyway; this keeps the fallback from asserting a blank card.
@@ -950,6 +979,13 @@ def inventory_update(card, results, campaign, path=None):
     if cap.get("ok"):
         phys = {"physical_blocks": cap.get("physical_blocks"), "phantom_blocks": cap.get("phantom"),
                 "measured": datetime.now().isoformat(timespec="seconds"), "campaign": campaign}
+        if cap.get("physical_is_lower_bound"):
+            # Not a capacity. Say so in the record, or a later reader will cite the probe's bound as a
+            # measurement of the card.
+            phys["physical_is_lower_bound"] = True
+            phys["search_ceiling"] = cap.get("search_ceiling")
+        if cap.get("over_advertised"):
+            phys["over_advertised"] = cap["over_advertised"]
         if entry.get("physical") != phys:
             entry.setdefault("physical", phys)
             changed.append("physical")
@@ -1184,6 +1220,10 @@ def main():
                          "They snapshot + best-effort restore, but use a blank card first.")
     ap.add_argument("--writespan-max", type=int, default=None,
                     help="highest block index the writespan probe tries (default: max(advertised,physical)+4).")
+    ap.add_argument("--capacity-max", type=int, default=None,
+                    help="top of the capacity search (default: advertised + 2, or 255 if unknown). Raise "
+                         "it for a card that answers reads past its advertised count -- otherwise the "
+                         "search terminates at its own bound and reports that as the capacity.")
     ap.add_argument("--read-tries", type=int, default=6,
                     help="retries per single-block read when probing the physical boundary (a real block "
                          "reads within retries; a phantom hard-fails every time). Higher = more robust to "
@@ -1308,6 +1348,7 @@ def main():
             ctx = {"pm3": args.pm3, "split": args.pm3_split, "state": state, "save_raw": save_raw,
                    "destructive": args.destructive, "read_tries": args.read_tries,
                    "writespan_max": args.writespan_max, "card": card,
+                   "capacity_max": args.capacity_max,
                    "impersonate_targets": IMPERSONATE_TARGETS}
 
             for p in probes:
