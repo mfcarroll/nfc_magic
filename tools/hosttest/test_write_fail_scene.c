@@ -32,27 +32,27 @@ static int tests_failed;
 static const char* current_test;
 static bool current_failed;
 
-#define CHECK(cond)                                                     \
-    do {                                                                \
-        if(!(cond)) {                                                   \
-            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);    \
-            current_failed = true;                                      \
-        }                                                               \
+#define CHECK(cond)                                                  \
+    do {                                                             \
+        if(!(cond)) {                                                \
+            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            current_failed = true;                                   \
+        }                                                            \
     } while(0)
 
-#define CHECK_STR(actual, expected)                                                        \
-    do {                                                                                   \
-        const char* a_ = (actual);                                                         \
-        if(a_ == NULL || strcmp(a_, (expected)) != 0) {                                    \
-            printf(                                                                        \
-                "  FAIL %s:%d  %s == \"%s\", expected \"%s\"\n",                           \
-                __FILE__,                                                                  \
-                __LINE__,                                                                  \
-                #actual,                                                                   \
-                a_ ? a_ : "(null)",                                                        \
-                (expected));                                                               \
-            current_failed = true;                                                         \
-        }                                                                                  \
+#define CHECK_STR(actual, expected)                              \
+    do {                                                         \
+        const char* a_ = (actual);                               \
+        if(a_ == NULL || strcmp(a_, (expected)) != 0) {          \
+            printf(                                              \
+                "  FAIL %s:%d  %s == \"%s\", expected \"%s\"\n", \
+                __FILE__,                                        \
+                __LINE__,                                        \
+                #actual,                                         \
+                a_ ? a_ : "(null)",                              \
+                (expected));                                     \
+            current_failed = true;                               \
+        }                                                        \
     } while(0)
 
 static void begin(const char* name) {
@@ -65,7 +65,9 @@ static void end(void) {
     if(current_failed) {
         tests_failed++;
         printf("FAILED: %s\n", current_test);
-        printf("  --- what the scene drew ---\n%s  ---------------------------\n", fake_scene_all_text());
+        printf(
+            "  --- what the scene drew ---\n%s  ---------------------------\n",
+            fake_scene_all_text());
     } else {
         printf("  ok  %s\n", current_test);
     }
@@ -339,6 +341,43 @@ static void test_unverified_uid_is_stated_on_wipe_complete(void) {
     end();
 }
 
+// cut_block == blocks_advertised, the one boundary both sides of the review have had backwards. It is a
+// COUNT against an INDEX: at equality the claimed blocks are 0..N-1 and the cut sits at index N, which is
+// the first block PAST the claim. So the "of the N this card claims" wording must NOT be used there --
+// it names an index that is not one of the N and reads as a completed fraction. Round 6 changed this to
+// <=, round 7 asked for the revert; this pins it so a third round-trip is not possible.
+static void test_cut_at_the_claim_reads_as_past_it(void) {
+    begin(
+        "a cut exactly at the advertised count reads as PAST the claim, not as a fraction of it");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 64;
+    r.blocks_advertised = 64;
+    r.cut_block = 64; // == the count, so index 64 is the first block past blocks 0..63
+    r.pass_truncated = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "past the 64 this card claims") != NULL);
+        CHECK(strstr(scroll, "of the 64 this card claims") == NULL);
+    }
+
+    // ...and one block lower still reads as inside the claim, so the boundary is the only thing moving.
+    r.cut_block = 63;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonWipeStopped, NfcMagicIso15693ModeWipe);
+    scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "of the 64 this card claims") != NULL);
+    }
+    end();
+}
+
 // Found on hardware: the note promised that re-running writes the unsent blocks. The bound is a wall
 // clock, so a consistently slow card is cut in the same place every time.
 static void test_cut_clone_note_promises_nothing(void) {
@@ -348,8 +387,7 @@ static void test_cut_clone_note_promises_nothing(void) {
     r.failed_count = 246;
     r.cut_block = 10;
     r.pass_truncated = true;
-    render_write_fail_with(
-        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
 
     const char* scroll = fake_scene_scroll_text();
@@ -375,8 +413,7 @@ static void test_cut_clone_lists_only_blocks_below_the_cut(void) {
     r.failed_bitmap[10 / 8] |= (uint8_t)(1u << (10 % 8));
     r.failed_bitmap[200 / 8] |= (uint8_t)(1u << (200 % 8));
     r.failed_count = 3;
-    render_write_fail_with(
-        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
 
     const char* scroll = fake_scene_scroll_text();
@@ -396,9 +433,9 @@ static void test_uncut_partial_lists_the_whole_bitmap(void) {
     r.blocks_total = 70;
     r.failed_count = 6;
     r.capacity_confirmed = true;
-    for(uint16_t b = 64; b <= 69; b++) r.failed_bitmap[b / 8] |= (uint8_t)(1u << (b % 8));
-    render_write_fail_with(
-        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    for(uint16_t b = 64; b <= 69; b++)
+        r.failed_bitmap[b / 8] |= (uint8_t)(1u << (b % 8));
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
 
     const char* scroll = fake_scene_scroll_text();
@@ -503,6 +540,7 @@ int main(void) {
     test_wipe_stopped_prints_the_cut_not_the_total();
     test_cut_sweep_plays_the_error_tone();
     test_unverified_uid_is_stated_on_wipe_complete();
+    test_cut_at_the_claim_reads_as_past_it();
     test_cut_clone_note_promises_nothing();
     test_cut_clone_lists_only_blocks_below_the_cut();
     test_uncut_partial_lists_the_whole_bitmap();
