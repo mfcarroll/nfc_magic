@@ -1,6 +1,21 @@
 {
-  "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten.",
+  "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten. Second order recorded 2026-09-08: 9 physical tags across 7 label types, seller-described as a mystery pack. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration.",
   "tags": {
+    "SL2S5302": {
+      "bag_label": "SL2S5302; SL2S5402 ICODE SLIX-S UID",
+      "expected": {
+        "block_size": 4,
+        "ic_ref": 2,
+        "listing_text": "SL2S5302; SL2S5402 ICODE SLIX-S UID  [hand-written: pm3]",
+        "magic": true,
+        "note": "NXP ICODE SLIX-S. IC id 0x02 per the app's decode table; SLIX-S vs SLI-S is uid[3] & 0x10. No block count claimed, so none expected here -- capacity will say.",
+        "pm3_writable": true,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "50x28mm sticker, white",
+      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Physically marked SL2S5302 to tell it from slix-1k-50x28, the other 50x28mm white sticker. BLOCK COUNT UNKNOWN: the label states no range, and neither proxmark nor our app hardcodes SLI-S geometry -- both read it from GET SYSTEM INFO. Measure before assuming, because whether 56/57/62/63 exist decides if a gen1 attempt is destructive."
+    },
     "black-tag": {
       "classification": {
         "campaign": "20260824_232750",
@@ -43,6 +58,123 @@
         "phantom_blocks": 0,
         "physical_blocks": 64
       }
+    },
+    "lri2k-keychain": {
+      "bag_label": "ST LRI2K UID 0-55B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 56,
+        "listing_text": "ST LRI2K UID 0-55B  [no note]",
+        "magic": true,
+        "pm3_writable": false,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "50x30mm plastic keychain, branded \"terminus shanghai\"",
+      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. ST rather than NXP or TI, so expect manufacturer byte 0x02 in uid[1]. 56 blocks means indices 0-55, so 56/57/62/63 are OUT OF RANGE and a gen1 attempt is harmless here for the same reason it is on the 28-block tags. The tool's LRi2K-56 impersonation target already assumes this geometry, so measuring it also checks that assumption."
+    },
+    "slix-1k-50mm": {
+      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+        "magic": true,
+        "note": "NXP ICODE SLIX. Same part family and geometry as the first order's plain tags, but with a UID claim they did not have -- so if this measures 28 blocks at IC ref 0x01 and takes a UID write, it is the same silicon in a magic variant.",
+        "pm3_writable": true,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "50mm round sticker, white",
+      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration."
+    },
+    "slix-1k-50x28": {
+      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+        "magic": true,
+        "pm3_writable": true,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "50x28mm sticker, white",
+      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-coin18. AMBIGUOUS BY SIGHT with SL2S5302, the other 50x28mm white sticker -- that one is physically marked SL2S5302. Use --identify if there is any doubt."
+    },
+    "slix-1k-coin18": {
+      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+        "magic": true,
+        "pm3_writable": true,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "18mm coin, green",
+      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-50x28, so same silicon expected in another form factor -- the pair is a free check on that, the way white-coin and black-tag were."
+    },
+    "slix-black-38x25": {
+      "bag_label": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 28,
+        "ic_ref": 1,
+        "listing_text": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B  [no note]",
+        "magic": true,
+        "pm3_writable": false,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "38x25mm sticker, black",
+      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. Label reads SL2S2012, which is probably a typo for SL2S2102 as on the other SLIX bags -- SL2S2012 is not a part number I can place. Recorded as written, not corrected. Also the only SLIX bag WITHOUT '1K', which may or may not mean anything."
+    },
+    "slix2-gold-30mm": {
+      "bag_label": "SL2S2602 ICODE SLIX2 UID",
+      "expected": {
+        "block_size": 4,
+        "listing_text": "SL2S2602 ICODE SLIX2 UID  [no note]",
+        "magic": true,
+        "note": "NXP ICODE SLIX2, IC id 0x01 with the SLIX2 type bits (uid[3] & 0x18 == 0x08) -- see iso15693_info.c:268. proxmark also has a SLIX2-specific GET NXP SYSTEM INFO path.",
+        "pm3_writable": false,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "30mm round sticker with a flat edge, gold",
+      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. BLOCK COUNT UNKNOWN and probably the largest tag here: SLIX2 is a bigger part than plain SLIX, and no range is claimed. If it measures above 56 blocks it is a geometry this project has never tested against, which makes it the most interesting tag in the batch as well as the riskiest to probe."
+    },
+    "ti-2k-silver-1": {
+      "bag_label": "TI 2048 2K UID 0-63B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 64,
+        "listing_text": "TI 2048 2K UID 0-63B  [no note]",
+        "magic": true,
+        "pm3_writable": false,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "25mm round sticker, silver",
+      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. First of two identical silver rounds."
+    },
+    "ti-2k-silver-2": {
+      "bag_label": "TI 2048 2K UID 0-63B",
+      "expected": {
+        "block_size": 4,
+        "blocks": 64,
+        "listing_text": "TI 2048 2K UID 0-63B  [no note]",
+        "magic": true,
+        "pm3_writable": false,
+        "recorded": "2026-09-08",
+        "source": "seller listing / bag label"
+      },
+      "form_factor": "25mm round sticker, silver",
+      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. Second of two identical silver rounds; visually indistinguishable from ti-2k-silver-1, so keep them apart and use --identify."
     },
     "white-coin": {
       "classification": {
@@ -93,7 +225,8 @@
         "gen1_write": false,
         "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "non-magic"
+        "reclassified": "2026-09-08: measurement unchanged, wording corrected",
+        "verdict": "no gen1/gen2/gen3"
       },
       "count_owned": 3,
       "expected": {
@@ -225,5 +358,5 @@
       }
     }
   },
-  "updated": "2026-08-24"
+  "updated": "2026-09-08"
 }

@@ -1011,10 +1011,21 @@ def check_expected(entry):
     verdict = cl.get("verdict")
     want_magic = exp.get("magic")
     if want_magic is not None and verdict and not verdict.startswith("unclassified"):
-        is_magic = verdict != "non-magic" and not verdict.startswith("not gen2")
-        if want_magic and not is_magic:
-            notes.append("listed as UID-changeable but classifies %s" % verdict); bad = True
-        elif not want_magic and is_magic:
+        found_magic = verdict.startswith(("gen1", "gen2", "gen3"))
+        if want_magic and not found_magic and verdict == "no gen1/gen2/gen3":
+            if exp.get("pm3_writable"):
+                # The seller's claim was specific: proxmark can write this one. That claim failed.
+                notes.append("marked pm3 and labelled UID-changeable, but no gen1/gen2/gen3 took")
+                bad = True
+            else:
+                # No pm3 mark. "proxmark cannot write it" is what the seller said about these, so a
+                # negative here CONFIRMS the annotation rather than contradicting the UID claim. Not a
+                # mismatch -- and not a licence to call the tag plain either.
+                notes.append("no gen1/gen2/gen3, and no pm3 mark -- consistent with the custom-app"
+                             " magic type the seller described; UID claim neither confirmed nor refuted")
+        elif want_magic and not found_magic:
+            notes.append("labelled UID-changeable but classifies %s" % verdict); bad = True
+        elif not want_magic and found_magic:
             notes.append("listed as plain but classifies %s" % verdict); bad = True
 
     # "matches listing" has to mean every claim was CHECKED, not just that nothing contradicted one.
@@ -1052,7 +1063,13 @@ def classify(cls):
     if cls.get("gen1_write"):
         return "gen1 magic"
     if cls.get("gen2_write") is False and cls.get("gen1_write") is False:
-        return "non-magic"
+        # NOT "non-magic". All this establishes is that none of the three methods proxmark implements
+        # moved the UID. The 2026-09-08 batch arrived with some tags hand-marked "pm3" by the seller and
+        # others described as writable only with a custom application he did not supply -- so a magic
+        # mechanism proxmark cannot reach is a live possibility, not a hypothetical. Whether this reading
+        # contradicts a tag's label is a question for check_expected, which knows what was claimed;
+        # the verdict's job is to report what was measured.
+        return "no gen1/gen2/gen3"
     if cls.get("gen2_write") is False:
         return "not gen2; gen1 untested"
     return "unclassified (no write probe run)"

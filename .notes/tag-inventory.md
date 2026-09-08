@@ -13,10 +13,19 @@ one above it is the phantom tail. Neither side gets corrected.
 
 | tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable | vs listing |
 |---|---|---|---|---|---|---|---|---|
+| SL2S5302 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
 | black-tag | gen2 magic | `E0 07 81 B8 AF 14 42 07` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
+| lri2k-keychain | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| slix-1k-50mm | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| slix-1k-50x28 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| slix-1k-coin18 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| slix-black-38x25 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| slix2-gold-30mm | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| ti-2k-silver-1 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
+| ti-2k-silver-2 | unclassified | `?` | ? | ? adv | ? / ? / ? | unknown | no | not yet measured |
 | white-coin | gen2 magic | `E0 07 80 3D E2 E7 3A 29` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
-| white-tag-1 | non-magic | `E0 04 01 00 84 AB E2 16` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches listing |
+| white-tag-1 | no gen1/gen2/gen3 | `E0 04 01 00 84 AB E2 16` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches listing |
 | white-tag-2 | unclassified (no write probe run) | `E0 04 01 00 84 AB E1 A5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 | white-tag-3 | unclassified (no write probe run) | `E0 04 01 00 84 AB DF C5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 
-Updated 2026-08-24
+Updated 2026-09-08
