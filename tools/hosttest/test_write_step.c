@@ -19,22 +19,22 @@ static int tests_failed;
 static const char* current_test;
 static bool current_failed;
 
-#define CHECK(cond)                                                     \
-    do {                                                                \
-        if(!(cond)) {                                                   \
-            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);    \
-            current_failed = true;                                      \
-        }                                                               \
+#define CHECK(cond)                                                  \
+    do {                                                             \
+        if(!(cond)) {                                                \
+            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            current_failed = true;                                   \
+        }                                                            \
     } while(0)
 
-#define CHECK_EQ(actual, expected)                                              \
-    do {                                                                        \
-        long long a_ = (long long)(actual), e_ = (long long)(expected);          \
-        if(a_ != e_) {                                                          \
-            printf("  FAIL %s:%d  %s == %lld, expected %lld\n",                 \
-                   __FILE__, __LINE__, #actual, a_, e_);                        \
-            current_failed = true;                                              \
-        }                                                                       \
+#define CHECK_EQ(actual, expected)                                                                 \
+    do {                                                                                           \
+        long long a_ = (long long)(actual), e_ = (long long)(expected);                            \
+        if(a_ != e_) {                                                                             \
+            printf(                                                                                \
+                "  FAIL %s:%d  %s == %lld, expected %lld\n", __FILE__, __LINE__, #actual, a_, e_); \
+            current_failed = true;                                                                 \
+        }                                                                                          \
     } while(0)
 
 static void begin(const char* name) {
@@ -140,7 +140,8 @@ static Iso15693Poller make_poller(Iso15693PollerMode mode, bool gen1) {
     return inst;
 }
 
-static const uint8_t TARGET_UID[ISO15693_3_UID_SIZE] = {0xE0, 0x04, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+static const uint8_t TARGET_UID[ISO15693_3_UID_SIZE] =
+    {0xE0, 0x04, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
 
 // ---- Write UID -----------------------------------------------------------------------------------
 
@@ -212,7 +213,8 @@ static void test_uid_moved_somewhere_unexpected(void) {
     memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
 
     // The card takes a magic write but lands somewhere else entirely.
-    const uint8_t elsewhere[ISO15693_3_UID_SIZE] = {0xE0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99};
+    const uint8_t elsewhere[ISO15693_3_UID_SIZE] = {
+        0xE0, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99};
     fake_tag.is_gen2_magic = false; // ignore the backdoor UID...
     fake_tag_set_uid_now(elsewhere); // ...but the UID is not what it was, nor the target
 
@@ -350,7 +352,8 @@ static void test_no_card_reports_card_lost(void) {
     NfcGenericEvent ev = {
         .protocol = NfcProtocolIso15693_3, .instance = NULL, .event_data = &error};
     NfcCommand cmd = NfcCommandContinue;
-    for(uint32_t i = 0; i < ISO15693_POLLER_MAX_ACTIVATION_ERRORS + 2 && cmd != NfcCommandStop; i++) {
+    for(uint32_t i = 0; i < ISO15693_POLLER_MAX_ACTIVATION_ERRORS + 2 && cmd != NfcCommandStop;
+        i++) {
         cmd = iso15693_poller_nfc_callback(ev, &inst);
     }
 
@@ -399,6 +402,38 @@ static void test_clone_writes_data_only_after_the_uid_takes(void) {
     CHECK_EQ(inst.clone_failed_count, 0);
     CHECK(fake_tag.writes_accepted >= 28); // the data pass ran
     CHECK(saw_event(Iso15693PollerEventWriteProgress)); // and reported progress
+    end();
+}
+
+// The seam iso15693_poller_finish_write exists to protect. Both UID verifies end in that one call and
+// differ ONLY in skip_backdoor -- gen2 writes the backdoor blocks because its UID lives elsewhere, gen1
+// must skip them because its UID lives IN them. Nothing tested that flag when the tail was extracted:
+// flipping it at either call site left all 107 cases green. So assert it at both, via the one field it
+// moves -- clone_blocks_total, which write_source_blocks deducts the four skipped registers from.
+static void test_the_two_verify_arms_disagree_about_the_backdoor_blocks(void) {
+    begin("a gen2 clone counts the backdoor blocks and a gen1 clone deducts them");
+    static Iso15693_3Data src;
+
+    // gen2: UID lives in its own register space, so all 64 source blocks are in scope.
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_data_init(&src, 64, 4);
+    Iso15693Poller gen2 = make_poller(Iso15693PollerModeClone, false);
+    gen2.clone_source = &src;
+    memcpy(gen2.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&gen2, 0);
+    CHECK_EQ(gen2.clone_blocks_total, 64);
+
+    // gen1: the UID occupies 56/57/62/63, so the data pass must skip them and not count them.
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = false;
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&src, 64, 4);
+    Iso15693Poller gen1 = make_poller(Iso15693PollerModeClone, true);
+    gen1.clone_source = &src;
+    memcpy(gen1.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&gen1, 0);
+    CHECK_EQ(gen1.clone_blocks_total, 60); // 64 - the four backdoor registers
     end();
 }
 
@@ -459,6 +494,7 @@ int main(void) {
     test_no_card_reports_card_lost();
     test_foreign_protocol_event_is_ignored();
     test_clone_writes_data_only_after_the_uid_takes();
+    test_the_two_verify_arms_disagree_about_the_backdoor_blocks();
     test_clone_on_non_magic_writes_nothing();
     test_empty_source_clone_is_refused_before_writing();
 
