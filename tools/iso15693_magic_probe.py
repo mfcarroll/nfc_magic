@@ -300,6 +300,35 @@ def pm15_csetuid(pm3, uid, gen, split):
     return ("( ok )" in clean(raw).lower()), raw
 
 
+def pm15_wrbl_unaddressed(pm3, block, data_hex, split):
+    """WRITE BLOCK in UNADDRESSED mode, which is the only form that matches the magic sequences.
+
+    The distinction is not cosmetic and it cost a false negative on 2026-09-08. Per
+    common/iso15693tools.h and arg_get_raw_flag in cmdhf15.c:
+
+      `hf 15 wrbl -*`   scan mode -> flags DATARATE_HIGH | ADDRESS = 0x22, and the UID goes in the
+                        frame. An addressed write is validated against the card's memory map, so it
+                        fails above the advertised block count regardless of what is physically there.
+      `hf 15 wrbl --ua` unaddressed -> SUBCARRIER_SINGLE(0x00) | DATARATE_HIGH(0x02) |
+                        NONINVENTORY(0x00) = 0x02, no UID. Frame: 02 21 <blk> <data> + CRC.
+
+    That second form is byte-identical to gen1's own first frame in SetTag15693Uid
+    (armsrc/iso15693.c:3166) and to what client/luascripts/hf_15_magic.lua sends as
+    `hf 15 raw -2 -c -d 02213E00000000`. So it is the ONLY form that can answer a question about the
+    backdoor registers.
+
+    Addressed stays the default everywhere else, deliberately: for a user-data write it targets one tag
+    instead of every tag in the field, which is exactly what #251 asks the app to do."""
+    d = data_hex.replace(" ", "")
+    raw = pm3_exec(pm3, ["hf 15 wrbl --ua -b %d -d %s" % (block, d)], split, timeout=30)
+    c = clean(raw).lower()
+    ok = "( ok )" in c or " ok)" in c
+    fail = "( fail )" in c or "no tag found" in c
+    if ok == fail:
+        ok = not fail
+    return ok, raw
+
+
 def pm15_cfg_raw(pm3, maxblock, blocksize, icref, split):
     """Send only the gen2 CFG frame (magic write 0xE0 09 47 <max> <size> <icref> 00), CRC appended."""
     frame = "02E00947%02X%02X%02X00" % (maxblock & 0xFF, blocksize & 0xFF, icref & 0xFF)
@@ -533,18 +562,22 @@ def gen1_range_gate(ctx):
 
     Returns (writable, note)."""
     before_ok, before, _, braw = pm15_rdbl(ctx["pm3"], GEN1_BLK_UNLOCK, ctx["split"], tries=2)
-    ok, wraw = pm15_wrbl(ctx["pm3"], GEN1_BLK_UNLOCK, "00000000", ctx["split"])
+    # UNADDRESSED, because that is the frame gen1 sends. An addressed write carries the UID and gets
+    # validated against the card's memory map, so it fails above the advertised count whatever is
+    # physically there -- which is a fact about proxmark's bounds check, not about the card.
+    ok, wraw = pm15_wrbl_unaddressed(ctx["pm3"], GEN1_BLK_UNLOCK, "00000000", ctx["split"])
     ctx["save_raw"]("gen1_gate_unlock", "--- read before ---\n" + braw + "\n--- write ---\n" + wraw)
 
     if not ok:
-        return False, "block %d (unlock) refused the write" % GEN1_BLK_UNLOCK
+        return False, ("block %d (unlock) refused an UNADDRESSED zero write, which is gen1's own first"
+                       " frame" % GEN1_BLK_UNLOCK)
 
     note = "block %d (unlock) accepted a zero write" % GEN1_BLK_UNLOCK
     if before_ok:
         # It read before, so it is addressable memory and we know what was there. Put it back: this
         # probe is meant to answer a question, not to leave a mark.
         if before != "00 00 00 00":
-            restored, rraw = pm15_wrbl(ctx["pm3"], GEN1_BLK_UNLOCK, before, ctx["split"])
+            restored, rraw = pm15_wrbl_unaddressed(ctx["pm3"], GEN1_BLK_UNLOCK, before, ctx["split"])
             ctx["save_raw"]("gen1_gate_restore", rraw)
             note += "; prior content %s %s" % (before, "restored" if restored else "NOT RESTORED")
         else:
