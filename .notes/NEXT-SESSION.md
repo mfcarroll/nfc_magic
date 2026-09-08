@@ -344,7 +344,29 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   proxmark's default CFG state — so the gen2 probe was geometry-neutral on both. Different silicon
   from the original test card, which presents EM-Marin at IC ref 0x0F and advertises 66 against 64
   physical. **Re-run the regression five on one of them**; that is the outstanding piece.
-- **A GEN1 CANDIDATE IS IN HAND as of 2026-09-08 — `lri2k-keychain`.** The listing it was ordered from
+- **GEN1 IS CONFIRMED ON HARDWARE, 2026-09-08 — `lri2k-keychain`.** The four-frame sequence set
+  `E0F1E2D3C4B5A697`, it read back exactly, and the original UID restored via gen1. Campaign
+  `iso15_20260908_025701`. **This is the first gen1 card the project has ever had**, and it unblocks the
+  gen1 row of the harness table, which has read "modelled, not settled" since the beginning.
+  **Two findings beyond gen1 itself, both citable:**
+  1. **The backdoor registers accept writes WITHOUT acknowledging.** The gate got no ACK on an
+     unaddressed zero write to block 62, then the full sequence worked — so that write was accepted
+     silently. `iso15693_poller.h` justifies discarding these frames' return values as something that
+     "must" be done "on a card that may not answer". That was an inference from proxmark's source.
+     **It is now a measurement.**
+  2. **Writable memory above the advertised count, on a third kind of silicon.** It advertises 56 blocks
+     and took writes at 56/57/62/63 — the same principle as the gen2 card holding blocks above its own
+     claim, now shown on gen1.
+  **NOT settled: the latch.** `SetTag15693Uid` ends in `switch_off()`, so every read-back sits behind a
+  field power-cycle and cannot distinguish "latches on power-up" from "changes immediately". The app's
+  `NfcCommandReset`-before-verify is still justified by the model, not by measurement. Isolating it needs
+  a read in the SAME field session as the write.
+  **THE CARD IS NOW ARMED, deliberately.** `0x6996` went into block 63 twice and nothing clears it, so
+  its UID can move on any later write to 56/57 — including the app's own wipe. That is the state #255's
+  armed-gen1 case describes, and it has never been reproducible before. **The highest-value hardware
+  test now available: run the app's WIPE on it.** It should zero 56/57, move the UID, and report
+  `uid_changed` as Partial — the mitigation this PR ships and has never exercised on real gen1 silicon.
+- **The earlier gen1 candidate note, superseded:** The listing it was ordered from
   is titled "15693 UID Changeable + **Lua Script by Iceman** Compatible ST LRi 2K (0-55 block)", and
   `proxmark3/client/luascripts/hf_15_magic.lua` sends `02213E00000000`, `02213F69960000`,
   `022138<uid hi>`, `022139<uid lo>` — WRITE BLOCK (`0x21`) at 62, 63, 56, 57 with 0, `0x6996` and the
