@@ -557,10 +557,19 @@ def gen1_range_gate(ctx):
     the UID moves when 56/57 are written, not when the unlock register is. Deliberately NOT block 56
     (on an armed card that IS the move) and NOT block 63 (that is the arming frame).
 
-    A refusal here is a REASONED negative: gen1 cannot work on a card that will not take its first
-    frame. That is stronger evidence than an untested skip.
+    ONE-SIDED TEST, and this cost two confident wrong answers on lri2k-keychain before it was
+    understood. An ACK proves the register is addressable and writable. NO ACK PROVES NOTHING:
+    SetTag15693Uid (armsrc/iso15693.c:3216) sends all four gen1 frames in a loop and never checks the
+    response between them, and iso15693_poller.h says why -- "the frames' return values are discarded,
+    as they must be on a card that may not answer". A backdoor register that accepts a write silently
+    is indistinguishable here from one that refuses it.
 
-    Returns (writable, note)."""
+    So the negative branch returns "inconclusive", never "cannot work". The only conclusive gen1 test is
+    the one both proxmark and this app use: send the whole sequence and see whether the UID moves after
+    a power cycle -- which necessarily includes the arming frame. The gate reduces risk only when it
+    says yes.
+
+    Returns (state, note) with state in {"writable", "inconclusive"}."""
     before_ok, before, _, braw = pm15_rdbl(ctx["pm3"], GEN1_BLK_UNLOCK, ctx["split"], tries=2)
     # UNADDRESSED, because that is the frame gen1 sends. An addressed write carries the UID and gets
     # validated against the card's memory map, so it fails above the advertised count whatever is
@@ -569,8 +578,10 @@ def gen1_range_gate(ctx):
     ctx["save_raw"]("gen1_gate_unlock", "--- read before ---\n" + braw + "\n--- write ---\n" + wraw)
 
     if not ok:
-        return False, ("block %d (unlock) refused an UNADDRESSED zero write, which is gen1's own first"
-                       " frame" % GEN1_BLK_UNLOCK)
+        return "inconclusive", (
+            "block %d (unlock) did not ACK an unaddressed zero write -- gen1's own first frame. That is"
+            " NOT evidence gen1 fails: these registers need not answer, which is why proxmark's own"
+            " gen1 writer ignores the responses" % GEN1_BLK_UNLOCK)
 
     note = "block %d (unlock) accepted a zero write" % GEN1_BLK_UNLOCK
     if before_ok:
@@ -584,7 +595,7 @@ def gen1_range_gate(ctx):
             note += "; it already held zeros, so nothing changed"
     else:
         note += "; it does not answer reads, so there is no way to tell what it held"
-    return True, note
+    return "writable", note
 
 
 def probe_magictype(ctx):
@@ -634,20 +645,16 @@ def probe_magictype(ctx):
                     ask(C("warn", "     Enter to go ahead anyway, Ctrl-C to stop and run"
                                   " --probes baseline first... "))
 
-                writable, gate_note = gen1_range_gate(ctx)
-                res["gen1_range_writable"] = writable
+                state, gate_note = gen1_range_gate(ctx)
+                res["gen1_gate"] = state
                 res["gen1_gate_note"] = gate_note
-                if not writable:
-                    # A reasoned negative, and the arming frame is never sent.
-                    print(C("ok", "   gen1 gate: %s" % gate_note))
-                    print(C("ok", "   -> gen1 CANNOT work here, established without sending the arming"
-                                  " frame. Registers 56/57/62/63 are untouched."))
-                    res["gen1_write"] = False
-                    res["gen1_skipped"] = "register range refuses writes"
-                    continue
-                print(C("warn", "   gen1 gate: %s" % gate_note))
-                print(C("warn", "   -> the range IS writable, so the next frame is the ARMING one:"
-                                " 0x6996 into block %d." % GEN1_BLK_COMMIT))
+                print(C("warn" if state == "writable" else "dim", "   gen1 gate: %s" % gate_note))
+                if state == "writable":
+                    print(C("warn", "   -> the range IS writable. The next frame is the ARMING one:"
+                                    " 0x6996 into block %d." % GEN1_BLK_COMMIT))
+                else:
+                    print(C("dim", "   -> INCONCLUSIVE, so the gate has bought nothing here. Only the"
+                                   " full sequence can answer it, and that includes the arming frame."))
                 if ctx.get("allow_arming"):
                     print(C("dim", "      proceeding: --allow-arming was passed."))
                 elif not sys.stdin.isatty():

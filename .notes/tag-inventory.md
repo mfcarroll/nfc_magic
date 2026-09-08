@@ -15,7 +15,7 @@ one above it is the phantom tail. Neither side gets corrected.
 |---|---|---|---|---|---|---|---|---|
 | SL2S5302 | unclassified (no write probe run) | `E0 04 02 50 03 00 35 F8` | MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S ) | 40 adv / 40 phys | 0x02 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
 | black-tag | gen2 magic | `E0 07 81 B8 AF 14 42 07` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
-| lri2k-keychain | unclassified (gen1 result void, see note) | `E0 02 22 24 50 00 83 03` | MATCH ST Microelectronics SA France | 56 adv / 56 phys | 0x22 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
+| lri2k-keychain | gen2 refused; gen1 UNTESTED | `E0 02 22 24 50 00 83 03` | MATCH ST Microelectronics SA France | 56 adv / 56 phys | 0x22 / 0x00 / 0x00 | blank | yes | matches listing |
 | slix-1k-50mm | unclassified (no write probe run) | `E0 04 01 50 20 26 08 63` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv | 0x01 / 0x00 / 0x00 | none found, [0, 1] unread | yes | matches so far — physical capacity and magic not tested |
 | slix-1k-50x28 | unclassified (no write probe run) | `E0 04 01 50 20 26 06 8C` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
 | slix-1k-coin18 | unclassified (no write probe run) | `E0 04 01 50 20 22 00 E2` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
