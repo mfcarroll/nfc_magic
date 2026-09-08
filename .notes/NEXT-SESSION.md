@@ -23,7 +23,8 @@ that is the known risk and it was taken deliberately.
 
 **ROUND 7 LANDED 2026-09-07 — `COMMENTED`, 20 threads, nothing blocking.** Read
 [pr-round-7/ASSESSMENT.md](pr-round-7/ASSESSMENT.md) first: it is against the PRE-CUT code, our cut
-already closes ~3 of his threads, and it PRESERVED two claims he has now flagged. He also merged upstream
+closes exactly ONE of his threads (and not in the shape he proposed), and it PRESERVED FOUR claims he
+has now flagged — it shortened comments without re-checking them. He also merged upstream
 `dev` into the PR branch (`d31f5162`) as housekeeping.
 
 **The WHEN decision is resolved: he has replied, so the cut can go up framed as a partial answer to

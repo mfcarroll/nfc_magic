@@ -11,14 +11,36 @@ a thread comment — housekeeping, not a code change of ours.
 Our comment cut is 16 commits sitting unpushed on dev. His Round 7 is against `049029c9`, which does not
 contain it. Three consequences, in order of importance:
 
-**1. The cut already closes some of Round 7.** Provisionally three threads — `write_fail.c:271` (the
-sentence that cost him a false finding), `poller.h:178`, and `write_fail.c:336` (the three duplicated
-UID loops, which the cut's one code change folded into `iso15693_info_cat_uid`; zero hand-rolled loops
-remain). **Verify each individually before claiming it** — "gone from the scan" is not "fixed".
+**1. The cut closes exactly ONE of Round 7 — verified per thread, not scanned.** A first pass with a
+text-matching scan said three, and that was wrong: the scan matched blockquote fragments that the cut had
+rewrapped, so "rewritten" got read as "fixed". The record of that mistake stays here because it is the
+same error as everything below — treating a changed comment as a corrected one.
 
-**2. The cut PRESERVED several claims he has now flagged, and that is the uncomfortable finding.**
-The cut deduplicated; it did not re-verify. It reduced how many places each fact lives, which was the
-goal, but never asked whether the surviving statement was TRUE. Two cases where that shows:
+- **`write_fail.c:336` (three duplicated UID loops) — CLOSED, but not in the shape he proposed.** He
+  suggested `nfc_magic_iso15693_uid_cat` covering three sites, with the Info screen's spaced form
+  "deliberately stay[ing] out of it". We folded ALL FOUR behind a two-policy enum
+  (`iso15693_info_cat_uid`, `Iso15693UidFormatSpaced` / `Grouped`). Defensible — the two widths, 23 vs
+  17 characters, are now named on the enum where both callers see them, instead of living as prose on
+  one copy — but it is a DIVERGENCE from his suggestion, not agreement with it. Say so.
+- **`write_fail.c:271` — STILL PRESENT** at `:273`, verbatim: "short-circuits to this screen before any
+  of the truncation reporting".
+- **`poller.h:178` — STILL PRESENT** at `:164-166`, and the cut COMPRESSED the refuted reasoning while
+  keeping it word for word.
+
+**2. The cut PRESERVED FOUR claims he has now flagged, and that is the finding that matters.**
+
+Not two, as first written here — `poller.c:41`, `poller.h:160`, `poller.h:164` and `write_fail.c:273`.
+The pattern is consistent and worth naming exactly: **the cut treated each comment as a unit to SHORTEN,
+not a claim to CHECK.** Compression preserved truth-value. Several of these sentences are now tighter,
+better-placed, and still wrong — and in two cases the false sentence ended up NEARER the text that
+contradicts it.
+
+So the honest framing for the reply is not "the cut is its own best argument". It is: the cut did what it
+set out to do on duplication and did nothing at all for accuracy, and Round 7 is the proof. The
+ownership model still stands — one owner per fact is right — but it makes the surviving copy
+authoritative, which raises the cost of that copy being wrong rather than lowering it.
+
+The two clearest cases:
 
 - **`poller.h:160`** — he flags "Two different cards **separate them, in opposite directions**" as
   re-introducing the round-6 error in the framing sentence directly above its own correction. **The cut
