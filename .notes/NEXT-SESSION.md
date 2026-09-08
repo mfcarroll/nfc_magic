@@ -344,6 +344,18 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   proxmark's default CFG state — so the gen2 probe was geometry-neutral on both. Different silicon
   from the original test card, which presents EM-Marin at IC ref 0x0F and advertises 66 against 64
   physical. **Re-run the regression five on one of them**; that is the outstanding piece.
+- **A GEN1 CANDIDATE IS IN HAND as of 2026-09-08 — `lri2k-keychain`.** The listing it was ordered from
+  is titled "15693 UID Changeable + **Lua Script by Iceman** Compatible ST LRi 2K (0-55 block)", and
+  `proxmark3/client/luascripts/hf_15_magic.lua` sends `02213E00000000`, `02213F69960000`,
+  `022138<uid hi>`, `022139<uid lo>` — WRITE BLOCK (`0x21`) at 62, 63, 56, 57 with 0, `0x6996` and the
+  UID halves. That is **byte-for-byte** `SetTag15693Uid` in `armsrc/iso15693.c:3166`, i.e. the gen1
+  sequence `hf 15 csetuid` sends with no flag. So the Lua method IS gen1, our probe already covers it,
+  and a Lua-writable product is a gen1 product.
+  It reads 56 blocks, and **that does not rule gen1 out** — `ISO15693_POLLER_WIPE_MAX_BLOCKS` says only
+  a WRITE settles whether a block exists, so 56-63 failing to read is not evidence they are absent.
+  They may be backdoor registers outside the user range, as our gen2 card holds blocks above its own
+  advertised count. Which also makes the probe safe for user data: writing them cannot touch 0-55.
+  **Next action: `--probes magictype --destructive` on `lri2k-keychain`.** Its baseline is taken.
 - **gen1 magic candidates** (inbound, unconfirmed as gen1). What they would settle is unchanged: the
   armed-card wipe hazard, the unlock/commit reading inferred from proxmark's send order, and the UID
   re-read that reports a change without preventing one. He said explicitly not to hold the merge for

@@ -28,4 +28,4 @@ one above it is the phantom tail. Neither side gets corrected.
 | white-tag-2 | unclassified (no write probe run) | `E0 04 01 00 84 AB E1 A5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 | white-tag-3 | unclassified (no write probe run) | `E0 04 01 00 84 AB DF C5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 
-Updated 2026-09-08T02:06:36
+Updated 2026-09-08

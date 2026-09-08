@@ -378,8 +378,15 @@ def probe_capacity(ctx):
                         " read." % (reported or "?", ceiling)))
         print(C("warn", "   -> capacity NOT measured: it is >= %d blocks. The number above is this"
                         " probe's bound, not the card's." % physical))
-        print(C("warn", "      Re-run with --capacity-max 255 to push the bound out. A card that answers"
-                        " reads everywhere is the shape ISO15693_POLLER_PASS_MAX_MS exists for."))
+        if ceiling >= 255:
+            print(C("warn", "      The ceiling was already the full 8-bit block space, so this card"
+                            " answers a read at EVERY address it has. That is the"
+                            " answers-reads-everywhere card ISO15693_POLLER_PASS_MAX_MS exists for,"
+                            " and no read-based probe can find its edge."))
+        else:
+            print(C("warn", "      Re-run with --capacity-max 255 to push the bound out. A card that"
+                            " answers reads everywhere is the shape ISO15693_POLLER_PASS_MAX_MS"
+                            " exists for."))
     else:
         print("   reported %s blocks; physical boundary via retried reads (%d probes) -> %d real blocks"
               % (reported or "?", probes, physical))
