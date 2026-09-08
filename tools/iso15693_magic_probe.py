@@ -830,6 +830,63 @@ INVENTORY_JSON = os.path.join(HERE, "tag-inventory.json")
 INVENTORY_MD = os.path.join(os.path.dirname(HERE), ".notes", "tag-inventory.md")
 
 
+def identify(pm3, split, expect=None, path=None):
+    """Read whatever tag is on the antenna and say which inventory entry it is.
+
+    This exists because labels live on paper and UIDs live on silicon. Three of the white-tags are
+    physically identical and differ only in the last two UID bytes, and they are NOT interchangeable --
+    one has been write-probed and one is the untouched control -- so "which tag is this" has to be
+    answerable without trusting how they were put away.
+
+    With `expect`, it is a precondition rather than a question: non-zero exit if the tag on the antenna
+    is not the one you meant to write to."""
+    inv = inventory_load(path)
+    if inv is None:
+        return 2
+    info, raw = pm15_info_retry(pm3, split)
+    uid = info.get("uid")
+    if not uid:
+        print(C("err", "no tag on the antenna (or it would not read)."))
+        return 2
+
+    def norm(u):
+        return (u or "").replace(" ", "").upper()
+
+    match = None
+    for label in sorted(inv.get("tags", {})):
+        if norm((inv["tags"][label].get("original") or {}).get("uid")) == norm(uid):
+            match = label
+            break
+
+    print("UID on antenna : %s" % uid)
+    print("chip           : %s" % (info.get("type") or "?"))
+    print("geometry       : %s blocks x %s bytes, IC ref %s"
+          % (info.get("block_count"), info.get("block_size"), _hx(info.get("ic_ref"))))
+    if match is None:
+        print(C("warn", "inventory       : NOT RECORDED -- this tag is new, or its UID has been changed"
+                        " since it was recorded (a magic card's UID is not an identity)."))
+    else:
+        e = inv["tags"][match]
+        o, cl = e.get("original", {}), e.get("classification", {})
+        print(C("ok", "inventory       : %s" % match))
+        print("  verdict      : %s" % cl.get("verdict", "unclassified"))
+        print("  at capture   : %s blocks advertised, data in %s"
+              % (o.get("advertised_blocks"), _data_cell(o.get("nonzero_blocks"))))
+        if e.get("note"):
+            print("  note         : %s" % e["note"])
+
+    if expect is None:
+        return 0 if match else 1
+    if match == expect:
+        print(C("ok", "\nCONFIRMED: this is '%s'." % expect))
+        return 0
+    print(C("err", "\nWRONG TAG. Expected '%s', this is %s."
+                   % (expect, "'%s'" % match if match else "not in the inventory")))
+    if match is None:
+        print(C("err", "Do not write to it on the assumption it is '%s'." % expect))
+    return 1
+
+
 def inventory_load(path=None):
     path = path or INVENTORY_JSON
     if not os.path.exists(path):
@@ -1130,6 +1187,9 @@ def main():
                     help="path to the inventory JSON (default: tools/tag-inventory.json).")
     ap.add_argument("--render-inventory", action="store_true",
                     help="rewrite .notes/tag-inventory.md from the JSON and exit; touches no hardware.")
+    ap.add_argument("--identify", action="store_true",
+                    help="read the tag on the antenna and say which inventory entry it is. Read-only. "
+                         "With --card <label>, ASSERTS it is that tag and exits non-zero if not.")
     args = ap.parse_args()
 
     C.enabled = (sys.stdout.isatty() and not args.no_color and os.environ.get("NO_COLOR") is None)
@@ -1142,6 +1202,17 @@ def main():
         print("rendered %s (%d tag%s)"
               % (INVENTORY_MD, len(inv.get("tags", {})), "" if len(inv.get("tags", {})) == 1 else "s"))
         return
+
+    if args.identify:
+        if not shutil.which(shlex.split(args.pm3)[0]):
+            sys.exit(C("err", "ERROR: Proxmark client '%s' not found." % args.pm3))
+        reason, _ = pm3_probe(args.pm3, args.pm3_split)
+        if reason:
+            sys.exit(C("err", "ERROR: Proxmark3 not usable: %s." % reason))
+        cards = [c.strip() for c in (args.card or "").split(",") if c.strip()]
+        if len(cards) > 1:
+            sys.exit("ERROR: --identify checks ONE tag; pass a single --card label, or none.")
+        sys.exit(identify(args.pm3, args.pm3_split, cards[0] if cards else None, args.inventory))
 
     if args.list_probes:
         print("Probes (name : destructive? : what it does):")

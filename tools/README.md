@@ -51,6 +51,22 @@ writable tag takes the same four frames. The distinguisher is whether the UID *m
 probe reads back — so `gen1_write: true` already means the UID changed, and a tag that accepted the
 frames without moving its UID records as non-magic (with four blocks now overwritten).
 
+### Which tag is this?
+
+```bash
+python3 tools/iso15693_magic_probe.py --identify                       # what is on the antenna?
+python3 tools/iso15693_magic_probe.py --identify --card white-tag-3    # assert it, non-zero if not
+```
+
+Read-only. Labels live on paper and UIDs live on silicon, and some tags are physically identical while
+not being interchangeable -- one may have been write-probed and another kept as an untouched control. The
+second form is the precondition to run before any `--destructive` probe. A tag that is not in the
+inventory reports as such rather than as a mismatch, since that is the normal state of a new arrival.
+
+One caveat it prints for itself: a magic card's UID is not an identity. If a probe or a clone left a
+magic card carrying a different UID, it will not match its own entry -- which is a reason to restore the
+UID after any test, and a reason the `original` section records the UID it had when first seen.
+
 ### The inventory
 
 `tools/tag-inventory.json` is the source of truth; `.notes/tag-inventory.md` is a rendered table, rewritten

@@ -5,6 +5,11 @@
 PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted** —
 GitHub records the reply at 2026-08-22T18:08Z, so use that date, not the 08-20 some of these notes carry.
 
+**Every physical tag is in [tag-inventory.md](tag-inventory.md)** — what it is, what it measured before
+anything wrote to it, and whether it has ever been written to. Read it before touching hardware, and
+`python3 tools/iso15693_magic_probe.py --identify` to find out which tag is actually on the antenna.
+Labels live on paper, UIDs live on silicon, and three of the tags are physically identical.
+
 **The comment cut is BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed, nothing pushed.**
 Eight of them are the cut itself; the rest are the corrections and citations found afterwards, plus notes. Results and the full argument are in
 [pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md) under "EXECUTED". Headline: comment
@@ -375,9 +380,15 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   to "post the reply", confirm the VENUE before sending. "Post it here" once meant this chat and was
   read as the PR thread, which put an unreviewed comment in front of the maintainer. An outward-facing
   send is not undoable by apology; ask if the target is not explicit.
-- Hardware: one **physically 64-block** gen2 ISO15693 magic card (advertised count is programmable --
-  see the hardware section). More cards inbound as of 2026-08-17: other gen2 silicon, gen1 candidates,
-  and ordinary ISO15693 tags. No gen1 card confirmed on either side yet.
+- Hardware: **six tags as of 2026-08-24, all in [tag-inventory.md](tag-inventory.md)** — the original
+  physically-64 gen2 card (advertised count is programmable, see the hardware section), two more
+  confirmed gen2 (white-coin, black-tag), and three plain NXP SLI at 28 blocks. **Still no gen1 card
+  confirmed on either side.** A further order was expected to include gen1 candidates at other
+  capacities; anything new gets an inventory entry before it gets written to.
+  **Do not identify a tag by its label alone.** The three white-tags are physically indistinguishable
+  and are NOT interchangeable -- white-tag-1 has been write-probed, white-tag-3 is the untouched
+  control. `--identify` reads the tag and names it; `--identify --card <label>` asserts it and exits
+  non-zero on the wrong one, which is the check to run before any destructive probe.
 
 ## The host test harness — READ THIS BEFORE TOUCHING THE POLLER OR THE RESULT SCREENS
 
