@@ -1,6 +1,11 @@
 # Round 7 reply — DRAFT, NOT POSTED
 
-Body between the ~~~~ markers. Per-thread replies in [thread-replies.md](thread-replies.md).
+Body between the ~~~~ markers.
+
+**Per-thread replies are NOT written yet** — 20 threads, and they are the remaining piece before
+anything can go up. Each needs to quote the text rather than a line number, because the cut moves
+every line reference in `poller.h` and `write_fail.c`. Thread ids and bodies are in
+[received/threads.json](received/threads.json).
 
 ~~~~
 Thank you for the two corrections you volunteered against yourself. The `<=` revert is in, and so is the
