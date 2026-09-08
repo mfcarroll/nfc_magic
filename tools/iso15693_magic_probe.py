@@ -1032,7 +1032,7 @@ def identify(pm3, split, expect=None, path=None):
         print(C("ok", "inventory       : %s" % match))
         print("  verdict      : %s" % cl.get("verdict", "unclassified"))
         print("  at capture   : %s blocks advertised, data in %s"
-              % (o.get("advertised_blocks"), _data_cell(o.get("nonzero_blocks"))))
+              % (o.get("advertised_blocks"), _data_cell(o)))
         if e.get("note"):
             print("  note         : %s" % e["note"])
 

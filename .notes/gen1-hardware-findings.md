@@ -96,6 +96,19 @@ has never been possible here before. Restore command is in the inventory entry.
 Treat it as the project's most valuable tag and do not reassign its label — `--identify` matches on the
 UID, so a moved UID makes it unrecognisable until restored.
 
+## Two process lessons from the session itself
+
+**Do not infer a fact from the absence of a mention.** The keychain was recorded as "NOT marked pm3"
+because the tag description had not said "note" or "no note" for it. It *was* marked. Everything
+downstream — the seller-annotation hypothesis, whether a negative gen1 result contradicted his claim —
+rested on a fact invented out of silence. Ask, or record it as unknown.
+
+**Replace a note, do not append to it.** That wrong claim survived five corrections, because each was
+appended and the entry still *opened* with it — which is what `--identify` printed back, long after the
+mark was confirmed. Six revisions cannot fix a false first sentence. This is the same defect as the
+comment drift the round-7 cut exists to fix, in our own notes: a superseded claim left at the front reads
+as current. The inventory now keeps the current state in `note` and the history in `note_history`.
+
 ## WORK LIST — for a delta AFTER the comment cut
 
 The cut was promised as one decision with nothing else in it. None of this goes in it.
