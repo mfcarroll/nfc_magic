@@ -947,8 +947,26 @@ def inventory_update(card, results, campaign, path=None):
     cap = results.get("capacity") or {}
     mag = results.get("magictype") or {}
 
-    # --- original: write-once, and only from a source that was read before anything wrote
-    if "original" not in entry:
+    # --- original: write-once, and only from a source that was read before anything wrote.
+    #
+    # One narrow exception, added 2026-09-08. Write-once exists to stop a post-write read replacing the
+    # pre-write truth. A tag that has NEVER had a write attempted has no post-write state to protect, so
+    # an INCOMPLETE original on such a tag can legitimately be re-taken -- which is the whole point of
+    # re-running a probe that failed to read some blocks. Both conditions are required, and the
+    # replacement is recorded rather than done quietly.
+    def _incomplete(o):
+        return o.get("nonzero_blocks") is None or bool(o.get("unreadable_blocks"))
+
+    def _never_written(en):
+        cl = en.get("classification") or {}
+        return not any(key in cl for key in ("gen1_write", "gen2_write"))
+
+    replacing = ("original" in entry and _incomplete(entry["original"])
+                 and _never_written(entry) and base.get("ok") and not base.get("unreadable_blocks"))
+    # Snapshot BEFORE the overwrite. Reading it afterwards describes the replacement, not what was
+    # replaced -- including its timestamp, which would then claim the old record was captured now.
+    superseded_from = dict(entry["original"]) if replacing else None
+    if "original" not in entry or replacing:
         src = base if base.get("ok") else (info if info.get("uid") else None)
         if src:
             entry["original"] = {
@@ -962,6 +980,7 @@ def inventory_update(card, results, campaign, path=None):
                 "dsfid": src.get("dsfid"),
                 "afi": src.get("afi"),
                 "locked_blocks": base.get("locked_blocks"),
+                "unreadable_blocks": base.get("unreadable_blocks"),
                 # None means NOT KNOWN, [] means read and found empty. dict.get's default only fires
                 # when the key is absent, so pick explicitly: the baseline probe reads per block with
                 # retries and is the authority; capacity's dump can fail and return None.
@@ -971,7 +990,20 @@ def inventory_update(card, results, campaign, path=None):
                 "campaign": campaign,
                 "from_baseline_probe": bool(base.get("ok")),
             }
-            changed.append("original")
+            if replacing:
+                prev = superseded_from or {}
+                unread = prev.get("unreadable_blocks")
+                entry["original"]["superseded"] = {
+                    "reason": "incomplete (%s unread) and no write had ever been attempted; replaced by "
+                              "a complete re-read"
+                              % (unread if unread else "nonzero_blocks not known"),
+                    "captured": prev.get("captured"), "campaign": prev.get("campaign"),
+                    "uid": prev.get("uid"), "nonzero_blocks": prev.get("nonzero_blocks"),
+                    "unreadable_blocks": unread}
+                changed.append("original RE-TAKEN (previous one had %s unread)"
+                               % (unread if unread else "unknown data"))
+            else:
+                changed.append("original")
     elif base.get("ok") or info.get("uid"):
         # Do not touch it -- but say so, because silently ignoring a fresh read looks like a bug.
         changed.append("original kept (already recorded %s)" % entry["original"].get("captured", "?"))
@@ -1130,12 +1162,24 @@ def find_baseline(card, state=None):
     return None
 
 
-def _data_cell(nonzero):
-    """None is NOT KNOWN; [] is read-and-empty. Collapsing the two is how a failed dump gets reported
-    as a blank card, which is what happened on 2026-08-24 before probe_capacity learned the difference."""
+def _data_cell(original):
+    """None is NOT KNOWN; [] is read-and-empty; [] with blocks UNREAD is neither.
+
+    Collapsing the first two is how a failed dump got reported as a blank card on 2026-08-24. The third
+    case bit on 2026-09-08: slix-1k-50mm's baseline read 26 of 28 blocks, found nothing in those 26, and
+    recorded "blank" -- while blocks 0 and 1, the two it could not read, were exactly the ones in
+    question. "Nothing in the part I could see" is not "nothing"."""
+    nonzero = (original or {}).get("nonzero_blocks")
+    unread = (original or {}).get("unreadable_blocks") or []
     if nonzero is None:
         return "unknown"
-    return str(nonzero) if nonzero else "blank"
+    if nonzero and unread:
+        return "%s (+%d unread)" % (nonzero, len(unread))
+    if nonzero:
+        return str(nonzero)
+    if unread:
+        return "none found, %s unread" % (unread if len(unread) <= 4 else "%d blocks" % len(unread))
+    return "blank"
 
 
 def inventory_render(inv, path=None):
@@ -1158,7 +1202,7 @@ def inventory_render(inv, path=None):
         rows.append((card, cl.get("verdict", "unclassified"), o.get("uid") or "?",
                      (o.get("type") or "?"), geo,
                      "%s / %s / %s" % (_hx(o.get("ic_ref")), _hx(o.get("dsfid")), _hx(o.get("afi"))),
-                     _data_cell(o.get("nonzero_blocks")),
+                     _data_cell(o),
                      "yes" if o.get("from_baseline_probe") else "no",
                      exp_cell))
     try:

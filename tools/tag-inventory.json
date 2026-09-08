@@ -24,6 +24,7 @@
       "original": {
         "advertised_blocks": 40,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:35:59",
@@ -35,7 +36,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F F8 35 00 03 50 02 04 E0 00 00 27 03 02",
         "type": "MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S )",
-        "uid": "E0 04 02 50 03 00 35 F8"
+        "uid": "E0 04 02 50 03 00 35 F8",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -67,6 +69,7 @@
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260824_225620",
         "captured": "2026-08-24T23:05:01",
@@ -78,7 +81,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 07 42 14 AF B8 81 07 E0 00 00 3F 03 8B",
         "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
-        "uid": "E0 07 81 B8 AF 14 42 07"
+        "uid": "E0 07 81 B8 AF 14 42 07",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260824_225620",
@@ -109,6 +113,7 @@
       "original": {
         "advertised_blocks": 56,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:44:57",
@@ -120,7 +125,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 03 83 00 50 24 22 02 E0 00 00 37 03 22",
         "type": "MATCH ST Microelectronics SA France",
-        "uid": "E0 02 22 24 50 00 83 03"
+        "uid": "E0 02 22 24 50 00 83 03",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -152,6 +158,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:28:45",
@@ -163,7 +170,11 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 63 08 26 20 50 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 26 08 63"
+        "uid": "E0 04 01 50 20 26 08 63",
+        "unreadable_blocks": [
+          0,
+          1
+        ]
       },
       "physical": {
         "correction": "No physical measurement exists: capacity aborted because block 0 would not read. Absent, not zero."
@@ -191,6 +202,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:32:23",
@@ -202,7 +214,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 8C 06 26 20 50 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 26 06 8C"
+        "uid": "E0 04 01 50 20 26 06 8C",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -233,6 +246,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:33:28",
@@ -244,7 +258,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F E2 00 22 20 50 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 22 00 E2"
+        "uid": "E0 04 01 50 20 22 00 E2",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -276,6 +291,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:34:33",
@@ -287,7 +303,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 38 20 D7 D2 12 01 04 E0 00 00 1B 03 21",
         "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 12 D2 D7 20 38"
+        "uid": "E0 04 01 12 D2 D7 20 38",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -317,6 +334,7 @@
       "original": {
         "advertised_blocks": 79,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:42:52",
@@ -330,7 +348,12 @@
         ],
         "sysinfo": "00 0F 36 F1 CD 01 00 03 48 E0 00 00 4E 03 01",
         "type": "no tag-info available",
-        "uid": "E0 48 03 00 01 CD F1 36"
+        "uid": "E0 48 03 00 01 CD F1 36",
+        "unreadable_blocks": [
+          16,
+          17,
+          20
+        ]
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -365,6 +388,7 @@
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:38:07",
@@ -376,7 +400,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 1A 38 F3 BB 10 01 53 E0 00 00 3F 03 8B",
         "type": "no tag-info available",
-        "uid": "E0 53 01 10 BB F3 38 1A"
+        "uid": "E0 53 01 10 BB F3 38 1A",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -407,6 +432,7 @@
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:40:43",
@@ -418,7 +444,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 1A 62 F3 AC 10 01 53 E0 00 00 3F 03 8B",
         "type": "no tag-info available",
-        "uid": "E0 53 01 10 AC F3 62 1A"
+        "uid": "E0 53 01 10 AC F3 62 1A",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260908_012746",
@@ -450,6 +477,7 @@
       "original": {
         "advertised_blocks": 64,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260824_225620",
         "captured": "2026-08-24T22:58:56",
@@ -461,7 +489,8 @@
         "nonzero_blocks": [],
         "sysinfo": "00 0F 29 3A E7 E2 3D 80 07 E0 00 00 3F 03 8B",
         "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
-        "uid": "E0 07 80 3D E2 E7 3A 29"
+        "uid": "E0 07 80 3D E2 E7 3A 29",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260824_225620",
@@ -496,6 +525,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260824_225620",
         "captured": "2026-08-24T23:07:00",
@@ -509,7 +539,8 @@
         ],
         "sysinfo": "00 0F 16 E2 AB 84 00 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB E2 16"
+        "uid": "E0 04 01 00 84 AB E2 16",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260824_225620",
@@ -541,6 +572,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260824_225620",
         "captured": "2026-08-24T23:09:38",
@@ -554,7 +586,8 @@
         ],
         "sysinfo": "00 0F A5 E1 AB 84 00 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB E1 A5"
+        "uid": "E0 04 01 00 84 AB E1 A5",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260824_225620",
@@ -586,6 +619,7 @@
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
         "block_size": 4,
         "campaign": "20260824_225620",
         "captured": "2026-08-24T23:11:13",
@@ -599,7 +633,8 @@
         ],
         "sysinfo": "00 0F C5 DF AB 84 00 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB DF C5"
+        "uid": "E0 04 01 00 84 AB DF C5",
+        "unreadable_blocks": []
       },
       "physical": {
         "campaign": "20260824_225620",
@@ -609,5 +644,5 @@
       }
     }
   },
-  "updated": "2026-09-08"
+  "updated": "2026-09-08T02:06:36"
 }
