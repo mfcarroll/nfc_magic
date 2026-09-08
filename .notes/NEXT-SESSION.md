@@ -21,8 +21,13 @@ pre-flight probe (#255) as its own PR. The cut was done on the stated preference
 waiting, which was the plan. If he asks for the narrow version, this delta is wider than he wanted —
 that is the known risk and it was taken deliberately.
 
-**The open decision is WHEN to send it:** push now as an unprompted round, or hold until he replies so
-the delta can be framed as an answer. Not a technical question; the work is finished either way.
+**ROUND 7 LANDED 2026-09-07 — `COMMENTED`, 20 threads, nothing blocking.** Read
+[pr-round-7/ASSESSMENT.md](pr-round-7/ASSESSMENT.md) first: it is against the PRE-CUT code, our cut
+already closes ~3 of his threads, and it PRESERVED two claims he has now flagged. He also merged upstream
+`dev` into the PR branch (`d31f5162`) as housekeeping.
+
+**The WHEN decision is resolved: he has replied, so the cut can go up framed as a partial answer to
+Round 7** rather than as an unprompted round. That was the better option and it is now available.
 
 ### The finding to lead with, whenever it goes
 
