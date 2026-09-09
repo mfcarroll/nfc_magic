@@ -13,9 +13,10 @@ there rather than bury it.
 
 ## What is in this push, and why it is two things
 
-**The comment cut is in here.** It was built before this review existed — sixteen commits, promised at the
-end of round 6 — so you reviewed the code without it. Round 7's answers sit on top of it as their own
-commits. Reviewing them as two groups will read better than reviewing them interleaved.
+**The comment cut is in here.** It was built before this review existed (I worked on it while you were
+away) - sixteen commits, promised at the end of round 6 — so you reviewed the code without it. Round 7's
+answers sit on top of it as their own commits. Reviewing them as two groups will read better than reviewing
+them interleaved.
 
 ## The cut deduplicated. It did not re-verify. Round 7 is the proof
 
@@ -101,6 +102,25 @@ case asserting a gen2 clone counts the backdoor blocks and a gen1 clone deducts 
 ## Still open from before
 
 The `:752` budget thread and `PASS_MAX_MS`. And #255 has a new comment from @0x6r1an0y worth reading
-before any gen3 work — zeroing `0x14`/`0x15` on an un-finalized V3 card does more than clear the
-signature.
+before any future gen3 work — zeroing `0x14`/`0x15` on an un-finalized V3 card can brick it, not just
+clear the signature.
+
+**The CHANGELOG's gen3 entry now says that, attributed to him.** It had described the outcome as a moved
+UID and a card that no longer identifies as re-writable — recoverable-sounding, for something permanent.
+#255 still carries the softer wording; I have not edited it.
+
+**And it reopens a scope question I would rather ask than assume.** You made the point last round that
+the CHANGELOG protects the reader of release notes, not the person holding the card — who still sees only
+*"Wipe card? / Zeroes every data block, including the gen1 magic blocks 56/57/62/63."* The app cannot say
+more than that, because the wipe does no magic detection: menu, confirm, sweep.
+
+That was a defensible trade when the gen3 cost was a moved UID and a lost signature, with the post-wipe
+re-read at least reporting the identity half. It is a worse trade against permanent destruction — the
+re-read tells you nothing useful about a bricked card, so the mitigation we ship is worth less than it
+looked and the pre-flight probe is worth more. Two block reads, against a signature that exists only
+while the hazard does, behind the same consent shape as the gen1 opt-in.
+
+I am not adding it uninvited; it is a feature and this round was not that. But if you would rather have
+the gen3 half of #255 in this PR than as the follow-up you were offered, this is the round where the
+argument for it got stronger, and I would take that direction.
 ~~~~
