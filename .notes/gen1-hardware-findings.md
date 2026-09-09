@@ -128,13 +128,40 @@ The cut was promised as one decision with nothing else in it. None of this goes 
 - [ ] **`tools/README.md`**: record that `physical_blocks` is a lower bound (Finding 4).
 - [ ] **Consider a `gen1` verification test in `tools/hosttest`** — the fixture now makes the model
       checkable, though the harness is host-side and cannot drive a card.
-- [ ] **THE GEN3 HAZARD IS WORSE THAN WE DOCUMENT, and this one is user-facing.** @0x6r1an0y, who wrote
-      proxmark's ISO15693 V3 magic support, on #255: *"Zeroing blocks 0x14/0x15 on an un-finalized V3
-      card not only clear the signature, but also brick the card forever."* Our CHANGELOG says a wipe
-      leaves "a card with a moved UID that no longer identifies as re-writable", and #255 says the same
-      -- both describe a recoverable-sounding outcome for something he says is permanent. Correct both,
-      **attributed rather than asserted**, since no gen3 card exists on this PR to confirm it. This is
-      the highest-severity documentation gap in the PR: it is the entry whose entire job is to warn
-      someone holding a gen3 card.
+- [x] **THE GEN3 HAZARD IS WORSE THAN WE DOCUMENT** — **DONE in Round 7, commit `c8beff5`.**
+      The CHANGELOG entry is corrected and attributed, and the wipe confirm now carries
+      "This can \e#brick\e# a gen3 card!" behind a "Wipe? (gen1/gen2 only)" title. #255's own
+      text still carries the softer wording — editing an issue means posting, so it is not done.
+
 - [ ] **Do NOT hold the merge for any of this.** mishamyte said explicitly not to hold for gen1 cards,
       and that still stands. This strengthens the PR's claims; it does not block them.
+
+## SEQUENCING — this list is a B-round, so it comes BEFORE the C/D comment passes
+
+Settled 2026-09-08. Eight of the nine items above are **comment and documentation corrections**: the
+header wording, `gen1_attempted`'s doc, `uid_changed`, the CHANGELOG, `tools/README.md`, the harness
+table. Only the hosttest is code. So this is not separate from the comment work — **it IS comment work,
+of the B kind** (is it factually correct?), and B precedes C and D. See
+[pr-round-7/comment-brevity-pass.md](pr-round-7/comment-brevity-pass.md) for the four operations.
+
+Run C before this and C spends its effort protecting text that is about to be replaced: it would keep
+`gen1_attempted`'s "as they must be on a card that may not answer" as load-bearing, and the gen1 round
+then rewrites that exact sentence because it is now a measurement rather than an inference. Same for the
+"NOT hardware-validated" notes on `iso15693_poller.h:87` and `:113`.
+
+**And this round SHRINKS the surface, which is the argument for taking it first.** Replacing an inference
+with an observation removes the hedging that made the inference honest: "modelled, not settled" becomes
+"measured", the two NOT-hardware-validated warnings narrow to the latch alone, and the de-arming argument
+at `iso15693_poller.c:852` keeps its conclusion while losing "the only order anyone has observed the
+hardware accept". Rough estimate 20-40 lines out before C starts, and about a quarter of the 48 inventory
+blocks stop being contingent.
+
+One thing it ADDS: the latch is still unmeasured (see "NOT settled" above), so at least one new hedge
+appears. Net still negative.
+
+**The card is a reusable fixture, so this is not one-shot.** Recovery is byte-identical via
+`hf 15 csetuid -u E002222450008303`. Restore, test, restore. That is what makes a B-round on real silicon
+affordable at all, and it is why this does not need to wait for a second card.
+
+**Still not a merge blocker.** mishamyte said not to hold for gen1 and that stands. Order is a preference,
+not a constraint: PR description -> gen1 B-round -> C -> D.

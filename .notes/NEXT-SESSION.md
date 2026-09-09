@@ -131,6 +131,21 @@ review events — he has never asked for less comment, only for accurate comment
 the cut itself are ours. It IS an outstanding public commitment (round 6: "not treating it as optional"),
 which means **the scope is ours, not his.**
 
+## THE PATHWAY TO RELEASE, in order — settled 2026-09-08
+
+1. **Push + post Round 7** (built, verified, awaiting go-ahead).
+2. **Rewrite the PR description.** The pack squashes, so it is the permanent record. See the section
+   above; it is a race against him merging on the July body.
+3. **The gen1 B-round** — [gen1-hardware-findings.md](gen1-hardware-findings.md). Eight of its nine items
+   are comment corrections, so it is a **B pass, and B precedes C/D.** It also SHRINKS the surface
+   (inference -> measurement removes the hedging), so it makes the comment passes easier rather than
+   harder. The card is a reusable fixture — restore, test, restore — so it is not one-shot.
+4. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged.
+5. **D — can it be correctly simplified?** Rewords live claims, so it carries a B-check inside it.
+
+Nothing in 3-5 is a merge blocker; mishamyte said explicitly not to hold for gen1. The order is a
+preference. Running C before 3 would have C protect text the gen1 round is about to replace.
+
 ## Deferred DELIBERATELY, not forgotten — 2026-08-22
 
 **A full `/code-review` pass over the PR was scoped and NOT run**, to save tokens in a fresh weekly
