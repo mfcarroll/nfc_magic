@@ -229,6 +229,28 @@ and both are done.
 
 ## Rules that cost us real time — cumulative, all rounds
 
+- **VERIFY WHICH TREE A BUILD CLAIM IS ABOUT.** Two ways this went wrong on 2026-09-09, both silent.
+  `Momentum-Firmware` is a working tree on branch `t5577-deep-read`, **1287 commits ahead of
+  `origin/dev`** with unrelated LF-RFID work — a green build there says nothing about stock. Stock
+  Momentum is **`Momentum-Firmware-slix`** (branch `dev`, clean, API 87.1). And
+  `unleashed-firmware/applications_user/nfc_magic_dev` had been a real **directory**, not a symlink, so
+  it silently went three commits stale and a "both trees clean" claim covered a copy with the gen3
+  warning missing from it. **Now a symlink** (`../../nfc_magic_dev`, matching Momentum's), verified by
+  rebuilding through it: same 165,952-byte FAP, zero warnings, `tools/` still excluded. `applications_user`
+  is gitignored in Unleashed, so the symlink is not a tracked change.
+
+  Stock trees to build against, and what to report:
+
+  | | tree | branch | API |
+  |---|---|---|---|
+  | Unleashed | `unleashed-firmware` | `unl092-base` @ `3c9be0fd` | **88.4** — the SDK he builds with |
+  | Momentum | `Momentum-Firmware-slix` | `dev` @ `8ed809f` | **87.1** |
+
+  And **`clang-format` is not on PATH** — the toolchain's is at
+  `Momentum-Firmware*/toolchain/arm64-darwin/bin/clang-format` (18.1.8), used with
+  `--style=file:<firmware>/.clang-format`. Running the bare command makes every file report as needing
+  format, which is the false-FAIL twin of a `grep -q` false pass and just as uninformative.
+
 - **A REPLY TO A FINDING NEEDS AT MOST THREE THINGS: the disposition, anything HE got wrong, and
   anything WE found while doing it.** Everything else is padding to the person who wrote the finding.
   Round 7's drafts broke this in two opposite directions, nine replies between them, and both come from
