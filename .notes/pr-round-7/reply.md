@@ -11,12 +11,23 @@ Thank you for the two corrections you volunteered against yourself. The `<=` rev
 finding you withdrew before posting — that one is the most useful thing in this round and I want to start
 there rather than bury it.
 
-## What is in this push, and why it is two things
+## What is in this push, and why it is three things
 
-**The comment cut is in here.** It was built before this review existed (I worked on it while you were
-away) - sixteen commits, promised at the end of round 6 — so you reviewed the code without it. Round 7's
-answers sit on top of it as their own commits. Reviewing them as two groups will read better than reviewing
-them interleaved.
+**The comment cut is in here.** It was built before this review existed — I worked on it while you were
+away, so you reviewed the code without it. Round 7's answers sit on top as their own commits, and the
+gen3 warning is a third group again. Reviewing them as three groups will read better than interleaved.
+**20 commits, in this order:**
+
+1. **The cut — 8 commits**, `the header states each fact once` through `give the retry-is-not-a-promise
+   fact an owner`. Deduplicate: one owner per fact. This is the thing promised at the end of round 6.
+2. **The corrections — 11 commits**, `the wiped==0 path does not prove the UID is safe` through `two
+   claims the cut invented that were not quite true`. Two kinds, and the order is chronological rather
+   than sorted: the first four I found myself between rounds (including the two CHANGELOG entries and
+   the #251 citation you can see in the diff), the rest are your Round 7 findings.
+3. **The gen3 warning — 1 commit**, `the gen3 wipe costs the card, and both warnings now say so`. One
+   finding from @0x6r1an0y on #255, landed in the two places a user could see it. **The only
+   user-facing change in the push, and the only one that is not a comment** — worth reviewing on its own
+   terms rather than as part of a comment pass.
 
 ## The cut deduplicated. It did not re-verify. Round 7 is the proof
 
@@ -56,11 +67,10 @@ argument and not a constraint note. That is your `:752` thread, still open, and 
 hold open.
 
 The residue is a mix rather than uniformly one thing, so here is the rule I would cut by — and I had it
-wrong at first. My first version was "would this be at home in the commit message?" — which is weaker
-than it sounds here. The pack squashes, and the squash body is the concatenation of the branch's commit
-messages, so they do survive; but ours would run to ~728 lines, so whoever merges will more likely write
-their own summary, and then they do not. So the test is the stronger one: **would a maintainer editing
-this line, offline, need it to avoid a wrong edit?** And for whatever
+wrong at first. My first version was "would this be at home in the commit message?", which leans on the
+commit history surviving — see the last section, where that turns out not to be a safe assumption here.
+So the test is the one that does not depend on it: **would a maintainer editing this line, offline, need
+it to avoid a wrong edit?** And for whatever
 survives: **can I name the wrong edit it prevents?** If not, delete it. On that rule the
 `view_dispatcher` queue argument stays, so does the 2026-08-04 wipe measurement, so does "do not try to
 de-arm by pre-writing the commit block", so does the activation-cache prefix property. The derivations,
@@ -123,9 +133,11 @@ case asserting a gen2 clone counts the backdoor blocks and a gen1 clone deducts 
 - Host tests **108**, all green — up from 106. Two new: the cut-at-the-claim boundary, and `skip_backdoor`
   at both verify arms.
 - Both firmware trees clean from a deleted object dir, zero warnings, `clang-format` clean.
-- **Churn: 6 lines**, and both instances are the cut writing a line that Round 7 then corrected
-  (`3199bb9`→`7883953`, `58de6ba`→`b312deb`). I could have amended the cut's commits to hide that, and
-  deliberately did not — the order things happened in is the finding.
+- **Churn: 9 lines, in three instances**, every one of them the cut writing a line that a later commit
+  then corrected — `states each fact once` → `four claims the comment cut shortened` (4 lines), `the
+  private struct stops re-documenting` → `two claims the cut invented` (3), and `the constants stop
+  deriving` → `eight claim-accuracy corrections` (2). I could have amended the cut's commits to hide all
+  three, and deliberately did not: the order things happened in is the finding.
 - Comment/code for Round 7 alone: comment **+37**, code **−9**. Correcting a claim costs lines, same as
   round 6. The cut's own figures were comment −95, code +11.
 
