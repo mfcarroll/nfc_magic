@@ -38,17 +38,43 @@ which is exactly what these four demonstrate.
 
 Measured across the eight files: **−102 comment lines took the surface from 37% to 36%.** Removing
 comment lowers numerator and denominator together, so reaching `gen2_poller.c`'s 9% by deduplication is
-arithmetically impossible — `iso15693_poller.c` would have to drop from 698 comment lines to about 236,
-and what is left after the cut is the hardware measurements, the `view_dispatcher` queue argument and the
-constraint notes.
+arithmetically impossible — `iso15693_poller.c` would have to drop from 698 comment lines to about 236.
 
 The metric that does track the defect is how many places state the same fact. **Repeated 6-word comment
 phrases across the ISO15693 surface: 135 before, 34 after.** Sites per fact: `56/57/62/63` 10 → 1,
 "first activation" 6 → 1.
 
 And the honest part: ISO15693 does carry roughly 9x the comment per line of code that `gen2_poller.c`
-does, and that file is 875 lines, so the gap is not a size artefact. I think the argument is about what
-the residue *is*, not that the gap is imaginary.
+does (90 lines per 100 against 11), and that file is 875 lines, so the gap is not a size artefact.
+
+**Deduplication was the wrong answer to it, and the volume objection stands.** I went back over what the
+cut left behind and it is not what I would have told you it was. There are **46 comment blocks of 8 lines
+or more** across the ISO15693 surface; the app before this PR had **exactly one**, at 10 lines, in
+`gen2_poller_i.c`. `ISO15693_POLLER_PASS_MAX_MS` is **46 comment lines for one `#define`**, and about half
+of those are a wipe-versus-clone cost derivation — which is not a hardware measurement, not the queue
+argument and not a constraint note. That is your `:752` thread, still open, and it was the right thread to
+hold open.
+
+The residue is a mix rather than uniformly one thing, so here is the rule I would cut by. **Would the
+sentence be equally at home in the commit message? Then it belongs only there.** And for whatever
+survives that: **can I name the wrong edit it prevents?** If not, delete it. On that rule the
+`view_dispatcher` queue argument stays, so does the 2026-08-04 wipe measurement, so does "do not try to
+de-arm by pre-writing the commit block", so does the activation-cache prefix property. The derivations,
+the rejected alternatives and the measurement narratives go.
+
+I have inventoried all 48 blocks of 8 lines or more against that rule rather than estimating: **742 lines
+in them, down to 409, with 12 of the 48 left alone.** Across the whole surface that projects to roughly
+**1770 -> 1250, so about 40pct down to 30pct** — worth doing, and less than the "match `gen2_poller.c`"
+target, which as above cannot be reached this way. **No code changes**, verifiable by stripping comments
+from both trees and diffing. If you want it nearer your figure, the lever is the 1000-odd one- and
+two-line notes rather than these blocks, and I would want your call on that rather than mine.
+
+**I would rather do that as its own delta than fold it in here.** This round is the argument for why:
+every error in it came from shortening a verified sentence, not from moving one. So the pass has to be
+deletion of whole claims, not rewording of survivors — deletion cannot make a fact wrong — and that is a
+different operation from what is in front of you now. If you would rather have it before merge, say so
+and I will scope it to whatever you want cut, including leaving the header contracts alone, which are the
+part I would defend.
 
 ## Your two corrections
 
