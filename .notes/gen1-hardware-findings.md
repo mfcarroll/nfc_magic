@@ -128,5 +128,13 @@ The cut was promised as one decision with nothing else in it. None of this goes 
 - [ ] **`tools/README.md`**: record that `physical_blocks` is a lower bound (Finding 4).
 - [ ] **Consider a `gen1` verification test in `tools/hosttest`** — the fixture now makes the model
       checkable, though the harness is host-side and cannot drive a card.
+- [ ] **THE GEN3 HAZARD IS WORSE THAN WE DOCUMENT, and this one is user-facing.** @0x6r1an0y, who wrote
+      proxmark's ISO15693 V3 magic support, on #255: *"Zeroing blocks 0x14/0x15 on an un-finalized V3
+      card not only clear the signature, but also brick the card forever."* Our CHANGELOG says a wipe
+      leaves "a card with a moved UID that no longer identifies as re-writable", and #255 says the same
+      -- both describe a recoverable-sounding outcome for something he says is permanent. Correct both,
+      **attributed rather than asserted**, since no gen3 card exists on this PR to confirm it. This is
+      the highest-severity documentation gap in the PR: it is the entry whose entire job is to warn
+      someone holding a gen3 card.
 - [ ] **Do NOT hold the merge for any of this.** mishamyte said explicitly not to hold for gen1 cards,
       and that still stands. This strengthens the PR's claims; it does not block them.

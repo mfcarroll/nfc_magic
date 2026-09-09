@@ -432,6 +432,13 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   `sed -E 's/^(iso15693|changelog|nfc_magic|scene_write): //'`
 - Also adapt the BODY for publication: no third-person references to the reviewer ("he counted three" ->
   "you counted three"), and drop mentions of `tools/hosttest`, whose files are not in the pack.
+- **Do NOT resolve his review threads.** Established from the data 2026-09-08: of 100 threads, the only
+  24 resolved are all from round 5 (2026-08-16), all opened by him, and the two he left open from that
+  round are exactly the two he named in round 7 as "held open from before" (the `:752` budget thread and
+  `PASS_MAX_MS`). So resolution is HIS record of having traced a fix himself -- "I traced the guard
+  rather than taking it on report" -- and marking a thread resolved asserts that verification on his
+  behalf. Other rounds sitting unresolved is his housekeeping, not a gap to tidy. `viewerCanResolve`
+  comes back mixed, so this is a choice rather than a permission wall.
 - **The user pushes and posts. Never push the PR branch without an explicit go-ahead** -- and when told
   to "post the reply", confirm the VENUE before sending. "Post it here" once meant this chat and was
   read as the PR thread, which put an unreviewed comment in front of the maintainer. An outward-facing
