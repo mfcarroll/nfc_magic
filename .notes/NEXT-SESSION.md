@@ -135,6 +135,27 @@ review events — he has never asked for less comment, only for accurate comment
 the cut itself are ours. It IS an outstanding public commitment (round 6: "not treating it as optional"),
 which means **the scope is ours, not his.**
 
+## THE PATHWAY TO RELEASE, in order — settled 2026-09-08, step 3 added 09-09
+
+1. **Push + post Round 7** (built, verified, awaiting a go-ahead).
+2. **Improve the PR body** — worth doing on its own merits even though it is NOT the permanent record
+   (see the section above). Material is in [pr-description.md](pr-description.md).
+3. **Offer him the squash message** — same file. **Timing: not yet.** The trigger is the PR nearing
+   merge — an approval, or him asking whether it is done — because the message has to describe the final
+   state and the C/D passes will change it. **DECIDED: it stays in `.notes/` and gets pasted as a PR
+   comment.** Never a tracked file: "remove before finalization" is a step that gets forgotten, and this
+   way we keep what a comment cannot give — a diff across rounds. Do not re-open this. Condense first:
+   ~190 lines now, #258's comparable is ~20, so 60-100 is the target.
+4. **The gen1 B-round** — [gen1-hardware-findings.md](gen1-hardware-findings.md). Eight of its nine
+   items are comment corrections, so it is a **B pass, and B precedes C/D.** It also SHRINKS the surface
+   (inference -> measurement removes the hedging), so it makes the comment passes easier rather than
+   harder. The card is a reusable fixture — restore, test, restore — so it is not one-shot.
+5. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged.
+6. **D — can it be correctly simplified?** Rewords live claims, so it carries a B-check inside it.
+
+Nothing in 3-6 is a merge blocker; mishamyte said explicitly not to hold for gen1. The order is a
+preference. Running C before 4 would have C protect text the gen1 round is about to replace.
+
 ## Deferred DELIBERATELY, not forgotten — 2026-08-22
 
 **A full `/code-review` pass over the PR was scoped and NOT run**, to save tokens in a fresh weekly

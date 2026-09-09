@@ -1,7 +1,10 @@
 # DRAFT — #250's squash commit message (and description material)
 
-**This file never reaches the fork.** `sync-to-fork.sh:17` excludes `.notes/` outright, so there is no
-removal step to forget.
+**DECIDED 2026-09-08: this stays in `.notes/` and gets pasted as a PR comment when the time comes.**
+`sync-to-fork.sh:17` excludes `.notes/` outright, so it never reaches the fork and there is no removal
+step to forget. A tracked file in the app root was considered so he could review it in the diff, and
+rejected: "remove before finalization" is a step that gets forgotten, and this way we keep the thing a
+comment cannot give us — a diff across rounds. Do not re-open this.
 
 ⚠️ **REPURPOSED 2026-09-08.** This was drafted as a PR-body rewrite on a wrong premise — that the squash
 message is the PR body. **It is not.** Verified by diffing #238 / #236 / #244: the squash body is
