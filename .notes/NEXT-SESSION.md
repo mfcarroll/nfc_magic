@@ -107,6 +107,30 @@ verify it. Start there rather than from this section.
 routing, so a comment-only pass is verifiable as behaviour-preserving rather than read-and-hoped. If the
 cut touches code, update the tests in the same commit.
 
+## ⚠️ THE PR DESCRIPTION IS THE PERMANENT RECORD — and it is a merge race, 2026-09-08
+
+**`xMasterX/all-the-plugins` SQUASH-MERGES.** Verified: every commit on `dev` has one parent, #258's four
+commits are not ancestors of `dev` (`compare` says `diverged`), and the squash message is the PR title +
+`(#NNN)` + **the PR body, verbatim**. So all 20 of our commit messages vanish at merge. The body is the
+only durable in-repo record.
+
+**#250's body is still the July feature summary** — 48 lines, no queue-hang argument, no 2026-08-04 wipe
+measurement, no gen1 de-arming reasoning. Round 7 came back `COMMENTED` with **nothing blocking**, so he
+can approve and merge at any time and the permanent record would be that summary.
+
+- **ON THE LIST: rewrite the PR description before merge.** Worth doing even if the comment pass never
+  happens; required if it does, since that is where deleted reasoning lands.
+- The round-7 reply now carries an explicit **"please don't merge on the current body"** section, so the
+  flag goes up as soon as it is posted. If the reply is delayed, flag it separately — do not let it wait.
+- Consequence for the comment work: the test is NOT "would this be at home in the commit message" (it
+  would not survive). It is **"would a maintainer editing this line, offline, need it?"** See
+  [pr-round-7/comment-brevity-pass.md](pr-round-7/comment-brevity-pass.md).
+
+**Do not re-inherit the wrong premise:** comment VOLUME is not his objection. Checked against all 86
+review events — he has never asked for less comment, only for accurate comment. The 42%-vs-10% figure and
+the cut itself are ours. It IS an outstanding public commitment (round 6: "not treating it as optional"),
+which means **the scope is ours, not his.**
+
 ## Deferred DELIBERATELY, not forgotten — 2026-08-22
 
 **A full `/code-review` pass over the PR was scoped and NOT run**, to save tokens in a fresh weekly

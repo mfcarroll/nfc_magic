@@ -55,9 +55,12 @@ of those are a wipe-versus-clone cost derivation — which is not a hardware mea
 argument and not a constraint note. That is your `:752` thread, still open, and it was the right thread to
 hold open.
 
-The residue is a mix rather than uniformly one thing, so here is the rule I would cut by. **Would the
-sentence be equally at home in the commit message? Then it belongs only there.** And for whatever
-survives that: **can I name the wrong edit it prevents?** If not, delete it. On that rule the
+The residue is a mix rather than uniformly one thing, so here is the rule I would cut by — and I had it
+wrong at first. My first version was "would this be at home in the commit message?", which is no use
+here: the pack squash-merges, so none of these commit messages reaches `dev`. The squash message is the
+PR *description*, which makes that the only durable home for anything taken out of the code. So the test
+is **would a maintainer editing this line, offline, need it to avoid a wrong edit?** And for whatever
+survives: **can I name the wrong edit it prevents?** If not, delete it. On that rule the
 `view_dispatcher` queue argument stays, so does the 2026-08-04 wipe measurement, so does "do not try to
 de-arm by pre-writing the commit block", so does the activation-cache prefix property. The derivations,
 the rejected alternatives and the measurement narratives go.
@@ -165,4 +168,19 @@ while the hazard does, behind the same consent shape as the gen1 opt-in.
 I am not adding it uninvited; it is a feature and this round was not that. But if you would rather have
 the gen3 half of #255 in this PR than as the follow-up you were offered, this is the round where the
 argument for it got stronger, and I would take that direction.
+## One thing to ask of you before you merge
+
+The pack squashes, so **this PR's description becomes the commit message on `dev`** — it is the permanent
+record, and everything in these 20 commit messages is gone at merge. The description today is the
+feature summary I wrote in July. It does not carry the `view_dispatcher` queue-hang argument, the
+2026-08-04 wipe measurement, or the gen1 de-arming reasoning, all of which a future maintainer of this
+file will want and none of which survives a squash.
+
+**So: please don't merge on the current body.** I owe you a rewritten description, and I would rather
+write it before you press the button than ask for a follow-up commit afterwards. That is independent of
+the comment pass above — it is worth doing even if the pass never happens, and more so if it does, since
+the description is where the deleted reasoning has to land.
+
+No rush on it from your side. I just did not want "nothing blocking" to turn into a squash over a
+July-era summary.
 ~~~~
