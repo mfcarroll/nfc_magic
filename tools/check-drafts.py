@@ -31,6 +31,11 @@ in doubt cite the finding, not the line; thread-replies.md's own header says so.
 """
 import re, sys, os, json, glob, subprocess
 
+# Sibling firmware checkouts. A SHA that resolves in one of these is an external reference the
+# reviewer CAN look up -- unlike one from this repo, which he can never resolve.
+FW_TREES = [p for p in glob.glob(os.path.expanduser("~/../Shared/code/personal/rfid/*"))
+            + glob.glob("../*") if os.path.isdir(os.path.join(p, ".git"))]
+
 def sh(*a):
     return subprocess.run(a, capture_output=True, text=True).stdout
 
@@ -136,8 +141,11 @@ def main():
                 if subprocess.run(["git", "cat-file", "-e", sha + "^{commit}"],
                                   capture_output=True).returncode == 0:
                     flag("SHA", sha, "resolves locally -- a DEV sha is never valid in a PR comment")
+                elif any(subprocess.run(["git", "-C", t, "cat-file", "-e", sha + "^{commit}"],
+                                        capture_output=True).returncode == 0 for t in FW_TREES):
+                    pass    # a FIRMWARE sha: legitimate, and he can look it up in that repo
                 else:
-                    flag("SHA?", sha, "does not resolve; if meant as a hash it is dead")
+                    flag("SHA?", sha, "resolves in no repo we know of; if meant as a hash it is dead")
 
             for m in re.finditer(r'`([A-Za-z0-9_]+\.[ch])[:.](\d+)`', l):
                 f, n = m.group(1), int(m.group(2))
