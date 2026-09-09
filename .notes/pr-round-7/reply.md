@@ -109,12 +109,28 @@ clear the signature.
 UID and a card that no longer identifies as re-writable — recoverable-sounding, for something permanent.
 #255 still carries the softer wording; I have not edited it.
 
-**And it reopens a scope question I would rather ask than assume.** You made the point last round that
-the CHANGELOG protects the reader of release notes, not the person holding the card — who still sees only
-*"Wipe card? / Zeroes every data block, including the gen1 magic blocks 56/57/62/63."* The app cannot say
-more than that, because the wipe does no magic detection: menu, confirm, sweep.
+**So does the wipe confirm, which matters more.** You made the point last round that the CHANGELOG
+protects the reader of release notes, not the person holding the card — and that reader was seeing only
+*"Wipe card? / Zeroes every data block, including the gen1 magic blocks 56/57/62/63."* It now reads:
 
-That was a defensible trade when the gen3 cost was a moved UID and a lost signature, with the post-wipe
+> **Wipe? (gen1/gen2 only)**
+> Zeroes every block, including
+> gen1 magic 56/57/62/63.
+> This can **brick** a gen3 card!
+
+`brick` is bold via `\e#`, which switches font rather than weight and so moves the wrap; confirmed on
+device, title included — `widget_add_string_element` runs off the canvas rather than truncating. The
+title is a scope statement, not a detection claim: *"Wipe gen1 / gen2 card?"* would read as the app
+asserting a generation it cannot detect, and would defuse the last line for exactly the person at risk.
+`text_height` also drops 54 → 38, which is a fix and not tidying — at 54 the box ran to y=67, past the
+screen, so an over-long string would have drawn *under* the button instead of clipping.
+
+**What I did not do is the probe, and that is the scope question I would rather ask than assume.** The
+wipe does no magic detection at all — menu, confirm, sweep — so that line can only say what a gen3 card
+would cost, never that this one is gen3. A static warning is honest about that. A probe would not be a
+wording change.
+
+The trade was defensible when the gen3 cost was a moved UID and a lost signature, with the post-wipe
 re-read at least reporting the identity half. It is a worse trade against permanent destruction — the
 re-read tells you nothing useful about a bricked card, so the mitigation we ship is worth less than it
 looked and the pre-flight probe is worth more. Two block reads, against a signature that exists only
