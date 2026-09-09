@@ -229,6 +229,24 @@ and both are done.
 
 ## Rules that cost us real time — cumulative, all rounds
 
+- **NEVER CITE A DEV-REPO SHA IN ANYTHING HE WILL READ.** Caught 2026-09-09 in the round-7 reply, which
+  cited `3199bb9`→`7883953` and `58de6ba`→`b312deb` for its churn figure. Both halves were unresolvable
+  for him, for two independent reasons: `7883953` and `b312deb` had been rewritten by the fold rebase and
+  are unreachable, and even the LIVE dev hashes never appear on the fork — `sync-to-fork.sh` overlays its
+  own commits, so the branch he reads has entirely different hashes. **Cite commit SUBJECTS instead**;
+  they survive the sync, and he greps for them anyway. This is a whole error class the dev-repo/fork split
+  creates and nothing in the workflow catches it — no build, test or format check looks at prose. Sweep
+  every draft before posting:
+
+  ```bash
+  grep -oE '\b[0-9a-f]{7,9}\b' .notes/pr-round-*/reply.md .notes/pr-round-*/thread-replies.md | sort -u
+  ```
+
+  Same trap in reverse: a fork SHA is meaningless in a dev-repo commit message. And any SHA-bearing
+  figure goes stale the moment a commit is added — the same bullet claimed "6 lines, both instances" when
+  a later commit had made it 9 lines in three. **Re-measure every number in a draft immediately before
+  posting**, not when it is written.
+
 - **A read-based capacity measurement is a LOWER BOUND, not a capacity, and so is a search that hits its
   own ceiling.** Proven twice on 2026-09-08. `tools/iso15693_magic_probe.py`'s capacity probe reported
   "82 real blocks" on a card advertising 79 when every block up to its search bound answered — 82 was
