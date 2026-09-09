@@ -178,9 +178,12 @@ re-read tells you nothing useful about a bricked card, so the mitigation we ship
 looked and the pre-flight probe is worth more. Two block reads, against a signature that exists only
 while the hazard does, behind the same consent shape as the gen1 opt-in.
 
-I am not adding it uninvited; it is a feature and this round was not that. But if you would rather have
-the gen3 half of #255 in this PR than as the follow-up you were offered, this is the round where the
-argument for it got stronger, and I would take that direction.
+I am not adding it uninvited; it is a feature and this round was not that. I think the strong warning
+suffices, and aligns with the previous decision to keep gen3 work out of this PR. But if you would
+rather have the gen3 half of #255 in this PR because of the risk of a user bricking a tag, this is
+the round where the argument for it got stronger, and I'm happy to add it once the comment work is
+done.
+
 ## One thing to ask of you before you squash
 
 The pack squashes, so the message on `dev` is GitHub's concatenation of every commit on the branch.
