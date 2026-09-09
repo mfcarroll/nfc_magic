@@ -33,8 +33,8 @@ gen3 warning is a third group again. Reviewing them as three groups will read be
 
 This is the finding, and it is not a comfortable one.
 
-**Four of your twenty threads are comments the cut had already touched** — `poller.c:41`, `poller.h:160`,
-`poller.h:164`, `write_fail.c:273`. The cut shortened or re-placed each one and left the claim inside it
+**Four of your twenty threads are comments the cut had already touched** — `poller.c:41`,
+`poller.h:173`, `poller.h:178`, `write_fail.c:271`. The cut shortened or re-placed each one and left the claim inside it
 wrong. In two cases it moved the false sentence *closer* to the text that contradicts it.
 
 The pattern is exact: the cut treated each comment as a unit to shorten, not a claim to check.
@@ -47,13 +47,18 @@ which is exactly what these four demonstrate.
 
 ## The ratio, since it was the round-6 argument
 
-Measured across the eight files: **−102 comment lines took the surface from 37% to 36%.** Removing
-comment lowers numerator and denominator together, so reaching `gen2_poller.c`'s 9% by deduplication is
-arithmetically impossible — `iso15693_poller.c` would have to drop from 698 comment lines to about 236.
+Measured across the nine ISO15693 files it touched: **−94 comment lines took the surface from 42% to
+40%.** Removing comment lowers numerator and denominator together, so reaching `gen2_poller.c` by
+deduplication is arithmetically impossible, and by a wider margin than I said last round.
+`gen2_poller.c` is 671 code / 75 comment — **10.1% surface**. `iso15693_poller.c` is 811 / 741, so
+matching that would mean **741 comment lines down to about 91**.
 
-The metric that does track the defect is how many places state the same fact. **Repeated 6-word comment
-phrases across the ISO15693 surface: 135 before, 34 after.** Sites per fact: `56/57/62/63` 10 → 1,
-"first activation" 6 → 1.
+The metric that does track the defect is how many places state the same fact — and I am stating the
+metric this time, because last round's version of this number is not one you could have reproduced.
+**Distinct 6-word comment phrases occurring more than once, across those nine files: 255 before, 94
+after.** Per fact, counted as comment blocks mentioning it: `56/57/62/63` **23 → 13**, "first
+activation" **5 → 0**. The `56/57/62/63` figure is the honest one to look at — thirteen sites still name
+those four blocks, so one-owner-per-fact is not finished, it is started.
 
 And the honest part: ISO15693 does carry roughly 9x the comment per line of code that `gen2_poller.c`
 does (90 lines per 100 against 11), and that file is 875 lines, so the gap is not a size artefact.
@@ -78,7 +83,7 @@ the rejected alternatives and the measurement narratives go.
 
 I have inventoried all 48 blocks of 8 lines or more against that rule rather than estimating: **742 lines
 in them, down to 409, with 12 of the 48 left alone.** Across the whole surface that projects to roughly
-**1770 -> 1250, so about 40pct down to 30pct** — worth doing, and less than the "match `gen2_poller.c`"
+**1770 → 1250, so about 40% down to 30%** — worth doing, and less than the "match `gen2_poller.c`"
 target, which as above cannot be reached this way. **No code changes**, verifiable by stripping comments
 from both trees and diffing. If you want it nearer your figure, the lever is the 1000-odd one- and
 two-line notes rather than these blocks, and I would want your call on that rather than mine.
@@ -112,8 +117,8 @@ Two of your threads, and one of them differs from what you proposed:
   was drawing; my reading is that naming both widths on the enum, 23 characters against 17, makes that
   distinction enforceable instead of prose on one copy. Say if you would rather have the three-site
   version.
-- **`:257`'s propagation of the "two cards that separate them" phrasing** is gone — the cut rewrote
-  `start_wipe` and removed that sentence.
+- **`poller.h:242`'s propagation of the "two cards that separate them" phrasing** is gone — the cut
+  rewrote `start_wipe` and removed that sentence.
 
 ## This round
 
@@ -138,8 +143,9 @@ case asserting a gen2 clone counts the backdoor blocks and a gen1 clone deducts 
   private struct stops re-documenting` → `two claims the cut invented` (3), and `the constants stop
   deriving` → `eight claim-accuracy corrections` (2). I could have amended the cut's commits to hide all
   three, and deliberately did not: the order things happened in is the finding.
-- Comment/code for Round 7 alone: comment **+37**, code **−9**. Correcting a claim costs lines, same as
-  round 6. The cut's own figures were comment −95, code +11.
+- Comment/code for Round 7 alone: comment **+44**, code **−9**. Correcting a claim costs lines, same as
+  round 6. The cut's own figures were comment −95, code +11 (across all eleven files it touched; −94 of
+  that is in the nine ISO15693 ones).
 
 ## Still open from before
 
