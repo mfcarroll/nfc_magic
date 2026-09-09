@@ -165,3 +165,34 @@ affordable at all, and it is why this does not need to wait for a second card.
 
 **Still not a merge blocker.** mishamyte said not to hold for gen1 and that stands. Order is a preference,
 not a constraint: PR description -> gen1 B-round -> C -> D.
+
+## THE MECHANICAL SITE LIST — `tools/gen1-staleness.py`, run 2026-09-09
+
+The work list above is thematic. This is every SITE, derived by scanning for the phrasings the
+session invalidated. **10 genuinely stale, 7 correctly hedged, 1 false positive.** Re-run the tool
+rather than trusting this list once anything moves.
+
+**Stale — correct these:**
+
+| site | what it says | why it is now wrong |
+|---|---|---|
+| `poller.h:94`, `:120` | "gen1 is NOT hardware-validated" | The UID write IS validated. Narrow to the latch. |
+| `poller.h:216` | return values discarded "as they must be on a card that may not answer" | Observed, not inferred. A register accepted a write with no ACK. |
+| `poller.h:236` | "a possible gen1 clone ... Source inspection only" | No longer source-only. |
+| `poller.c:26` | "OUR INFERENCE from proxmark's send order, not a documented contract" | The ORDER is now observed to work; only what the registers *do* is still inference. Narrow, do not delete. |
+| `poller.c:339` | "Magic cards **may** not answer these writes" | They do not answer. Measured. |
+| `poller.c:856` | armed card "**can** have its UID moved by a wipe" | Reproduced, and recovered byte-identically. |
+| `poller.c:859` | "the only order **anyone** has observed" | We have now observed it ourselves, on our own card. |
+| `poller.c:1381` | "for the sake of a gen1 case **nobody can test**" | We can test it. This one is simply false. |
+| `poller.c:1413` | "NOTE: gen1 path is not hardware-validated" | False for the UID write. |
+| `partial_details.c:140` | "Filed rather than fixed: gen1, and **no card to test it**" | False. |
+
+**Correct as written — the latch is still unmeasured, so leave these alone:**
+`CHANGELOG.md:85`, `CHANGELOG.md:97`, `poller.c:861`, `poller.c:867`, `poller.c:1373`,
+`poller.h:74`, `poller.h:251`.
+
+**False positive:** `poller.c:127` — "keeps that impossible" matches the `possib(le|ility)` pattern.
+
+**Note the direction of travel:** eight of the ten replace a hedge with a measurement, which is
+shorter. That is the evidence for the sequencing argument above — this round shrinks the surface
+before C runs.
