@@ -22,9 +22,8 @@ cannot shorten it.
 
 Fixed, including the omission, which is the sharper half.
 
-The entry now says a gen3 card ignores the gen2 backdoor, so the UID reads back unchanged and a clone or
-Write UID lands on the **"Not gen2 magic card"** opt-in screen. I checked the string against
-`gen1_optin.c` rather than trusting the enum doc.
+The entry now routes it as you describe, ending at the **"Not gen2 magic card"** opt-in screen. I
+checked that string against `gen1_optin.c` rather than trusting the enum doc.
 
 And it now says what that means: **accepting that opt-in sends four ordinary WRITE BLOCKs into
 56/57/62/63, so the clone path can damage a gen3 card, not only the wipe.** That was the part worth
@@ -53,23 +52,14 @@ the cut itself. The "any" is gone.
 
 Fixed, with your phrasing.
 
-You are right that no card can separate them in opposite directions — `blocks_total` is
-`highest_present + 1` and is structurally `<=` the cut, which the line above already says. What two
-cards differ in is which side of the **advertised count** the cut lands on, which is what the bullets'
-own labels say.
-
-Worth noting the comment cut had already removed the `:257` propagation you flagged — `start_wipe` no
-longer says "see the field's own doc for the two cards that separate them."
+Worth noting the comment cut had already removed the propagation you flagged at `poller.h:242` —
+`start_wipe` no longer says "see the field's own doc for the two cards that separate them."
 
 ---
 ## `3948188969` — poller.c, the wipe/clone cost comparison
 
-Accepted in full, all three points.
-
-Both extra costs are absence-driven and `absent_run` increments only on the read-failure path, so the
-card this bound exists for — refuses every write, answers a read everywhere — accumulates zero
-absences, pays no inventory, has no run to re-probe, and the two passes cost the same. The comment now
-says so.
+Accepted in full, all three points, and the comment now says the two passes cost the same on that
+geometry.
 
 "After the loop" corrected: the re-probe is inside the loop, and what runs after it is the tail-drop,
 which reads the activation cache and costs no airtime.
@@ -81,9 +71,8 @@ is above the claim by definition.
 ---
 ## `3948188977` — poller.c, the wrong pass credited
 
-Accepted. The wipe's read is what *determines* emptiness, so "not only the empty ones" was never a
-property it could have had. The pass that changed is the clone, and the comment now points at
-`write_source_blocks` where this file documents it.
+Accepted. The comment now credits the clone and points at `write_source_blocks`, where this file
+already documents it.
 
 Last round's wording had it the right way round and the rewrite moved the attribute. That is one of
 four cases this round where the comment cut compressed a claim and kept the error, which I have set out
@@ -101,14 +90,10 @@ block was attempted and what remains is past the claim entirely.
 ---
 ## `3948188996` — poller.h, the absent-run bound
 
-Accepted — right bound, wrong reason, and your replacement reasoning is in.
+Accepted — right bound, wrong reason, and your replacement reasoning is in verbatim.
 
-You can hit 8+ consecutive absences below the claim and still get past it, because the trip falls
-through to `continue` there rather than ending the sweep. What bounds the gap is the run still open at
-the cut: the deadline is tested at the top of the iteration, so `absent_run <= ABSENT_RUN - 1` there on
-every path, giving `cut_block - blocks_total <= 7`.
-
-I checked that on all three paths into the top of the loop before writing it down.
+I checked the `<= ABSENT_RUN - 1` claim on all three paths into the top of the loop before writing it
+down, rather than taking it from your comment.
 
 ---
 ## `3948189002` — write_fail.c, the qualifier list
@@ -138,10 +123,8 @@ now argues for the named-call pair rather than for a `|=` / `&= ~` adjacency tha
 ## `3948189016` — write_fail.c and partial_details.c, three descriptions of `blocks_total`
 
 Fixed, and both defer to the header's unqualified "a COUNT", which is the description that survives.
-
-You are right that `highest_present + 1` is the size of the range up to the highest proven block rather
-than a tally of proven blocks, because interior absences fold in. `partial_details.c` now says "a
-COUNT, one past the highest block that answered" instead of describing `highest_present`.
+`partial_details.c` now says "a COUNT, one past the highest block that answered" instead of describing
+`highest_present`.
 
 ---
 ## `3948189021` — partial_details.c, the `<` → `<=` revert
@@ -155,7 +138,7 @@ as you asked, since "block N itself was not attempted" is equally true of both b
 **And the boundary is now pinned.** Nothing tested it — every existing case sat strictly below the claim
 (23 of 70, 55 of 64, 10 of 256). There is a case asserting `cut_block == blocks_advertised` renders
 "past the N this card claims" and *not* "of the N", plus that one block lower still reads as inside.
-Both of us have had it backwards once; a third round trip is a red test now.
+A third round trip is a red test now.
 
 ---
 ## `3948189029` — poller.c, the dead conjunct
@@ -215,9 +198,8 @@ This one shipped in the comment cut rather than this round, so it is in the earl
 ---
 ## `3948189071` — write_fail.c, the title switch order
 
-Moved. `Partial` now sits at chain position rather than eleventh, so the switch and the render chain read
-in lockstep — which is what makes "does every branch still have the right title?" a single-pass check,
-and you are right that it was part of the point of hoisting them out.
+Moved — `Partial` now sits after `OverCapacity`, at chain position 4 rather than switch position 11, so
+the two lists read in order.
 
 ---
 ## `3948189078` — write_fail.c, 189 columns
