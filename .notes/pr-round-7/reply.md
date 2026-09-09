@@ -68,8 +68,9 @@ cut left behind and it is not what I would have told you it was. There are **46 
 or more** across the ISO15693 surface; the app before this PR had **exactly one**, at 10 lines, in
 `gen2_poller_i.c`. `ISO15693_POLLER_PASS_MAX_MS` is **46 comment lines for one `#define`**, and about half
 of those are a wipe-versus-clone cost derivation — which is not a hardware measurement, not the queue
-argument and not a constraint note. That is your `:752` thread, still open, and it was the right thread to
-hold open.
+argument and not a constraint note. That is your `PASS_MAX_MS` thread — the one you held open because
+"the replacement comment carries a larger version of the same problem than I first thought" — and you
+were right to hold it.
 
 The residue is a mix rather than uniformly one thing, so here is the rule I would cut by — and I had it
 wrong at first. My first version was "would this be at home in the commit message?", which leans on the
@@ -149,7 +150,8 @@ case asserting a gen2 clone counts the backdoor blocks and a gen1 clone deducts 
 
 ## Still open from before
 
-The `:752` budget thread and `PASS_MAX_MS`. And #255 has a new comment from @0x6r1an0y worth reading
+The two you held open deliberately: the budget question on the capacity guard that a cut pass loses
+"Card too small" to, and `PASS_MAX_MS`. And #255 has a new comment from @0x6r1an0y worth reading
 before any future gen3 work — zeroing `0x14`/`0x15` on an un-finalized V3 card can brick it, not just
 clear the signature.
 
