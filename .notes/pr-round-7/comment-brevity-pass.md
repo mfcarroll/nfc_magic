@@ -37,25 +37,37 @@ cannot be correct). C is safe from this by construction, since pure deletion int
 
 ## Two corrections that changed this plan
 
-### 1. THE REPO SQUASH-MERGES. Commit messages do not survive.
+### 1. THE REPO SQUASH-MERGES — but the message is THE COMMIT MESSAGES, not the PR body
 
-Verified 2026-09-08 against `xMasterX/all-the-plugins`:
+**An earlier version of this file got this wrong in both directions. Corrected 2026-09-08 after the
+owner challenged it.** What is actually verified:
 
-- every commit on `dev` has **one parent** — no merge commits at all
-- #258 shipped 4 commits; its merge commit `9312f41d2` has one parent, and `compare/4d04165a2...dev`
-  returns **`diverged`**. The PR commits are not ancestors of the branch.
-- the squash message is the **PR title + `(#258)` + the PR body**, verbatim
+- It squash-merges. Every commit on `dev` has **one parent**; #258's four commits are not ancestors of
+  it (`compare/4d04165a2...dev` -> `diverged`). That part was right.
+- **The squash body is GitHub's `COMMIT_MESSAGES` default**: `<title> (#N)`, then `* <headline>` plus
+  that commit's body, per commit, joined by GitHub's own `---------` separator. Diffed against #238,
+  #236 and #244 — the only differences were blank-line placement, the `---------` GitHub inserts, and a
+  truncation artefact in the `messageHeadline` API field. **Not the PR body**: #258's body is 9949 bytes
+  and its squash message is 799.
+- **So commit messages DO survive a squash, concatenated.** The test this plan first used — "would the
+  sentence be at home in the commit message? then it belongs only there" — was correct, and the
+  replacement written here on 2026-09-08 was based on a wrong reading.
 
-So the test this plan first used — *"would the sentence be at home in the commit message? then it belongs
-only there"* — **is wrong**. Our 20 commit messages never reach the repo; they live on the fork branch and
-in the GitHub PR view only.
+**The real hazard is different, and it is still real.** #258 proves the merger overrides the default:
+mishamyte hand-wrote an 799-byte purpose-built message for a 4-commit PR whose concatenation would have
+been 4064. **Our 20 fork-bound commits concatenate to ~728 lines.** Nobody wants that on `dev`, so an
+override is the likely outcome — and then the messages ARE lost, as first claimed, but for a different
+reason and with a different fix.
 
-**The test is now:** *would a maintainer editing this line, with no network access, need it to avoid a
-wrong edit?* If yes it stays in the code. If no, it goes to **the PR description**, which is the one
-durable in-repo home because it becomes the squash commit message.
+**The fix is to write the squash message ourselves and offer it to him**, which is the house pattern
+#258 demonstrates — not to rewrite the PR description. See [../pr-description.md](../pr-description.md),
+which is being repurposed for that.
 
-This raises the bar for deletion — there is no `git log` to fall back on. It does not rescue process
-narration: "measured on device rather than counted" helps nobody in either location.
+**So both tests are live, with different strengths:**
+1. *Would a maintainer editing this line, offline, need it?* -> the code. Unchanged, and the stronger test.
+2. *Would it be at home in the commit message?* -> valid again, **but a weak home.** It survives only if
+   nobody overrides the default, and on a 20-commit PR someone will. Anything genuinely load-bearing
+   belongs in the code or in the proposed squash message, not in a commit message alone.
 
 ### 2. COMMENT VOLUME IS NOT HIS OBJECTION. It is ours.
 

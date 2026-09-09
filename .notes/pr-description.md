@@ -1,20 +1,27 @@
-# DRAFT — the #250 PR description
+# DRAFT — #250's squash commit message (and description material)
 
 **This file never reaches the fork.** `sync-to-fork.sh:17` excludes `.notes/` outright, so there is no
-removal step to forget and no risk of it shipping. Edit here, paste into the PR when it is ready.
+removal step to forget.
 
-**Why it is load-bearing:** the pack squash-merges (verified — every commit on `dev` has one parent,
-#258's four commits are not ancestors of it), and the squash message is the PR title + `(#250)` + this
-body, verbatim. **All 20 commit messages are gone at merge. This is the permanent record.**
+⚠️ **REPURPOSED 2026-09-08.** This was drafted as a PR-body rewrite on a wrong premise — that the squash
+message is the PR body. **It is not.** Verified by diffing #238 / #236 / #244: the squash body is
+GitHub's `COMMIT_MESSAGES` default (`<title> (#N)`, then `* <headline>` + body per commit, joined by
+`---------`). #258's body is 9949 bytes; its squash message is 799, hand-written by mishamyte rather than
+taking the 4064-byte concatenation.
 
-**What belongs here, and what does not.** This is the home for durable facts and decisions a maintainer
-might want but does not need at the moment of editing a line: hardware measurements, rejected
-alternatives, why a constant has the value it has. It is NOT a dumping ground for everything the C pass
-deletes — process narration ("measured on device rather than counted") is worthless in both places.
-Sections marked 🔨 are the ones that grow as C runs.
+**So commit messages DO survive a squash — but ours would be ~728 lines**, which is why the merger will
+probably override. The fix is to hand him a message rather than let him improvise one.
 
-⚠️ **DECISION NEEDED — the AI disclosure.** The current body says *"PR is human-written."* If this draft
-goes in as written that stops being true. Options at the bottom; your call, not mine.
+**What this file is for now, in priority order:**
+1. **The proposed squash commit message.** Needs condensing hard — #258's is ~20 lines; a feature this
+   size can justify 60-100, not the 190 below. Cut to what a `git log` reader wants.
+2. Leftover material worth adding to the PR body, which is still worth improving even though it is not
+   the permanent record.
+
+Sections marked 🔨 grow as the C pass runs.
+
+⚠️ **DECISION NEEDED — the AI disclosure.** The current body says *"PR is human-written."* If the added
+material goes in as drafted that stops being true. Options at the bottom; your call, not mine.
 
 ---
 

@@ -107,44 +107,33 @@ verify it. Start there rather than from this section.
 routing, so a comment-only pass is verifiable as behaviour-preserving rather than read-and-hoped. If the
 cut touches code, update the tests in the same commit.
 
-## ⚠️ THE PR DESCRIPTION IS THE PERMANENT RECORD — and it is a merge race, 2026-09-08
+## ⚠️ THE SQUASH MESSAGE IS THE COMMIT MESSAGES — corrected 2026-09-08
 
-**`xMasterX/all-the-plugins` SQUASH-MERGES.** Verified: every commit on `dev` has one parent, #258's four
-commits are not ancestors of `dev` (`compare` says `diverged`), and the squash message is the PR title +
-`(#NNN)` + **the PR body, verbatim**. So all 20 of our commit messages vanish at merge. The body is the
-only durable in-repo record.
+**A previous version of this section said the PR body becomes the squash message. That is WRONG.**
+Verified by diffing #238 / #236 / #244: the squash body is GitHub's `COMMIT_MESSAGES` default —
+`<title> (#N)`, then `* <headline>` + body per commit, joined by GitHub's `---------`. #258's body is
+9949 bytes; its squash message is 799. So **commit messages survive a squash, concatenated.**
 
-**#250's body is still the July feature summary** — 48 lines, no queue-hang argument, no 2026-08-04 wipe
-measurement, no gen1 de-arming reasoning. Round 7 came back `COMMENTED` with **nothing blocking**, so he
-can approve and merge at any time and the permanent record would be that summary.
+The pack does squash-merge (every `dev` commit has one parent; #258's four commits are not ancestors).
+That part holds.
 
-- **ON THE LIST: rewrite the PR description before merge.** Worth doing even if the comment pass never
-  happens; required if it does, since that is where deleted reasoning lands.
-- The round-7 reply now carries an explicit **"please don't merge on the current body"** section, so the
-  flag goes up as soon as it is posted. If the reply is delayed, flag it separately — do not let it wait.
-- Consequence for the comment work: the test is NOT "would this be at home in the commit message" (it
-  would not survive). It is **"would a maintainer editing this line, offline, need it?"** See
-  [pr-round-7/comment-brevity-pass.md](pr-round-7/comment-brevity-pass.md).
+**The live hazard: the merger overrides the default.** mishamyte hand-wrote #258's 799-byte message
+rather than take the 4064-byte concatenation. **Our 20 fork-bound commits concatenate to ~728 lines** —
+so an override is likely, and then the messages are lost.
+
+- **ON THE LIST: write the proposed squash commit message ourselves and offer it to him.** That is the
+  house pattern #258 demonstrates. [pr-description.md](pr-description.md) holds the draft, being
+  repurposed from a PR-body rewrite to a squash-message proposal.
+- The round-7 reply's closing section needs the same correction before posting — it currently asks him
+  not to merge "on the current body", which is the wrong artefact.
+- Consequence for the comment work: BOTH tests are live. "Would a maintainer editing this line, offline,
+  need it?" is the strong one. "Would it be at home in the commit message?" is valid again but a WEAK
+  home — it survives only if nobody overrides.
 
 **Do not re-inherit the wrong premise:** comment VOLUME is not his objection. Checked against all 86
 review events — he has never asked for less comment, only for accurate comment. The 42%-vs-10% figure and
 the cut itself are ours. It IS an outstanding public commitment (round 6: "not treating it as optional"),
 which means **the scope is ours, not his.**
-
-## THE PATHWAY TO RELEASE, in order — settled 2026-09-08
-
-1. **Push + post Round 7** (built, verified, awaiting go-ahead).
-2. **Rewrite the PR description.** The pack squashes, so it is the permanent record. See the section
-   above; it is a race against him merging on the July body.
-3. **The gen1 B-round** — [gen1-hardware-findings.md](gen1-hardware-findings.md). Eight of its nine items
-   are comment corrections, so it is a **B pass, and B precedes C/D.** It also SHRINKS the surface
-   (inference -> measurement removes the hedging), so it makes the comment passes easier rather than
-   harder. The card is a reusable fixture — restore, test, restore — so it is not one-shot.
-4. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged.
-5. **D — can it be correctly simplified?** Rewords live claims, so it carries a B-check inside it.
-
-Nothing in 3-5 is a merge blocker; mishamyte said explicitly not to hold for gen1. The order is a
-preference. Running C before 3 would have C protect text the gen1 round is about to replace.
 
 ## Deferred DELIBERATELY, not forgotten — 2026-08-22
 
