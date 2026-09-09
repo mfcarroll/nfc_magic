@@ -141,11 +141,12 @@ case asserting a gen2 clone counts the backdoor blocks and a gen1 clone deducts 
 - Both firmwares built from a deleted object dir, **zero app warnings** in either, `clang-format` clean
   (the toolchain's 18.1.8 against the firmware's own config — `ColumnLimit 99`, `ReflowComments false`):
   - **stock Unleashed `dev` @ `3c9be0fd`, API 88.4** — the same SDK you reported last round. FAP
-    **165,952** bytes.
-  - **stock Momentum `dev` @ `8ed809f`, API 87.1.** FAP **148,192** bytes.
+    **170,408** bytes.
+  - **stock Momentum `dev` @ `8ed809f`, API 87.1.** FAP **151,528** bytes.
   - Both are stock checkouts, not the working tree I develop in, which carries unrelated LF-RFID work.
-    As last round: absolute sizes will not match your figure, since the toolchain differs — the number
-    worth comparing is the delta, and there is no code change in this delta beyond the confirm screen.
+    As last round: absolute sizes will not match your figure, since the toolchain differs. The delta is
+    the comparable number, and the only compiled change in it is the confirm screen — everything else
+    is comment, plus one host test and the CHANGELOG.
 - `fap_version` **2.3** and the CHANGELOG heading now agree here as well as on the branch. They had
   drifted to 2.1 in my own repo, and `sync-to-fork.sh` copies the version *from* it — so the next push
   would have taken the PR below upstream's 2.2. Caught before pushing rather than after.
