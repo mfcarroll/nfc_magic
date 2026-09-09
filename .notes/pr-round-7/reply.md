@@ -179,10 +179,10 @@ looked and the pre-flight probe is worth more. Two block reads, against a signat
 while the hazard does, behind the same consent shape as the gen1 opt-in.
 
 I am not adding it uninvited; it is a feature and this round was not that. I think the strong warning
-suffices, and aligns with the previous decision to keep gen3 work out of this PR. But if you would
-rather have the gen3 half of #255 in this PR because of the risk of a user bricking a tag, this is
-the round where the argument for it got stronger, and I'm happy to add it once the comment work is
-done.
+suffices for this round, and it is where I left things when I filed #255 — which you have not weighed
+in on either way. But if you would rather have the gen3 half of #255 in this PR because of the risk of
+a user bricking a tag, this is the round where the argument for it got stronger, and I'm happy to add
+it.
 
 ## One thing to ask of you before you squash
 
