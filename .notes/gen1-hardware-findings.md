@@ -169,7 +169,7 @@ not a constraint: PR description -> gen1 B-round -> C -> D.
 ## THE MECHANICAL SITE LIST — `tools/gen1-staleness.py`, run 2026-09-09
 
 The work list above is thematic. This is every SITE, derived by scanning for the phrasings the
-session invalidated. **10 genuinely stale, 7 correctly hedged, 1 false positive.** Re-run the tool
+session invalidated. **11 genuinely stale, 7 correctly hedged, 1 false positive.** Re-run the tool
 rather than trusting this list once anything moves.
 
 **Stale — correct these:**
@@ -186,6 +186,7 @@ rather than trusting this list once anything moves.
 | `poller.c:1381` | "for the sake of a gen1 case **nobody can test**" | We can test it. This one is simply false. |
 | `poller.c:1413` | "NOTE: gen1 path is not hardware-validated" | False for the UID write. |
 | `partial_details.c:140` | "Filed rather than fixed: gen1, and **no card to test it**" | False. |
+| `CHANGELOG.md:143` | gen1 "shipped as a faithful proxmark port, **not tested against gen1 hardware (none was available)**" | False, and it is the USER-FACING one. Found only after extending the scanner — "not tested against" and "none was available" matched none of the original patterns. |
 
 **Correct as written — the latch is still unmeasured, so leave these alone:**
 `CHANGELOG.md:85`, `CHANGELOG.md:97`, `poller.c:861`, `poller.c:867`, `poller.c:1373`,

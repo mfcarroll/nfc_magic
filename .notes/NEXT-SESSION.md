@@ -229,6 +229,29 @@ and both are done.
 
 ## Rules that cost us real time — cumulative, all rounds
 
+- **A REPLY TO A FINDING NEEDS AT MOST THREE THINGS: the disposition, anything HE got wrong, and
+  anything WE found while doing it.** Everything else is padding to the person who wrote the finding.
+  Round 7's drafts broke this in two opposite directions, nine replies between them, and both come from
+  the same instinct — writing to show we engaged rather than to say what he does not already know.
+
+  **Restating his reasoning back at him.** The absent-run reply spent four lines explaining his own
+  finding to him. Eight more did it at 9–20% overlap. Detect it by measuring shared 7-grams between his
+  comment and the reply, **excluding code spans** — shared identifiers are legitimate, shared prose is
+  not. Legitimate exceptions exist and the measure will flag them: quoting text we *added* or *deleted*,
+  and confirming reasoning on a thread where he wrote "my error, please revert" — there, showing we
+  followed the argument rather than the instruction is the point.
+
+  **Claiming his correction as ours.** Worse, because it reads as taking credit. *"Fixed. Four
+  qualifiers, not three"* — he wrote "There are four qualifiers, not three". Detect it by pulling every
+  correction-shaped phrase (`not two|three|N`, `rather than the N`, `your figure`, `actually`,
+  `miscount`) and checking each against his actual text. Round 7 had one of these, three legitimate
+  corrections stated once too often, and one correcting a claim he never made at all — "there are two of
+  those preambles, not three", when he had said two.
+
+  When a phantom correction has real substance under it, **reframe, do not delete**: that one became a
+  note that three sites share the condition line and only two share the behaviour, which is worth
+  knowing and was never his claim to be wrong about.
+
 - **NEVER CITE A DEV-REPO SHA IN ANYTHING HE WILL READ.** Caught 2026-09-09 in the round-7 reply, which
   cited `3199bb9`→`7883953` and `58de6ba`→`b312deb` for its churn figure. Both halves were unresolvable
   for him, for two independent reasons: `7883953` and `b312deb` had been rewritten by the fold rebase and

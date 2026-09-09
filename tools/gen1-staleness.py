@@ -23,7 +23,8 @@ import re, sys
 # Phrases the 2026-09-08 gen1 session invalidated or weakened.
 PATS = [
  (r"no gen1 card|without a gen1 card|no card to test|nobody can test|cannot be tested|untestable", "no-card claim"),
- (r"not hardware[- ]validated|NOT hardware-validated|unvalidated|not validated on hardware", "validation caveat"),
+ (r"not hardware[- ]validated|NOT hardware-validated|unvalidated|not validated on hardware"
+  r"|not tested against|none was available|no gen1 hardware was", "validation caveat"),
  (r"as they must be on a card that may not answer|may not answer", "the no-ACK INFERENCE (now observed)"),
  (r"inferred from proxmark|read out of proxmark|from proxmark's (send )?order|proxmark's source", "inference provenance"),
  (r"only order anyone has observed|only ordering .* observed|documented to accept", "ordering claim"),
