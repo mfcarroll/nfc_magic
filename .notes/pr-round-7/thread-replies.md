@@ -8,14 +8,11 @@ Order below is his review order.
 ---
 ## `3948188925` — poller.c, the `COUNT_OF` rationale
 
-Fixed, and your arithmetic needed one correction of its own.
+Fixed, with the failure mode flipped as you asked: widening lengthens the loop into an out-of-bounds
+read, it cannot shorten it.
 
-`sizeof(array)` goes 4 → 8 while the count stays 4, so a `sizeof`-bounded loop runs eight iterations
-over a four-element array — touching indices 4..7, which is **four** elements past the end, not two. I
-took your figure at first and had to check it; the comment now says four.
-
-The failure mode is flipped as you asked: widening lengthens the loop into an out-of-bounds read, it
-cannot shorten it.
+One correction to the figure — indices 4..7 is **four** elements past the end, not two. I took yours at
+first and had to check it; the comment says four.
 
 ---
 ## `3948188938` — CHANGELOG, the gen3 entry
@@ -98,12 +95,10 @@ down, rather than taking it from your comment.
 ---
 ## `3948189002` — write_fail.c, the qualifier list
 
-Fixed. Four qualifiers, not three, and the omitted one ranks **first** — the line below says so itself.
-
-The comment now lists all four in priority order and says the cut ranks first, and that the cut it means
-is a cut **clone**: a cut wipe has its own reason code and screen, but a cut clone has none, which is
-why this branch is where it lands. I verified the order against the `if`/`else if` chain rather than
-against the old comment.
+Fixed. The comment now lists all four in your priority order and says the cut ranks first, and that the
+cut it means is a cut **clone**: a cut wipe has its own reason code and screen, but a cut clone has
+none, which is why this branch is where it lands. I verified the order against the `if`/`else if` chain
+rather than against the old comment.
 
 ---
 ## `3948189009` — poller.c, the proximity argument
@@ -174,9 +169,11 @@ out-param or a sentinel `NfcCommand`, and I think that costs more clarity than f
 the tail paid because it carried a *parameter* that could diverge silently, which the preamble does not.
 Say if you would rather have it folded anyway.
 
-(Also: there are two of those preambles, not three. The wipe verify's inventory call reads identically on
-its condition line but only logs and continues, leaving `uid_verified` false rather than reporting
-CardLost. I checked because I had miscounted it.)
+One thing worth flagging for whoever does fold it: a **third** site calls `verify_inventory` on an
+identical condition line, and must not go in with these two. The wipe's UID verify only logs a warning
+and continues there, leaving `uid_verified` false rather than reporting CardLost — deliberately, so a
+card lifted the instant a wipe finishes is not turned into an error. Grepping the condition finds three;
+only two of them are the same thing.
 
 ---
 ## `3948189059` — write_fail.c, the three duplicated UID loops
