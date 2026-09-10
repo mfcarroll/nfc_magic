@@ -229,6 +229,31 @@ and both are done.
 
 ## Rules that cost us real time — cumulative, all rounds
 
+- **THE COMMIT TEST IS NOT THE COMMENT TEST, and reasoning is not "process narration" wherever it
+  appears.** The two artifacts answer different questions for different readers. A comment answers
+  *what must I not break when I edit this line?* — which is why "measured on device rather than
+  counted" fails there: nobody can act on it. A commit answers *why did this change?* — so the test
+  is **does it tell a reader of the diff something the diff cannot show?**
+
+  Two categories pass that test while failing the comment test, and they are the same two things a
+  diff structurally cannot show:
+
+  - **Removals.** A diff shows what left, never whether it went somewhere else. `02-c0aa63a`'s note
+    that "NOT hardware-validated" was dropped *because the caveat already lives on both gen1 entry
+    points, and what went was a dangling `see the PR note`* is evidence about the current state of
+    the code. Without it a reviewer correctly reads a vanished safety caveat as a quiet deletion.
+  - **Rejected alternatives.** `17-26602eb` says the rewrap does not reopen the cut's
+    do-not-rewrap decision, and where the boundary falls: churn-avoidance holds at 104 columns, not
+    at 189. That forestalls "you said you weren't rewrapping."
+
+  **Do not use "it gets squashed anyway" as the licence** — that has it backwards. Squashing makes
+  commit messages LESS durable. GitHub's `COMMIT_MESSAGES` default would concatenate all of ours into
+  the squash body, but they run ~728 lines, so whoever merges will more likely write their own summary
+  (as he did for #258) and they leave git entirely, surviving only on the PR page. The licence is that
+  explaining the change IS the commit's job. It is also why load-bearing facts cannot live only there:
+  the queue-hang argument and the 2026-08-04 measurement stay in the code, and the PR description
+  rewrite is on the list.
+
 - **VERIFY WHICH TREE A BUILD CLAIM IS ABOUT.** Two ways this went wrong on 2026-09-09, both silent.
   `Momentum-Firmware` is a working tree on branch `t5577-deep-read`, **1287 commits ahead of
   `origin/dev`** with unrelated LF-RFID work — a green build there says nothing about stock. Stock
