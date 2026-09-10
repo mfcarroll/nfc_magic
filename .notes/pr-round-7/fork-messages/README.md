@@ -3,7 +3,25 @@
 One file per fork commit, in replay order. `NN-<dev sha>.msg` — the dev sha names the commit to
 sync from; the file is the message to commit on the fork.
 
-## Phase 2, when the go-ahead comes
+## Phase 2 — DONE 2026-09-10, NOT PUSHED
+
+`tools/replay-to-fork.sh .notes/pr-round-7/fork-messages ../all-the-plugins` did it. 19 commits on
+the fork, and every gate green:
+
+- fork tree **== a single full sync from dev HEAD** — the per-commit replay lost nothing
+- **`origin/nfc-magic-iso15693` is still an ancestor** — the push will fast-forward, not force
+- **19 of 19 signed**
+- **his work intact**: key_cache refs 5 / 3 / 2 / 8 in `nfc_magic_scanner.c`, `nfc_magic_app.c`,
+  `nfc_magic_app_i.h`, `mf_classic_dict_attack.c`; `mfc_key_cache.c` present at 5523 bytes;
+  `fap_version` still 2.3
+- **none of the 19 touches a file of his** — checked by name across the whole range
+- the PACK builds, which is what he actually compiles: `applications_user/nfc_magic` ->
+  `all-the-plugins/base_pack/nfc_magic`, `./fbt fap_nfc_magic` on Unleashed, **170,404 bytes, zero
+  app warnings**. Symlink removed afterwards; it was a one-off gate.
+
+Awaiting the go-ahead to push. Nothing posted.
+
+## How phase 2 ran, for next round
 
 Prerequisites, both already verified 2026-09-09:
 - fork HEAD **== `origin/nfc-magic-iso15693`** (`d31f5162`). Never replay onto an older base — that
