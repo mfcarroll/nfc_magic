@@ -78,3 +78,66 @@ not weigh in unprompted. Name that risk; do not wait on it.
 `partial_details.c:25`. He flags it himself as "mildly against the grain of `44617f89`" — our own
 stated preference against naming values. That is a judgement call, not a correction, and it adds a
 public symbol. Answer it explicitly rather than just doing it.
+
+---
+
+# EXECUTED — all 16 addressed, 16 commits on dev, nothing pushed
+
+Built on `c338092`. Every commit is SHIPPED (nothing dev-only), all signed, **zero intra-batch churn**
+(checked pairwise with `--unified=0`, longest-common-line overlap, 0 hits).
+
+| thread | commit | delta |
+|---|---|---|
+| 01 regression | `e3f673e` the wipe title is ISO15693's | code: title moved into the `iso15693_wipe` branch |
+| 02 #251 scope | `2f79f8f` every write this app sends | comment +11 −4 |
+| 03 retracted UID claim | `1147320` drop the claim the poller retracted | comment −2 |
+| 04 the `<= 7` bound | `c31036f` an above-the-claim fact | comment +3 |
+| 06 get_result | `9cc7fcc` three exceptions, not one | comment ±0, code bytes identical |
+| 07 clears commit | `6ea63e4` the argument needs ordering | comment +2 |
+| 11 pronoun | `995322e` name the screen that states the cut | comment ±0 |
+| 15 reset list | `f16cc7c` name the four fields, not the count | comment +5 |
+| 12 only-warning | `b70f69f` say which one names the cost | comment +1 |
+| 13 doc comment | `869bfcc` reunite write_step's doc comment | comment −1 |
+| 10 duplication | `ee7f437` the poller owns the wiped == 0 argument | comment **−4** |
+| 08+09 wipe reach | `33dbde4` only on a card that answers everywhere | CHANGELOG +6 −4, comment +3 |
+| 05 blocks_total | `9bdb36e` a RANGE SIZE, and the header says so | header +9 −6, screen +4 −6 |
+| 16a line budget | `872687d` covers both y values | comment +2 |
+| 16b MAX_BLOCKS | `147b57d` name the block range once | **code**: new header define, 4 sites → 1 |
+| 14 test citation | `7e39d81` stop citing a file this repo lacks | comment +1 |
+
+Verified: both firmwares rebuilt from a cleared object dir and warning-free (stock
+`Momentum-Firmware-slix` @ `dev`, stock `unleashed-firmware` @ `unl092-base`), **108 host tests pass**,
+`clang-format --dry-run -Werror` reports **0 violations** across every `.c`/`.h` outside `tools/`.
+
+## Two findings that go beyond what he raised
+
+**#251 is wider than his correction.** He found the gen1 sequence bypassing `write_block_retried`.
+Checking it turned up two more unaddressed senders he did not name — and one of them outranks gen1:
+**WRITE AFI (`0x27`) and WRITE DSFID (`0x29`)** from the clone's identity pass are STANDARD ISO15693
+commands, so unlike a block write at index 56 they do not need the bystander to be any particular size.
+Any compliant tag in the field applies them, and a changed AFI can drop a tag out of a selective
+inventory. The gen2 backdoor's `0xE0` is proprietary, so it is the only one of the four with a floor
+under it. The scope now lives on `ISO15693_MAGIC_FLAGS`, the define that makes a frame unaddressed.
+
+**His #14 sub-claim is wrong, in our favour.** He suspects the citation is also off against our own
+harness because the commit named a test function. It is not: `test_cut_at_the_claim_reads_as_past_it`
+is at `tools/hosttest/test_write_fail_scene.c:349`, runner call at `:543`.
+
+## ⚠️ ADAPTATION REQUIRED BEFORE THESE REACH THE FORK
+
+**`55b17ae` is a DEV sha and it is cited in two messages** — `e3f673e` and `b70f69f`. It will not
+resolve for him. Replace with the subject, `iso15693: the gen3 wipe costs the card, and both warnings
+now say so`, when writing `fork-messages/`.
+
+The other seven SHAs in these messages (`e71dce03`, `9c14213d`, `9520e177`, `44617f89`, `5bc041d4`,
+`235b5e0e`, `e191411b`) are FORK shas quoted from his own review. They are dangling in dev and correct
+on the fork, which is where these messages get published — left deliberately, since echoing his own
+reference is what makes the connection obvious to him.
+
+## Still open after this delta
+
+- **The harness.** Not started; it is 49 files / 4,898 lines against a PR of 27 / +4,123, so it cannot
+  ride inside this delta. Ask him where he wants it.
+- **#251 needs an issue comment** carrying the AFI/DSFID finding — it is new information, not a
+  restatement.
+- The squash message needs re-measuring: #02 changes what it can claim about #251.
