@@ -3,19 +3,12 @@
 **Status: DRAFT. Not posted.** Numbers re-measured immediately before posting, per the rule.
 
 ~~~~
-All sixteen are addressed, sixteen commits, one decision each, and the regression is the first of
-them.
-
-`write_confirm.c` — you are right that it was unintended, and the commit message you quote is the
-evidence: it argues the title purely as an ISO15693 scope statement. The title now lives inside the
-`iso15693_wipe` branch, which is the shape the file already uses for the write-UID variant, and
-`is_wipe` goes back to "Wipe card?". I did not take the one-token version: a nested ternary on the
-line whose job is the protocol-neutral default is how this happened once already.
+All sixteen are addressed, sixteen commits, one decision each. The regression is the first of them,
+and it is not the one-token fix — detail on that thread.
 
 ## The one you would fix first is bigger than you found
 
-You are right that the gen1 sequence bypasses `write_block_retried`, and right that it is
-unaddressed. Checking that turned up two more senders, and one of them outranks gen1:
+Checking your finding turned up two more senders, and one of them outranks gen1:
 
 - **`WRITE AFI` (0x27) and `WRITE DSFID` (0x29)**, from the clone's identity pass. These are
   STANDARD ISO15693 commands. A block write at index 56 needs the bystander to be at least 57 blocks
@@ -24,8 +17,6 @@ unaddressed. Checking that turned up two more senders, and one of them outranks 
   damage is not confined to the value of one field.
 - **the gen2 backdoor**, `0xE0`, which is proprietary — a conforming tag should reject it. That is
   the only one of the four with a floor under it.
-
-One path became four, and the two you did not name are the ends of the range.
 
 Your suggested fix was "every **data-block** write" here, plus a separate mention of the gen1
 sequence. I went the other way: the scope now lives on `ISO15693_MAGIC_FLAGS`, the define that makes
@@ -36,20 +27,16 @@ stale.
 I re-verified the SDK half rather than carrying it forward on report — `iso15693_3_poller_write_block`
 appends `SUBCARRIER_1 | DATA_RATE_HI` and nothing else.
 
-#251 gets a comment carrying the AFI/DSFID part. It is new information about the hazard's size, not
-a restatement of what is already filed.
+#251 gets a comment carrying the AFI/DSFID part.
 
 ## One correction, and it is in your favour
 
-On the test citation you suspect it may be wrong against my own harness too, because the commit named
-a test function rather than the file. It is not: `test_cut_at_the_claim_reads_as_past_it` is in
-`test_write_fail_scene.c`, with its runner call at the bottom of the same file. The filename was
-right; only its absence from this repository was the problem.
+The test citation is not also wrong against my own harness.
+`test_cut_at_the_claim_reads_as_past_it` is in `test_write_fail_scene.c`, with its runner call at the
+bottom of the same file. Only its absence from this repository was the problem.
 
-I swept for others — `scenes`, `magic`, `views`, `helpers`, the root sources and the CHANGELOG, for
-both `test_*.c` and `hosttest`. That was the only one, so the exposure was a single line. It now says
-why the derivation is written out (this boundary has been got backwards twice, by both of us) and
-names nothing invisible.
+I swept `scenes`, `magic`, `views`, `helpers`, the root sources and the CHANGELOG for both `test_*.c`
+and `hosttest`. That was the only one, so the exposure was a single line.
 
 ## The harness — yes, and as its own PR
 
@@ -78,19 +65,18 @@ all three rounds since the cut:
 | this round | **+25** |
 
 So the cut removed 95 lines and correctness work has since put 110 back. We are fifteen lines worse
-off than before it started. That is not an argument against correcting things — every one of those
-lines went in because a claim was wrong — it is the mechanism: correcting a claim means writing the
-sentence that makes it correct.
+off than before it started. Every one of those lines went in because a claim was wrong, which is the
+mechanism rather than an excuse: correcting a claim means writing the sentence that makes it correct.
 
-Which is the argument for doing the deletion pass **after** the correctness ones rather than before,
-and it is what the plan below is shaped around.
+It is also the argument for running the deletion pass after the correctness rounds rather than
+before.
 
 ## Where this goes from here
 
-Nothing below blocks a merge, and I am not asking you to hold for any of it. Laying it out because
-you are close to ready and I would rather you know what is still coming than discover it:
+Nothing below blocks a merge and I am not asking you to hold for any of it — but you are close to
+ready, so you should have it in front of you rather than discover it:
 
-1. **This round.** Done, and it is the third consecutive round that was mostly factual.
+1. **This round.** Done.
 2. **A gen1 hardware round.** I now have a confirmed gen1 card — the four-frame sequence works, the
    backdoor registers accept writes **without acknowledging** (that was an inference from proxmark's
    source and is now a measurement), and the card is deliberately left armed, which reproduces the
@@ -113,10 +99,10 @@ whatever the feature is worth.
 
 Separately: the harness PR, and the #251 comment.
 
-Four of your sixteen are a comment contradicted by another comment a few lines away, and one is a
-duplication that a commit in the same push removed three other instances of. I do not have a mechanical
-check for that class yet — the existing one compares comments against code, not against each other —
-and building one is part of step 3, because deletion is what removes the substrate they live in.
+On the pattern you named: I have no standing check for it. What I run compares comments against the
+code, and the duplicate-phrase scan I used during the cut was a one-off rather than a tool — so
+nothing in the loop compares two comments to each other. Building that is part of step 3, since
+deletion is what removes the substrate these live in.
 
 ## Verification
 

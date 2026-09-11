@@ -50,10 +50,7 @@ The SDK half is re-verified rather than carried forward: `iso15693_3_poller_writ
 ## 03 — `write_fail.c`, "The UID was never touched" — comment 3989702126
 
 ~~~~
-Deleted. Both halves hold.
-
-One consequence worth stating: since neither string mentions the UID, the screen never made the
-claim the comment said it was making. So there is no behaviour to fix here, only the sentence.
+Deleted. Both halves hold, and there was no behaviour to fix behind them — only the sentence.
 
 Net −2 lines; the reason a cut wipe lands on this screen rather than WipeStopped stays.
 ~~~~

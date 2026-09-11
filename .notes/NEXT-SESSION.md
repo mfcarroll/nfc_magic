@@ -320,6 +320,32 @@ and both are done.
   note that three sites share the condition line and only two share the behaviour, which is worth
   knowing and was never his claim to be wrong about.
 
+  **THE RULE COVERS THE MAIN REPLY TOO, AND THE 7-GRAM SCAN WILL NOT FIND MOST OF THE PADDING.**
+  Learned again in round 8, where the rule was already written down and twelve of sixteen thread
+  replies plus the main reply broke it anyway. The overlap scan flagged exactly ONE (16.7%); the other
+  twelve measured **0-5% and were still padded**, because paraphrasing his reasoning in fresh words
+  shares no 7-grams. So the scan catches quotation, not restatement. **The only check that works is
+  per-paragraph, by hand: does this tell him something he does not already know, and can he act on
+  it?** Run it over every paragraph of every reply including the main one.
+
+  Three shapes to delete on sight, none of which the earlier version of this rule named:
+
+  - **Describing the diff he is about to read.** "Two comment lines say why the title is not taken
+    from `is_wipe`", "The line now says why the derivation is written out". He reads the diff commit
+    by commit; a prose summary of it is strictly worse than the diff.
+  - **Justifying our own action to him.** "It is new information about the hazard's size, not a
+    restatement of what is already filed." Nobody asked. Say what was done.
+  - **Explaining why we are telling him something.** "Laying it out because you are close to ready and
+    I would rather you know what is still coming than discover it." State the thing.
+
+  And the tell that started the round-8 sweep, which the user caught: any sentence opening **"Worth
+  noting"**, **"It is worth"**, or **"One thing to note"** is almost always about to narrate our own
+  process. Grep for them before posting.
+
+  What the trim is worth: thread replies 202 -> 161 payload lines, main reply ~1,200 -> 1,030 words,
+  and nothing of substance lost — every cut was his own reasoning, a description of a diff, or
+  process narration.
+
 - **NEVER CITE A DEV-REPO SHA IN ANYTHING HE WILL READ.** Caught 2026-09-09 in the round-7 reply, which
   cited `3199bb9`→`7883953` and `58de6ba`→`b312deb` for its churn figure. Both halves were unresolvable
   for him, for two independent reasons: `7883953` and `b312deb` had been rewritten by the fold rebase and
