@@ -55,7 +55,7 @@ Verified: **all eight SHAs cited across the sixteen messages resolve on the fork
 `git -C ../all-the-plugins cat-file -e`), and `python3 tools/check-drafts.py
 .notes/pr-round-8/fork-messages/*.msg` is clean.
 
-## Phase 2 — DONE 2026-09-11, NOT PUSHED
+## Phase 2 — DONE 2026-09-11, RE-RUN after the second-person reversal, NOT PUSHED
 
 `tools/replay-to-fork.sh .notes/pr-round-8/fork-messages ../all-the-plugins`. **16 commits**, and
 every gate green:
@@ -72,6 +72,11 @@ every gate green:
   app warnings** (170,404 last round, so +24 for the one code change). Symlink removed afterwards.
 
 The push would be **`dbc6e4fa..<fork HEAD>`**, a fast-forward of 16.
+
+Replayed three times: once with the first draft messages, once after rewrapping two substitutions
+that left 137 and 91 columns, and once after removing the second person entirely. The replay resets
+to `origin/nfc-magic-iso15693` first, so re-running it is free and leaves no trace of the earlier
+attempts — which is the reason to fix a message before pushing rather than after.
 
 ### One thing to carry forward
 
