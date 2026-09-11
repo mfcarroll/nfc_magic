@@ -1,9 +1,25 @@
-# Next session — THE COMMENT CUT IS DONE LOCALLY AND NOT PUSHED. Awaiting a go-ahead.
+# Next session — ROUND 7 IS PUSHED AND POSTED. Waiting on his Round 8.
 
 ## Where things stand
 
-PR #250, `nfc_magic_dev` on branch `iso15693-dev`. **Round 6 answered, pushed and posted** —
-GitHub records the reply at 2026-08-22T18:08Z, so use that date, not the 08-20 some of these notes carry.
+PR #250, `nfc_magic_dev` on branch `iso15693-dev`.
+
+**ROUND 7 SHIPPED 2026-09-11.** Fork pushed `d31f5162..dbc6e4fa`, a fast-forward of **19 commits**, all
+signed. Main reply at **issuecomment-5628507918**; **all 20 thread replies posted**. The delta is three
+reviewable groups: the cut (8), the corrections (10), the gen3 warning (1). His upstream key-cache work
+was verified untouched by all 19 before the push, and `fap_version` 2.3 — his own conflict resolution —
+is preserved.
+
+What the reply commits us to, so a later session does not contradict it: the volume objection is
+**conceded with numbers**, the C and D passes are **proposed and argued**, the CHANGELOG is **named as in
+scope**, and he is **asked not to merge on the current PR body** and to let us propose the squash message.
+
+**#255 is left as it stands — decided 2026-09-11.** Its text still carries the softer "moved UID"
+wording the CHANGELOG no longer does, but Brian's comment is on the issue and says the stronger thing,
+so a reader gets the real cost. Editing it would mean posting for little gain. Do not reopen.
+
+Round 6 for reference: reply recorded at 2026-08-22T18:08Z, so use that date, not the 08-20 some of
+these notes carry.
 
 **Every physical tag is in [tag-inventory.md](tag-inventory.md)** — what it is, what it measured before
 anything wrote to it, and whether it has ever been written to. Read it before touching hardware, and
@@ -121,11 +137,16 @@ That part holds.
 rather than take the 4064-byte concatenation. **Our 20 fork-bound commits concatenate to ~728 lines** —
 so an override is likely, and then the messages are lost.
 
-- **ON THE LIST: write the proposed squash commit message ourselves and offer it to him.** That is the
-  house pattern #258 demonstrates. [pr-description.md](pr-description.md) holds the draft, being
-  repurposed from a PR-body rewrite to a squash-message proposal.
-- The round-7 reply's closing section needs the same correction before posting — it currently asks him
-  not to merge "on the current body", which is the wrong artefact.
+- **ON THE LIST: write the proposed squash commit message and POST IT AS A PR COMMENT when merge nears.**
+  That is the whole mechanism, and two earlier readings of it here were wrong. The PR DESCRIPTION is
+  never used — #258's body is 9949 chars against a 799-char squash message. The default is the
+  concatenated commit messages, and he overrode it on #258 by writing his own in the merge box. So the
+  only lever is to hand him one: he is the person clicking merge, and a comment is how he gets it.
+  Draft ready in **[squash-message.md](squash-message.md)** — 62 lines, house style verified by
+  measurement rather than assumed (#258's longest line is 79 columns, not the 72 an earlier note here
+  claimed). Post the payload between the `~~~~` markers, as a comment, when merge nears.
+- **Improving the PR body is therefore optional polish, not a priority.** It is what a reader of the PR
+  page sees and it never enters git history. Do not confuse the two again.
 - Consequence for the comment work: BOTH tests are live. "Would a maintainer editing this line, offline,
   need it?" is the strong one. "Would it be at home in the commit message?" is valid again but a WEAK
   home — it survives only if nobody overrides.

@@ -50,7 +50,9 @@ The fork's working tree currently holds the output of a full sync — regenerabl
 - **Prefix STRIPPED, not stacked.** `iso15693:` / `changelog:` / `scenes:` removed, then
   `NFC Magic ISO15693: ` prefixed. Stacking it is what left 17 commits in August reading
   `NFC Magic ISO15693: iso15693: ...`.
-- **Six subjects trimmed to 72 columns** (they ran 73–78 once prefixed).
+- **Six subjects trimmed to 72 columns.** Worth being honest that **72 is not the house norm** — the
+  pre-round-7 fork subjects run up to **121 characters**, so nothing required this. Shorter reads better
+  in a review pane and the trims are pushed and fine, but do not carry "72" forward as a rule.
 - **Seven bodies moved to second person** — the reviewer reads these, so "he is right" became
   "you are right". `19-55b17ae.msg` keeps its third person deliberately: that "his authority" is
   @0x6r1an0y, who implemented proxmark's V3 path, not the reviewer.
