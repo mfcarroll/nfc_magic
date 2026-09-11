@@ -13,14 +13,16 @@ there rather than bury it.
 
 ## What is in this push, and why it is three things
 
-**The comment cut is in here.** It was built before this review existed — I worked on it while you were
-away, so you reviewed the code without it. Round 7's answers sit on top as their own commits, and the
-gen3 warning is a third group again. Reviewing them as three groups will read better than interleaved.
-**20 commits, in this order:**
+**19 commits in three groups, and the first of them is the comment cut** — built while you were away,
+so the code you reviewed in Round 7 did not have it. Round 7's answers sit on top as their own commits,
+and the gen3 warning is a third group again. Reviewing them as three groups will read better than
+interleaved:
 
 1. **The cut — 8 commits**, `the header states each fact once` through `give the retry-is-not-a-promise
-   fact an owner`. Deduplicate: one owner per fact. This is the thing promised at the end of round 6.
-2. **The corrections — 11 commits**, `the wiped==0 path does not prove the UID is safe` through `two
+   fact an owner`. Deduplication: one owner per fact, as promised at the end of round 6. **It is the
+   first of two passes, not the finished job** — see "The ratio" below for what it did not do and what
+   the second pass is. I would rather say that at the top than have you find it out halfway down.
+2. **The corrections — 10 commits**, `the wiped==0 path does not prove the UID is safe` through `two
    claims the cut invented that were not quite true`. Two kinds, and the order is chronological rather
    than sorted: the first four I found myself between rounds (including the two CHANGELOG entries and
    the #251 citation you can see in the diff), the rest are your Round 7 findings.
@@ -88,6 +90,23 @@ in them, down to 409, with 12 of the 48 left alone.** Across the whole surface t
 target, which as above cannot be reached this way. **No code changes**, verifiable by stripping comments
 from both trees and diffing. If you want it nearer your figure, the lever is the 1000-odd one- and
 two-line notes rather than these blocks, and I would want your call on that rather than mine.
+
+**And the CHANGELOG belongs in the same pass, for the same reason and with a clearer yardstick.** Its
+2.3 section is **163 lines of a 342-line file — 48% of a changelog covering years of this app, for one
+feature.** The comparison that settles it is the file's own history rather than my taste: your 2.0, a
+*major* release adding USCUID-UL, got **50 lines**. 2.1 got 19, 2.2 got 14, and every 1.x entry is
+between 4 and 17.
+
+`### Behaviour` is 80 of those 163 — fourteen bullets, each stating a behaviour and then explaining the
+mechanism behind it. The behaviour is release-notes material; the mechanism is not, and it is already in
+the code. Cutting to the headline plus at most a clause puts the section near 60, which is the 2.0
+precedent for a bigger change than this one.
+
+**`### Validation (at 2.1)` I would not touch**, and I want to be explicit about that since it is 26 of
+the 163. It is the gen1-is-a-port and gen3-is-unsupported honesty, and it is the part a user is actually
+at risk from not reading. The test for a changelog is not the test for a comment: does a release-notes
+reader need this to decide whether to use the feature, or to understand a risk they are taking? Hazards
+and limits stay; mechanism goes.
 
 **I would rather do that as its own delta than fold it in here.** This round is the argument for why:
 every error in it came from shortening a verified sentence, not from moving one. So the pass has to be

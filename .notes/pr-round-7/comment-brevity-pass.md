@@ -229,6 +229,42 @@ check FIRST, before touching anything. An empty diff reduces C's entire risk sur
 something load-bearing" — no functional risk at all. D cannot use this check, which is the fourth reason
 the two are separate passes.
 
+## THE CHANGELOG IS IN SCOPE TOO — added 2026-09-10
+
+Raised by the owner, and it is a better-evidenced case than the comments because the yardstick is the
+file's own history rather than a cross-file comparison.
+
+**Our 2.3 section is 163 lines of a 342-line file — 48%, for one feature, in a changelog covering years
+of this app.** What the precedents look like:
+
+| section | lines | what it was |
+|---|---|---|
+| **2.3 (ours)** | **163** | one feature |
+| 2.0 | 50 | mishamyte's MAJOR release — USCUID-UL write/wipe + Gen2/MFC outcomes |
+| 2.1 | 19 | his |
+| 2.2 | 14 | his |
+| 1.0 – 1.12 | 4–17 each | |
+
+So ours is **3.3x the largest precedent, and that precedent was a major release by the maintainer.**
+Note there is no cross-app norm to appeal to: `base_pack` holds five apps and ours is the only one with
+a CHANGELOG at all.
+
+**Where the mass is.** `### Behaviour` is 80 of the 163, across fourteen top-level bullets, and every
+one has the same shape — a bolded behaviour headline followed by the mechanism behind it. The headline
+is release-notes material; the mechanism is already in the code. Headline plus at most a clause takes
+that to roughly 25. With `### Added` trimmed from 47 toward 20 the section lands near **60**, which is
+the 2.0 precedent for a bigger change.
+
+**DO NOT CUT `### Validation (at 2.1)`** — 26 of the 163, and it is the gen1-is-a-faithful-port and
+gen3-is-unsupported honesty. It is the part a user is genuinely at risk from not reading, and the part
+the reviewer has praised. Two of its claims are stale and belong to the gen1 B-round, not to C: see
+`CHANGELOG.md:143` in [gen1-hardware-findings.md](../gen1-hardware-findings.md).
+
+**The test differs from the code test**, and the difference matters: *does a release-notes reader need
+this to decide whether to use the feature, or to understand a risk they are taking?* Hazards and limits
+stay. Mechanism goes to the code, which already has it. The C/D split still applies — C deletes whole
+mechanism clauses, D tightens what survives.
+
 ## Three defects to fix regardless of the pass
 
 1. **`iso15693_poller.c:1188` carries a dangling half-sentence** — it opens "Drives one write-mode step.
