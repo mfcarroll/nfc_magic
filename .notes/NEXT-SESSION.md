@@ -1,8 +1,32 @@
-# Next session — ROUND 7 IS PUSHED AND POSTED. Waiting on his Round 8.
-
+# Next session — ROUND 8 IS PUSHED AND POSTED. Waiting on his Round 9.
 ## Where things stand
 
 PR #250, `nfc_magic_dev` on branch `iso15693-dev`.
+
+**ROUND 8 SHIPPED 2026-09-11.** Fork pushed `dbc6e4fa..09778b6d`, a fast-forward of **16 commits**,
+all signed. Main reply at **issuecomment-5641879307**, **all 16 thread replies posted**, and the #251
+scope correction at **issue 251 issuecomment-5641885668**. Everything verified byte-identical against
+the drafts after posting. PR now reads **108 commits, 27 files, +4,123 −45**.
+
+His round 8 was `COMMENTED` and closed "nothing blocking beyond the regression". **The standing
+`CHANGES_REQUESTED` is stale — 2026-08-16 — and his last five reviews are all `COMMENTED`.** Do not
+read the badge as an objection.
+
+**13 of the 16 were comment-only**, proven with `tools/comment-only.py`. The three that were not: the
+`write_confirm` title regression, `ISO15693_POLLER_MAX_BLOCKS` across three files, and the CHANGELOG.
+
+What the reply commits us to, so a later session does not contradict it:
+
+- **The case for finishing before the merge is made, and made as HIS interest** — the PR squashes, so
+  tidying inside it costs `dev` nothing, while the same work afterwards is a second PR and a diff of
+  pure comment churn against a released app.
+- **The volume arithmetic is conceded in public**: the cut removed 95 comment lines, round 7's own
+  corrections put 85 back, this round another 25. Fifteen lines worse off than before the cut.
+- **The harness is promised as its own PR**, with the sizing that rules it out of this one.
+- **The gen1 round is put back in front of him**, on the grounds that the card now exists.
+- **A CHANGELOG correction is offered separately** if he merges before the gen1 round —
+  `CHANGELOG.md:145` still tells users the gen1 path was never tested against hardware, which is now
+  outright false rather than cautious.
 
 **ROUND 7 SHIPPED 2026-09-11.** Fork pushed `d31f5162..dbc6e4fa`, a fast-forward of **19 commits**, all
 signed. Main reply at **issuecomment-5628507918**; **all 20 thread replies posted**. The delta is three
