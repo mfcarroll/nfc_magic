@@ -42,6 +42,15 @@ Only the gen2 backdoor's `0xE0` needs the neighbour to be magic.
 The app now carries the full list on `ISO15693_MAGIC_FLAGS`, the define that makes a frame
 unaddressed, rather than on the block-write helper where it was scoped before.
 
-Still not staged on hardware, for the same reason as the original report: it needs two tags and would
-destroy data on the second.
+Still not staged on hardware — but the reason the original report gave has expired, so that part of it
+should be corrected rather than repeated. It said the test "would need two ISO15693 tags and would
+destroy data on the second". When it was filed there was one tag here. There are now fourteen, every
+one with a captured pre-write baseline and restorable from it, and most of them blank. So the
+destructive half is testable on a bystander that loses nothing permanent: present a gen2 magic card as
+the target, leave a 28-block SLI in the field, run the wipe, then read the SLI's block 27 — its only
+non-blank block — and see whether it was zeroed.
+
+It has not been run because it has not been run, not because it cannot be. It belongs in the next
+hardware session, and it would move the destructive half of this issue from expected-from-the-frames
+to observed.
 ~~~~

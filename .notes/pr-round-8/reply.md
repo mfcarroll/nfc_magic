@@ -84,6 +84,12 @@ ready, so you should have it in front of you rather than discover it:
    settled, so this round mostly **removes** text rather than adding it. The latch specifically stays
    an inference: every read-back sits behind a field power-cycle, so "latches on power-up" and
    "changes immediately" are still indistinguishable.
+
+   One of those eleven is user-facing and now outright false rather than merely cautious: the
+   CHANGELOG's validation section still reads "the gen1 path shipped as a faithful proxmark port, not
+   tested against gen1 hardware (none was available)". If you are minded to merge before that round
+   lands, say so and I will send the CHANGELOG correction on its own — it should not go out in release
+   notes as it stands.
 3. **A deletion pass.** Does each comment need to be there at all — no rewording, so it is verifiable
    by the code bytes being unchanged. This is where the volume actually comes down.
 4. **A simplification pass.** Can the survivors be said more briefly. This one rewrites live claims,

@@ -364,6 +364,23 @@ and both are done.
   a later commit had made it 9 lines in three. **Re-measure every number in a draft immediately before
   posting**, not when it is written.
 
+- **"WE CANNOT TEST THAT" GOES STALE THE MOMENT HARDWARE ARRIVES, AND NOTHING CHECKS IT.** Caught by
+  the user 2026-09-11 in the #251 draft, which repeated the issue's original "it would need two
+  ISO15693 tags and would destroy data on the second". That was true on 2026-08-11, when there was one
+  tag. **There are fourteen now, every one with a captured baseline and restorable from it, and most
+  of them blank** — see [tag-inventory.md](tag-inventory.md). So the two-tag test destroys nothing
+  permanent and is available today.
+
+  This is the same class as the gen1 hedging, but `tools/gen1-staleness.py` does not catch it: that
+  scans for claims about the gen1 PATH, not for claims about what the bench can do. **Before repeating
+  any "not staged / needs a card we do not have / would destroy" line, open the inventory and check
+  the count and the restorable column.** The phrases to grep for are `not staged`, `no card`, `needs a
+  card`, `would destroy`, `cannot test`, `nobody on the PR has`.
+
+  And when correcting one of these in a comment on our own earlier report, **say the reason expired
+  rather than quietly dropping it** — the old text stays visible above the new comment, so an
+  unexplained reversal reads as inconsistency.
+
 - **A read-based capacity measurement is a LOWER BOUND, not a capacity, and so is a search that hits its
   own ceiling.** Proven twice on 2026-09-08. `tools/iso15693_magic_probe.py`'s capacity probe reported
   "82 real blocks" on a card advertising 79 when every block up to its search bound answered — 82 was
