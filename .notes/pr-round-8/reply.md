@@ -73,10 +73,13 @@ before.
 
 ## Where this goes from here
 
-Nothing below blocks a merge and I am not asking you to hold for any of it — but you are close to
-ready, so you should have it in front of you rather than discover it:
+None of it blocks a merge. I would rather do it BEFORE one than after, though, and the reason is
+mechanical rather than a preference about polish: this PR squashes, so everything inside it collapses
+to a single commit and the tidying costs `dev` nothing. The same work afterwards is a second PR, a
+second review, and a diff of pure comment churn against a released app — more expensive for you than
+for me. So it is cheaper on this side of the merge in both directions.
 
-1. **This round.** Done.
+1. **Factual corrections.** This round, and the two before it. Done.
 2. **A gen1 hardware round.** I now have a confirmed gen1 card — the four-frame sequence works, the
    backdoor registers accept writes **without acknowledging** (that was an inference from proxmark's
    source and is now a measurement), and the card is deliberately left armed, which reproduces the
@@ -84,6 +87,10 @@ ready, so you should have it in front of you rather than discover it:
    settled, so this round mostly **removes** text rather than adding it. The latch specifically stays
    an inference: every read-back sits behind a field power-cycle, so "latches on power-up" and
    "changes immediately" are still indistinguishable.
+
+   When you last weighed in on the tags you said nothing in the review waited on them, and you were
+   right — none of the blockers needed a gen1 card. What has changed since is that the card exists,
+   so this is a bounded piece of work rather than an open wait on hardware.
 
    One of those eleven is user-facing and now outright false rather than merely cautious: the
    CHANGELOG's validation section still reads "the gen1 path shipped as a faithful proxmark port, not
@@ -95,7 +102,7 @@ ready, so you should have it in front of you rather than discover it:
 4. **A simplification pass.** Can the survivors be said more briefly. This one rewrites live claims,
    so it carries its own re-check rather than being safe by construction.
 5. **A squash message, whenever you are ready to merge.** I will post a proposed one as a comment.
-   The default here would be GitHub's concatenation of 92 commit messages — 2,748 lines — so you
+   The default here would be GitHub's concatenation of 108 commit messages — 3,167 lines — so you
    would end up writing your own in the merge box, as you did on #258. Better you have a draft to cut
    than a blank box — it is the only prose from this PR that ends up in git rather than on GitHub.
 

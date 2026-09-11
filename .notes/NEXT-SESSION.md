@@ -174,8 +174,22 @@ which means **the scope is ours, not his.**
 5. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged.
 6. **D — can it be correctly simplified?** Rewords live claims, so it carries a B-check inside it.
 
-Nothing in 3-6 is a merge blocker; mishamyte said explicitly not to hold for gen1. The order is a
-preference. Running C before 4 would have C protect text the gen1 round is about to replace.
+Nothing in 3-6 is a merge blocker, but there IS a reason to want all of it BEFORE the merge, and it
+is mechanical rather than a taste for polish: **the PR squashes, so everything inside it collapses to
+one commit and the tidying costs `dev` nothing.** The same work afterwards is a second PR, a second
+review, and a diff of pure comment churn against a released app — more expensive for him than for us.
+State it that way round; "nothing blocks a merge, and I am not asking you to hold" gives away an
+argument that is actually in his interest.
+
+**Do not over-claim what he said about gen1.** The line is "on the tags: worth having, but nothing
+here waits on them. None of the three blocking items below needs a gen1 card" — that is about the
+BLOCKERS being reachable on gen2, said while the tags had not arrived. It is not "merge without the
+gen1 round", and earlier notes here paraphrased it that way. The card exists now, which makes that
+round bounded work rather than an open wait, so it is worth putting back in front of him rather than
+treating his old answer as settled.
+
+The order is still a preference. Running C before 4 would have C protect text the gen1 round is about
+to replace.
 
 ## Deferred DELIBERATELY, not forgotten — 2026-08-22
 
