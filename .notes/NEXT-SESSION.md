@@ -641,11 +641,16 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   field power-cycle and cannot distinguish "latches on power-up" from "changes immediately". The app's
   `NfcCommandReset`-before-verify is still justified by the model, not by measurement. Isolating it needs
   a read in the SAME field session as the write.
-  **THE CARD IS NOW ARMED, deliberately.** `0x6996` went into block 63 twice and nothing clears it, so
-  its UID can move on any later write to 56/57 — including the app's own wipe. That is the state #255's
-  armed-gen1 case describes, and it has never been reproducible before. **The highest-value hardware
-  test now available: run the app's WIPE on it.** It should zero 56/57, move the UID, and report
-  `uid_changed` as Partial — the mitigation this PR ships and has never exercised on real gen1 silicon.
+  **THE ARMED-CARD WIPE HAS BEEN RUN — an earlier version of this bullet called it the next test and
+  it was done in the same session.** The wipe zeroed 56/57, the armed card latched on power-up, the
+  identity moved, and the post-power-cycle re-read caught it: `uid_changed`, reported Partial. The
+  mitigation this PR ships works on real gen1 silicon.
+  **And the outcome is WORSE than either #255 or the poller says.** The UID did not move to another
+  valid identity — it moved to **all zeros**, and an ISO15693 UID must begin with `0xE0`, so the card
+  is left with no valid identity at all. "Moved" and "changed" both understate it. Recovery is
+  byte-identical via `hf 15 csetuid`, and only possible because the app prints the original UID, which
+  is the argument for that screen.
+  **The card stays armed after a wipe**, so it is a reusable fixture: restore, test, restore.
   **Everything from that session, plus the work list it implies, is in
   [gen1-hardware-findings.md](gen1-hardware-findings.md).** Read that rather than this bullet; the
   corrections it lists belong in a delta AFTER the comment cut, which was promised as one decision with
