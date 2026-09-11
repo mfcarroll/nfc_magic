@@ -11,18 +11,12 @@ Everything else is padding to the person who wrote the finding.
 ## 01 — `scenes/nfc_magic_scene_write_confirm.c`, the wipe title — comment 3989702099
 
 ~~~~
-Fixed, and you are right that it was unintended — the commit you quote argues the title purely as an
-ISO15693 scope statement, which is the tell.
+Fixed, and yes — unintended.
 
 Not the one-token version, though. `is_wipe` goes back to `"Wipe card?"` and the ISO15693 title is
-set inside the `iso15693_wipe` branch, next to the `text_height` that branch already sets. That is
-the shape the file uses for the write-UID variant. A nested ternary would leave a protocol-specific
-string on the line whose whole job is the protocol-neutral default, which is how this happened the
-first time.
-
-Two comment lines say why the title is not taken from `is_wipe`: the union is right for the body
-dispatch and wrong for anything naming a generation, and that distinction is invisible at the
-declaration.
+set inside the `iso15693_wipe` branch, alongside the `text_height` it already sets there — the shape
+the file uses for the write-UID variant. A ternary would leave a protocol-specific string on the line
+whose whole job is the protocol-neutral default, which is how this happened the first time.
 ~~~~
 
 ---
@@ -58,13 +52,10 @@ The SDK half is re-verified rather than carried forward: `iso15693_3_poller_writ
 ~~~~
 Deleted. Both halves hold.
 
-The second one has a consequence worth stating: since neither rendered string mentions the UID, the
-screen never made the claim the comment said it was making. So the app is accidentally right, and
-there is no behaviour to fix here — which is the better of the two outcomes, because the poller's
-position is that it could not have said so honestly anyway.
+One consequence worth stating: since neither string mentions the UID, the screen never made the
+claim the comment said it was making. So there is no behaviour to fix here, only the sentence.
 
-What is left is the part that earns its place: why a cut wipe gets reported on this screen rather
-than on WipeStopped. Net −2 lines.
+Net −2 lines; the reason a cut wipe lands on this screen rather than WipeStopped stays.
 ~~~~
 
 ---
@@ -72,17 +63,13 @@ than on WipeStopped. Net −2 lines.
 ## 04 — `iso15693_poller.h`, the `<= 7` bound — comment 3989702137
 
 ~~~~
-Re-scoped to the bullet it sits in, and your worked case checks out exactly. I traced it rather than
-taking it: the below-claim branch is `if(!claimed_range_attempted) { ...card-present probe...;
-continue; }` and it never clears `absent_run`. 200 claimed, 10 held, clock at block 150 — run of 140,
-tail-drop clears 10..149, total stuck at 10, cut at 150.
+Re-scoped to the bullet it sits in. I traced the 200/10 case rather than taking it, and it comes out
+at your numbers exactly.
 
-Your second point is the more valuable one and I have cited it in place of the old mechanism. The
-deadline's position fixes `block` as the exclusive end of the attempted range and says nothing about
-the run length; what holds the gap to seven above the claim is the tripped-run handling, where a run
-reaching the threshold is either re-probed back under it or ends the sweep.
+Your correction of the MECHANISM is the more valuable half and the tripped-run handling is what the
+comment cites now — a reader checking the bound needs the code that provides it.
 
-The below-claim bullet now carries the counterexample and says outright that the bound does not hold
+The below-claim bullet carries the counterexample and says outright that the bound does not hold
 there, so the two halves cannot drift apart again.
 ~~~~
 
@@ -98,13 +85,10 @@ All three loose sites, the two you named plus the field doc itself. The field do
 it — they are carried by `failed_count`. `start_wipe`'s contract and the assignment site in the `.c`
 follow.
 
-With the header correct, the screen's pointer stops restating what it points at. That restatement was
-exactly the duplication the consolidation was meant to remove, and it survived only because it
-happened to be the accurate copy. It also clears the ragged wrap that edit left behind
-("-- and / it sits at or below the cut, so a sweep").
+With the header correct the screen's pointer stops restating it — and that clears the ragged wrap the
+earlier edit left there ("-- and / it sits at or below the cut, so a sweep").
 
-Kept both axes, since you flagged that they are different questions: "A count, never an index" is
-true and does not answer range-size-vs-tally.
+Both axes kept: "A count, never an index" is true and does not answer range-size-vs-tally.
 ~~~~
 
 ---
@@ -133,11 +117,8 @@ identically before and after.
 ## 07 — `iso15693_poller.c`, "nothing ever clears commit again" — comment 3989702161
 
 ~~~~
-Taken, in the narrower form you propose. No gen1 UID-write sequence clears commit afterwards, so a
-card left armed by an earlier run is still armed when the next one starts.
-
-The sweep's own zeroing of commit is now named rather than denied, and the reason it does not save the
-card is stated as ordering: 56/57 go first, while commit still holds `0x6996`.
+Taken, in the narrower form you propose, with the sweep's own zeroing of commit named rather than
+denied and ordering given as the reason it does not save the card.
 ~~~~
 
 ---
@@ -152,8 +133,8 @@ Your second cause I traced rather than took, and it holds: a 28-block dead card 
 where `claimed_range_attempted` first becomes true, trips with a run of 28, re-probes, finds nothing,
 and ends. Index 56 is never addressed.
 
-Both now name the card that can reach 56/57 — one that answers reads at every address — with the two
-cases that fall short called out in the source so the next reader does not have to re-derive them.
+Both now name the card that can reach 56/57, with the two cases that fall short called out in the
+source so the next reader does not re-derive them.
 ~~~~
 
 ---
@@ -171,17 +152,12 @@ it gave up".
 ## 10 — `iso15693_poller.c`, the duplicated `wiped == 0` argument — comment 3989702190
 
 ~~~~
-Deleted from the scene; the poller keeps it. Your reason for that direction is the right one — it is
-the poller's control flow.
-
-Both knock-ons are worth recording because they are what duplication does rather than incidental
-untidiness. "This file" was written about `iso15693_poller.c` and points at nothing in a scene that
-draws no inference about writes; and the dispositions had already drifted apart, one decision in two
-wordings. Deleting the copy settles both at once.
+Deleted from the scene; the poller keeps it, for the reason you give. Both knock-ons go with the
+copy, including the drifted disposition.
 
 What stays is what the scene is the authority on: which wipe reason codes reach a Details route, and
-that "Wipe stopped" can offer Retry without saying the identity check never reached an answer. That
-last one is about what a button promises.
+that "Wipe stopped" can offer Retry without saying the identity check never reached an answer — that
+last one is about what a button promises rather than about the poller's control flow.
 
 Net −4 lines, deletion only.
 ~~~~
@@ -191,10 +167,7 @@ Net −4 lines, deletion only.
 ## 11 — `nfc_magic_app_i.h`, "that screen" — comment 3989702200
 
 ~~~~
-Fixed. The screen is named now rather than referred to.
-
-Worth noting how it got there: the round-7 edit removed this parenthetical's overreach and left the
-pronoun pointing at the wrong end of a sentence it had just been rewritten around.
+Fixed — NothingWiped is named rather than referred to.
 ~~~~
 
 ---
@@ -202,11 +175,8 @@ pronoun pointing at the wrong end of a sentence it had just been rewritten aroun
 ## 12 — `scenes/nfc_magic_scene_write_confirm.c`, "the only warning" — comment 3989702205
 
 ~~~~
-Taken as you wrote it, since the rest of the paragraph is about this being a static line rather than
-a detection — which is a point about consequence.
-
-The two are not redundant, so the replacement says which does which: the title warns about scope and
-cannot say anything about cost.
+Taken as you wrote it. The replacement distinguishes the two rather than dropping one: the title
+warns about scope and cannot say anything about cost.
 ~~~~
 
 ---
@@ -214,10 +184,8 @@ cannot say anything about cost.
 ## 13 — `iso15693_poller.c`, the split doc comment — comment 3989702212
 
 ~~~~
-Moved, and the ragged wrap with it.
-
-The rejoined line lands at 103 columns, inside the 100–105 the rest of that paragraph runs at — so it
-restores its original shape rather than setting a new width.
+Moved, and the ragged wrap with it. The rejoined line lands at 103 columns, inside the 100–105 the
+rest of that paragraph runs at, so it restores the original shape rather than setting a new width.
 ~~~~
 
 ---
@@ -233,8 +201,7 @@ bottom of the same file. The filename was right; only its absence from this repo
 problem.
 
 I swept for others across `scenes`, `magic`, `views`, `helpers`, the root sources and the CHANGELOG,
-for both `test_*.c` and `hosttest`. That was the only one. The line now says why the derivation is
-written out — this boundary has been got backwards twice, by both of us — and names nothing invisible.
+for both `test_*.c` and `hosttest`. That was the only one.
 
 On the larger ask: yes, and as its own PR — the sizing is in my reply on the main thread.
 ~~~~
@@ -249,14 +216,9 @@ On the larger ask: yes, and as its own PR — the sizing is in my reply on the m
 `memset(uid_readback)`, `memset(clone_failed_bitmap)` and `iso15693_3_reset(data)`. The struct
 declares 31, and the four left alone are the four you name.
 
-I took your suggestion rather than correcting the number, because a count goes stale the next time a
-field is added and tells a reader nothing they can act on. The comment now names the four and why —
-two owned allocations, and two set by the caller and by `write_step`, so resetting them would discard
-the run's own inputs — and states the rule: a new field belongs in the reset list unless it is one of
-those two shapes.
-
-You are right that the last two are the trap. They are the ones a reader would otherwise read as an
-omission.
+I took your suggestion rather than correcting the number — a count goes stale the next time a field
+is added. The comment names the four and why, and states the rule behind them: a new field belongs in
+the reset list unless it is an owned allocation or set by the caller.
 ~~~~
 
 ---
@@ -272,9 +234,8 @@ set of two cases, both derived at the top, both coming out at three lines. The t
 their own now point at it. You are right about the commit message: it claimed the arithmetic was
 stated once, and the file did not show that.
 
-The derivations those sites keep are the local ones — that the timed-out body already reaches three
-when blocks failed, and that the y=20 body spends its third line on exactly one qualifier out of four
-in priority order. Those are decisions about content rather than about pixels.
+What those sites keep is local — which line the timed-out string goes in, and which one qualifier of
+four the y=20 body spends its third line on. Decisions about content rather than about pixels.
 
 **`ISO15693_POLLER_MAX_BLOCKS`.** In, in the header beside `BLOCK_BITMAP_SIZE`, with all four sites
 using it. You flag it as against the grain of that earlier commit and it is, so: that preference is
