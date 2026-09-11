@@ -71,7 +71,7 @@ mechanism rather than an excuse: correcting a claim means writing the sentence t
 It is also the argument for running the deletion pass after the correctness rounds rather than
 before.
 
-## Where this goes from here
+## Where I think this goes from here
 
 None of it blocks a merge. I would rather do it BEFORE one than after, though, and the reason is
 mechanical rather than a preference about polish: this PR squashes, so everything inside it collapses
@@ -103,7 +103,7 @@ for me. So it is cheaper on this side of the merge in both directions.
    so it carries its own re-check rather than being safe by construction.
 5. **A squash message, whenever you are ready to merge.** I will post a proposed one as a comment.
    The default here would be GitHub's concatenation of 108 commit messages — 3,167 lines — so you
-   would end up writing your own in the merge box, as you did on #258. Better you have a draft to cut
+   would end up writing your own in the merge box, similar to #258. Better you have a draft to cut
    than a blank box — it is the only prose from this PR that ends up in git rather than on GitHub.
 
 The CHANGELOG is in scope for 3 and 4 as well. Its 2.3 section is 165 of the file's 344 lines for one
