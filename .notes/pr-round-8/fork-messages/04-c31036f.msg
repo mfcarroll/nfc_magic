@@ -1,9 +1,10 @@
 NFC Magic ISO15693: the <= 7 gap bound is an above-the-claim fact, not a universal one
 
-cut_block's doc said the gap to blocks_total is held to ISO15693_POLLER_WIPE_ABSENT_RUN - 1
-"on every path". You refuted it from the bullet six lines down, which
-describes a card claiming 200 while holding 10 and says "THIS is where the gap
-gets large". Both were in the same field doc and the second one is right.
+cut_block's doc said the gap to blocks_total is held to
+ISO15693_POLLER_WIPE_ABSENT_RUN - 1 "on every path". You refuted it from the
+bullet six lines down, which describes a card claiming 200 while holding 10 and
+says "THIS is where the gap gets large". Both were in the same field doc and
+the second one is right.
 
 Traced it rather than taking it: the below-claim branch is
 `if(!claimed_range_attempted) { ...card-present probe...; continue; }`, and it

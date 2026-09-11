@@ -1,9 +1,10 @@
 NFC Magic ISO15693: the wipe title is ISO15693's, so stop it reaching USCUID-UL
 
-REGRESSION, and it lands on a protocol this PR does not add. dbc6e4fa put the gen3 warning on the wipe confirm screen and moved the title
-with it, but set it from is_wipe -- which line 24 defines as
-`uscuid_ul_is_wipe_mode || iso15693_wipe`. The gen3 BODY is gated on
-iso15693_wipe at the branch; the title was not.
+REGRESSION, and it lands on a protocol this PR does not add. dbc6e4fa put the
+gen3 warning on the wipe confirm screen and moved the title with it, but set it
+from is_wipe -- which line 24 defines as `uscuid_ul_is_wipe_mode ||
+iso15693_wipe`. The gen3 BODY is gated on iso15693_wipe at the branch; the
+title was not.
 
 So a magic Ultralight wipe (uscuid_ul_menu.c:99 sets the mode and goes straight
 to this scene) rendered:
