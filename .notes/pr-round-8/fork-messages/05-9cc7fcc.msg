@@ -20,7 +20,7 @@ never reports it, so "noted at its own field" would not have been true for it.
 Two ragged wraps fixed while in the same struct: the 35-character orphan
 "// function is the mapping, and", and "// send -- a" above gen1_attempted.
 
-Comment-only, and proven so rather than asserted: gcc -fpreprocessed -dD -E -P
-over the file hashes identically before and after.
+Comment-only, and checked rather than claimed: the file stripped of comments by
+the toolchain's GCC hashes identically before and after.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

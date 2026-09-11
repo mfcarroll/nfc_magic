@@ -118,5 +118,8 @@ deletion is what removes the substrate these live in.
 - 108 host tests pass.
 - Zero intra-batch churn: each pair of the sixteen commits diffed at `--unified=0`, no later commit
   removes a line an earlier one added.
-- Every commit touches shipped code; none is notes-only.
+- **13 of the 16 are comment-only**, and that is checked rather than claimed: every touched `.c`/`.h`
+  stripped of comments by the toolchain's GCC and hashed, before and after. The three that are not
+  are the ones worth your attention — the title regression, `ISO15693_POLLER_MAX_BLOCKS` with its
+  four call sites, and the CHANGELOG's wipe Limit.
 ~~~~

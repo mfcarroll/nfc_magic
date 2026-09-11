@@ -45,4 +45,6 @@ unaddressed, rather than on the block-write helper where it was scoped before.
 Still not staged on hardware. The destructive half is testable on a bystander that loses nothing
 permanent: present a gen2 magic card as the target, leave a 28-block SLI in the field, run the wipe,
 then read the SLI's block 27 — its only non-blank block — and see whether it was zeroed.
+
+I'll follow up once I've tested it.
 ~~~~

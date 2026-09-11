@@ -403,6 +403,29 @@ and both are done.
   (tick wraparound, don't-reuse-`is_wiping`, the widget copies its string so the early free is safe).
   Naming a value is often what makes the wrong refactor look attractive, so that is exactly where the
   constraint has to be written down.
+- **`gcc` ON THIS MACHINE IS CLANG, AND CLANG HAS NO `-fpreprocessed`.** Caught 2026-09-11 when the
+  user asked why the reply claimed "every commit touches shipped code" for a round that is mostly
+  comments. The comment-only check run inline as
+  `gcc -fpreprocessed -dD -E -P <file> | md5` **errors out and emits NOTHING**, so comparing two
+  empty outputs reported "identical" for every pair — including a commit that changes a ternary and
+  adds a line. A false PASS of exactly the `grep -q` shape, and it was quoted in a commit message as
+  "proven so rather than asserted".
+
+  **Use `tools/comment-only.py`**, which finds a real GCC in
+  `../Momentum-Firmware*/toolchain/arm64-darwin/bin/arm-none-eabi-gcc`, and **exits non-zero if the
+  preprocessor emits nothing** rather than treating emptiness as a match. `--range A..B` classifies
+  a whole round. This is the check the C deletion pass promises ("code bytes unchanged"), so it has
+  to be the thing that cannot pass by accident.
+
+  The round-8 answer it gives: **13 of 16 comment-only**, the exceptions being the title regression,
+  `ISO15693_POLLER_MAX_BLOCKS` across three files, and the CHANGELOG.
+
+  **And the reply bullet it replaced was wrong for a second reason:** "none is notes-only" names a
+  category the fork does not have. `.notes/` and `tools/` exist only in the dev repo, so on the PR
+  every commit is in the pack by construction and the claim is both invisible and, read as English,
+  the opposite of true. **Shipped-vs-dev-only is OUR bookkeeping; never put it in a reply.** What he
+  wants there is code-vs-comment, which tells him where to spend attention.
+
 - **A test that has never been observed to FAIL is not evidence, and neither is a build system whose
   dependency tracking has never been observed to fire.** Mutation-test anything new: break the fix the
   test covers, watch the test go red, restore. On 2026-08-18 two `write_identity` tests passed against
