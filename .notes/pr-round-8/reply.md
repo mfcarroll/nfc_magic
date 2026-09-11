@@ -53,30 +53,15 @@ names nothing invisible.
 
 ## The harness — yes, and as its own PR
 
-I would rather contribute it than delete the citation, so: yes. But it should not ride in here, and
-the reason is arithmetic. This PR is 27 files and +4,123 lines. `tools/hosttest` is **49 files and
-4,898 lines** — eight test files at 2,843 lines, three fakes at 940, and 33 fake SDK headers.
-Folding it in more than doubles the file count and roughly doubles the diff, at round eight, in a
-review you read commit by commit. That is a worse deal for you than for me.
+I would rather contribute it than delete the citation, so: yes. Not in here, though, and the reason
+is arithmetic — this PR is 27 files and +4,123 lines, and `tools/hosttest` is 49 files and 4,898. It
+would more than double what you are reading, at round eight, in a review you take commit by commit.
 
-What it is, so you can judge it before it arrives:
-
-- Shipped code compiles **verbatim** — the test files `#include` the `.c` so file-statics are
-  reachable, and firmware calls resolve to fakes via `-Ifakes`. No seam, no `#ifdef TEST`, nothing
-  added to the app. `application.fam` excludes `tools/`, so none of it can ship.
-- 108 cases across eight files: the wipe sweep, the clone loop, the terminal-outcome contract, the
-  write state machine, the AFI/DSFID retry loop, the two result screens against fake GUI recorders,
-  the write scene's routing, and the UID formatter's two policies.
-- The fakes' semantics are cited to firmware source in the README, and the GUI enum lists are copied
-  from the firmware rather than invented.
-- It has caught real defects rather than only confirming: the clock-cut "Card too small" claim on this
-  PR came from its first run over the clone loop.
-
-Two things you should know before saying yes. It is a **host** harness — it runs on a development
-machine with `make`, not on the Flipper and not under `ufbt`, so it needs somewhere to live that CI
-does not try to build as an app. And whether `base_pack` grows a test directory at all is a
-repository-shape decision that is @xMasterX's as much as yours. I will open it as its own PR and let
-the two of you decide; nothing in this one depends on the answer.
+I will open it separately and put the detail there. Two things worth knowing before then: it is a
+**host** harness, run with `make` on a development machine rather than under `ufbt`, so it needs
+somewhere to live that CI will not try to build as an app — and whether `base_pack` grows a test
+directory at all is a repository-shape call that is @xMasterX's as much as yours. Nothing in this PR
+depends on the answer.
 
 ## The volume number, measured
 
@@ -117,6 +102,10 @@ you are close to ready and I would rather you know what is still coming than dis
    by the code bytes being unchanged. This is where the volume actually comes down.
 4. **A simplification pass.** Can the survivors be said more briefly. This one rewrites live claims,
    so it carries its own re-check rather than being safe by construction.
+5. **A squash message, whenever you are ready to merge.** I will post a proposed one as a comment.
+   The default here would be GitHub's concatenation of 92 commit messages — 2,748 lines — so you
+   would end up writing your own in the merge box, as you did on #258. Better you have a draft to cut
+   than a blank box — it is the only prose from this PR that ends up in git rather than on GitHub.
 
 The CHANGELOG is in scope for 3 and 4 as well. Its 2.3 section is 165 of the file's 344 lines for one
 feature, against 50 for your 2.0 major release, 19 for 2.1 and 14 for 2.2. That is out of proportion

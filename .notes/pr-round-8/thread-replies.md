@@ -236,9 +236,7 @@ I swept for others across `scenes`, `magic`, `views`, `helpers`, the root source
 for both `test_*.c` and `hosttest`. That was the only one. The line now says why the derivation is
 written out — this boundary has been got backwards twice, by both of us — and names nothing invisible.
 
-On the larger ask: yes, and as its own PR. The sizing is in my reply on the main thread; the short
-version is that the harness is 49 files and 4,898 lines against this PR's 27 and +4,123, so folding it
-in here would more than double what you are reading, at round eight.
+On the larger ask: yes, and as its own PR — the sizing is in my reply on the main thread.
 ~~~~
 
 ---
