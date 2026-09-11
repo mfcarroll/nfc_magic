@@ -24,9 +24,21 @@ commits in this round and no `tools:`-only commits either.
   prefixed.
 - **Subjects NOT trimmed.** They run 70–90 columns. Existing fork subjects reach 121, so nothing
   requires 72 and the round-7 note says so explicitly — do not re-inherit it as a rule.
-- **All sixteen bodies moved to second person.** Every one referred to the reviewer in the third
-  person, since the dev message is written for us. "mishamyte points out" → "You point out",
-  "He is right" → "You are right", "his suggestion" → "your suggestion".
+- **NO SECOND PERSON, AND THIS REVERSES THE ROUND-7 CONVENTION.** That round's README said to move
+  bodies from third person to second, on the reasoning that the reviewer reads them. **That is
+  wrong, and the data says so:** only 11 of the 143 existing fork commits use "you" at all, seven of
+  them from round 7 — i.e. ours — and the pre-existing ones are mostly quoted UI strings. The older
+  norm is third person or no attribution ("Split out at mishamyte's request").
+
+  The reason is the artifact, not the audience. **A commit message outlives the review.** It is read
+  by whoever runs `git log` on `dev` in two years, and "You are right that the conclusion survives"
+  is meaningless to them — it reads as half of a conversation they cannot see. Second person belongs
+  in the PR reply, which is a conversation; the commit states the defect and the fix.
+
+  So: state it flat. "Flagged in review" or "Suggested in review" where the provenance carries
+  information, nothing where it does not. Dropped with it: dialogue narration ("You found it, and
+  found the tell with it"), self-assessment ("which is better than a corrected count"), and
+  descriptions of the diff the reader has in front of them.
 - **Three host-harness passages removed** — `02`, `15` lost "108 host tests pass" and `15`'s
   verification line was rewrapped around it. `tools/hosttest` is not in the pack, so a message citing
   it describes something the reader cannot see. **`16` KEEPS its references** on purpose: that commit

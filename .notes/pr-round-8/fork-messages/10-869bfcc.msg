@@ -5,15 +5,13 @@ doc comment. So the first half headed finish_write, describing the wrong functio
 and stopping mid-clause on "Returns the", while the second half sat above
 write_step opening with no subject. Neither function was correctly documented.
 
-You are explicit that the extraction itself is right and does what you asked for
--- this is only where the hunk landed. Moved the orphaned line down to rejoin
-its other half.
+The extraction itself is right; this is only where the hunk landed. The orphaned
+line moves down to rejoin its other half.
 
 The same paste left a ragged wrap inside finish_write's own comment ("-- so a
 change to / the gen2 / arm could"), which 5bc041d4's rewrap pass did not reach.
-Rejoined, at 103 columns, which is the width of the three lines around it -- so
-this restores the paragraph's original shape rather than setting a new one, and
-stays inside the churn-avoidance boundary the cut settled at.
+Rejoined at 103 columns, inside the 100-105 the rest of that paragraph runs at, so
+it restores the original shape rather than setting a new width.
 
 Comment-only, net -1 line.
 

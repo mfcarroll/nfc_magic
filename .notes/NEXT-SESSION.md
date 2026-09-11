@@ -631,8 +631,24 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   left uncorrected on purpose, because fixing them means force-pushing over a live review and an ugly
   subject line is worth far less than his review anchors. One sed does it:
   `sed -E 's/^(iso15693|changelog|nfc_magic|scene_write): //'`
-- Also adapt the BODY for publication: no third-person references to the reviewer ("he counted three" ->
-  "you counted three"), and drop mentions of `tools/hosttest`, whose files are not in the pack.
+- Also adapt the BODY for publication: drop mentions of `tools/hosttest`, whose files are not in the
+  pack. **But do NOT move it to second person — that instruction used to live here and it was wrong,
+  corrected 2026-09-11 after the user caught it.** A commit message outlives the review: it is read by
+  whoever runs `git log` on `dev` in two years, and "you are right that..." reads to them as half of a
+  conversation they cannot see. The data agrees — only **11 of 143** existing fork commits use "you",
+  **seven of them ours from round 7**, and the older norm is third person or no attribution at all
+  ("Split out at mishamyte's request"). Second person belongs in the PR reply, which IS a
+  conversation. In the commit, state the defect and the fix flat: "Flagged in review" / "Suggested in
+  review" where provenance carries information, nothing where it does not.
+
+  Three things go out with the pronoun, all of them the commit-message form of the reply padding:
+  **dialogue narration** ("You found it, and found the tell with it"), **self-assessment** ("which is
+  better than a corrected count"), and **descriptions of the diff** the reader already has open.
+
+  Length is NOT the problem and should not be cut for its own sake — measured 2026-09-11, existing
+  NFC-Magic fork messages run **median 243 words, mean 263, p90 375**. The round-8 sixteen average 226
+  after the rewrite, already under the median. The commit test still governs what goes in: does it
+  tell a reader of the diff something the diff cannot show?
 - **Do NOT resolve his review threads.** Established from the data 2026-09-08: of 100 threads, the only
   24 resolved are all from round 5 (2026-08-16), all opened by him, and the two he left open from that
   round are exactly the two he named in round 7 as "held open from before" (the `:752` budget thread and
