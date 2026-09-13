@@ -51,9 +51,10 @@ blocks. That is the part a user can act on.
 ## And it moved a threshold in round 9's own fix
 
 The fix for your sweep-condition finding — the one you said you would fix first — landed "the sweep
-misses 56/57 only when the card answers nothing there **and** claims fewer than 57 blocks". 57 is the threshold for block 56 sitting *inside* the claim,
-and it misses the other route: the sweep does not stop at the advertised count, it keeps writing
-until `ISO15693_POLLER_WIPE_ABSENT_RUN` blocks in a row answer nothing. A card silent from block A
+misses 56/57 only when the card answers nothing there **and** claims fewer than 57 blocks". 57 is
+the threshold for block 56 sitting *inside* the claim, and it misses the other route: the sweep does
+not stop at the advertised count, it keeps writing until `ISO15693_POLLER_WIPE_ABSENT_RUN` blocks in
+a row answer nothing. A card silent from block A
 is attempted through A+7, and a write that lands resets the run — so 56 and 57 both go at a claim of
 **49**. Measured against the poller rather than derived:
 
@@ -62,8 +63,10 @@ is attempted through A+7, and a write that lands resets the run — so 56 and 57
 49..52  ->  56 ZEROED,    57 ZEROED
 ```
 
-So the old wording called a card advertising 49–56 safe when the sweep reaches its UID registers.
-Two tests now sit on 48 and 49.
+So the old condition is wrong in a specific band. A card advertising 49–56 satisfies it — it answers
+nothing above its claim, and it claims fewer than 57 — so by that wording the sweep misses 56/57 and
+the UID is out of reach. It is not: the sweep gets there and zeroes them, which on an armed gen1
+card is the identity going. Two tests now sit on 48 and 49 to pin that boundary.
 
 That figure is yours — it is the condition you wrote out in that thread — and I took it without
 checking it. Saying so because you asked
