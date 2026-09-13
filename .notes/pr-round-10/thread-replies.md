@@ -85,7 +85,7 @@ wipe does no magic detection at any point to back it.
 Fixed in "two figures that outlived what anchored them" — the number is gone and the named fields
 stand on their own.
 
-The second half of that commit is your thread 11.
+The second half of that commit answers your note on the block-ceiling claim in the header.
 ~~~~
 
 ---
@@ -125,7 +125,7 @@ claim before cutting it, and that is now the rule rather than the incident.
 ## 10 — `nfc_magic_scene_write_confirm.c:24` — comment 3995478954
 
 ~~~~
-Dropped in the same commit as thread 05. `is_wipe` is `uscuid_ul_is_wipe_mode` at its only use site
+Dropped in the same commit as the confirm-title rationale. `is_wipe` is `uscuid_ul_is_wipe_mode` at its only use site
 and now says so.
 ~~~~
 

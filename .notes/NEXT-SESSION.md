@@ -403,7 +403,10 @@ which means **the scope is ours, not his.**
    wrapping the twelve `widget_add_string_multiline_element` calls — is DECLINED on diff cost**, and
    the old objection recorded against it (that the per-site y values carry the line budget) does NOT
    hold, since that rationale is hoisted to the file header. Say so rather than let it be re-derived.
-7. **THE RELEASE NOTES — added 2026-09-13, previously untracked.** The 2.3 section is **178 lines
+7. **THE RELEASE NOTES — added 2026-09-13, previously untracked. RUNS WITH STEP 5, not after it**
+   (decided 2026-09-13). The cut deletes the code-side copies of reasoning the release notes also
+   carry, so splitting them leaves the two artifacts briefly disagreeing and gives him two tightening
+   deltas to read instead of one. The 2.3 section is **178 lines
    against 14 and 19** for the two entries before it, i.e. half of CHANGELOG.md for one feature.
    Same discipline as C: what a user needs about the card in their hand stays, the reasoning goes.
    This was discussed across several rounds and never written down anywhere, which is why it kept
