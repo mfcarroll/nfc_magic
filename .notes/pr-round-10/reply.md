@@ -63,15 +63,15 @@ is attempted through A+7, and a write that lands resets the run — so 56 and 57
 49..52  ->  56 ZEROED,    57 ZEROED
 ```
 
-So the old condition is wrong in a specific band. A card advertising 49–56 satisfies it — it answers
-nothing above its claim, and it claims fewer than 57 — so by that wording the sweep misses 56/57 and
-the UID is out of reach. It is not: the sweep gets there and zeroes them, which on an armed gen1
-card is the identity going. Two tests now sit on 48 and 49 to pin that boundary.
+So the old condition is wrong in a specific band. A card advertising 49–56 satisfies it — it
+answers nothing above its claim, and it claims fewer than 57 — so by that wording the sweep misses
+56/57 and the UID is out of reach. It is not: the sweep gets there and zeroes them, which on an
+armed gen1 card is the identity going. Two tests now sit on 48 and 49 to pin that boundary.
 
 That figure is yours — it is the condition you wrote out in that thread — and I took it without
-checking it. Saying so because you asked
-for the same in the other direction. It was invisible until this week: the only gen1 card here was the
-56-block LRi2K, where 56/57 are the first two blocks past the claim.
+checking it. Saying so because you asked for the same in the other direction. It was invisible until
+this week: the only gen1 card here was the 56-block LRi2K, where 56/57 are the first two blocks past
+the claim.
 
 The correction runs toward safety — of the five gen1 cards, only the LRi2K reaches its own UID
 registers under a wipe.

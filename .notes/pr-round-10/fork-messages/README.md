@@ -17,3 +17,25 @@ sweep:
 awk '/^~~~~$/{f=!f;next} f' .notes/pr-round-*/reply.md .notes/pr-round-*/thread-replies.md \
   | grep -niE "thread[s]? [0-9]"
 ```
+
+## The width check was counting BYTES — 2026-09-13
+
+`awk '{print length}'` on this machine returns **bytes**, not characters. Every em-dash, en-dash and
+arrow in our prose is 3 bytes, so a line of 78 characters can measure 84+ and a width sweep
+over-reports on exactly the text we write.
+
+It is always conservative for a MAXIMUM — bytes >= characters, so nothing over-long can hide — which
+is why it caused no harm here: the round-10 fork messages measure **zero over 84 characters**. But
+it reported nine over-length lines in the reply when the real number was one, and a check that cries
+wolf is a check people stop reading.
+
+Use python for width from now on:
+
+```bash
+python3 -c "
+import sys
+for p in sys.argv[1:]:
+    for i,l in enumerate(open(p),1):
+        if i>1 and len(l.rstrip())>84: print(f'{p}:{i} = {len(l.rstrip())}')
+" .notes/pr-round-*/fork-messages/*.msg
+```
