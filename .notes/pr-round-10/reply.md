@@ -25,7 +25,7 @@ Three corrections came out of it, all three stated the other way round in the co
 - **"The backdoor registers accept writes without acknowledging" was a parse, not a measurement.**
   62/63 answer with error 0x10, and the client renders that as `( fail )`. What replaced it is
   stronger: on an armed card both register writes are refused and the UID moves anyway, so a poller
-  acting on those return values would abort a run that worked.
+  acting on those return values would abort a run that actaully worked.
 - **The four backdoor addresses are not memory.** The LRi2K taking writes at 56/57/62/63 while
   advertising 56 blocks was read here as memory above its claim, by analogy with a gen2 card holding
   blocks above its own. Wrong analogy. With the capacity search pushed past those addresses on four
@@ -189,6 +189,8 @@ than cutting first.
 
 Nothing here needs your time before that, unless you disagree with the order or want the addressing
 work scoped differently — it is your call whether it belongs in this PR at all or in a follow-up.
+
+[👤] I lean towards keeping it in this PR, especially now the gen1/2 hardware testing is almost all in hand as opposed to an unknown wait, but let me know if you disagree.
 
 Both firmwares warning-free, 116 host tests, format clean.
 ~~~~
