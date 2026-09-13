@@ -153,12 +153,35 @@ thirteen reason codes reaching a titled screen, the right-slot rule agreeing bet
 
 ## What is left, in order
 
+**Shrinking what you have to read, first:**
+
 1. **The comment cut.** Measured rather than guessed: 1,576 comment lines on this surface, 787 of
    them in 43 blocks of ten lines or more, and roughly 250–370 removable by moving argument out and
-   keeping constraints and measurements. Two thirds of it is in `iso15693_poller.c` alone, so it is
-   one file's delta. Deletion only, and verifiable as such.
-2. **Addressed writes**, and the gen1 caveat gate with them.
-3. **Re-test on device**, including the TI cards that cannot currently be written.
+   keeping constraints and measurements. Two thirds is in `iso15693_poller.c` alone, so it is one
+   file's delta. Deletion only, and mechanically verifiable as such — code bytes unchanged.
+2. **The simplification pass**, which is separate and smaller. Three real items: the pass-cut is
+   written out twice and both copies set the two fields that gate Retry, with half the rationale at
+   each site; three saturating `total - bad` subtractions share a constraint that is currently
+   explained 600 lines away; and the block-size clamp is spelled two ways that agree only by
+   accident. One item I am **declining** and would rather say so than leave you to wonder: the
+   twelve `widget_add_string_multiline_element` calls can be wrapped, and I had recorded an
+   objection that turns out not to hold, but it touches all twelve branch bodies in the most-churned
+   file in the PR to save about twenty-five lines of formatting. Wrong trade at this point.
+3. **The release notes.** The 2.3 section is **178 lines against 14 and 19** for the two entries
+   before it — half the file, for one feature. Same discipline as the comment cut: what a user needs
+   to know about the card in their hand stays, the reasoning behind it goes.
+
+**Then the feature work:**
+
+4. **Addressed writes**, and the gen1 caveat gate with them.
+5. **Re-test on device**, including the TI cards that cannot currently be written.
+
+**And at merge:**
+
+6. **The squash message.** Since this squashes, the default body is every commit message
+   concatenated, and this round alone is nine of them. I have one drafted to hand you as a comment
+   when you are ready to merge, rather than leaving you to write one in the merge box or take the
+   concatenation. Not yet — it has to describe the final state, and items 1–5 will change it.
 
 I am doing the cut first, and the reason is not tidiness: at 46% comment that file actively slows
 the work, and doing the addressing fix in it and then cutting around the new comments costs more
@@ -166,8 +189,6 @@ than cutting first.
 
 Nothing here needs your time before that, unless you disagree with the order or want the addressing
 work scoped differently — it is your call whether it belongs in this PR at all or in a follow-up.
-
-[👤] I lean towards in the PR still, I'd rather ship the app as functional as it can be now that most of the hardware testing is in hand rather than an unknown wait. But let me know if you disagree.
 
 Both firmwares warning-free, 116 host tests, format clean.
 ~~~~

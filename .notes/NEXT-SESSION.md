@@ -392,8 +392,22 @@ which means **the scope is ours, not his.**
    items are comment corrections, so it is a **B pass, and B precedes C/D.** It also SHRINKS the surface
    (inference -> measurement removes the hedging), so it makes the comment passes easier rather than
    harder. The card is a reusable fixture — restore, test, restore — so it is not one-shot.
-5. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged.
-6. **D — can it be correctly simplified?** Rewords live claims, so it carries a B-check inside it.
+5. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged. **Measured
+   2026-09-12** in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md):
+   1,576 comment lines, 787 in 43 blocks of 10+, ~250-370 removable, two thirds of it in
+   `iso15693_poller.c` alone. Re-measure before running it — round 10 added +103.
+6. **D — can it be correctly simplified?** SMALLER than C and separate from it. The live items are
+   the self-review's P1-P3: the duplicated pass-cut (two write points for the two fields that gate
+   Retry, half the rationale at each), the three saturating `total - bad` subtractions whose shared
+   constraint is explained 600 lines away, and the block-size clamp spelled two ways. **P4 —
+   wrapping the twelve `widget_add_string_multiline_element` calls — is DECLINED on diff cost**, and
+   the old objection recorded against it (that the per-site y values carry the line budget) does NOT
+   hold, since that rationale is hoisted to the file header. Say so rather than let it be re-derived.
+7. **THE RELEASE NOTES — added 2026-09-13, previously untracked.** The 2.3 section is **178 lines
+   against 14 and 19** for the two entries before it, i.e. half of CHANGELOG.md for one feature.
+   Same discipline as C: what a user needs about the card in their hand stays, the reasoning goes.
+   This was discussed across several rounds and never written down anywhere, which is why it kept
+   being re-raised.
 
 Nothing in 3-6 is a merge blocker, but there IS a reason to want all of it BEFORE the merge, and it
 is mechanical rather than a taste for polish: **the PR squashes, so everything inside it collapses to
