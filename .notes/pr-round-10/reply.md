@@ -5,9 +5,13 @@ Post between the `~~~~` markers.
 ~~~~
 ## Round 9 addressed, gen1 validated, the self-review run — and a reason not to merge yet
 
-All eleven threads are fixed; replies are on each. Also in this push: the gen1 hardware round, the
-self-review you asked for, and a device test session that found something that changes where this
-PR stands. That last part is the important one, so it is below rather than buried at the end.
+All eleven threads are fixed; replies are on each. The round is grouped by SUBJECT rather than one
+commit per thread — nine commits for the eleven, plus the gen1 round and the self-review — so
+several threads land in the same one and each reply names which.
+
+Also in this push: the gen1 hardware round, the self-review you asked for, and a device test session
+that found something that changes where this PR stands. That last part is the important one, so it
+is below rather than buried at the end.
 
 ## gen1 is validated across three chips
 
@@ -86,7 +90,7 @@ hf 15 wrbl      -b 8 -d 55667788   ->  ( ok )
 
 Addressed works, unaddressed is refused with error 0x01, addressed works again as the control.
 
-[👤 This para 100% human-written.] That is fundamentally different to the behaviour of the only gen2 card I had throughout the start of this project, and means that - as it stands - the app only correctly supports a subset of gen2 cards. It's totally fixable, but is feature work.
+[👤] That is fundamentally different to the behaviour of the only gen2 card I had throughout the start of this project, and means that - as it stands - the app only correctly supports a subset of gen2 cards. It's totally fixable, but is feature work.
 
 **Every ISO15693 write this app sends is unaddressed.** So on that silicon a wipe clears nothing and
 reports "Wipe failed", and a clone sets the UID through the gen2 backdoor and then fails every data
@@ -191,7 +195,7 @@ than cutting first.
 Nothing here needs your time before that, unless you disagree with the order or want the addressing
 work scoped differently — it is your call whether it belongs in this PR at all or in a follow-up.
 
-[👤] I lean towards keeping it in this PR, especially now the gen1/2 hardware testing is in hand as opposed to an unknown wait, but let me know if you disagree.
+[👤] I lean towards keeping it in this PR, especially now the gen1/2 hardware testing is in hand as opposed to an unknown wait, but please let me know if you disagree.
 
 Both firmwares warning-free, 116 host tests, format clean.
 ~~~~
