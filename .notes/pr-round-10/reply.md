@@ -191,7 +191,7 @@ than cutting first.
 Nothing here needs your time before that, unless you disagree with the order or want the addressing
 work scoped differently — it is your call whether it belongs in this PR at all or in a follow-up.
 
-[👤] I lean towards keeping it in this PR, especially now the gen1/2 hardware testing is almost all in hand as opposed to an unknown wait, but let me know if you disagree.
+[👤] I lean towards keeping it in this PR, especially now the gen1/2 hardware testing is in hand as opposed to an unknown wait, but let me know if you disagree.
 
 Both firmwares warning-free, 116 host tests, format clean.
 ~~~~
