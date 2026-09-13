@@ -194,3 +194,10 @@ python3 tools/make_test_iso15693_nfc.py            # -> tools/test_nfc/*.nfc
 The set covers: smaller impersonation (SLIX-28, LRi2K-56), same-size/different-IC (Tag-it-64),
 edge-page data that fits (edgedata_64), and edge-page data that can't fit a 64-block target
 (oversize_edgedata_70 vs oversize_empty_70 — Partial-with-named-blocks vs clean Success).
+
+**Every byte is synthetic and self-identifying**, so a block-addressing fault reads as a wrong number
+rather than as merely wrong data: blocks 0/1 carry `A5<blk>5A<blk>`, and `wipeseed_64` fills every block
+with the reverse, `5A<blk>A5<blk>`. The two markers differ on purpose — the merge-gate test clones
+wipeseed and then a smaller profile over it, and needs to tell a header block that was rewritten from
+one wipeseed left behind. Regenerate rather than hand-editing, and re-copy to the SD card afterwards if
+you keep fixtures there; `flipper_ground_truth.py` uploads from the repo each run and needs no copy.

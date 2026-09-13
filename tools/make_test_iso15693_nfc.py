@@ -23,7 +23,21 @@ import argparse
 import os
 
 # profile = dict(uid=8 bytes, ic_ref, dsfid, afi, blocks, data={blocknum: "AABBCCDD"} for non-zero blocks)
-_HDR0, _HDR1 = "E3082156", "82186000"  # a plausible block0/block1 (mirrors a real read); rest zero
+# Blocks 0/1 of most profiles: non-zero, so a clone has something to compare rather than zeros that a
+# failed write is indistinguishable from; self-identifying, so a block-addressing fault shows up as a
+# wrong NUMBER and not merely as wrong data; and deliberately the REVERSE of wipeseed_64's
+# 5A<blk>A5<blk>, so the merge-gate test can still tell a header block that was rewritten from one
+# wipeseed left behind.
+#
+# These replaced real data on 2026-09-13. The previous pair mirrored a live read of the card now called
+# gen-2-card, which turned out to be an expired access credential cloned onto it -- so seven of these
+# fixtures were carrying eight bytes of a real credential's payload as their "synthetic" header. Nothing
+# shipped (sync-to-fork.sh never touches tools/), but test data should look like test data.
+def _hdr(block):
+    return "A5%02X5A%02X" % (block, block)
+
+
+_HDR0, _HDR1 = _hdr(0), _hdr(1)
 PROFILES = {
     "slix_28": dict(uid="E0 04 01 10 A1 A2 A3 A4", ic_ref=0x03, dsfid=0x00, afi=0x00, blocks=28,
                     data={0: _HDR0, 1: _HDR1},
