@@ -96,8 +96,14 @@ extern Iso15693_3Data fake_activation_cache;
 // Reset everything: a 0-block tag, no lift, 1 tick per op, empty log.
 void fake_tag_reset(void);
 
+// The byte fake_tag_init and fake_data_init fill with. Exposed because a test that wants to prove a
+// block was NOT written has to name the value it expects to still be there -- asserting "non-zero" is
+// not enough when the source is filled with the same marker, which is how two gen1 tests came to pass
+// against a mutant that wrote straight over the backdoor blocks.
+#define FAKE_MARKER (0xA5U)
+
 // Give the tag `advertised` blocks of `block_size` bytes, `physical` of them present and writable,
-// the rest absent. Blocks below `physical` are filled with a recognisable non-zero marker.
+// the rest absent. Blocks below `physical` are filled with FAKE_MARKER.
 void fake_tag_init(uint16_t advertised, uint16_t physical, uint8_t block_size);
 
 // Mark [first, last] inclusive as `kind`, leaving content alone.

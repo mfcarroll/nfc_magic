@@ -1,7 +1,197 @@
-# Next session — ROUND 8 IS PUSHED AND POSTED. Waiting on his Round 9.
+# Next session — THE SELF-REVIEW IS DONE AND FIXED. Nothing pushed.
 ## Where things stand
 
+**25 shipped commits are unpushed** (35 in all, counting `.notes/` and `tools/`). The PR's pushed
+head is still `09778b6d`. The stack is: the gen1 B-round (8), round 9's fixes (7), and round 10's
+self-review fixes — 16 commits, of which **10 are shipped** and 6 are dev-only.
+
+### THE BENCH RUN IS DONE — 4/4 gen1, and it corrected one of round 9's own fixes
+
+All four pm3-marked candidates are **gen1**: `slix-1k-50x28`, `slix-1k-coin18`, `slix-1k-50mm` (NXP
+SLIX, 28 blocks) and `SL2S5302` (NXP SLIX-S, 40). With the LRi2K that is five cards across three
+chips, and the CHANGELOG says so now.
+
+**Two corrections came out of it, and both were standing facts here.**
+
+1. **The backdoor addresses are NOT memory.** "Writable memory above the advertised count" was the
+   wrong reading of the LRi2K, by analogy with a gen2 card's over-claim. With `--capacity-max 70`
+   searching past them on all four new cards, every one stops at its advertised count and
+   56/57/62/63 answer **no read, ever**. Write-only registers outside the memory map. A 28-block
+   gen1 card has 28 blocks.
+2. **The wipe reaches the UID registers from a claim of 49, not 57.** The sweep keeps writing past
+   the claim until `ABSENT_RUN` blocks answer nothing, so a card silent from A is attempted through
+   A+7, and a landing write resets the run — so 56 and 57 both go at 49. Measured 44→52, pinned by
+   tests at 48/49. **The 57 figure was his, from round 9 thread 01, adopted without checking.** The
+   band it wrongly called safe is 49–56.
+
+   It runs toward safety: only the 56-block LRi2K reaches its own UID registers under a wipe. The
+   other four trip out seven blocks past their claim.
+
+**And a harness bug worth not repeating.** `pm3_exec` decoded pm3 stdout as strict UTF-8. `hf 15
+rdbl` prints an ASCII rendering of the block, so block 0 of any **NDEF-formatted** tag — which opens
+`E1`, the CC magic number — made the decode throw, and the caught exception was recorded as a FAILED
+READ. Three bench sessions went looking for an RF cause for `slix-1k-50mm`. The tell was in the
+first capture: every failure named the same byte offset (472/474), and RF does not fail
+deterministically to the byte. Fixed with `errors="replace"`; the hex column the parser uses is
+ASCII and survives. Same class as the `gcc -fpreprocessed` and `grep -q` false passes.
+
+### NEXT: the cut, as its own round
+
+**The consent screen no longer reports gen1's validation status at all** — that was folded into the
+first round-10 commit rather than shipped as a round-trip, since correcting it and then removing it
+inside one batch is the intra-batch churn he has flagged twice. What the user consents to is the
+write and its blast radius; the sample size is a fact about the project and lives in the release
+notes.
+
+**The bench run is now about the CHANGELOG claim, not the screen.** "validated on hardware, on one
+ST LRi2K card" is a claim about evidence, and that is where more cards change the text.
+
+Four `pm3`-marked tags have **never had a write probe run**, and the seller said those are the
+proxmark-writable ones:
+
+| tag | blocks | state | gen1 probe |
+|---|---|---|---|
+| `SL2S5302` | 40 adv / 40 phys | blank, restorable | safe — 56/57/62/63 above measured capacity |
+| `slix-1k-50mm` | 28 adv | `[0,1]` unread | safe |
+| `slix-1k-50x28` | 28 / 28 | blank | safe |
+| `slix-1k-coin18` | 28 / 28 | blank | safe |
+
+**The probe is a real test, not a foregone negative.** gen1 needs 56/57/62/63 to exist, and on all
+four those sit above the *measured* capacity — but a read-based capacity figure is only a LOWER
+BOUND, and `lri2k-keychain` is exactly the case that proves it: 56 advertised, and it took writes at
+56/57/62/63 anyway. So the probe discovers whether these answer the gen1 backdoor at all. (RESULT:
+all four do, and none of them has memory there — see the corrected finding below.)
+
+The four unmarked tags (`slix-black-38x25` 28 blocks, `slix2-gold-30mm` 79/82, `ti-2k-silver-1/2`
+64 each) are expected to refuse — the seller said they need a custom application. Note the last
+three have the backdoor blocks genuinely IN range, so the probe is destructive there; all are blank
+or restorable, but run them last and restore from baseline.
+
+**Then the cut**, measured in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md):
+~250-370 lines out of `iso15693_poller.c` alone, which holds 65% of the opportunity. Do not go after
+the header — its 66% is per-field contract, the least compressible comment on the surface.
+
+**ROUND 10 = the self-review mishamyte asked for**, run 2026-09-12 with
+`/pr-review-toolkit:review-pr` (seven agents) over the reconstructed FINAL-STATE PR diff — 27
+files, +3922 −45, built by replaying `sync-to-fork.sh` onto the PR merge-base so it covers the
+unpushed commits rather than only what he can see. Everything is in
+[pr-round-10/self-review/](pr-round-10/self-review/): `SCOPE.md`, `FINDINGS.md`, the diff, and the
+session's own mechanical results.
+
+### The finding to lead the reply with — it explains rounds 8, 9 AND 10
+
+**`tools/gen1-staleness.py` could not see a single one of the eight stale gen1 sites that survived
+the B-round**, including two consent-screen strings that told users gen1 was untested. Two
+vocabulary gaps, both the same mistake: the patterns match the phrasing that was *already fixed*.
+
+- `latch(es)?\b` misses `latched` — the word is at three shipped sites, and the scanner flagged the
+  two that are CORRECT.
+- the validation pattern matches "validated", never "tested". `2edb202` removed exactly three sites,
+  all spelled "NOT hardware-**validated**"; the survivors all spelled it "not hardware-**tested**".
+
+A pattern list written by reading the sites you just fixed encodes their vocabulary and is
+systematically blind to the ones you missed — and then reports the job done. Fixed, plus a SELFTEST
+list of known-stale phrasings asserted to match (runs on every invocation, refuses to scan if it
+fails), plus a loud exit when given no files, since a bare run printed nothing and exited 0.
+
+### The one behavioural fix, and it is a real user-facing gap
+
+**A wipe that loses the card never said the identity check had not run.** It returns before
+`VerifyWipe` is entered, `has_details` sent CardLost to its default arm, and "UID not re-checked"
+is reachable only through Details. By then the sweep has written 56/57 — which on an armed gen1
+card ARE the UID — so the card could be gone and its identity with it, and the user was told only
+that they had removed it. `has_details` now covers CardLost when `wipe_mode && !uid_verified`; the
+note's wording is chosen by route (a card-lost wipe never reached a field reset); and the block
+list is SUPPRESSED there, because the sweep's own comment says a lifted card "can surface as a pile
+of blocks that wouldn't clear". Four tests, each mutation-checked to kill exactly one.
+
+Second code change: the wipe's live progress denominator moved BELOW the geometry guard, so a card
+reporting `block_size == 0` can no longer carry its own unverified claim into a terminal event.
+
+### What the review did NOT find, which is worth saying in the reply
+
+A full correctness pass found **no functional defect** — memory, buffers, tick wraparound,
+tail-drop arithmetic, state-machine completeness, Back handling and the poller/scene thread
+boundary all verified, the "widget copies its string" constraint checked in the SDK rather than
+assumed. Nothing treats a refused backdoor write as proof it did not land. All 13 reason codes
+reach a titled screen. Every numeric figure outside two off-by-ones matched.
+
+### Still OPEN from round 10 — deliberately not done
+
+These were in the review but NOT in the five items that were actioned. Decide before the reply:
+
+- **Y1** `mark_failed`/`unmark_failed` write the bitmap with no bound; the invariant is held by four
+  call sites. A `furi_check` would make it structural.
+- **Y2** the reason enum has three silent `default:` absorbers and `NotMagic == 0`, which is also
+  the scene manager's default state. `…Unset = 0` plus dropping two defaults gets `-Wswitch`.
+- **Y3** `Iso15693PollerResult` has no `mode` field though six of sixteen fields are mode-scoped.
+- **Y4** `ISO15693_MAGIC_BLK_*` (gen1 blocks) and `ISO15693_MAGIC_V2_BLK_*` (gen2 registers) are
+  both `uint8_t` and both spelled `BLK`; a gen2 ref into `build_gen1_frame` destroys four blocks.
+- **X1** two implicit `uint16_t -> uint8_t` narrowings, the only two in the file that lack a cast.
+- **P1-P3** three simplifications worth doing (the duplicated pass-cut is the real one: two write
+  points for `pass_truncated`/`pass_cut_block`, each holding half the rationale).
+- **P4** the twelve `widget_add_string_multiline_element` calls — a wrapper works and the y
+  rationale is already hoisted to the file header, so the old objection is weaker than the notes
+  said. **Declined on diff cost at round 10**, not on principle. Tell him, so it is not re-derived.
+- **T3** zero coverage on the reason-code selection ladder and on the gen1 consent screen — the
+  highest-consequence routing in the feature and the only screen where a wrong button destroys a
+  card. Both are ~60 lines of test against harnesses that already exist.
+
+### Verified on the current tree, 2026-09-12
+
+| check | result |
+|---|---|
+| host tests, from `make clean` | **114 run, 0 failed** (108 -> 114) |
+| Momentum `dev` @ slix, forced rebuild | **zero nfc_magic warnings** |
+| Unleashed `unl092-base` | **zero nfc_magic warnings** |
+| clang-format, shipped | **95 files, 0 need formatting** |
+| intra-batch churn, all 13 round-10 commits | **none** |
+| comment-only | 3 comment-only, 7 code/CHANGELOG, 2 dev-only tools |
+
+⚠️ **`git checkout -- <file>` ate an uncommitted fix during mutation testing this session**, exactly
+as the rule below says it would. And GNU Make 3.81's whole-second timestamps reported a wrong test
+red and then a dirty baseline. **Mutation-test only from a committed baseline, and always
+`make clean`.**
+
+## Round 8 and earlier — where things stood
+
 PR #250, `nfc_magic_dev` on branch `iso15693-dev`.
+
+**THE GEN1 B-ROUND IS BUILT — eight shipped commits on dev, on top of `56e8f49`, NOTHING PUSHED.**
+Seven are comment-only (proven with `tools/comment-only.py`) and one is the CHANGELOG. Zero C code
+changed. Both firmwares warning-free, 108 host tests, clang-format clean, all signed.
+
+**IT WAS BUILT TWICE.** The first build assumed the latch was unmeasurable; a second bench session
+measured it, and four of those seven commits stated the superseded model. The round was reset and
+rebuilt rather than patched, because a series that asserts a thing and retracts it two commits later
+is the intra-batch churn he has flagged twice. Nothing was pushed, so it cost nothing.
+
+⚠️ **AND THE RESET SILENTLY TOOK THE BENCH FINDINGS WITH IT.** `git reset --hard` to before the round
+also dropped the notes commit holding Findings 5-7 — the only record of the session. Recovered from
+the safety branch, which is the whole reason to make one before a reset. **Never reset a round without
+`git branch wip-<name>` first, and check what notes commits sit inside the range.**
+
+**THE TWO REVERSALS, both in [gen1-hardware-findings.md](gen1-hardware-findings.md) as Findings 5-7:**
+
+1. **There is no power-up latch.** A written UID takes effect IMMEDIATELY — an INVENTORY in the same
+   field session already returns it. The app was built on the opposite premise and four comments plus
+   two CHANGELOG entries said so. **The `NfcCommandReset` STAYS** — it is free, it re-activates for a
+   clean read, and gen2's UID is in a register space this was never tested against — but it is
+   belt-and-braces now, not load-bearing, and the comments say which.
+2. **"The backdoor registers accept writes WITHOUT acknowledging" was a PARSE, not a measurement.**
+   62/63 answer with error 0x10; `hf 15 wrbl --ua` renders that as `( fail )`, which session 1 read as
+   an absent ACK. Do not reinstate it. What replaced it is stronger and does not need silence: on an
+   armed card BOTH register writes are refused and the UID moves anyway, so a poller acting on those
+   returns would abort a run that worked.
+
+**THE SURFACE ESTIMATE WAS WRONG, and in the wrong direction.** The findings doc predicted "20-40
+lines out before C starts". It came out **positive**. A measurement is LONGER than the hedge it
+replaces — it carries the card, the date and the observation. Do not budget a B-round as a reduction;
+C is the reduction.
+
+**#255 still carries the softer "moved UID" wording**, which this round makes wrong rather than merely
+soft. The earlier do-not-reopen decision is worth revisiting: "left with no valid identity" is a
+different warning from "the UID moved".
 
 **ROUND 8 SHIPPED 2026-09-11.** Fork pushed `dbc6e4fa..09778b6d`, a fast-forward of **16 commits**,
 all signed. Main reply at **issuecomment-5641879307**, **all 16 thread replies posted**, and the #251
@@ -133,8 +323,9 @@ stated preference, because he had not answered:
 the reply.
 
 Also in that pass, per his notes:
-- the **compact-UID formatter's four copies** (`iso15693_info.c:18`, `write_fail.c:287`, `:305`,
-  `write_confirm.c:39`). The fold relocated one, it did not add one — so it is not against this delta.
+- ~~the **compact-UID formatter's four copies**~~ — **DONE, struck 2026-09-12.** The helper
+  `iso15693_info_cat_uid` exists (`iso15693_info.c:283`, declared `iso15693_info.h:27`) and those
+  four sites are now call sites of it. No duplication remains; do not re-plan it.
 - the twelve `widget_add_string_multiline_element` calls varying only in `(x, y)`. Deliberately left in
   Round 6: those y values carry the line-budget arithmetic he measured for us in Round 4, and they should
   move in the comment cut rather than be buried in a table.
@@ -169,8 +360,10 @@ so an override is likely, and then the messages are lost.
   Draft ready in **[squash-message.md](squash-message.md)** — 62 lines, house style verified by
   measurement rather than assumed (#258's longest line is 79 columns, not the 72 an earlier note here
   claimed). Post the payload between the `~~~~` markers, as a comment, when merge nears.
-- **Improving the PR body is therefore optional polish, not a priority.** It is what a reader of the PR
-  page sees and it never enters git history. Do not confuse the two again.
+- **The PR body is NOT being rewritten — settled 2026-09-12.** It is what a reader of the PR page
+  sees and it never enters git history. Step 2 of the pathway used to say "worth doing on its own
+  merits", which contradicted this; that step is struck. The squash message is the only one of the
+  two worth writing.
 - Consequence for the comment work: BOTH tests are live. "Would a maintainer editing this line, offline,
   need it?" is the strong one. "Would it be at home in the commit message?" is valid again but a WEAK
   home — it survives only if nobody overrides.
@@ -183,8 +376,12 @@ which means **the scope is ours, not his.**
 ## THE PATHWAY TO RELEASE, in order — settled 2026-09-08, step 3 added 09-09
 
 1. **Push + post Round 7** (built, verified, awaiting a go-ahead).
-2. **Improve the PR body** — worth doing on its own merits even though it is NOT the permanent record
-   (see the section above). Material is in [pr-description.md](pr-description.md).
+2. ~~**Improve the PR body**~~ — **STRUCK 2026-09-12. Decided: we are NOT rewriting the PR body.**
+   Only the squash message. The body never enters git history (#258: a 9949-byte body against a
+   799-byte squash message), so it is the one artifact where effort does not compound. This step
+   contradicted the "optional polish, not a priority" line in the section above, which is the
+   reasoning that holds; the contradiction stood for three rounds and was acted on once. Do not
+   re-open.
 3. **Offer him the squash message** — same file. **Timing: not yet.** The trigger is the PR nearing
    merge — an approval, or him asking whether it is done — because the message has to describe the final
    state and the C/D passes will change it. **DECIDED: it stays in `.notes/` and gets pasted as a PR
@@ -634,9 +831,14 @@ on a small tag, and it is the assumption that had to hold for that to be true.
      silently. `iso15693_poller.h` justifies discarding these frames' return values as something that
      "must" be done "on a card that may not answer". That was an inference from proxmark's source.
      **It is now a measurement.**
-  2. **Writable memory above the advertised count, on a third kind of silicon.** It advertises 56 blocks
-     and took writes at 56/57/62/63 — the same principle as the gen2 card holding blocks above its own
-     claim, now shown on gen1.
+  2. ~~**Writable memory above the advertised count.**~~ **CORRECTED 2026-09-12 — it is not memory.**
+     It advertises 56 blocks and took writes at 56/57/62/63, and the first reading of that was extra
+     memory above the claim, by analogy with the gen2 card holding blocks above its own. The four-card
+     run settles it the other way: on all five gen1 cards those addresses answer **no read at any
+     point**, with `--capacity-max 70` searching straight past them. They are WRITE-ONLY BACKDOOR
+     REGISTERS that the magic silicon decodes as a UID-set command — not capacity, and not part of the
+     memory map. A 28-block gen1 card has 28 blocks. The gen2 card's over-claim is a genuinely
+     different phenomenon and the analogy was the thing that misled.
   **NOT settled: the latch.** `SetTag15693Uid` ends in `switch_off()`, so every read-back sits behind a
   field power-cycle and cannot distinguish "latches on power-up" from "changes immediately". The app's
   `NfcCommandReset`-before-verify is still justified by the model, not by measurement. Isolating it needs
@@ -684,6 +886,15 @@ on a small tag, and it is the assumption that had to hold for that to be true.
   fap_nfc_magic_dev` (88.2). Both must be warning-free.
 - Format: `../Momentum-Firmware/toolchain/current/bin/clang-format
   -style=file:../Momentum-Firmware/.clang-format -i <files>`
+- **A `changelog:`-prefixed commit flows through the sync correctly — checked 2026-09-11.**
+  `sync-to-fork.sh` does not filter by subject AT ALL; it overlays by path, and `CHANGELOG.md` is in
+  `APP_PATHS`. Commit SELECTION is done by hand when generating `fork-messages/`, using the same path
+  list, so a `changelog:` commit is picked up there too, and the subject-strip regex covers
+  `changelog` alongside `iso15693|nfc_magic|scene_write`.
+  **But `application.fam` is NOT in `APP_PATHS`** — the script only seds `fap_version` across
+  (`sync-to-fork.sh:52-53`). So a commit changing anything ELSE in the fam (the sources list, a new
+  asset, the stack size) is selected for replay by the path filter and then silently not transferred.
+  No such commit has existed yet. Check for one before trusting a replay.
 - Fork sync: `SYNC_SRC=<dev-sha> tools/sync-to-fork.sh ../all-the-plugins`, cwd inside the dev repo,
   one fork commit per dev commit. Skip `notes:` commits. **The script overlays and NEVER DELETES** --
   so a file removed or renamed in dev must be `git rm`'d in the fork by hand, at the commit that removed

@@ -87,6 +87,75 @@ app's `NfcCommandReset`-before-verify remains justified by the model, not by obs
 To isolate it: read the UID in the **same field session** as the write. Nothing in the current tooling
 does that — it needs a raw sequence in one pm3 invocation, or an app build that skips the reset.
 
+## SESSION 2, 2026-09-11 — THE LATCH IS SETTLED, AND THE MODEL WAS WRONG
+
+Same card, `lri2k-keychain`, identify-asserted before and after, restored byte-identically twice.
+Raw frames via `hf 15 raw` with `-k` holding the field up across commands in one client session.
+
+### Finding 5 — the UID changes IMMEDIATELY. It does not latch on power-up.
+
+The four-frame sequence, then an INVENTORY **in the same field session, no power-cycle**:
+
+```
+hf 15 raw -ackw -d 02213E00000000   -> 01 10 1E 06      unlock  REJECTED (error 0x10)
+hf 15 raw -ckw  -d 02213F69960000   -> 01 10 1E 06      commit  REJECTED (error 0x10)
+hf 15 raw -ckw  -d 02213897A6B5C4   -> 00 78 F0         blk 56  OK
+hf 15 raw -ckw  -d 022139D3E2F1E0   -> 00 78 F0         blk 57  OK
+hf 15 raw -ck   -d 260100           -> 00 00 97 A6 B5 C4 D3 E2 F1 E0 5F 81
+```
+
+That inventory response is UID LSB-first: **`E0F1E2D3C4B5A697`, the newly written one**. A second
+inventory from a fresh invocation, field dropped in between, returned the same. So A = new and
+B = new: **the change is immediate, and the power-up latch does not exist on this silicon.**
+
+**This inverts the model the app is built on.** `iso15693_poller.h` says the field is power-cycled
+before the read-back "so a card that only latches the new UID after a reset is not misreported as a
+failure", and the CHANGELOG says a gen1 card "latches a written UID only on the next power-up". One
+sample, one chip — but on that chip the premise is false, not merely unverified.
+
+**The `NfcCommandReset` should NOT be removed on this evidence.** It is harmless, it re-activates the
+card for a clean read, and the gen2 Write-UID doc leans on the same reasoning for a UID that lives in
+a different register space and was not tested here. What changes is the JUSTIFICATION, not the code.
+
+### Finding 6 — the backdoor registers DO answer, and 2026-09-08's "no ACK" was a parse
+
+Blocks 62 and 63 returned `01 10 1E 06` — flags `0x01` with the error bit set, error code `0x10`,
+"block not available". That is an in-band refusal, not silence. Confirmed through both command forms
+on the same card minutes apart:
+
+| form | block 62 |
+|---|---|
+| `hf 15 raw -ackw -d 02213E00000000` | `01 10 1E 06` — answers, error 0x10 |
+| `hf 15 wrbl --ua -b 62 -d 00000000` | `( fail )` |
+
+So session 1's "an unaddressed zero write to block 62 got no ACK" was almost certainly
+`pm15_wrbl_ua` reading a `( fail )` — this exact error — as an absent acknowledgement. **The claim
+"these registers accept writes WITHOUT acknowledging" is not supported and should not ship.**
+
+### Finding 7 — on an armed card the UID writes alone move it, and the refusals do not matter
+
+Writing **only** 56/57, with no unlock and no commit:
+
+```
+hf 15 raw -ackw -d 02213898A6B5C4   -> 00 78 F0
+hf 15 raw -ckw  -d 022139D3E2F1E0   -> 00 78 F0
+hf 15 raw -ck   -d 260100           -> 00 00 98 A6 B5 C4 D3 E2 F1 E0 ED 30   = E0F1E2D3C4B5A698
+```
+
+The card was armed from session 1 and nothing clears that. So the arm persists across power-cycles
+and across a restore, 62/63 are refused while it holds, and the UID moves on 56/57 alone.
+
+**This is the real reason the app must discard the per-frame return values, and it is now measured
+rather than assumed: both register writes were REFUSED and the sequence worked anyway.** A poller
+that acted on those errors would have aborted a run that succeeded. That argument is stronger than
+the one it replaces, and it does not depend on the card being silent.
+
+### What this does to the built round
+
+Four of its seven commits state the superseded model. The round needs rebuilding from these findings
+rather than patching, since a series that asserts a thing and then retracts it is exactly the
+intra-batch churn the reviewer has flagged twice.
+
 ## The card is a REUSABLE FIXTURE
 
 It stays armed after a wipe (a wipe writes zero to block 63, not `0x6996`, so it cannot re-arm but does

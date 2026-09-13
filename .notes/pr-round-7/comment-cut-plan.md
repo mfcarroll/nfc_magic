@@ -64,9 +64,13 @@ mechanism intact — which is why it is the fallback rather than the plan.
 
 ## Also in this pass, per his Round 6 notes
 
-- **the compact-UID formatter's four copies**: `iso15693_info.c:18`, `write_fail.c:287`, `:305`,
-  `write_confirm.c:39`. He was explicit that the fold *relocated* one rather than adding one, so this is
-  not a charge against the Round 6 delta.
+- ~~**the compact-UID formatter's four copies**: `iso15693_info.c:18`, `write_fail.c:287`, `:305`,
+  `write_confirm.c:39`.~~ **DONE — struck 2026-09-12.** There is no duplication left to remove.
+  `iso15693_info_cat_uid(FuriString*, const uint8_t*, Iso15693UidFormat)` is defined at
+  `iso15693_info.c:283` and declared at `iso15693_info.h:27`, and those four sites are now four CALL
+  SITES of it (`scene_iso15693_info.c:18`, `write_fail.c:326`, `:339`, `write_confirm.c:39`), plus six
+  in `tools/hosttest/test_uid_format.c`. The only remaining raw UID hex loop is inside the helper.
+  Do not re-plan this item.
 - **the twelve `widget_add_string_multiline_element` calls** varying only in `(x, y)`. Deliberately left in
   Round 6: those y values carry the line-budget arithmetic he measured for us in Round 4, and burying them
   in a table would lose it. They move here, with that arithmetic given one owner.

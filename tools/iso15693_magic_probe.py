@@ -128,14 +128,41 @@ def pm3_failure_reason(text):
 
 
 def pm3_exec(pm3_bin, cmds, split=False, timeout=90):
-    """Run pm3 command(s); return combined stdout+stderr. Batched with ';' unless split."""
+    """Run pm3 command(s); return combined stdout+stderr. Batched with ';' unless split.
+
+    DECODED WITH errors="replace", AND THAT IS LOAD-BEARING. `hf 15 rdbl` prints an ASCII rendering
+    of the block it just read, so a block holding a byte that is not valid UTF-8 -- 0xE1, say --
+    makes the client's stdout undecodable. Under strict decoding subprocess raises, this function
+    caught the exception, and the caller saw the read as FAILED: a tag whose block 0 read perfectly
+    was reported as unreadable.
+
+    That cost three bench sessions on slix-1k-50mm, whose blocks 0 and 1 "would not read" across
+    36+ attempts and three couplings including a 20mm air gap. The tell was in the captured output
+    all along -- every failure named the SAME byte offset (472 for block 0, 474 for block 1), and RF
+    flakiness does not fail deterministically to the byte.
+
+    AND IT WAS NEVER GOING TO BE ONE ODD TAG. Those blocks read E1 40 0E 01 / 03 00 FE 00: an NFC
+    Forum Type 5 capability container and an empty NDEF TLV. 0xE1 is the CC magic number, so block 0
+    of EVERY NDEF-formatted ISO15693 tag opens with the exact byte that broke the decode. The three
+    siblings were fine only because they are unformatted and read all zeros. Any NDEF tag would have
+    presented as having an unreadable block 0.
+
+    So: never decode pm3 output strictly. Block contents are arbitrary bytes by definition, and the
+    client puts them in its own stdout.
+    """
     base = shlex.split(pm3_bin)
     out = ""
     groups = [[c] for c in cmds] if split else [cmds]
     for g in groups:
         joined = " ; ".join(g)
         try:
-            r = subprocess.run(base + ["-c", joined], capture_output=True, text=True, timeout=timeout)
+            r = subprocess.run(
+                base + ["-c", joined],
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=timeout,
+            )
             out += (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired:
             out += "\n[pm3 TIMED OUT after %ss -- device busy/absent?]\n" % timeout

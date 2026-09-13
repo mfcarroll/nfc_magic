@@ -7,9 +7,11 @@
     "SL2S5302": {
       "bag_label": "SL2S5302; SL2S5402 ICODE SLIX-S UID",
       "classification": {
-        "campaign": "20260908_012746",
+        "campaign": "20260912_171357",
+        "gen1_write": true,
+        "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "gen1 magic"
       },
       "expected": {
         "block_size": 4,
@@ -165,9 +167,11 @@
     "slix-1k-50mm": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
       "classification": {
-        "campaign": "20260908_012746",
+        "campaign": "20260912_172807",
+        "gen1_write": true,
+        "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "gen1 magic"
       },
       "expected": {
         "block_size": 4,
@@ -181,11 +185,11 @@
         "source": "seller listing / bag label"
       },
       "form_factor": "50mm round sticker, white",
-      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration. || MEASURED 2026-09-08: SLIX, IC ref 0x01, advertises 28. ANOMALY: blocks 0 and 1 would not read -- 6 retries each in baseline and 6 more in capacity, so 12 consecutive failures -- while blocks 2-27 read fine. Capacity aborted entirely, since it needs block 0 as its anchor, so this tag has NO physical measurement. Marginal coupling is the obvious explanation (it is the only tag too large to sit flat on the HF pad) but it does not fit well: coupling drops reads at RANDOM, and this failed the same two addresses every time while its three siblings read all 28 blocks. Re-run it: if 0 and 1 fail again with the tag repositioned, that is a property of the tag rather than the placement. || 2026-09-08 RE-RUN TWICE MORE, 12 retries each, one contact-but-realigned and one with a ~20mm air gap: blocks 0 and 1 unreadable every time while 2-27 read fine. That is three sessions and 36+ attempts per block across three different couplings, so IT IS NOT COUPLING -- it is a property of the tag. The air gap did fix whatever was stopping the tag reading at all, which supports the over-coupling guess for the FIRST failure, but blocks 0/1 survived the fix. Still no physical measurement: capacity anchors on block 0. Hypothesis to test with the write probe -- if this is a magic tag, blocks 0/1 may be reserved or remapped by its magic implementation rather than faulty.",
+      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration. || MEASURED 2026-09-08: SLIX, IC ref 0x01, advertises 28. ANOMALY: blocks 0 and 1 would not read -- 6 retries each in baseline and 6 more in capacity, so 12 consecutive failures -- while blocks 2-27 read fine. Capacity aborted entirely, since it needs block 0 as its anchor, so this tag has NO physical measurement. Marginal coupling is the obvious explanation (it is the only tag too large to sit flat on the HF pad) but it does not fit well: coupling drops reads at RANDOM, and this failed the same two addresses every time while its three siblings read all 28 blocks. Re-run it: if 0 and 1 fail again with the tag repositioned, that is a property of the tag rather than the placement. || 2026-09-08 RE-RUN TWICE MORE, 12 retries each, one contact-but-realigned and one with a ~20mm air gap: blocks 0 and 1 unreadable every time while 2-27 read fine. That is three sessions and 36+ attempts per block across three different couplings, so IT IS NOT COUPLING -- it is a property of the tag. The air gap did fix whatever was stopping the tag reading at all, which supports the over-coupling guess for the FIRST failure, but blocks 0/1 survived the fix. Still no physical measurement: capacity anchors on block 0. Hypothesis to test with the write probe -- if this is a magic tag, blocks 0/1 may be reserved or remapped by its magic implementation rather than faulty. || 2026-09-12 RESOLVED, AND IT WAS NEVER THE TAG. The 'unreadable' blocks 0/1 were a HARNESS bug: pm3_exec decoded the pm3 client's stdout as UTF-8 strictly, `hf 15 rdbl` prints an ASCII rendering of the block it read, and these two blocks hold a byte that is not valid UTF-8 (0xE1). The decode raised, the exception was caught and recorded as a failed read, and three sessions went looking for an RF cause. THE TELL WAS IN THE CAPTURED OUTPUT THE WHOLE TIME: every failure named the same byte offset -- 472 for block 0, 474 for block 1, identical across all 6 retries and all 3 sessions -- and RF flakiness does not fail deterministically to the byte. Fixed by decoding with errors='replace'; the hex column the parser actually uses is ASCII and survives intact. CONSEQUENCE FOR THIS RECORD: this tag is NOT blank. Blocks 0 and 1 hold data, and 'none found, [0,1] unread' is a record of the tool failing rather than of the card. Its `original` baseline is therefore incomplete -- and `original` is WRITE-ONCE, so a re-run will not replace it. Decide deliberately before re-baselining. Its three siblings read all 28 blocks because they are genuinely blank, so all-zero ASCII columns decoded fine -- which is why only this tag showed it.",
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one. || 2026-09-12: nonzero_blocks and unreadable_blocks CORRECTED. The [0,1] 'unreadable' record was the UTF-8 decode bug in pm3_exec, not the tag. Blocks 0 and 1 read fine with the fixed tool (campaign iso15_20260912_172719) and hold E1 40 0E 01 / 03 00 FE 00 -- an NDEF capability container and an empty NDEF TLV. Backfilling rather than re-baselining is sound HERE and only here: no probe has ever written to blocks 0-27 on this tag (gen1 touches 56/57/62/63 only), so today's read of them is still pristine. The rest of the original record is untouched.",
         "block_size": 4,
         "campaign": "20260908_012746",
         "captured": "2026-09-08T01:28:45",
@@ -194,14 +198,14 @@
         "ic_ref": 1,
         "locked_blocks": [],
         "mfg_byte": 4,
-        "nonzero_blocks": [],
+        "nonzero_blocks": [
+          0,
+          1
+        ],
         "sysinfo": "00 0F 63 08 26 20 50 01 04 E0 00 00 1B 03 01",
         "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
         "uid": "E0 04 01 50 20 26 08 63",
-        "unreadable_blocks": [
-          0,
-          1
-        ]
+        "unreadable_blocks": []
       },
       "physical": {
         "correction": "No physical measurement exists: capacity aborted because block 0 would not read. Absent, not zero."
@@ -210,9 +214,11 @@
     "slix-1k-50x28": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
       "classification": {
-        "campaign": "20260908_012746",
+        "campaign": "20260912_170728",
+        "gen1_write": true,
+        "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "gen1 magic"
       },
       "expected": {
         "block_size": 4,
@@ -254,9 +260,11 @@
     "slix-1k-coin18": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
       "classification": {
-        "campaign": "20260908_012746",
+        "campaign": "20260912_171618",
+        "gen1_write": true,
+        "gen2_write": false,
         "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
+        "verdict": "gen1 magic"
       },
       "expected": {
         "block_size": 4,
@@ -671,5 +679,5 @@
       }
     }
   },
-  "updated": "2026-09-08"
+  "updated": "2026-09-12T17:28:27"
 }

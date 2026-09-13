@@ -265,6 +265,93 @@ static void test_card_lost_offers_retry_and_exit(void) {
     end();
 }
 
+// ...but a WIPE that lost the card is the opposite case, and the mode is what separates them. The sweep
+// writes 56/57 at index 56/57, long before any plausible cut, and on an armed gen1 card those two blocks
+// ARE the UID -- so the card can be gone and its identity gone with it. The wipe returns before
+// Iso15693WriteStateVerifyWipe is ever entered, so uid_verified stays false and nothing ran to notice.
+// Details is the only route to the sentence that says so.
+static void test_wipe_card_lost_offers_details_for_the_uid_note(void) {
+    begin("a wipe that lost the card offers Details, because the UID check never ran");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 40;
+    r.uid_verified = false;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Retry");
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Details");
+    // The label has to agree with the destination -- this reason is now in BOTH predicates, which is
+    // exactly the pairing that produced the round-5 "Exit opens Details" bug.
+    CHECK(route_of(GuiButtonTypeRight).scene_id == NfcMagicSceneIso15693PartialDetails);
+    end();
+}
+
+// The gate is uid_verified, not the reason alone: a wipe that lost the card AFTER the check answered has
+// nothing left to report, so it must fall back to Exit.
+static void test_wipe_card_lost_with_a_verified_uid_offers_exit(void) {
+    begin("a wipe that lost the card after the UID check answered offers Exit");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 40;
+    r.uid_verified = true;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe, &r);
+
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Exit");
+    end();
+}
+
+// The sentence itself, and its wording. A card-lost wipe never reached the field reset, so the note must
+// not blame one -- "did not answer after the field reset" names a step that never happened here.
+static void test_wipe_card_lost_details_says_the_check_never_finished(void) {
+    begin("the card-lost Details note does not blame a field reset that never happened");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 40;
+    r.uid_verified = false;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "UID not re-checked") != NULL);
+        CHECK(strstr(scroll, "stopped answering") != NULL);
+        CHECK(strstr(scroll, "field reset") == NULL);
+    }
+    end();
+}
+
+// And the list that must NOT appear. The poller's own sweep says a card lifted mid-wipe "can surface as
+// a pile of blocks that wouldn't clear", and documents those counters as the caller's to discard on that
+// exit -- so printing them would name the card's departure as a pile of refusals.
+static void test_wipe_card_lost_details_lists_no_blocks(void) {
+    begin("a card-lost wipe lists no blocks, only the UID note");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 40;
+    r.uid_verified = false;
+    // The shape the sweep really leaves behind: blocks that stopped answering as the card left.
+    r.failed_bitmap[7 / 8] |= (uint8_t)(1u << (7 % 8));
+    r.failed_bitmap[31 / 8] |= (uint8_t)(1u << (31 % 8));
+    r.failed_count = 2;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "UID not re-checked") != NULL);
+        // No block index, asserted as "no digit anywhere" rather than as a search for "7" -- a
+        // single-character strstr passes on any text containing that character and so is one wording
+        // change away from being vacuous. The UID note carries no digits, so this is exact.
+        bool has_digit = false;
+        for(const char* p = scroll; *p; p++) {
+            if(*p >= '0' && *p <= '9') has_digit = true;
+        }
+        CHECK(!has_digit);
+    }
+    // Titled for what it actually shows, not for a list it does not have.
+    CHECK(fake_scene_text_contains("Wipe notes"));
+    CHECK(!fake_scene_text_contains("Blocks not cleared"));
+    end();
+}
+
 // Found on hardware: the screen named where the sweep stopped and never said why, while offering a
 // Retry button -- so the user was asked to retry against a cause the screen withheld.
 static void test_wipe_stopped_says_it_timed_out(void) {
@@ -536,6 +623,10 @@ int main(void) {
     test_every_reason_renders_its_own_screen();
     test_wipe_stopped_offers_retry_and_details();
     test_card_lost_offers_retry_and_exit();
+    test_wipe_card_lost_offers_details_for_the_uid_note();
+    test_wipe_card_lost_with_a_verified_uid_offers_exit();
+    test_wipe_card_lost_details_says_the_check_never_finished();
+    test_wipe_card_lost_details_lists_no_blocks();
     test_wipe_stopped_says_it_timed_out();
     test_wipe_stopped_prints_the_cut_not_the_total();
     test_cut_sweep_plays_the_error_tone();

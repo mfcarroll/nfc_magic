@@ -13,12 +13,12 @@ one above it is the phantom tail. Neither side gets corrected.
 
 | tag | verdict | original UID | proxmark TYPE | blocks | IC ref / DSFID / AFI | data at capture | restorable | vs listing |
 |---|---|---|---|---|---|---|---|---|
-| SL2S5302 | unclassified (no write probe run) | `E0 04 02 50 03 00 35 F8` | MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S ) | 40 adv / 40 phys | 0x02 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
+| SL2S5302 | gen1 magic | `E0 04 02 50 03 00 35 F8` | MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S ) | 40 adv / 40 phys | 0x02 / 0x00 / 0x00 | blank | yes | matches listing |
 | black-tag | gen2 magic | `E0 07 81 B8 AF 14 42 07` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
 | lri2k-keychain | gen1 magic | `E0 02 22 24 50 00 83 03` | MATCH ST Microelectronics SA France | 56 adv / 56 phys | 0x22 / 0x00 / 0x00 | blank | yes | matches listing |
-| slix-1k-50mm | unclassified (no write probe run) | `E0 04 01 50 20 26 08 63` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv | 0x01 / 0x00 / 0x00 | none found, [0, 1] unread | yes | matches so far — physical capacity and magic not tested |
-| slix-1k-50x28 | unclassified (no write probe run) | `E0 04 01 50 20 26 06 8C` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
-| slix-1k-coin18 | unclassified (no write probe run) | `E0 04 01 50 20 22 00 E2` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
+| slix-1k-50mm | gen1 magic | `E0 04 01 50 20 26 08 63` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv | 0x01 / 0x00 / 0x00 | [0, 1] | yes | matches so far — physical capacity not tested |
+| slix-1k-50x28 | gen1 magic | `E0 04 01 50 20 26 06 8C` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches listing |
+| slix-1k-coin18 | gen1 magic | `E0 04 01 50 20 22 00 E2` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches listing |
 | slix-black-38x25 | unclassified (no write probe run) | `E0 04 01 12 D2 D7 20 38` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x21 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
 | slix2-gold-30mm | unclassified (no write probe run) | `E0 48 03 00 01 CD F1 36` | no tag-info available | 79 adv / 82 phys (+3) | 0x01 / 0x00 / 0x00 | [21] (+3 unread) | yes | matches so far — magic not tested |
 | ti-2k-silver-1 | unclassified (no write probe run) | `E0 53 01 10 BB F3 38 1A` | no tag-info available | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
@@ -28,4 +28,4 @@ one above it is the phantom tail. Neither side gets corrected.
 | white-tag-2 | unclassified (no write probe run) | `E0 04 01 00 84 AB E1 A5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 | white-tag-3 | unclassified (no write probe run) | `E0 04 01 00 84 AB DF C5` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches so far — magic not tested |
 
-Updated 2026-09-08
+Updated 2026-09-12T17:28:27

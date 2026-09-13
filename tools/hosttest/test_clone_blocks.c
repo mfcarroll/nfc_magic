@@ -19,22 +19,22 @@ static int tests_failed;
 static const char* current_test;
 static bool current_failed;
 
-#define CHECK_EQ(actual, expected)                                              \
-    do {                                                                        \
-        long long a_ = (long long)(actual), e_ = (long long)(expected);          \
-        if(a_ != e_) {                                                          \
-            printf("  FAIL %s:%d  %s == %lld, expected %lld\n",                 \
-                   __FILE__, __LINE__, #actual, a_, e_);                        \
-            current_failed = true;                                              \
-        }                                                                       \
+#define CHECK_EQ(actual, expected)                                                                 \
+    do {                                                                                           \
+        long long a_ = (long long)(actual), e_ = (long long)(expected);                            \
+        if(a_ != e_) {                                                                             \
+            printf(                                                                                \
+                "  FAIL %s:%d  %s == %lld, expected %lld\n", __FILE__, __LINE__, #actual, a_, e_); \
+            current_failed = true;                                                                 \
+        }                                                                                          \
     } while(0)
 
-#define CHECK(cond)                                                             \
-    do {                                                                        \
-        if(!(cond)) {                                                           \
-            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);            \
-            current_failed = true;                                              \
-        }                                                                       \
+#define CHECK(cond)                                                  \
+    do {                                                             \
+        if(!(cond)) {                                                \
+            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            current_failed = true;                                   \
+        }                                                            \
     } while(0)
 
 static void begin(const char* name) {
@@ -174,6 +174,29 @@ static void test_interior_failure_is_not_capacity(void) {
     end();
 }
 
+// The same rule, but on the silicon that actually exercises the guard. The test above uses a LOCKED
+// block, which still ANSWERS a read -- so any_failure_answered decides it and wrote_above_failure never
+// does any work. Dropping that conjunct therefore left the whole suite green while the clone reported a
+// card with a mid-memory dropout as "Clone finished / Holds 27 of 28", a fabricated verdict about the
+// user's hardware. An ABSENT block refuses the write and fails the read, which is how a real dropout
+// presents and the only shape where position is the sole remaining excuse.
+static void test_interior_absent_block_is_not_capacity(void) {
+    begin("an interior block that answers NOTHING is still not a capacity edge");
+    fake_tag_init(64, 64, 4);
+    fake_tag_set_range(10, 10, FakeBlockAbsent);
+    fake_data_init(&source, 28, 4);
+    fake_data_fill(&source, 10, 10, 0x00); // empty, so only position could excuse it
+    Iso15693Poller inst;
+    const bool present = run_clone(&inst, false);
+
+    CHECK(present);
+    CHECK(!inst.clone_capacity_confirmed); // blocks 11..27 wrote ABOVE it, so it is no tail
+    CHECK_EQ(inst.clone_over_capacity, 0);
+    CHECK_EQ(inst.clone_failed_count, 1); // counted as a real failure, not excused
+    CHECK(bitmap_bit(&inst, 10));
+    end();
+}
+
 // A card lifted mid-clone makes every remaining block fail, which is EXACTLY the shape of the card's
 // capacity ending there. It must report the removal rather than classify anything.
 static void test_card_lifted_mid_clone(void) {
@@ -194,17 +217,26 @@ static void test_gen1_skips_the_backdoor_blocks(void) {
     begin("gen1 excludes the four backdoor blocks from the total");
     fake_tag_init(64, 64, 4);
     fake_data_init(&source, 64, 4);
+    // The source must NOT share the tag's fill byte. With both at FAKE_MARKER, "block 56 is non-zero"
+    // was true whether the block had been skipped or overwritten with source data, so this test passed
+    // against a mutant whose is_backdoor_block always returned false -- i.e. against a gen1 clone
+    // writing straight over the backdoor registers, which is the one thing it exists to catch.
+    fake_data_fill(&source, 0, 63, 0x5A);
     Iso15693Poller inst;
     const bool present = run_clone(&inst, true);
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 60); // 64 less 56, 57, 62, 63
     CHECK_EQ(inst.clone_failed_count, 0);
-    // The four were never written, so the target still holds its pre-clone marker there.
-    CHECK(fake_tag.content[56][0] != 0);
-    CHECK(fake_tag.content[57][0] != 0);
-    CHECK(fake_tag.content[62][0] != 0);
-    CHECK(fake_tag.content[63][0] != 0);
+    // The four were never written, so the target still holds its OWN byte, not the source's.
+    CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
+    CHECK_EQ(fake_tag.content[57][0], FAKE_MARKER);
+    CHECK_EQ(fake_tag.content[62][0], FAKE_MARKER);
+    CHECK_EQ(fake_tag.content[63][0], FAKE_MARKER);
+    // ...and a block either side DID take the source's byte, so the skip is a skip and not a clone
+    // that wrote nothing at all.
+    CHECK_EQ(fake_tag.content[55][0], 0x5A);
+    CHECK_EQ(fake_tag.content[58][0], 0x5A);
     end();
 }
 
@@ -232,15 +264,17 @@ static void test_gen1_partial_backdoor_overlap(void) {
     begin("gen1 deducts only the backdoor blocks the source actually has");
     fake_tag_init(58, 58, 4);
     fake_data_init(&source, 58, 4);
+    fake_data_fill(&source, 0, 57, 0x5A); // distinct from the tag's own byte -- see the test above
     Iso15693Poller inst;
     const bool present = run_clone(&inst, true);
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 56); // 58 less blocks 56 and 57; 62 and 63 are out of range
     CHECK_EQ(inst.clone_failed_count, 0);
-    // The two in range were skipped, so the target keeps its pre-clone marker there.
-    CHECK(fake_tag.content[56][0] != 0);
-    CHECK(fake_tag.content[57][0] != 0);
+    // The two in range were skipped, so the target keeps its own byte rather than the source's.
+    CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
+    CHECK_EQ(fake_tag.content[57][0], FAKE_MARKER);
+    CHECK_EQ(fake_tag.content[55][0], 0x5A); // and the block below them did take
     end();
 }
 
@@ -341,7 +375,8 @@ static void test_uncut_clone_sets_no_truncation(void) {
     begin("a clone that finishes leaves the truncation fields clear");
     fake_tag_init(64, 64, 4);
     fake_data_init(&source, 64, 4);
-    fake_tag_set_range(30, 30, FakeBlockLocked); // an ordinary refusal, nothing to do with the clock
+    fake_tag_set_range(
+        30, 30, FakeBlockLocked); // an ordinary refusal, nothing to do with the clock
     Iso15693Poller inst;
     const bool present = run_clone(&inst, false);
 
@@ -359,6 +394,7 @@ int main(void) {
     test_oversize_source_with_empty_tail();
     test_failure_that_answers_a_read_is_not_capacity();
     test_interior_failure_is_not_capacity();
+    test_interior_absent_block_is_not_capacity();
     test_card_lifted_mid_clone();
     test_gen1_skips_the_backdoor_blocks();
     test_gen1_small_source_deducts_nothing();

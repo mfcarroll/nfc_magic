@@ -19,22 +19,22 @@ static int tests_failed;
 static const char* current_test;
 static bool current_failed;
 
-#define CHECK_EQ(actual, expected)                                                      \
-    do {                                                                                \
-        long long a_ = (long long)(actual), e_ = (long long)(expected);                  \
-        if(a_ != e_) {                                                                   \
-            printf("  FAIL %s:%d  %s == %lld, expected %lld\n",                          \
-                   __FILE__, __LINE__, #actual, a_, e_);                                 \
-            current_failed = true;                                                       \
-        }                                                                                \
+#define CHECK_EQ(actual, expected)                                                                 \
+    do {                                                                                           \
+        long long a_ = (long long)(actual), e_ = (long long)(expected);                            \
+        if(a_ != e_) {                                                                             \
+            printf(                                                                                \
+                "  FAIL %s:%d  %s == %lld, expected %lld\n", __FILE__, __LINE__, #actual, a_, e_); \
+            current_failed = true;                                                                 \
+        }                                                                                          \
     } while(0)
 
-#define CHECK(cond)                                                                     \
-    do {                                                                                \
-        if(!(cond)) {                                                                    \
-            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);                     \
-            current_failed = true;                                                       \
-        }                                                                                \
+#define CHECK(cond)                                                  \
+    do {                                                             \
+        if(!(cond)) {                                                \
+            printf("  FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            current_failed = true;                                   \
+        }                                                            \
     } while(0)
 
 static void begin(const char* name) {
@@ -240,6 +240,61 @@ static void test_advertised_zero(void) {
     end();
 }
 
+// The other half of the geometry guard, and the one that can lie. A card that claims blocks but
+// reports a block size of 0 also sweeps nothing -- and must not leave its CLAIM sitting in
+// blocks_total, because this path returns 0 wiped, which reaches a terminal event (NothingWiped).
+// blocks_total's contract is that terminal events only ever carry the measured figure and only
+// WriteProgress sees the advertised one, so the live denominator has to be set BELOW the guard.
+static void test_zero_block_size_reports_no_claim(void) {
+    begin("a card claiming blocks with block size 0 reports 0, not its claim");
+    fake_tag_init(64, 64, 0);
+    Iso15693Poller inst;
+    bool card_lost;
+    const uint16_t wiped = run_sweep(&inst, &card_lost);
+
+    CHECK_EQ(wiped, 0);
+    CHECK_EQ(inst.clone_blocks_total, 0); // NOT 64 -- the claim must not reach a terminal event
+    CHECK_EQ(inst.wipe_advertised, 64); // the claim itself is still recorded, where it belongs
+    CHECK(!card_lost);
+    end();
+}
+
+// HOW FAR PAST ITS CLAIM THE SWEEP GETS, which decides whether a wipe can destroy an armed gen1
+// card's UID. Block 56 is modelled as real gen1 silicon presents it: it takes a write (it is a
+// backdoor register) and answers no read, so it looks absent until written to. 48 and 49 are the
+// boundary -- measured, not derived; the first attempt at this arithmetic said 57.
+static void test_sweep_stops_short_of_56_at_48(void) {
+    begin("a card claiming 48 never reaches block 56");
+    fake_tag_init(48, 48, 4);
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_tag_fill(56, 57, FAKE_MARKER);
+    Iso15693Poller inst;
+    bool card_lost;
+    run_sweep(&inst, &card_lost);
+
+    CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
+    CHECK(!card_lost);
+    end();
+}
+
+// One more block of claim and the run reaches 56 -- seven blocks above everything the card admits
+// to holding. 57 goes with it rather than one claim later, because the write to 56 lands and resets
+// the run.
+static void test_sweep_reaches_56_and_57_at_49(void) {
+    begin("a card claiming 49 reaches both 56 and 57, above its own claim");
+    fake_tag_init(49, 49, 4);
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_tag_fill(56, 57, FAKE_MARKER);
+    Iso15693Poller inst;
+    bool card_lost;
+    run_sweep(&inst, &card_lost);
+
+    CHECK_EQ(fake_tag.content[56][0], 0x00); // on an armed gen1 card this is the UID going
+    CHECK_EQ(fake_tag.content[57][0], 0x00);
+    CHECK(!card_lost);
+    end();
+}
+
 // The block-number space is 256 wide and the bitmap holds exactly that many bits. A card that is
 // writable all the way to the ceiling must stop there rather than run past the bitmap.
 static void test_full_256_hits_the_ceiling(void) {
@@ -284,7 +339,8 @@ static void test_clock_cuts_the_sweep(void) {
 static void test_cut_index_exceeds_total_after_a_tail_drop(void) {
     begin("a dropped trailing run leaves the cut above blocks_total");
     fake_tag_init(64, 64, 4);
-    fake_tag_set_range(50, 63, FakeBlockAbsent); // answers neither, and the floor keeps sweeping it
+    fake_tag_set_range(
+        50, 63, FakeBlockAbsent); // answers neither, and the floor keeps sweeping it
     fake_tag_cache_from_activation(); // nothing proves 50+ existed, so the tail-drop discards them
     // 50 accepted blocks cost 1 op each; each absent one costs 3 writes + a read. 160 ticks/op puts
     // the 10s cut a few blocks into the dead stretch -- past 50, so the drop and the cut disagree.
@@ -369,6 +425,9 @@ int main(void) {
     test_locked_but_already_empty_is_not_a_failure();
     test_interior_dropout_that_recovers();
     test_advertised_zero();
+    test_zero_block_size_reports_no_claim();
+    test_sweep_stops_short_of_56_at_48();
+    test_sweep_reaches_56_and_57_at_49();
     test_full_256_hits_the_ceiling();
     test_clock_cuts_the_sweep();
     test_cut_index_exceeds_total_after_a_tail_drop();

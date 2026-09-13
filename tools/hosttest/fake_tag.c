@@ -9,7 +9,6 @@ uint32_t fake_tick = 0;
 FakeTag fake_tag;
 Iso15693_3Data fake_activation_cache;
 
-#define FAKE_MARKER (0xA5U)
 #define FAKE_LOG_CAP (16384U)
 
 static char fake_log_buf[FAKE_LOG_CAP];
@@ -250,10 +249,10 @@ Iso15693_3Error iso15693_3_poller_send_frame(
     if((buf->data[1] == 0x29 || buf->data[1] == 0x27) && buf->size >= 3) {
         const bool is_dsfid = (buf->data[1] == 0x29);
         fake_tag.identity_writes_seen++;
-        const bool transient_refusal =
-            fake_tag.identity_writes_seen <= fake_tag.identity_writes_refused;
-        const bool refused = transient_refusal || (is_dsfid ? fake_tag.refuses_dsfid :
-                                                             fake_tag.refuses_afi);
+        const bool transient_refusal = fake_tag.identity_writes_seen <=
+                                       fake_tag.identity_writes_refused;
+        const bool refused = transient_refusal ||
+                             (is_dsfid ? fake_tag.refuses_dsfid : fake_tag.refuses_afi);
         if(!refused) {
             if(is_dsfid) {
                 fake_tag.dsfid = buf->data[2];
