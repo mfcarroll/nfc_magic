@@ -1,4 +1,35 @@
-# Next session — THE SELF-REVIEW IS DONE AND FIXED. Nothing pushed.
+# Next session — ROUND 10 IS PUSHED AND POSTED. Waiting on his round 11.
+
+**Pushed 2026-09-13: `09778b6d..536e0d4f`, a fast-forward of 9.** All nine verified on GitHub, his
+key_cache work untouched, `fap_version` still 2.3, ten files, pack builds warning-free.
+
+**Posted:** the main reply as [issuecomment-5652071967](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5652071967),
+and all eleven thread replies, each verified attached to the right root comment.
+
+**The reply says this should NOT merge yet**, and why: TI Tag-it HF-I Plus refuses unaddressed
+WRITE BLOCK with error 0x01, and every ISO15693 write this app sends is unaddressed. Not a
+regression — the write path is unchanged since the passing August run and the EM-Marin control still
+passes. It reframes #251 from a bystander hazard into a compatibility limit.
+
+## THE PLAN HE HAS BEEN GIVEN, in the order stated in the reply
+
+1. **The comment cut, WITH the release-notes trim** — one delta, deletion only, verifiable with
+   `tools/comment-only.py`. **RE-MEASURE FIRST**: the 250-370 figure predates round 10, which added
+   +103 comment lines. The release-notes half is the 2.3 section at 178 lines against 14 and 19 for
+   the two entries before it.
+2. **The simplification pass** — P1-P3 in
+   [pr-round-10/self-review/FINDINGS.md](pr-round-10/self-review/FINDINGS.md). P4 is DECLINED and he
+   has been told so.
+3. **Addressed writes**, and the gen1 caveat gate with them — both recorded in
+   [pr-round-10/unaddressed-write-finding.md](pr-round-10/unaddressed-write-finding.md).
+4. **Re-test on device**, including the TI cards.
+5. **The squash message** at merge — draft in [squash-message.md](squash-message.md), condense to
+   60-100 lines first.
+
+mfcarroll leans toward keeping the addressing work inside this PR and said so in the reply; the
+scoping decision is with mishamyte.
+
+
 ## Where things stand
 
 **25 shipped commits are unpushed** (35 in all, counting `.notes/` and `tools/`). The PR's pushed
