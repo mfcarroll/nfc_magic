@@ -49,27 +49,21 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
         // wipe re-reads the UID afterwards and reports a change instead of claiming one. See the open
         // question in iso15693_poller_wipe_blocks.
         //
-        // The gen3 line is the only warning that names the COST; the title above it warns too, but
-        // only about scope. The wipe performs NO magic detection -- menu, confirm, sweep -- so
-        // this cannot say "your card is gen3", only what a gen3 card would cost, and @0x6r1an0y
-        // (who wrote proxmark's V3 support) reports that cost is the card itself, permanently.
-        // #255 is where a pre-flight probe would go; until then a static line is the whole of the
-        // mitigation and the CHANGELOG only reaches release notes.
+        // The gen3 line is the only warning that names the COST; the title above it warns about scope
+        // only. The wipe performs NO magic detection -- menu, confirm, sweep -- so this cannot say
+        // "your card is gen3", only what a gen3 card would cost, which per proxmark's V3 author is the
+        // card itself, permanently. A pre-flight probe would go in #255; until then the static line is
+        // the whole mitigation.
         //
-        // No warning GLYPH, and this is not an oversight: FontSecondary is u8g2_font_haxrcorp4089_tr,
-        // whose _r suffix is u8g2's restricted set -- ASCII 32-127 only, so an emoji renders as a
-        // missing glyph. The smallest warning icon available is Warning_30x23, which is two text lines
-        // tall and 30 of the 128px wide; it would force an indent and cost a line. Hence "!".
+        // FontSecondary is u8g2_font_haxrcorp4089_tr, and two things follow. No `m` in the suffix means
+        // it is PROPORTIONAL (profont11_mr / FontKeyboard is the monospace one), so WHAT BINDS IS PIXEL
+        // WIDTH, NOT CHARACTER COUNT -- the three lines below run to 29, 23 and 27 characters against
+        // the ~24 an average mix allows, and canvas_string_width is the only way to check one. And the
+        // `_r` is u8g2's restricted set, ASCII 32-127, so there is no warning GLYPH to use: the
+        // smallest icon, Warning_30x23, is two text lines tall and 30 of the 128px wide. Hence "!".
         //
         // Hard line breaks: elements_text_box wraps on its own, and left to itself it split "including"
         // mid-word.
-        //
-        // WHAT BINDS IS PIXEL WIDTH, NOT CHARACTER COUNT. FontSecondary is u8g2_font_haxrcorp4089_tr,
-        // which has no `m` in its suffix and so is PROPORTIONAL -- `profont11_mr` (FontKeyboard) is the
-        // monospace one. A line of narrow glyphs therefore fits far more than a line of wide ones, and
-        // the three lines below run to 29, 23 and 27 characters against the ~24 an average mix allows.
-        // Measured on device rather than counted: canvas_string_width is the only honest answer, and a
-        // character budget in a comment is how a usable line gets rejected as too long.
         //
         // THREE lines is the budget, and that part IS fixed -- the font advances 11px regardless of
         // glyph, so they land at y=13/24/35 and a fourth reaches the button box at rows 52-63.
