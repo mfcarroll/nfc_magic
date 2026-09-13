@@ -123,6 +123,19 @@ def main():
             payload = set(range(1, len(lines) + 1))
         print("##### %s%s" % (path, "" if len(fences) < 2
                               else "   (payload: %d of %d lines)" % (len(payload), len(lines))))
+        # Hex inside a FENCED BLOCK is command transcript, not a hash -- `-d 11223344` is a write
+        # payload and `E0 04 01 50` is a UID. Flagging those trains the reader to skim the report,
+        # which is the same failure as a build that always prints warnings. Prose outside the fences
+        # is still scanned, and that is where a dead sha would actually be cited.
+        in_code = set()
+        code = False
+        for i, l in enumerate(lines, 1):
+            if l.lstrip().startswith("```"):
+                code = not code
+                in_code.add(i)
+            elif code:
+                in_code.add(i)
+
         notes_only = 0
         for i, l in enumerate(lines, 1):
             def flag(kind, what, why):
@@ -134,7 +147,8 @@ def main():
                 bad += 1
                 print("  :%-4d %-11s %-30s %s" % (i, kind, what, why))
 
-            for sha in re.findall(r'(?<![0-9a-zA-Z])[0-9a-f]{7,9}(?![0-9a-zA-Z])', l):
+            for sha in (() if i in in_code else
+                        re.findall(r'(?<![0-9a-zA-Z])[0-9a-f]{7,9}(?![0-9a-zA-Z])', l)):
                 # Do NOT skip all-digit tokens: 7883953 was a real rewritten commit in a real
                 # draft, and skipping it is how it survived a sweep. git is the decisive test --
                 # a plain number does not resolve as a commit, so there is no false-positive cost.
