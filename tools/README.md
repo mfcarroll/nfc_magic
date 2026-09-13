@@ -111,16 +111,18 @@ is seen and never replaced, because by the second run this tool's own probes hav
 later run adds or corrects the classification only. That is what makes an entry citable in a validation
 claim — "measured on the tag whose original config was X" stays true.
 
-**One entry is not write-once and says so.** `gen-2-card` predates this tool, and the earliest read of it
-we have was taken the day after it was first cloned, so its `original` is the earliest READ rather than a
-factory state. `original.pre_write: false` marks that, and the rendered table flags the row with `*`.
+**One entry has no pre-write read and says so.** `gen-2-card` predates this tool and was cloned the day
+before the first instrumented read of it, so its factory identity was never captured. Its `original` is a
+sentinel carrying `pre_write: false` and `unavailable` — present so a later run cannot fill the slot with
+whatever the card is wearing — and the rendered row shows `?` for identity and flags the tag with `*`.
 Nothing else carries the flag.
 
 **A magic card's identity is not evidence of its silicon.** UID, IC ref, DSFID, AFI and advertised
 geometry are all writable — proxmark's `TYPE` line is a lookup on the UID's manufacturer byte, and the
-rest come from the CFG block. `gen-2-card` presents as EM-Marin EM4237 because that identity was cloned
-onto it; the same card was watched reading as TI, NXP and ST across four campaigns in one afternoon. Cite
-what a card DID, not what it says it is.
+rest come from the CFG block. `gen-2-card` presents as EM-Marin EM4237 because an expired access
+credential was cloned onto it; the same card was watched reading as TI, NXP and ST across four campaigns
+in one afternoon. That borrowed identity lives under `carries_cloned_credential`, deliberately named so
+it can never be read as the card's own. Cite what a card DID, not what it says it is.
 
 `writespan` settles whether the clone app should cap writes at the target's advertised count. It's
 meaningful only when the card advertises **fewer** blocks than it physically has — clone a small
