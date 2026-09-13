@@ -37,6 +37,13 @@ went to **all zeros**, and an ISO15693 UID must begin `0xE0`, so the card is lef
 identity at all. Recovery is byte-identical, and only possible because the app prints the original
 UID.
 
+The gen1 consent screen drops its "not hardware-tested" line as a result. That caveat was doing real
+work while the path had never been tried on anything — it told the user the risk itself was
+untested, which is worth knowing before agreeing to it. Now it has been tried on three chips, so the
+line has no information left in it, and what remains on the screen is the blast radius: gen1 sets
+the UID with an ordinary WRITE BLOCK into 56/57/62/63, so a tag that is not magic loses those four
+blocks. That is the part a user can act on.
+
 ## And it moved a threshold in round 9's own fix
 
 The fix for threads 01/02 landed "the sweep misses 56/57 only when the card answers nothing there
@@ -55,19 +62,20 @@ So the old wording called a card advertising 49–56 safe when the sweep reaches
 Two tests now sit on 48 and 49.
 
 That figure is yours, from thread 01, and I took it without checking it. Saying so because you asked
-for the same in the other direction. It was invisible until this week: every gen1 card here was the
+for the same in the other direction. It was invisible until this week: the only gen1 card here was the
 56-block LRi2K, where 56/57 are the first two blocks past the claim.
 
 The correction runs toward safety — of the five gen1 cards, only the LRi2K reaches its own UID
 registers under a wipe.
 
-## THE DEVICE SESSION, AND WHY THIS SHOULD NOT MERGE YET
+## THE DEVICE SESSION, AND WHY I THINK THIS SHOULD NOT MERGE YET
 
 The notes have carried one outstanding hardware item since August: two more gen2 samples arrived a
 week after the regression runs, and "re-run the regression five on one of them" never happened. It
 has now, and it found a functional limit.
 
-**TI Tag-it HF-I Plus refuses unaddressed WRITE BLOCK.** Same tag, same block, three commands:
+**TI Tag-it HF-I Plus refuses unaddressed WRITE BLOCK.** Same tag, same block, three commands (on
+proxmark):
 
 ```
 hf 15 wrbl      -b 8 -d 11223344   ->  ( ok )
@@ -76,6 +84,8 @@ hf 15 wrbl      -b 8 -d 55667788   ->  ( ok )
 ```
 
 Addressed works, unaddressed is refused with error 0x01, addressed works again as the control.
+
+[👤 This para 100% human-written.] That is fundamentally different to the behaviour of the only gen2 card I had throughout the start of this project, and means that - as it stands - the app only correctly supports a subset of gen2 cards. It's totally fixable, but is feature work.
 
 **Every ISO15693 write this app sends is unaddressed.** So on that silicon a wipe clears nothing and
 reports "Wipe failed", and a clone sets the UID through the gen2 backdoor and then fails every data
@@ -141,27 +151,6 @@ card-supplied counts, the tick-wraparound form, the tail-drop arithmetic at all 
 thirteen reason codes reaching a titled screen, the right-slot rule agreeing between `on_enter` and
 `on_event`, and the Back-swallow argument protocol by protocol.
 
-## The mechanism behind rounds 8, 9 and 10
-
-`tools/gen1-staleness.py` is a scanner I wrote to find the comments the hardware sessions
-invalidated, and the gen1 round used it as its work list. **It could not see a single one of the
-eight stale sites that survived** — including two consent-screen strings still telling users gen1
-was untested.
-
-Two gaps, both the same mistake: the patterns match the phrasing that was *already fixed*.
-`latch(es)?\b` does not match `latched`, so of the three sites in the tree it flagged the two that
-were correct. And the validation pattern matched "validated" and never "tested" — the three sites
-the round removed all said "NOT hardware-validated"; the survivors all said "not hardware-tested".
-
-A pattern list written by reading the sites you just fixed encodes their vocabulary and is
-systematically blind to the ones you missed. It then reports the job done. It now carries a list of
-known-stale phrasings asserted to match, runs it on every invocation, and refuses to scan if it
-fails.
-
-Those two consent-screen strings lost the sentence rather than gaining a corrected one. What the
-user consents to is the write and its blast radius; how well the path is validated is a fact about
-this project, and it belongs in the release notes.
-
 ## What is left, in order
 
 1. **The comment cut.** Measured rather than guessed: 1,576 comment lines on this surface, 787 of
@@ -177,6 +166,8 @@ than cutting first.
 
 Nothing here needs your time before that, unless you disagree with the order or want the addressing
 work scoped differently — it is your call whether it belongs in this PR at all or in a follow-up.
+
+[👤] I lean towards in the PR still, I'd rather ship the app as functional as it can be now that most of the hardware testing is in hand rather than an unknown wait. But let me know if you disagree.
 
 Both firmwares warning-free, 116 host tests, format clean.
 ~~~~
