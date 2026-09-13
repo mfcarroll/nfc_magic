@@ -3,6 +3,7 @@
   "hypothesis_2026_09_08": "The seller's 'pm3' mark correlates with presenting a GENUINE-looking identity. The four pm3-marked tags (three SLIX at IC ref 0x01, SLIX-S at 0x02) all carry NXP's manufacturer byte with an IC reference matching the part they claim, and proxmark identifies every one. Of the unmarked tags, four present something off: IC ref 0x21 on a SLIX that should read 0x01, unregistered manufacturer bytes 0x53 (silver pair) and 0x48 (gold). Reading: those are emulators carrying a programmed CFG, which is what produces an odd IC ref, while the pm3 tags are genuine NXP silicon made magic some other way. It cuts against the naive expectation, predicting that the tags proxmark CAN write look LEAST like magic. THIS IS A HYPOTHESIS and the write probe tests it. REVISED 2026-09-08: the keychain was originally counted as a fifth 'something off' on its IC ref 0x22. That was wrong -- it presents a fully coherent genuine ST identity, and it is a branded commercial product rather than part of the magic-card order at all. Excluding it as a freebie, the correlation covers four magic candidates against four pm3 tags, which is a cleaner claim than the one it replaces but rests on a smaller set. Do not treat 8 tags as 9 independent samples: the three SLIX share a UID prefix and the silver pair differ in two bytes, so this is more like four distinct products.",
   "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten. Second order recorded 2026-09-08: 9 physical tags across 7 label types, seller-described as a mystery pack. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration.",
   "order_context_2026_09_08": "ORDERED 5, RECEIVED 9. The seller over-delivered as a favour after the purpose was explained, said he would substitute randomly, and MARKED the pm3-writable ones on the bag. So order lines do not map to delivered tags -- the bag labels are his own annotation of what each tag is and should be trusted over the order. The lines were: 1x 'Icode slix 1k 0-27b', 2x 'ST LRi 2K 0-55b', 1x '50X28mm', 1x '50x28mm slix 1k'. His words on the unmarked ones: \u4e13\u7528\u7684\u8bfb\u5199\u8bbe\u5907, a DEDICATED READ/WRITE DEVICE -- hardware, not a script.",
+  "provenance_rule_2026_09_13": "A magic card's UID, IC ref, DSFID, AFI and advertised geometry are all WRITABLE, so none of them identifies its silicon -- proxmark's TYPE line is a lookup on the UID's manufacturer byte, and the rest come from the CFG block. Treat every such field as a COSTUME unless the record says the read predates any write (original.pre_write). Found 2026-09-13 while adding gen-2-card: its 'EM-Marin EM4237' identity turned out to be a clone written the day before the first instrumented read, and had been cited as silicon in the PR. State what a card DID, not what it says it is.",
   "tags": {
     "SL2S5302": {
       "bag_label": "SL2S5302; SL2S5402 ICODE SLIX-S UID",
@@ -48,7 +49,8 @@
         "measured": "2026-09-08T01:35:59",
         "phantom_blocks": 0,
         "physical_blocks": 40
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "black-tag": {
       "classification": {
@@ -93,7 +95,66 @@
         "measured": "2026-08-24T23:05:01",
         "phantom_blocks": 0,
         "physical_blocks": 64
-      }
+      },
+      "source_url": "https://www.aliexpress.com/item/1005012335464752.html"
+    },
+    "gen-2-card": {
+      "classification": {
+        "campaign": "20260727_105923",
+        "gen1_write": false,
+        "gen2_write": true,
+        "gen3_signature": false,
+        "verdict": "gen2 magic"
+      },
+      "count_owned": 1,
+      "form_factor": "credit card, white PVC",
+      "label": "Physically labelled 'gen-2-card' 2026-09-13. It is the only gen2 card in credit-card form factor, which is what the label means; the other white PVC card is 'white-card'.",
+      "note": "THE ORIGINAL GEN2 CARD, and the control the project's central write claim rests on. The 2026-08-17 regression five passed on it, and it was re-run as the control in the 2026-09-12 device session: it ACCEPTS unaddressed WRITE BLOCK, where white-coin and black-tag refuse it (#251). That behavioural contrast is measured and stands on its own.\n\nWHAT DOES NOT STAND is the silicon attached to it. 'EM-Marin' is a CLONED IDENTITY, not this card's chip. Every field that names it is writable on a gen2 magic card: proxmark's TYPE is a lookup on UID byte 0x16, and IC ref / block count / block size come from GET SYSTEM INFO, which is the writable CFG block. All of them were watched moving on this one card inside three hours on 2026-07-27 -- 105923: E0 16 3C.. / IC 0x0F / 66 blocks, gen2_write TRUE; 113213: the SAME UID at IC 0x8B / 64 blocks, after the gen2 csetuid stamped proxmark's default CFG; 120636: E0 07 C0 C1 C2 C3 C4 C5 (the synthetic tagit_64 test UID); 123035: E0 04 01 10 A1 A2 A3 A4 at 28 blocks (slix_28). No read of this card predates a write, and the EM source tag it was cloned from was never dumped into the repo, so the underlying silicon is UNIDENTIFIED.\n\nConsequence for anything citing it: the 'EM-Marin 0x0F vs TI Tag-it 0x8B' framing used in pr-round-10 reads as a silicon contrast and is not one. Both attributions are UID-manufacturer lookups on cards whose UIDs are writable, and 0x8B is also what THIS card reports after a plain gen2 CFG write. white-coin and black-tag are in a better position -- their TI presentation is the state they ARRIVED in rather than one we wrote -- but 'as shipped' is still not 'as fabricated'. Cite the BEHAVIOUR (accepts vs refuses unaddressed WRITE BLOCK), not the chip name.",
+      "original": {
+        "advertised_blocks": 66,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260727_101028",
+        "captured": "2026-07-27T10:11:05",
+        "dsfid": 2,
+        "from_baseline_probe": false,
+        "ic_ref": 15,
+        "locked_blocks": null,
+        "mfg_byte": 22,
+        "nonzero_blocks": [
+          0,
+          1
+        ],
+        "pre_write": false,
+        "pre_write_note": "NOT a factory state. This is the earliest instrumented read of the card, and a write had already happened by then -- worklog.md dates a clone of an EM ISO15693 source onto a 64-block magic target to 2026-07-26, the day before. Blocks 0-1 held E3 08 21 56 / 82 18 60 00 at this read. The unreadable list is single-attempt RF flakiness from the early probe (retried reads came later); blocks 64/65 are the phantom tail and fail by design, and 66-69 are past the advertised count entirely.",
+        "sysinfo": "00 0F DE F6 A2 19 66 3C 16 E0 02 00 41 03 0F",
+        "type": "MATCH EM-Marin SA (Skidata); EM4237 [IC id = 15] 23,5pF",
+        "uid": "E0 16 3C 66 19 A2 F6 DE",
+        "unreadable_blocks": [
+          2,
+          4,
+          10,
+          12,
+          13,
+          33,
+          35,
+          38,
+          43,
+          52,
+          53,
+          55,
+          56,
+          61,
+          62
+        ]
+      },
+      "physical": {
+        "campaign": "20260727_101028",
+        "measured": "2026-07-27T10:11:05",
+        "phantom_blocks": 2,
+        "physical_blocks": 64
+      },
+      "source_url": "https://www.aliexpress.com/item/1005006949791537.html"
     },
     "lri2k-keychain": {
       "armed_gen1_wipe_2026_09_08": {
@@ -162,7 +223,8 @@
         "measured": "2026-09-08T01:44:57",
         "phantom_blocks": 0,
         "physical_blocks": 56
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix-1k-50mm": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
@@ -209,7 +271,8 @@
       },
       "physical": {
         "correction": "No physical measurement exists: capacity aborted because block 0 would not read. Absent, not zero."
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix-1k-50x28": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
@@ -255,7 +318,8 @@
         "measured": "2026-09-08T01:32:23",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix-1k-coin18": {
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
@@ -301,7 +365,8 @@
         "measured": "2026-09-08T01:33:28",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix-black-38x25": {
       "bag_label": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B",
@@ -346,7 +411,8 @@
         "measured": "2026-09-08T01:34:33",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix2-gold-30mm": {
       "bag_label": "SL2S2602 ICODE SLIX2 UID",
@@ -399,7 +465,8 @@
         "physical_blocks": 82,
         "physical_is_lower_bound": true,
         "search_ceiling": 81
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "ti-2k-silver-1": {
       "bag_label": "TI 2048 2K UID 0-63B",
@@ -443,7 +510,8 @@
         "measured": "2026-09-08T01:38:07",
         "phantom_blocks": 0,
         "physical_blocks": 64
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "ti-2k-silver-2": {
       "bag_label": "TI 2048 2K UID 0-63B",
@@ -487,7 +555,42 @@
         "measured": "2026-09-08T01:40:43",
         "phantom_blocks": 0,
         "physical_blocks": 64
-      }
+      },
+      "source_url": "https://www.aliexpress.com/store/1112214"
+    },
+    "white-card": {
+      "classification": {
+        "campaign": "20260913_005922",
+        "gen2_write": false,
+        "gen3_signature": false,
+        "recovered_from_raw": "Measured in campaign 20260913_005922 and lost when the operator declined the gen1 arming prompt -- KeyboardInterrupt escaped the campaign loop before the result store and inventory_update, leaving manifest.json with \"cards\": []. Reconstructed 2026-09-13 from the raw captures that survived, which are the primary evidence either way: white-card_magictype_v3sig.txt reads blocks 0x14/0x15 as 00 00 00 00 (not the V3 signature), and white-card_magictype_gen2.txt shows `hf 15 csetuid -u E0A1B2C3D4E5F607 --v2` -> 'Setting new UID ( fail )' with the verify still reading all zeros. The probe's abort path is fixed as of this commit; see tools/test_probe_abort.py.",
+        "verdict": "not gen2; gen1 untested"
+      },
+      "note": "Arrived in a separate shipment from the 2026-09-08 batch and probed 2026-09-13. Ships BLANK WITH A ZERO UID -- 00 00 00 00 00 00 00 00, returned in the UID field of GET SYSTEM INFO across three separate captures, so it is the card's answer and not a failed read. sysinfo 00 0F 00*10 1B 03 01 = 28 blocks x 4 bytes, IC ref 0x01, DSFID/AFI zero.\n\nThe zero UID is the only discriminator available. Geometry does not separate the candidates: white-tag-1/2/3 are also IC ref 0x01 at 28x4 and white-tag-1 measured NON-magic, while the three slix-1k gen1 cards are also IC ref 0x01 at 28x4. What differs is that every one of those carries a laser-programmed UID beginning 0xE0 plus a manufacturer byte. A UID of all zeros means the UID lives in writable storage and was never programmed, i.e. a magic card that has not been given an identity.\n\ngen2 is excluded more firmly than the run reported. proxmark's `csetuid --v2` writes its own default CFG (64x4, IC ref 0x8B) as a side effect, and the post-attempt sysinfo is byte-identical at 1B 03 01 -- so the card ignored the custom 0xE0 frames outright rather than taking CFG and refusing the UID. No geometry was moved and there is nothing to restore.\n\nNOT ARMED, deliberately, and it is the only card in the inventory that is not. All five gen1 cards carry gen1_write true, which only the full four-frame sequence sets, and nothing clears that register (#255) -- so every gen1 test the app has ever run went against a card that was already unlocked, where the UID moves on a write to 56/57 regardless of whether the app's own unlock/commit frames do anything. On the armed lri2k-keychain those two frames are REFUSED with error 0x10 and the UID still moves. This card is the only instrument that can test the app's own unlock sequence, and the test is one-shot: unlocking is intrinsic to setting a gen1 UID, so whoever writes first spends it. Spend it on the Flipper (gen1 clone from a 28-block source), not on the probe. What it CANNOT answer, despite being the obvious use: whether a wipe moves a virgin gen1 card's UID -- the UID starts at zeros, so a wipe that moved it to zeros is invisible.",
+      "original": {
+        "advertised_blocks": 28,
+        "afi": 0,
+        "block_size": 4,
+        "campaign": "20260913_005742",
+        "captured": "2026-09-13T00:58:22",
+        "dsfid": 0,
+        "from_baseline_probe": false,
+        "ic_ref": 1,
+        "locked_blocks": null,
+        "mfg_byte": 0,
+        "nonzero_blocks": [],
+        "sysinfo": "00 0F 00 00 00 00 00 00 00 00 00 00 1B 03 01",
+        "type": "no tag-info available",
+        "uid": "00 00 00 00 00 00 00 00",
+        "unreadable_blocks": null
+      },
+      "physical": {
+        "campaign": "20260913_005742",
+        "measured": "2026-09-13T00:58:22",
+        "phantom_blocks": 0,
+        "physical_blocks": 28
+      },
+      "source_url": "https://share.temu.com/DYjEAQEkQxA"
     },
     "white-coin": {
       "classification": {
@@ -532,7 +635,8 @@
         "measured": "2026-08-24T22:58:56",
         "phantom_blocks": 0,
         "physical_blocks": 64
-      }
+      },
+      "source_url": "https://www.aliexpress.com/item/1005007586284866.html"
     },
     "white-tag-1": {
       "classification": {
@@ -582,7 +686,8 @@
         "measured": "2026-08-24T23:07:00",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/item/32808113402.html"
     },
     "white-tag-2": {
       "classification": {
@@ -629,7 +734,8 @@
         "measured": "2026-08-24T23:09:38",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/item/32808113402.html"
     },
     "white-tag-3": {
       "classification": {
@@ -676,8 +782,9 @@
         "measured": "2026-08-24T23:11:13",
         "phantom_blocks": 0,
         "physical_blocks": 28
-      }
+      },
+      "source_url": "https://www.aliexpress.com/item/32808113402.html"
     }
   },
-  "updated": "2026-09-12T17:28:27"
+  "updated": "2026-09-13T00:58:22"
 }

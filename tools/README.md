@@ -111,12 +111,23 @@ is seen and never replaced, because by the second run this tool's own probes hav
 later run adds or corrects the classification only. That is what makes an entry citable in a validation
 claim — "measured on the tag whose original config was X" stays true.
 
+**One entry is not write-once and says so.** `gen-2-card` predates this tool, and the earliest read of it
+we have was taken the day after it was first cloned, so its `original` is the earliest READ rather than a
+factory state. `original.pre_write: false` marks that, and the rendered table flags the row with `*`.
+Nothing else carries the flag.
+
+**A magic card's identity is not evidence of its silicon.** UID, IC ref, DSFID, AFI and advertised
+geometry are all writable — proxmark's `TYPE` line is a lookup on the UID's manufacturer byte, and the
+rest come from the CFG block. `gen-2-card` presents as EM-Marin EM4237 because that identity was cloned
+onto it; the same card was watched reading as TI, NXP and ST across four campaigns in one afternoon. Cite
+what a card DID, not what it says it is.
+
 `writespan` settles whether the clone app should cap writes at the target's advertised count. It's
 meaningful only when the card advertises **fewer** blocks than it physically has — clone a small
 source first (e.g. `slix_28` → 28 blocks) onto the physically-64 magic card, then:
 
 ```bash
-python3 tools/iso15693_magic_probe.py --card blank1 --probes info,capacity,writespan --destructive
+python3 tools/iso15693_magic_probe.py --card gen-2-card --probes info,capacity,writespan --destructive
 ```
 
 It write-tests a ladder of blocks around the advertised boundary (snapshot + restore each) and reports
@@ -132,6 +143,18 @@ you to re-clone from the `.nfc`. `impersonate` on such a card reports "no change
 ignored)" — that's not a clamp; real geometry only sets via the full UID-write sequence, which is what
 the app clone (and the ground-truth harness below) exercises. `--flipper-note` captures what the
 Flipper app reads, for a quick proxmark-vs-Flipper diff.
+
+### `test_probe_abort.py` — the probe keeps what it measured when you say no
+
+```bash
+python3 tools/test_probe_abort.py
+```
+
+Pins one behaviour: stopping at a destructive probe's confirmation prompt must still record the
+measurements taken above it. It used to discard them — declining the gen1 arming prompt threw away the
+V3 and gen2 results from the same probe and left the card reading "unclassified". No hardware; the pm3
+preflight and the probe are stubbed. Pass a path to run it against a modified copy, which is how to
+check the test can still fail.
 
 ## `flipper_ground_truth.py` — ground-truth the app clone on hardware (Flipper CLI)
 
