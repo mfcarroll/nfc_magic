@@ -63,3 +63,38 @@ Worth separating from the defect: the screens behave properly. A wipe that clear
 "Wipe failed / No blocks could be cleared -- the card accepted no zero-write", which is exactly
 what happened, and the clone path has a dedicated screen for "UID written, not one data block
 took". The capability is missing; the reporting is not lying about it.
+
+---
+
+# SECOND FINDING — the gen1 caveat fires on sources that do not contain those blocks
+
+Measured 2026-09-13, gen1 clone of a 28-block source onto a 28-block gen1 card:
+
+```
+Clone partial
+Cloned 28/28 blocks
+Not written: 0
+gen1: 56/57/62/63 differ
+```
+
+Every block took, nothing failed, and the screen still says four blocks differ. On a 28-block
+source blocks 56/57/62/63 **are not in the source at all**, so there is nothing for them to differ
+from. They also answer no read on this silicon, so "differ" is not even checkable.
+
+**The correct test already exists twenty lines away.** The block-count deduction at
+`iso15693_poller.c:618` gates on `iso15693_poller_backdoor_blocks[i] < source_count`, which is why
+"Cloned 28/28" is right — nothing was deducted. `test_gen1_small_source_deducts_nothing` pins it.
+
+The caveat does not use that gate. `nfc_magic_scene_iso15693_write_fail.c:270` and
+`nfc_magic_scene_iso15693_partial_details.c:153` both fire on `used_gen1` alone, and the second
+carries a comment asserting the opposite: "Unconditional: those four blocks differ from the source
+whatever the write results above say."
+
+So the same fact is implemented correctly in the poller and incorrectly in both scenes.
+
+**Fixing it is not a comment change.** The scene cannot derive it: on a small source the deduction
+is a no-op, so `blocks_total` looks identical either way. The poller has to record whether any
+backdoor block was actually skipped, and both scenes gate on that. New result field, two call
+sites, and a test alongside the existing deduction one.
+
+Deferred with the addressing work.
