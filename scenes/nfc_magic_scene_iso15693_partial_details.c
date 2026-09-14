@@ -17,7 +17,7 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     const bool wipe_mode = (instance->iso15693_mode == NfcMagicIso15693ModeWipe);
     // Bound the list at the cut, for the reason pass_truncated gives: on a clone the bitmap holds two
     // different things at two different addresses, and only the group below the cut is a fact about the
-    // card. Listing them together names the back-filled group as refusals. A cut wipe records nothing
+    // card. Listing them together would name the back-filled group as refusals. A cut wipe records
     // above its cut, so the bound is inert there -- applied in both modes anyway, because a rule that
     // holds in one and is inert in the other beats a mode test.
     //

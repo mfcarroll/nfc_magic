@@ -183,9 +183,9 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         const uint16_t reached = instance->iso15693_result.blocks_total;
         const uint16_t failed = instance->iso15693_result.failed_count;
         FuriString* text = furi_string_alloc();
-        // The figure is the CUT, not blocks_total: the latter is a COUNT, not an index (see the
-        // header), and it sits at or below the cut, so a sweep that attempted 55 blocks and proved 50
-        // present would read "Stopped at 50".
+        // The figure is the CUT, not blocks_total: the latter is a COUNT, not an index (see
+        // blocks_total in the header), and it sits at or below the cut, so a sweep that attempted 55
+        // blocks and proved 50 present would read "Stopped at 50".
         //
         // No "of %u" either. The sweep deliberately runs past the advertised count, so the cut can land
         // above the claim and "Stopped at 200 of 64" parses as a fraction -- as falling short of 64
@@ -400,9 +400,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
     //   else             -> no right button at all
     // on_event decides the same way, in the same order. That third case matters to anyone extending
     // this: a non-retryable reason with nothing behind Details gets NO right button, not an Exit.
-    // Nothing enforces it but this comment. While the two sets were disjoint, on_enter could branch on
-    // retryable and on_event on details and never disagree; putting one reason in both made a control
-    // labelled Exit open the Details scroll view. Add a reason to either predicate and re-read this.
+    // Nothing enforces it but this comment. While is_retryable and has_details shared no reason,
+    // on_enter could branch on retryable and on_event on details and never disagree; putting one reason
+    // in both made a control labelled Exit open the Details scroll view. Add a reason to either
+    // predicate and re-read this.
     //
     // Back escapes from anywhere (on_event's SceneManagerEventTypeBack), so a screen that spends both
     // slots on Retry and Details is not a trap -- and Back is precisely what the "Exit" button below

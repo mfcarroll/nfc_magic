@@ -177,13 +177,14 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 // a single poller callback, emitting no progress past the advertised count.
 //
 // This is a BACKSTOP, not a tuning knob, and the two errors it sits between are wildly asymmetric:
-//   - cutting a legitimate sweep early leaves real data unwiped above the cut. That is the privacy
-//     failure this whole sweep exists to remove, arrived at from the other direction.
+//   - cutting a legitimate sweep early leaves real data unwiped above the cut -- the privacy failure
+//     this whole sweep exists to remove.
 //   - letting a pathological card run long makes the user wait, un-abortably, for a wipe they asked for.
 // So it is set generously, well clear of any sweep a real card can ask for, and NOT tuned down for the
 // second case -- the block ceiling already caps that at roughly the 18s above.
 //
-// 10 seconds, against the ~3-4s the largest sweep a card can ask for -- 256 accepting blocks -- costs.
+// 10 seconds, against the ~3-4s a sweep of 256 accepting blocks costs -- the largest any card can ask
+// for, an accepted block being a fraction of a refused one.
 // Not the true worst case: one re-probe of the trailing run follows it, is not deadline-checked (it
 // would have to abandon the run half-classified), and is bounded by the run length.
 //
@@ -219,7 +220,7 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 // silently rather than how much is caught. (Below that count the sweep never stops on absence at all.)
 // What remains: a card whose memory is present but answers neither a write nor a read across a whole run,
 // even on re-probe, is indistinguishable from one that ends there by any means available here. What keeps
-// the fake-flash case honest is not this number but the tail-drop rule, which judges a trailing run by
+// an over-claiming card honest is not this number but the tail-drop rule, which judges a trailing run by
 // whether it answers rather than by the advertised count -- see the sweep's absence handling.
 #define ISO15693_POLLER_WIPE_ABSENT_RUN (8U)
 
@@ -1028,7 +1029,7 @@ static uint16_t iso15693_poller_wipe_blocks(
     // precisely because the card's claim is evidence the blocks exist. Unqualified, the drop wins and a
     // card whose blocks stop answering mid-range reports a clean Success over data it never cleared.
     // block_held_data is the discriminator: proof of existence keeps a block, absence of proof drops
-    // it, so a fake-flash card's phantoms still go.
+    // it, so the phantoms of a card claiming more than it holds still go.
     //
     // Not closed: a block already dead when the card was presented is indistinguishable from a phantom
     // here and drops with them. Different symptom -- degraded before the wipe rather than during it.

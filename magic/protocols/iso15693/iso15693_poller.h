@@ -150,7 +150,8 @@ typedef struct {
     // Wipe only: the block count the card ADVERTISED, so a report can put the measured figure beside
     // the claim. The gen2 CFG frame programs this number, which is why the two differing is
     // information rather than an error: a card cloned from a smaller source advertises less than it
-    // still holds and serves reads for, and a card with fake flash advertises more. 0 for a clone.
+    // still holds and serves reads for, and one cloned from a larger source advertises more. 0 for a
+    // clone.
     uint16_t blocks_advertised;
     // The run stopped on its wall-clock bound (ISO15693_POLLER_PASS_MAX_MS) rather than at its natural
     // end, so its range is a cut and no report may pass that range off as a finding about the card.
