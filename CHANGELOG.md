@@ -31,10 +31,11 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   success, and leave the previous card's data reachable. The sweep runs past the advertised count until
   a run of blocks answers neither a write nor a read.
 - **A wipe reports the range it covered** — "Cleared *N* blocks. Card claims *M*." Both figures, no
-  verdict: a card cloned from a smaller source, or one that advertises more memory than it physically
-  holds (fake flash), shows a mismatch with nothing wrong. A sweep cut short by its time limit is
-  **partial** if anything was cleared, names where it stopped and offers a retry; one that cleared
-  nothing is a failure and offers none.
+  verdict, because the count is programmable and a mismatch either way is usually benign: a card cloned
+  from a smaller source advertises less than it holds, and one cloned from a larger source advertises
+  more. Blocks above the real top answer nothing at all, so nothing is silently lost either way.
+  A sweep cut short by its time limit is **partial** if anything was cleared, names where it stopped
+  and offers a retry; one that cleared nothing is a failure and offers none.
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
   won't write is **Partial**, naming the blocks. An empty block past the card's real capacity loses
   nothing, so the clone is a **Success** carrying a note that the card advertises more blocks than it
