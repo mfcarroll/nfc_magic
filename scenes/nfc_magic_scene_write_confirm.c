@@ -46,7 +46,7 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
         // "Every" is literal: 56/57/62/63 are cleared too, because on a gen2 card they are ordinary
         // user data and sparing them would leave data behind on the common card. On gen1 those same
         // blocks are the backdoor registers, so the string does not promise the UID survives -- the
-        // wipe re-reads the UID afterwards and reports a change instead of claiming one. See the open
+        // wipe re-reads the UID afterwards and reports whether it moved. See the open
         // question in iso15693_poller_wipe_blocks.
         //
         // The gen3 line is the only warning that names the COST; the title above it warns about scope

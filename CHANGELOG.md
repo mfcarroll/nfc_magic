@@ -18,7 +18,7 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **Wipe** — zeros every data block the card physically holds, **including 56/57/62/63**. On a gen2
   card those are ordinary user data, so sparing them would leave real data behind. On a **gen1** card
   they are the UID / unlock / commit registers, so a wipe cannot promise to leave the UID intact — it
-  **re-reads the UID afterwards, where it can, and reports a change** rather than claiming one.
+  **re-reads the UID afterwards, where it can, and reports whether it moved**.
 - **Write UID** — manual backdoor UID write. Tries gen2 first and, only if that leaves the UID
   unchanged, offers the same opt-in gen1 attempt the clone does.
 - **Live "Writing X / N" progress** during a clone or wipe, as the USCUID-UL clone already had.
@@ -31,13 +31,14 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   success, and leave the previous card's data reachable. The sweep runs past the advertised count until
   a run of blocks answers neither a write nor a read.
 - **A wipe reports the range it covered** — "Cleared *N* blocks. Card claims *M*." Both figures, no
-  verdict: a card cloned from a smaller source, or one with fake flash, shows a mismatch with nothing
-  wrong. A sweep cut short by its time limit is **partial** if anything was cleared, names where it
-  stopped and offers a retry; one that cleared nothing is a failure and offers none.
+  verdict: a card cloned from a smaller source, or one that advertises more memory than it physically
+  holds (fake flash), shows a mismatch with nothing wrong. A sweep cut short by its time limit is
+  **partial** if anything was cleared, names where it stopped and offers a retry; one that cleared
+  nothing is a failure and offers none.
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
   won't write is **Partial**, naming the blocks. An empty block past the card's real capacity loses
   nothing, so the clone is a **Success** carrying a note that the card advertises more blocks than it
-  physically holds. A fake-flash card clones faithfully for the blocks that fit.
+  physically holds — the blocks that do fit are copied exactly.
 - **No data is written until the card takes the magic UID.** Data blocks and identity fields follow
   only once the UID reads back as the target, so a card that doesn't take it is left untouched — which
   is why cloning has no up-front prompt. A wipe does prompt, since destruction is a wipe's only product.
