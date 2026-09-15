@@ -13,10 +13,9 @@ passes. It reframes #251 from a bystander hazard into a compatibility limit.
 
 ## THE PLAN HE HAS BEEN GIVEN, in the order stated in the reply
 
-1. **The comment cut, WITH the release-notes trim** — one delta, deletion only, verifiable with
-   `tools/comment-only.py`. **RE-MEASURE FIRST**: the 250-370 figure predates round 10, which added
-   +103 comment lines. The release-notes half is the 2.3 section at 178 lines against 14 and 19 for
-   the two entries before it.
+1. ~~**The comment cut, WITH the release-notes trim**~~ — **BUILT 2026-09-15, unpushed.** Six shipped
+   commits, deletion-only promise held, numbers in "Where things stand" below. Both halves done: the
+   source at −115 and the 2.3 section at 178 → 107 lines.
 2. **The simplification pass** — P1-P3 in
    [pr-round-10/self-review/FINDINGS.md](pr-round-10/self-review/FINDINGS.md). P4 is DECLINED and he
    has been told so.
@@ -32,9 +31,39 @@ scoping decision is with mishamyte.
 
 ## Where things stand
 
-**25 shipped commits are unpushed** (35 in all, counting `.notes/` and `tools/`). The PR's pushed
-head is still `09778b6d`. The stack is: the gen1 B-round (8), round 9's fixes (7), and round 10's
-self-review fixes — 16 commits, of which **10 are shipped** and 6 are dev-only.
+**Everything through round 10 is PUSHED and POSTED** — fork head `536e0d4f`, and the eleven thread
+replies plus the main reply went up 2026-09-13. **He has not replied since.** The PR is waiting on
+him, not on us.
+
+**THE CUT IS BUILT AND UNPUSHED — step 1 of the plan above.** Ten commits sit on dev after
+`bd50bf5`: four dev-only (`tools/`, `.notes/`) and **six shipped**.
+
+| | |
+|---|---|
+| `d04f20d` | cut the argument out of the poller's comments, keeping the constraints |
+| `1d86a9c` | the same cut across the header and the four scenes |
+| `5c62d6d` | the 2.3 release notes stop explaining themselves |
+| `6a1a265` | two sentences that did not parse after the cut |
+| `4ab1b7a` | drop the fake-flash analogy |
+| `fa31120` | read the cut back for sense, not for category |
+
+**Measured, and it holds the deletion-only promise: comment +170 −285, net −115, and ZERO C code
+changed** (`tools/comment-only.py` — the three commits it flags as CODE are all CHANGELOG.md, which
+it correctly classes as non-source). `comment-ratio.py` reports a `code −73` on the same range; that
+is the same markdown being counted as code, so use the `-- magic scenes views helpers '*.c' '*.h'`
+form when checking this promise.
+
+Where it landed against the estimate:
+
+| | estimated | actual |
+|---|---|---|
+| `iso15693_poller.c` | 250–370 lines out | **−76** |
+| the whole ISO15693 surface | — | −115; comment 1,318 → 1,219, ratio 43% → **41%** |
+| CHANGELOG 2.3 section | 178 lines | **107** (whole file 357 → 286) |
+
+**The estimate was optimistic by 3-5x on the source**, which is the third time a comment-pass
+estimate has missed in the same direction. The release-notes half beat expectations instead. Do not
+quote a projected line count to him; quote the measurement after the fact.
 
 ### THE BENCH RUN IS DONE — 4/4 gen1, and it corrected one of round 9's own fixes
 
@@ -66,7 +95,7 @@ first capture: every failure named the same byte offset (472/474), and RF does n
 deterministically to the byte. Fixed with `errors="replace"`; the hex column the parser uses is
 ASCII and survives. Same class as the `gcc -fpreprocessed` and `grep -q` false passes.
 
-### NEXT: the cut, as its own round
+### The cut, as its own round — DONE 2026-09-15, see "Where things stand". Kept for its reasoning.
 
 **The consent screen no longer reports gen1's validation status at all** — that was folded into the
 first round-10 commit rather than shipped as a round-trip, since correcting it and then removing it
@@ -98,9 +127,11 @@ The four unmarked tags (`slix-black-38x25` 28 blocks, `slix2-gold-30mm` 79/82, `
 three have the backdoor blocks genuinely IN range, so the probe is destructive there; all are blank
 or restorable, but run them last and restore from baseline.
 
-**Then the cut**, measured in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md):
-~250-370 lines out of `iso15693_poller.c` alone, which holds 65% of the opportunity. Do not go after
-the header — its 66% is per-field contract, the least compressible comment on the surface.
+**Then the cut**, scoped in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md).
+Its projection was ~250-370 lines out of `iso15693_poller.c` alone; **the actual figure was −76 from
+that file and −115 across the surface**. The advice that held: do not go after the header, whose 66%
+is per-field contract and the least compressible comment here. The advice that did not: the
+opportunity in the poller was roughly a quarter of what was projected.
 
 **ROUND 10 = the self-review mishamyte asked for**, run 2026-09-12 with
 `/pr-review-toolkit:review-pr` (seven agents) over the reconstructed FINAL-STATE PR diff — 27
@@ -271,7 +302,10 @@ anything wrote to it, and whether it has ever been written to. Read it before to
 `python3 tools/iso15693_magic_probe.py --identify` to find out which tag is actually on the antenna.
 Labels live on paper, UIDs live on silicon, and three of the tags are physically identical.
 
-**The comment cut is BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed, nothing pushed.**
+**The round-7 comment cut was BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed.** (It
+shipped long ago — this paragraph is the round-7 state as it stood. NOT the 2026-09-15 cut, which is
+a separate, later pass; see "Where things stand" at the top. Two different deltas have been called
+"the comment cut" and only the later one is unpushed.)
 Eight of them are the cut itself; the rest are the corrections and citations found afterwards, plus notes. Results and the full argument are in
 [pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md) under "EXECUTED". Headline: comment
 **−95**, code **+11**, seven of eight commits comment-only and proven so, zero intra-batch churn, both
