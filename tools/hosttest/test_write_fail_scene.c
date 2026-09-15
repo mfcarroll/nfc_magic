@@ -285,8 +285,9 @@ static void test_wipe_card_lost_offers_details_for_the_uid_note(void) {
     end();
 }
 
-// The gate is uid_verified, not the reason alone: a wipe that lost the card AFTER the check answered has
-// nothing left to report, so it must fall back to Exit.
+// Pins the DEFENSIVE uid_verified term, not a reachable outcome: the poller sets uid_verified only in
+// Iso15693WriteStateVerifyWipe, whose one exit is success_or_partial, so it cannot pair that flag with
+// CardLost. This fixes what the scene does if that ever changes -- it is not evidence that it happens.
 static void test_wipe_card_lost_with_a_verified_uid_offers_exit(void) {
     begin("a wipe that lost the card after the UID check answered offers Exit");
     Iso15693PollerResult r = {0};
