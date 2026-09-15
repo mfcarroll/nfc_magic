@@ -52,8 +52,7 @@
 // them, its back-fill skips them again, the reported total deducts them, and the source inspection
 // reads them. One list, four callers: spelled out per caller the set would exist four times and could
 // disagree with itself in four ways. Membership only -- the gen1 write SEQUENCE is ordered and stays
-// written out at
-// its call site, where the order is the point.
+// written out at its call site, where the order is the point.
 // COUNT_OF rather than sizeof at the three loops below: sizeof is right only while the element type is
 // uint8_t, and this file already contemplates block indices above 255 elsewhere. Widen it to uint16_t
 // and sizeof(array) goes 4 -> 8 while the element count stays 4, so a sizeof-bounded loop would run
@@ -1232,9 +1231,11 @@ static NfcCommand
             // safe. "No write landed, so the UID cannot have moved" is the one inference this file
             // declines to draw anywhere else: on a card the sweep reached index 56/57 on, three
             // WRITE BLOCKs each went out there before it gave up, and a tag can apply a write without
-            // answering. Only two things stop the sweep short of 56/57: the card answers nothing above
-            // its claim AND claims fewer than 49 blocks, or the geometry guard above returned before
-            // the first write -- which also lands here, since it returns 0.
+            // answering. Only two things stop the sweep short of 56/57: the card answers nothing
+            // above its claim AND claims fewer than 49 blocks -- a card that refuses every write
+            // but still serves a read never accumulates a run, so it walks past 56/57 whatever it
+            // claims -- or the geometry guard above returned before the first write, which also
+            // lands here, since it returns 0.
             //
             // 49 is not a threshold about the claim CONTAINING 56. The sweep runs past the advertised
             // count until ISO15693_POLLER_WIPE_ABSENT_RUN blocks answer nothing, so a card silent
