@@ -1,798 +1,821 @@
 {
-  "gen1_finding_2026_09_08": "THE LUA SCRIPT IS GEN1, CONFIRMED BYTE-FOR-BYTE. The ST LRi 2K listing is titled '15693 UID Changeable + Lua Script by Iceman Compatible ST LRi 2K (0-55 block)', and proxmark's client/luascripts/hf_15_magic.lua sends exactly four frames: 02213E00000000, 02213F69960000, 022138<uid hi>, 022139<uid lo>. 0x21 is ISO15693_WRITEBLOCK, so those are WRITE BLOCK at 0x3E, 0x3F, 0x38, 0x39 = blocks 62, 63, 56, 57 with 0, 0x6996 and the UID halves. That is the identical sequence SetTag15693Uid builds in armsrc/iso15693.c:3166, which is what `hf 15 csetuid` with no flag sends. Same frames, different transport -- client raw vs ARM helper. TWO CONSEQUENCES. (1) Our gen1 probe ALREADY covers the Lua method; there is no fourth mechanism to implement. (2) A product advertised as Lua-writable is a GEN1 product -- which is the card this PR has been blocked on for six rounds. #255's armed-gen1 hazard, the unlock/commit ordering inferred from proxmark's send order, and the post-wipe UID re-read are all untestable without one.",
-  "hypothesis_2026_09_08": "The seller's 'pm3' mark correlates with presenting a GENUINE-looking identity. The four pm3-marked tags (three SLIX at IC ref 0x01, SLIX-S at 0x02) all carry NXP's manufacturer byte with an IC reference matching the part they claim, and proxmark identifies every one. Of the unmarked tags, four present something off: IC ref 0x21 on a SLIX that should read 0x01, unregistered manufacturer bytes 0x53 (silver pair) and 0x48 (gold). Reading: those are emulators carrying a programmed CFG, which is what produces an odd IC ref, while the pm3 tags are genuine NXP silicon made magic some other way. It cuts against the naive expectation, predicting that the tags proxmark CAN write look LEAST like magic. THIS IS A HYPOTHESIS and the write probe tests it. REVISED 2026-09-08: the keychain was originally counted as a fifth 'something off' on its IC ref 0x22. That was wrong -- it presents a fully coherent genuine ST identity, and it is a branded commercial product rather than part of the magic-card order at all. Excluding it as a freebie, the correlation covers four magic candidates against four pm3 tags, which is a cleaner claim than the one it replaces but rests on a smaller set. Do not treat 8 tags as 9 independent samples: the three SLIX share a UID prefix and the silver pair differ in two bytes, so this is more like four distinct products.",
-  "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten. Second order recorded 2026-09-08: 9 physical tags across 7 label types, seller-described as a mystery pack. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration.",
-  "order_context_2026_09_08": "ORDERED 5, RECEIVED 9. The seller over-delivered as a favour after the purpose was explained, said he would substitute randomly, and MARKED the pm3-writable ones on the bag. So order lines do not map to delivered tags -- the bag labels are his own annotation of what each tag is and should be trusted over the order. The lines were: 1x 'Icode slix 1k 0-27b', 2x 'ST LRi 2K 0-55b', 1x '50X28mm', 1x '50x28mm slix 1k'. His words on the unmarked ones: \u4e13\u7528\u7684\u8bfb\u5199\u8bbe\u5907, a DEDICATED READ/WRITE DEVICE -- hardware, not a script.",
-  "provenance_rule_2026_09_13": "A magic card's UID, IC ref, DSFID, AFI and advertised geometry are all WRITABLE, so none of them identifies its silicon -- proxmark's TYPE line is a lookup on the UID's manufacturer byte, and the rest come from the CFG block. Treat every such field as a COSTUME unless the record says the read predates any write (original.pre_write). Found 2026-09-13 while adding gen-2-card, whose 'EM-Marin EM4237' identity turned out to be an expired access credential cloned onto it the day before the first instrumented read -- and had been cited as silicon in the PR. Two rules follow. Say what a card DID, not what it says it is. And when a card's identity came from somewhere else, record it under a name that says so: an inventory slot called `original` invites exactly the misreading that caused this.",
-  "tags": {
-    "SL2S5302": {
-      "bag_label": "SL2S5302; SL2S5402 ICODE SLIX-S UID",
-      "classification": {
-        "campaign": "20260912_171357",
-        "gen1_write": true,
-        "gen2_write": false,
-        "gen3_signature": false,
-        "verdict": "gen1 magic"
-      },
-      "expected": {
-        "block_size": 4,
-        "ic_ref": 2,
-        "listing_text": "SL2S5302; SL2S5402 ICODE SLIX-S UID  [hand-written: pm3]",
-        "magic": true,
-        "note": "NXP ICODE SLIX-S. IC id 0x02 per the app's decode table; SLIX-S vs SLI-S is uid[3] & 0x10. No block count claimed, so none expected here -- capacity will say.",
-        "pm3_writable": true,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "50x28mm sticker, white",
-      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Physically marked SL2S5302 to tell it from slix-1k-50x28, the other 50x28mm white sticker. BLOCK COUNT UNKNOWN: the label states no range, and neither proxmark nor our app hardcodes SLI-S geometry -- both read it from GET SYSTEM INFO. Measure before assuming, because whether 56/57/62/63 exist decides if a gen1 attempt is destructive. || MEASURED 2026-09-08: SLIX-S, IC ref 0x02 as predicted from the decode table, and 40 BLOCKS x 4 -- a geometry this project had never measured, and one the label did not claim. 40 blocks means indices 0-39, so 56/57/62/63 are OUT OF RANGE: a gen1 attempt is harmless here after all.",
-      "original": {
-        "advertised_blocks": 40,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:35:59",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 2,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F F8 35 00 03 50 02 04 E0 00 00 27 03 02",
-        "type": "MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S )",
-        "uid": "E0 04 02 50 03 00 35 F8",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:35:59",
-        "phantom_blocks": 0,
-        "physical_blocks": 40
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "black-tag": {
-      "classification": {
-        "campaign": "20260824_232750",
-        "gen2_write": true,
-        "gen3_signature": false,
-        "verdict": "gen2 magic"
-      },
-      "count_owned": 1,
-      "expected": {
-        "block_size": 4,
-        "blocks": 64,
-        "listing_text": "as white-coin, different form factor",
-        "magic": true,
-        "note": "Same silicon expected as white-coin. If the two measure differently that is the interesting result, since the listings claim they are the same part.",
-        "recorded": "2026-08-24",
-        "source": "seller listing",
-        "total_bytes": 256
-      },
-      "form_factor": "tag",
-      "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
-      "original": {
-        "advertised_blocks": 64,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260824_225620",
-        "captured": "2026-08-24T23:05:01",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 139,
-        "locked_blocks": [],
-        "mfg_byte": 7,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 07 42 14 AF B8 81 07 E0 00 00 3F 03 8B",
-        "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
-        "uid": "E0 07 81 B8 AF 14 42 07",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260824_225620",
-        "measured": "2026-08-24T23:05:01",
-        "phantom_blocks": 0,
-        "physical_blocks": 64
-      },
-      "source_url": "https://www.aliexpress.com/item/1005012335464752.html"
-    },
-    "gen-2-card": {
-      "carries_cloned_credential": {
-        "advertised_blocks": 66,
-        "afi": 0,
-        "block_size": 4,
-        "campaign": "20260727_101028",
-        "captured": "2026-07-27T10:11:05",
-        "captured_note": "The earliest instrumented read of the card, 2026-07-27T10:11:05, one day after the clone. The unreadable list is single-attempt RF flakiness from the early probe (retried reads came later); blocks 64/65 are the phantom tail and fail by design, 66-69 are past the advertised count.",
-        "dsfid": 2,
-        "from_baseline_probe": false,
-        "ic_ref": 15,
-        "locked_blocks": null,
-        "mfg_byte": 22,
-        "nonzero_blocks": [
-          0,
-          1
-        ],
-        "sysinfo": "00 0F DE F6 A2 19 66 3C 16 E0 02 00 41 03 0F",
-        "type": "MATCH EM-Marin SA (Skidata); EM4237 [IC id = 15] 23,5pF",
-        "uid": "E0 16 3C 66 19 A2 F6 DE",
-        "unreadable_blocks": [
-          2,
-          4,
-          10,
-          12,
-          13,
-          33,
-          35,
-          38,
-          43,
-          52,
-          53,
-          55,
-          56,
-          61,
-          62
-        ],
-        "what_this_is": "NOT this card's identity. It is an ACCESS CREDENTIAL -- the project owner's own, long expired -- that was cloned onto this magic card on 2026-07-26, before any instrumented read of the card existed. It is the first ISO15693 tag the project ever scanned, which is how it came to be the clone source. Kept deliberately and with the owner's say-so, because the credential is dead and because this is the only record of what the identity-clone feature was first validated against. Blocks 0-1 (E3 08 21 56 / 82 18 60 00) are the credential's payload, not the card's. Nothing here describes the magic card: UID, TYPE, IC ref, DSFID, AFI, advertised geometry and block data all belong to the credential. The card's own measured facts are under `physical`."
-      },
-      "classification": {
-        "campaign": "20260727_105923",
-        "gen1_write": false,
-        "gen2_write": true,
-        "gen3_signature": false,
-        "verdict": "gen2 magic"
-      },
-      "count_owned": 1,
-      "form_factor": "credit card, white PVC",
-      "label": "Physically labelled 'gen-2-card' 2026-09-13. It is the only gen2 card in credit-card form factor, which is what the label means; the other white PVC card is 'white-card'.",
-      "note": "THE ORIGINAL GEN2 CARD, and the control the project's central write claim rests on. The 2026-08-17 regression five passed on it, and it was re-run as the control in the 2026-09-12 device session: it ACCEPTS unaddressed WRITE BLOCK, where white-coin and black-tag refuse it (#251). That behavioural contrast is measured and stands on its own.\n\nWHAT THIS CARD IS, is unknown. It presents as EM-Marin EM4237 at IC ref 0x0F advertising 66 blocks because an expired access credential was cloned onto it on 2026-07-26 -- see `carries_cloned_credential`. Every field that names a chip is writable on a gen2 magic card: proxmark's TYPE is a lookup on the UID's manufacturer byte, and IC ref / block count / block size come from GET SYSTEM INFO, which is the CFG block. All of them were watched moving on this one card inside three hours on 2026-07-27 -- 105923: E0 16 3C.. / IC 0x0F / 66 blocks, gen2_write TRUE; 113213: the SAME UID at IC 0x8B / 64 blocks, after the gen2 csetuid stamped proxmark's default CFG; 120636: E0 07 C0 C1 C2 C3 C4 C5 (the synthetic tagit_64 test UID); 123035: E0 04 01 10 A1 A2 A3 A4 at 28 blocks (slix_28). The credential's identity says nothing about the card, and neither does any of the others.\n\nWhat IS measured about the card: 64 physical blocks with a 2-block phantom tail above whatever it is currently advertising, gen2 magic, and that it accepts unaddressed WRITE BLOCK.\n\nConsequence for anything citing it: the 'EM-Marin 0x0F vs TI Tag-it 0x8B' framing used in pr-round-10 reads as a silicon contrast and is not one. Both attributions are UID-manufacturer lookups on cards whose UIDs are writable, and 0x8B is also what THIS card reports after a plain gen2 CFG write. white-coin and black-tag are in a better position -- their TI presentation is the state they ARRIVED in rather than one we wrote -- but 'as shipped' is still not 'as fabricated'. Cite the BEHAVIOUR (accepts vs refuses unaddressed WRITE BLOCK), not the chip name.",
-      "original": {
-        "from_baseline_probe": false,
-        "pre_write": false,
-        "type": null,
-        "uid": null,
-        "unavailable": "THERE IS NONE, and this record exists to say so rather than leave the slot open for a later run to fill with a costume. This card was cloned on 2026-07-26, a day before the first instrumented read, so no read of it predates a write and its factory identity was never captured. What it presents instead is an expired access credential -- see `carries_cloned_credential`. Its physical block count is measured and real; everything that names a chip is not."
-      },
-      "physical": {
-        "campaign": "20260727_101028",
-        "measured": "2026-07-27T10:11:05",
-        "note": "physical_blocks 64 is a real measurement of THIS card -- block 63 reads, 64 and 65 fail both rdbl and wrbl. phantom_blocks is not: it is 66 minus 64, and the 66 came from the cloned credential's CFG, so it counts the costume's over-claim rather than a property of the card. The card's advertised count is whatever it was last written with.",
-        "phantom_blocks": 2,
-        "physical_blocks": 64
-      },
-      "source_url": "https://www.aliexpress.com/item/1005006949791537.html"
-    },
-    "lri2k-keychain": {
-      "armed_gen1_wipe_2026_09_08": {
-        "formatter_first_hardware_sighting": "Incidental but worth having: 'Now reads: 00000000 00000000' is the Iso15693UidFormatGrouped output from the comment-cut delta's one code change, rendering correctly on hardware for the first time -- two 4-byte groups, 17 characters, inside the line budget.",
-        "recovery": "Recoverable, and the original UID is recorded here: hf 15 csetuid -u E002222450008303. gen1's frames are unaddressed (flags 0x02, no UID in the frame), so an invalid UID does not put the card out of reach.",
-        "screen": "UID changed / Wiped 58/58. The card's UID moved. Now reads: 00000000 00000000",
-        "sweep_found_58_of_56_advertised": "The wipe cleared 58 blocks against 56 advertised, with zero failures -- so blocks 56 and 57, the gen1 UID registers, were reached and zeroed. That is the sweep-above-advertised design working on gen1 silicon. It also demonstrates the rule it was built on: our own read-based capacity probe measured 56/56 on this card and UNDER-DETECTED BY TWO. Only a write settles whether a block exists, exactly as ISO15693_POLLER_WIPE_MAX_BLOCKS says -- which means the probe's capacity figure is a lower bound on any card whose high blocks accept writes without answering reads.",
-        "what_it_settles": "THE ARMED-GEN1 WIPE HAZARD IS REAL AND NOW DEMONSTRATED, not inferred. #255's central claim held: the wipe zeroed blocks 56/57, the armed card latched the result on power-up, and its identity moved. AND THE MITIGATION THIS PR SHIPS WORKED -- the post-power-cycle UID re-read caught it, uid_verified reached an answer, and the run reported uid_changed as Partial on the UID-changed screen rather than claiming a clean wipe. Six rounds argued this from proxmark's send order; it is now measured.",
-        "worse_than_documented": "The UID did not move to another VALID identity -- it moved to ALL ZEROS. An ISO15693 UID must begin with 0xE0, so the card now answers with a non-conformant identity. #255 and the poller both describe this as the UID being 'moved' or 'changed', which understates it: the card is left without a valid UID at all. The screen printing 00000000 00000000 is honest and is the only route back, but a reader of either document would not expect zeros."
-      },
-      "bag_label": "ST LRI2K UID 0-55B",
-      "bag_label_note": "The bag carried the \"compatible with\" characters, but this tag probably is not what that bag describes. It is a FINISHED COMMERCIAL PRODUCT -- branded \"terminus shanghai\", an AIoT company -- in a form factor shared with nothing else in the order, and the seller said he would include extras. An extra thrown in loose can easily end up in whatever bag was to hand, so the label is weak evidence about THIS tag. Read the measurements instead, and they are coherent for genuine ST: manufacturer byte 0x02, proxmark identifies it as ST Microelectronics SA France, 56 blocks matching the label range, unlocked and blank as unprogrammed stock would be. The write probe settles it -- if gen2 and gen1 both refuse, genuine non-magic is the reading that fits everything.",
-      "classification": {
-        "armed": "THIS CARD IS NOW ARMED, and deliberately so. 0x6996 went into block 63 twice -- the test write and the restore -- and per #255 and the OPEN QUESTION in iso15693_poller_wipe_blocks NOTHING ever clears it. So its UID can move on ANY later write to blocks 56/57, including the app's own wipe. That is a hazard and an asset at once: it is exactly the state #255's armed-gen1 case describes, and it has never been reproducible before.",
-        "campaign": "20260908_025701",
-        "gen1_confirmed": "CONFIRMED ON HARDWARE 2026-09-08, campaign iso15_20260908_025701. The four-frame sequence set E0F1E2D3C4B5A697, it read back exactly, and the original UID restored via gen1. First gen1 card this project has ever had.",
-        "gen1_write": true,
-        "gen2_still_valid": "The gen2 half of that run is unaffected -- `hf 15 csetuid --v2` goes through the ARM helper, which builds its own E0 09 frames unaddressed.",
-        "gen2_write": false,
-        "gen3_signature": false,
-        "verdict": "gen1 magic"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 56,
-        "corrected": "2026-09-08: recorded as unmarked at first. The bag DOES carry the pm3 mark, which matters -- it turns a negative gen1 result from 'confirms the seller's annotation' into 'contradicts his specific claim'.",
-        "listing_text": "ST LRI2K UID 0-55B  [hand-written: pm3]  [+ 'compatible with' characters]",
-        "magic": true,
-        "pm3_writable": true,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "50x30mm plastic keychain, branded \"terminus shanghai\"",
-      "note": "GEN1 MAGIC, confirmed on hardware 2026-09-08. Bag: 'ST LRI2K UID 0-55B', hand-marked pm3, with the 'compatible with' characters. 50x30mm plastic keychain branded 'terminus shanghai'. ST manufacturer byte 0x02, IC ref 0x22, 56 blocks x 4, blank, no locked blocks. THE PROJECT'S FIRST GEN1 CARD and its most valuable tag: it is a REUSABLE ARMED FIXTURE, since a wipe writes zero to block 63 rather than 0x6996 and so cannot clear the existing arm. Restore the UID, run a test, restore again -- `hf 15 csetuid -u E002222450008303`, unaddressed, so an invalid UID does not put it out of reach. Full findings and the work list they imply: ../.notes/gen1-hardware-findings.md and armed_gen1_wipe_2026_09_08 below.",
-      "note_history": {
-        "superseded_readings": [
-          "freebie: a branded commercial product that fell into the wrong bag",
-          "probably ordered: its label matches an ordered line item exactly",
-          "probably gen1: that line item's listing advertises Iceman's Lua script, which IS gen1",
-          "gen1 CONFIRMED on hardware"
-        ],
-        "the_original_error": "The first inventory pass recorded 'NOT marked pm3'. The user's tag description had not said 'note' or 'no note' for this tag, and absence of a mention was read as absence of a mark. Inferred from silence and then written down as fact.",
-        "void_runs": "Two runs reported confident gen1 negatives and both were void: the first sent an ADDRESSED write where gen1 sends unaddressed, the second got no ACK -- which proves nothing, because these registers accept writes without answering.",
-        "why_this_is_recorded": "The note was WRONG for most of 2026-09-08 and stayed wrong through five corrections, because each one was APPENDED. Six revisions cannot fix a false first sentence: the entry opened 'NOT marked pm3' and that is what --identify printed, long after the mark had been confirmed. Same defect as the comment drift this PR spent a round cutting -- a superseded claim left at the front reads as current. Notes get REPLACED, with the history in its own field."
-      },
-      "original": {
-        "advertised_blocks": 56,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:44:57",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 34,
-        "locked_blocks": [],
-        "mfg_byte": 2,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 03 83 00 50 24 22 02 E0 00 00 37 03 22",
-        "type": "MATCH ST Microelectronics SA France",
-        "uid": "E0 02 22 24 50 00 83 03",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:44:57",
-        "phantom_blocks": 0,
-        "physical_blocks": 56
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "slix-1k-50mm": {
-      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
-      "classification": {
-        "campaign": "20260912_172807",
-        "gen1_write": true,
-        "gen2_write": false,
-        "gen3_signature": false,
-        "verdict": "gen1 magic"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
-        "magic": true,
-        "note": "NXP ICODE SLIX. Same part family and geometry as the first order's plain tags, but with a UID claim they did not have -- so if this measures 28 blocks at IC ref 0x01 and takes a UID write, it is the same silicon in a magic variant.",
-        "pm3_writable": true,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "50mm round sticker, white",
-      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration. || MEASURED 2026-09-08: SLIX, IC ref 0x01, advertises 28. ANOMALY: blocks 0 and 1 would not read -- 6 retries each in baseline and 6 more in capacity, so 12 consecutive failures -- while blocks 2-27 read fine. Capacity aborted entirely, since it needs block 0 as its anchor, so this tag has NO physical measurement. Marginal coupling is the obvious explanation (it is the only tag too large to sit flat on the HF pad) but it does not fit well: coupling drops reads at RANDOM, and this failed the same two addresses every time while its three siblings read all 28 blocks. Re-run it: if 0 and 1 fail again with the tag repositioned, that is a property of the tag rather than the placement. || 2026-09-08 RE-RUN TWICE MORE, 12 retries each, one contact-but-realigned and one with a ~20mm air gap: blocks 0 and 1 unreadable every time while 2-27 read fine. That is three sessions and 36+ attempts per block across three different couplings, so IT IS NOT COUPLING -- it is a property of the tag. The air gap did fix whatever was stopping the tag reading at all, which supports the over-coupling guess for the FIRST failure, but blocks 0/1 survived the fix. Still no physical measurement: capacity anchors on block 0. Hypothesis to test with the write probe -- if this is a magic tag, blocks 0/1 may be reserved or remapped by its magic implementation rather than faulty. || 2026-09-12 RESOLVED, AND IT WAS NEVER THE TAG. The 'unreadable' blocks 0/1 were a HARNESS bug: pm3_exec decoded the pm3 client's stdout as UTF-8 strictly, `hf 15 rdbl` prints an ASCII rendering of the block it read, and these two blocks hold a byte that is not valid UTF-8 (0xE1). The decode raised, the exception was caught and recorded as a failed read, and three sessions went looking for an RF cause. THE TELL WAS IN THE CAPTURED OUTPUT THE WHOLE TIME: every failure named the same byte offset -- 472 for block 0, 474 for block 1, identical across all 6 retries and all 3 sessions -- and RF flakiness does not fail deterministically to the byte. Fixed by decoding with errors='replace'; the hex column the parser actually uses is ASCII and survives intact. CONSEQUENCE FOR THIS RECORD: this tag is NOT blank. Blocks 0 and 1 hold data, and 'none found, [0,1] unread' is a record of the tool failing rather than of the card. Its `original` baseline is therefore incomplete -- and `original` is WRITE-ONCE, so a re-run will not replace it. Decide deliberately before re-baselining. Its three siblings read all 28 blocks because they are genuinely blank, so all-zero ASCII columns decoded fine -- which is why only this tag showed it.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one. || 2026-09-12: nonzero_blocks and unreadable_blocks CORRECTED. The [0,1] 'unreadable' record was the UTF-8 decode bug in pm3_exec, not the tag. Blocks 0 and 1 read fine with the fixed tool (campaign iso15_20260912_172719) and hold E1 40 0E 01 / 03 00 FE 00 -- an NDEF capability container and an empty NDEF TLV. Backfilling rather than re-baselining is sound HERE and only here: no probe has ever written to blocks 0-27 on this tag (gen1 touches 56/57/62/63 only), so today's read of them is still pristine. The rest of the original record is untouched.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:28:45",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [
-          0,
-          1
-        ],
-        "sysinfo": "00 0F 63 08 26 20 50 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 26 08 63",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "correction": "No physical measurement exists: capacity aborted because block 0 would not read. Absent, not zero."
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "slix-1k-50x28": {
-      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
-      "classification": {
-        "campaign": "20260912_170728",
-        "gen1_write": true,
-        "gen2_write": false,
-        "gen3_signature": false,
-        "verdict": "gen1 magic"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
-        "magic": true,
-        "pm3_writable": true,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "50x28mm sticker, white",
-      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-coin18. AMBIGUOUS BY SIGHT with SL2S5302, the other 50x28mm white sticker -- that one is physically marked SL2S5302. Use --identify if there is any doubt. || MEASURED 2026-09-08: SLIX, IC ref 0x01, 28/28, blank. Matches the label exactly.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:32:23",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 8C 06 26 20 50 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 26 06 8C",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:32:23",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "slix-1k-coin18": {
-      "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
-      "classification": {
-        "campaign": "20260912_171618",
-        "gen1_write": true,
-        "gen2_write": false,
-        "gen3_signature": false,
-        "verdict": "gen1 magic"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
-        "magic": true,
-        "pm3_writable": true,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "18mm coin, green",
-      "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-50x28, so same silicon expected in another form factor -- the pair is a free check on that, the way white-coin and black-tag were. || MEASURED 2026-09-08: SLIX, IC ref 0x01, 28/28, blank. Matches. Same bag as slix-1k-50x28 and they agree on every field, so the same-silicon claim for that pair holds.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:33:28",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F E2 00 22 20 50 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 50 20 22 00 E2",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:33:28",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "slix-black-38x25": {
-      "bag_label": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B",
-      "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
-      "classification": {
-        "campaign": "20260908_012746",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B  [no note]",
-        "magic": true,
-        "pm3_writable": false,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "38x25mm sticker, black",
-      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. Label reads SL2S2012, which is probably a typo for SL2S2102 as on the other SLIX bags -- SL2S2012 is not a part number I can place. Recorded as written, not corrected. Also the only SLIX bag WITHOUT '1K', which may or may not mean anything. || MEASURED 2026-09-08: SLIX, 28/28, blank -- but IC ref 0x21, where the three genuine-looking SLIX tags all report 0x01. Consistent with the 'compatible with' label: NXP manufacturer byte and SLIX type bits, but an IC reference no NXP SLIX is known to use.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:34:33",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 33,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 38 20 D7 D2 12 01 04 E0 00 00 1B 03 21",
-        "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
-        "uid": "E0 04 01 12 D2 D7 20 38",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:34:33",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "slix2-gold-30mm": {
-      "bag_label": "SL2S2602 ICODE SLIX2 UID",
-      "classification": {
-        "campaign": "20260908_012746",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "expected": {
-        "block_size": 4,
-        "listing_text": "SL2S2602 ICODE SLIX2 UID  [no note]",
-        "magic": true,
-        "note": "NXP ICODE SLIX2, IC id 0x01 with the SLIX2 type bits (uid[3] & 0x18 == 0x08) -- see iso15693_info.c:268. proxmark also has a SLIX2-specific GET NXP SYSTEM INFO path.",
-        "pm3_writable": false,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "30mm round sticker with a flat edge, gold",
-      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. BLOCK COUNT UNKNOWN AND UNCLAIMED -- the label states no range, and nothing here can supply one: neither proxmark nor this app hardcodes SLIX2 geometry, both read GET SYSTEM INFO, and proxmark's SLIX2-specific GET NXP SYSTEM INFO path carries no size table either. So capacity has to measure it. A guess that it is a large part was recorded here on 2026-09-08 and withdrawn the same day as unsourced -- on the labels alone the largest claimed geometry in this batch is the TI pair at 0-63B, not this tag. Which way it lands decides whether a gen1 attempt is destructive, so measure before writing. || MEASURED 2026-09-08: THE INTERESTING ONE. Advertises 79 blocks x 4 -- so the withdrawn guess that it was the largest tag in the batch was numerically right, and withdrawing it was still correct: there was no source for it and now there is a measurement. uid[1]=0x48, not NXP's 0x04, and 'no tag-info available'. AND IT ANSWERS READS PAST ITS ADVERTISED COUNT: every block from 0 to 81 returned data. The capacity figure of 82 is the probe's own search ceiling (advertised + 2, then +1), NOT the card -- real capacity is >= 82 and unmeasured. Re-run with --capacity-max 255. This is the answers-reads-everywhere archetype that ISO15693_POLLER_PASS_MAX_MS exists for, on an off-the-shelf tag rather than a deliberately programmed one. gen1 IS destructive here. || 2026-09-08 RE-RUN with --capacity-max 255: it answers a read at EVERY address in the 8-bit block space, all 256. So no read-based probe can find its edge, and the earlier '82' was purely the default ceiling. This is the answers-reads-everywhere card in its pure form, off the shelf.",
-      "original": {
-        "advertised_blocks": 79,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:42:52",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 72,
-        "nonzero_blocks": [
-          21
-        ],
-        "sysinfo": "00 0F 36 F1 CD 01 00 03 48 E0 00 00 4E 03 01",
-        "type": "no tag-info available",
-        "uid": "E0 48 03 00 01 CD F1 36",
-        "unreadable_blocks": [
-          16,
-          17,
-          20
-        ]
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "correction": "2026-09-08: 82 is (advertised + 2) + 1, i.e. this probe's search bound. Every block 0..81 answered a read, so capacity is >= 82 and UNMEASURED. Recorded before the probe learned to say so; re-run with --capacity-max 255.",
-        "measured": "2026-09-08T01:42:52",
-        "over_advertised": 3,
-        "phantom_blocks": 0,
-        "physical_blocks": 82,
-        "physical_is_lower_bound": true,
-        "search_ceiling": 81
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "ti-2k-silver-1": {
-      "bag_label": "TI 2048 2K UID 0-63B",
-      "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
-      "classification": {
-        "campaign": "20260908_012746",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 64,
-        "listing_text": "TI 2048 2K UID 0-63B  [no note]",
-        "magic": true,
-        "pm3_writable": false,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "25mm round sticker, silver",
-      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. First of two identical silver rounds. || MEASURED 2026-09-08: 64/64, blank, IC ref 0x8B -- proxmark's gen2 default CFG value, same as white-coin and black-tag. But uid[1] is 0x53, NOT TI's 0x07, and proxmark reports 'no tag-info available': it does not present as a TI part at all, despite emulating one per the label. Both silver rounds share E0 53 01 10 in bytes 0-3 and differ only in bytes 4 and 6, with byte 5 (F3) and byte 7 (1A) identical -- a factory UID scheme with very little entropy. gen1 IS destructive here: 64 blocks means 56/57/62/63 exist.",
-      "original": {
-        "advertised_blocks": 64,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:38:07",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 139,
-        "locked_blocks": [],
-        "mfg_byte": 83,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 1A 38 F3 BB 10 01 53 E0 00 00 3F 03 8B",
-        "type": "no tag-info available",
-        "uid": "E0 53 01 10 BB F3 38 1A",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:38:07",
-        "phantom_blocks": 0,
-        "physical_blocks": 64
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "ti-2k-silver-2": {
-      "bag_label": "TI 2048 2K UID 0-63B",
-      "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
-      "classification": {
-        "campaign": "20260908_012746",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "expected": {
-        "block_size": 4,
-        "blocks": 64,
-        "listing_text": "TI 2048 2K UID 0-63B  [no note]",
-        "magic": true,
-        "pm3_writable": false,
-        "recorded": "2026-09-08",
-        "source": "seller listing / bag label"
-      },
-      "form_factor": "25mm round sticker, silver",
-      "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. Second of two identical silver rounds; visually indistinguishable from ti-2k-silver-1, so keep them apart and use --identify. || MEASURED 2026-09-08: 64/64, blank, IC ref 0x8B, uid[1]=0x53, 'no tag-info available' -- identical in every field to ti-2k-silver-1 except UID bytes 4 and 6. gen1 IS destructive here.",
-      "original": {
-        "advertised_blocks": 64,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260908_012746",
-        "captured": "2026-09-08T01:40:43",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 139,
-        "locked_blocks": [],
-        "mfg_byte": 83,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 1A 62 F3 AC 10 01 53 E0 00 00 3F 03 8B",
-        "type": "no tag-info available",
-        "uid": "E0 53 01 10 AC F3 62 1A",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260908_012746",
-        "measured": "2026-09-08T01:40:43",
-        "phantom_blocks": 0,
-        "physical_blocks": 64
-      },
-      "source_url": "https://www.aliexpress.com/store/1112214"
-    },
-    "white-card": {
-      "classification": {
-        "campaign": "20260913_005922",
-        "gen2_write": false,
-        "gen3_signature": false,
-        "recovered_from_raw": "Measured in campaign 20260913_005922 and lost when the operator declined the gen1 arming prompt -- KeyboardInterrupt escaped the campaign loop before the result store and inventory_update, leaving manifest.json with \"cards\": []. Reconstructed 2026-09-13 from the raw captures that survived, which are the primary evidence either way: white-card_magictype_v3sig.txt reads blocks 0x14/0x15 as 00 00 00 00 (not the V3 signature), and white-card_magictype_gen2.txt shows `hf 15 csetuid -u E0A1B2C3D4E5F607 --v2` -> 'Setting new UID ( fail )' with the verify still reading all zeros. The probe's abort path is fixed as of this commit; see tools/test_probe_abort.py.",
-        "verdict": "not gen2; gen1 untested"
-      },
-      "note": "Arrived in a separate shipment from the 2026-09-08 batch and probed 2026-09-13. Ships BLANK WITH A ZERO UID -- 00 00 00 00 00 00 00 00, returned in the UID field of GET SYSTEM INFO across three separate captures, so it is the card's answer and not a failed read. sysinfo 00 0F 00*10 1B 03 01 = 28 blocks x 4 bytes, IC ref 0x01, DSFID/AFI zero.\n\nThe zero UID is the only discriminator available. Geometry does not separate the candidates: white-tag-1/2/3 are also IC ref 0x01 at 28x4 and white-tag-1 measured NON-magic, while the three slix-1k gen1 cards are also IC ref 0x01 at 28x4. What differs is that every one of those carries a laser-programmed UID beginning 0xE0 plus a manufacturer byte. A UID of all zeros means the UID lives in writable storage and was never programmed, i.e. a magic card that has not been given an identity.\n\ngen2 is excluded more firmly than the run reported. proxmark's `csetuid --v2` writes its own default CFG (64x4, IC ref 0x8B) as a side effect, and the post-attempt sysinfo is byte-identical at 1B 03 01 -- so the card ignored the custom 0xE0 frames outright rather than taking CFG and refusing the UID. No geometry was moved and there is nothing to restore.\n\nNOT ARMED, deliberately, and it is the only card in the inventory that is not. All five gen1 cards carry gen1_write true, which only the full four-frame sequence sets, and nothing clears that register (#255) -- so every gen1 test the app has ever run went against a card that was already unlocked, where the UID moves on a write to 56/57 regardless of whether the app's own unlock/commit frames do anything. On the armed lri2k-keychain those two frames are REFUSED with error 0x10 and the UID still moves. This card is the only instrument that can test the app's own unlock sequence, and the test is one-shot: unlocking is intrinsic to setting a gen1 UID, so whoever writes first spends it. Spend it on the Flipper (gen1 clone from a 28-block source), not on the probe. What it CANNOT answer, despite being the obvious use: whether a wipe moves a virgin gen1 card's UID -- the UID starts at zeros, so a wipe that moved it to zeros is invisible.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "block_size": 4,
-        "campaign": "20260913_005742",
-        "captured": "2026-09-13T00:58:22",
-        "dsfid": 0,
-        "from_baseline_probe": false,
-        "ic_ref": 1,
-        "locked_blocks": null,
-        "mfg_byte": 0,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 00 00 00 00 00 00 00 00 00 00 1B 03 01",
-        "type": "no tag-info available",
-        "uid": "00 00 00 00 00 00 00 00",
-        "unreadable_blocks": null
-      },
-      "physical": {
-        "campaign": "20260913_005742",
-        "measured": "2026-09-13T00:58:22",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://share.temu.com/DYjEAQEkQxA"
-    },
-    "white-coin": {
-      "classification": {
-        "campaign": "20260824_231941",
-        "gen2_write": true,
-        "gen3_signature": false,
-        "verdict": "gen2 magic"
-      },
-      "count_owned": 1,
-      "expected": {
-        "block_size": 4,
-        "blocks": 64,
-        "listing_text": "64 block / 256 byte / 2k, 8 bytes UID changeable",
-        "magic": true,
-        "note": "64 x 4 = 256 bytes = 2048 bits; the three figures agree. UID-changeable means magic; gen2 is the expectation, but the listing does not say which generation.",
-        "recorded": "2026-08-24",
-        "source": "seller listing",
-        "total_bytes": 256
-      },
-      "form_factor": "coin",
-      "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
-      "original": {
-        "advertised_blocks": 64,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260824_225620",
-        "captured": "2026-08-24T22:58:56",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 139,
-        "locked_blocks": [],
-        "mfg_byte": 7,
-        "nonzero_blocks": [],
-        "sysinfo": "00 0F 29 3A E7 E2 3D 80 07 E0 00 00 3F 03 8B",
-        "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
-        "uid": "E0 07 80 3D E2 E7 3A 29",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260824_225620",
-        "measured": "2026-08-24T22:58:56",
-        "phantom_blocks": 0,
-        "physical_blocks": 64
-      },
-      "source_url": "https://www.aliexpress.com/item/1005007586284866.html"
-    },
-    "white-tag-1": {
-      "classification": {
-        "campaign": "20260824_233604",
-        "gen1_write": false,
-        "gen2_write": false,
-        "gen3_signature": false,
-        "reclassified": "2026-09-08: measurement unchanged, wording corrected",
-        "verdict": "no gen1/gen2/gen3"
-      },
-      "count_owned": 3,
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
-        "magic": false,
-        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
-        "recorded": "2026-08-24",
-        "source": "seller listing",
-        "total_bytes": 112
-      },
-      "form_factor": "tag",
-      "note": "The probed representative of the three. Classified non-magic on hardware 2026-08-24; the gen1 attempt sent ordinary WRITE BLOCKs at 56/57/62/63, all out of range on a 28-block tag, and block 27 still read its factory 57 5F 4F 4B afterwards -- so no aliasing, and the tag is byte-identical to its baseline.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260824_225620",
-        "captured": "2026-08-24T23:07:00",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [
-          27
-        ],
-        "sysinfo": "00 0F 16 E2 AB 84 00 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB E2 16",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260824_225620",
-        "measured": "2026-08-24T23:07:00",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/item/32808113402.html"
-    },
-    "white-tag-2": {
-      "classification": {
-        "campaign": "20260824_225620",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "count_owned": 3,
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
-        "magic": false,
-        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
-        "recorded": "2026-08-24",
-        "source": "seller listing",
-        "total_bytes": 112
-      },
-      "form_factor": "tag",
-      "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260824_225620",
-        "captured": "2026-08-24T23:09:38",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [
-          27
-        ],
-        "sysinfo": "00 0F A5 E1 AB 84 00 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB E1 A5",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260824_225620",
-        "measured": "2026-08-24T23:09:38",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/item/32808113402.html"
-    },
-    "white-tag-3": {
-      "classification": {
-        "campaign": "20260824_225620",
-        "gen3_signature": false,
-        "verdict": "unclassified (no write probe run)"
-      },
-      "count_owned": 3,
-      "expected": {
-        "block_size": 4,
-        "blocks": 28,
-        "ic_ref": 1,
-        "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
-        "magic": false,
-        "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
-        "recorded": "2026-08-24",
-        "source": "seller listing",
-        "total_bytes": 112
-      },
-      "form_factor": "tag",
-      "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
-      "original": {
-        "advertised_blocks": 28,
-        "afi": 0,
-        "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
-        "block_size": 4,
-        "campaign": "20260824_225620",
-        "captured": "2026-08-24T23:11:13",
-        "dsfid": 0,
-        "from_baseline_probe": true,
-        "ic_ref": 1,
-        "locked_blocks": [],
-        "mfg_byte": 4,
-        "nonzero_blocks": [
-          27
-        ],
-        "sysinfo": "00 0F C5 DF AB 84 00 01 04 E0 00 00 1B 03 01",
-        "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
-        "uid": "E0 04 01 00 84 AB DF C5",
-        "unreadable_blocks": []
-      },
-      "physical": {
-        "campaign": "20260824_225620",
-        "measured": "2026-08-24T23:11:13",
-        "phantom_blocks": 0,
-        "physical_blocks": 28
-      },
-      "source_url": "https://www.aliexpress.com/item/32808113402.html"
-    }
+ "gen1_finding_2026_09_08": "THE LUA SCRIPT IS GEN1, CONFIRMED BYTE-FOR-BYTE. The ST LRi 2K listing is titled '15693 UID Changeable + Lua Script by Iceman Compatible ST LRi 2K (0-55 block)', and proxmark's client/luascripts/hf_15_magic.lua sends exactly four frames: 02213E00000000, 02213F69960000, 022138<uid hi>, 022139<uid lo>. 0x21 is ISO15693_WRITEBLOCK, so those are WRITE BLOCK at 0x3E, 0x3F, 0x38, 0x39 = blocks 62, 63, 56, 57 with 0, 0x6996 and the UID halves. That is the identical sequence SetTag15693Uid builds in armsrc/iso15693.c:3166, which is what `hf 15 csetuid` with no flag sends. Same frames, different transport -- client raw vs ARM helper. TWO CONSEQUENCES. (1) Our gen1 probe ALREADY covers the Lua method; there is no fourth mechanism to implement. (2) A product advertised as Lua-writable is a GEN1 product -- which is the card this PR has been blocked on for six rounds. #255's armed-gen1 hazard, the unlock/commit ordering inferred from proxmark's send order, and the post-wipe UID re-read are all untestable without one.",
+ "hypothesis_2026_09_08": "The seller's 'pm3' mark correlates with presenting a GENUINE-looking identity. The four pm3-marked tags (three SLIX at IC ref 0x01, SLIX-S at 0x02) all carry NXP's manufacturer byte with an IC reference matching the part they claim, and proxmark identifies every one. Of the unmarked tags, four present something off: IC ref 0x21 on a SLIX that should read 0x01, unregistered manufacturer bytes 0x53 (silver pair) and 0x48 (gold). Reading: those are emulators carrying a programmed CFG, which is what produces an odd IC ref, while the pm3 tags are genuine NXP silicon made magic some other way. It cuts against the naive expectation, predicting that the tags proxmark CAN write look LEAST like magic. THIS IS A HYPOTHESIS and the write probe tests it. REVISED 2026-09-08: the keychain was originally counted as a fifth 'something off' on its IC ref 0x22. That was wrong -- it presents a fully coherent genuine ST identity, and it is a branded commercial product rather than part of the magic-card order at all. Excluding it as a freebie, the correlation covers four magic candidates against four pm3 tags, which is a cleaner claim than the one it replaces but rests on a smaller set. Do not treat 8 tags as 9 independent samples: the three SLIX share a UID prefix and the silver pair differ in two bytes, so this is more like four distinct products.",
+ "note": "Expectations seeded from seller listings before any tag was read. Measurements are added by tools/iso15693_magic_probe.py; the expected block is never overwritten. Second order recorded 2026-09-08: 9 physical tags across 7 label types, seller-described as a mystery pack. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration.",
+ "order_context_2026_09_08": "ORDERED 5, RECEIVED 9. The seller over-delivered as a favour after the purpose was explained, said he would substitute randomly, and MARKED the pm3-writable ones on the bag. So order lines do not map to delivered tags -- the bag labels are his own annotation of what each tag is and should be trusted over the order. The lines were: 1x 'Icode slix 1k 0-27b', 2x 'ST LRi 2K 0-55b', 1x '50X28mm', 1x '50x28mm slix 1k'. His words on the unmarked ones: 专用的读写设备, a DEDICATED READ/WRITE DEVICE -- hardware, not a script.",
+ "provenance_rule_2026_09_13": "A magic card's UID, IC ref, DSFID, AFI and advertised geometry are all WRITABLE, so none of them identifies its silicon -- proxmark's TYPE line is a lookup on the UID's manufacturer byte, and the rest come from the CFG block. Treat every such field as a COSTUME unless the record says the read predates any write (original.pre_write). Found 2026-09-13 while adding gen-2-card, whose 'EM-Marin EM4237' identity turned out to be an expired access credential cloned onto it the day before the first instrumented read -- and had been cited as silicon in the PR. Two rules follow. Say what a card DID, not what it says it is. And when a card's identity came from somewhere else, record it under a name that says so: an inventory slot called `original` invites exactly the misreading that caused this.",
+ "tags": {
+  "SL2S5302": {
+   "bag_label": "SL2S5302; SL2S5402 ICODE SLIX-S UID",
+   "classification": {
+    "campaign": "20260912_171357",
+    "gen1_write": true,
+    "gen2_write": false,
+    "gen3_signature": false,
+    "verdict": "gen1 magic"
+   },
+   "expected": {
+    "block_size": 4,
+    "ic_ref": 2,
+    "listing_text": "SL2S5302; SL2S5402 ICODE SLIX-S UID  [hand-written: pm3]",
+    "magic": true,
+    "note": "NXP ICODE SLIX-S. IC id 0x02 per the app's decode table; SLIX-S vs SLI-S is uid[3] & 0x10. No block count claimed, so none expected here -- capacity will say.",
+    "pm3_writable": true,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "50x28mm sticker, white",
+   "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Physically marked SL2S5302 to tell it from slix-1k-50x28, the other 50x28mm white sticker. BLOCK COUNT UNKNOWN: the label states no range, and neither proxmark nor our app hardcodes SLI-S geometry -- both read it from GET SYSTEM INFO. Measure before assuming, because whether 56/57/62/63 exist decides if a gen1 attempt is destructive. || MEASURED 2026-09-08: SLIX-S, IC ref 0x02 as predicted from the decode table, and 40 BLOCKS x 4 -- a geometry this project had never measured, and one the label did not claim. 40 blocks means indices 0-39, so 56/57/62/63 are outside the DATA geometry. That does NOT make a gen1 attempt harmless, and this record said it did: blocks 56 and 57 accept a gen1 UID write on this card and the UID moves -- measured directly, see latch_2026_09_15. The UID registers are backdoor registers rather than memory, so they do not sit inside the advertised range and the block count says nothing about whether they exist. What 40 blocks does settle is the WIPE sweep, which never reaches them: 40 is below 49, so the absent run ends the sweep around block 47.",
+   "original": {
+    "advertised_blocks": 40,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:35:59",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 2,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F F8 35 00 03 50 02 04 E0 00 00 27 03 02",
+    "type": "MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S )",
+    "uid": "E0 04 02 50 03 00 35 F8",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:35:59",
+    "phantom_blocks": 0,
+    "physical_blocks": 40
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214",
+   "latch_2026_09_15": {
+    "chip": "NXP ICODE SLIX-S, IC ref 0x02",
+    "result": "no power-up latch; UID changes immediately",
+    "refusal_rendering": "the client reported 'command failed' for 62/63 rather than the in-band 01 10 1E 06 the LRi2K returned -- not distinguished here between an error frame and silence",
+    "method": "The four gen1 frames, then an INVENTORY in the SAME field session with the field held up (-k), no power-cycle: the inventory returns the NEWLY written UID. So the UID change is immediate and there is no power-up latch on this chip. 62/63 were refused and 56/57 accepted, the same split as every other armed card here. Original UID restored from this record and confirmed byte-identical with hf 15 reader."
+   }
   },
-  "updated": "2026-09-13T00:58:22"
+  "black-tag": {
+   "classification": {
+    "campaign": "20260824_232750",
+    "gen2_write": true,
+    "gen3_signature": false,
+    "verdict": "gen2 magic"
+   },
+   "count_owned": 1,
+   "expected": {
+    "block_size": 4,
+    "blocks": 64,
+    "listing_text": "as white-coin, different form factor",
+    "magic": true,
+    "note": "Same silicon expected as white-coin. If the two measure differently that is the interesting result, since the listings claim they are the same part.",
+    "recorded": "2026-08-24",
+    "source": "seller listing",
+    "total_bytes": 256
+   },
+   "form_factor": "tag",
+   "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
+   "original": {
+    "advertised_blocks": 64,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260824_225620",
+    "captured": "2026-08-24T23:05:01",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 139,
+    "locked_blocks": [],
+    "mfg_byte": 7,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 07 42 14 AF B8 81 07 E0 00 00 3F 03 8B",
+    "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
+    "uid": "E0 07 81 B8 AF 14 42 07",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260824_225620",
+    "measured": "2026-08-24T23:05:01",
+    "phantom_blocks": 0,
+    "physical_blocks": 64
+   },
+   "source_url": "https://www.aliexpress.com/item/1005012335464752.html"
+  },
+  "gen-2-card": {
+   "carries_cloned_credential": {
+    "advertised_blocks": 66,
+    "afi": 0,
+    "block_size": 4,
+    "campaign": "20260727_101028",
+    "captured": "2026-07-27T10:11:05",
+    "captured_note": "The earliest instrumented read of the card, 2026-07-27T10:11:05, one day after the clone. The unreadable list is single-attempt RF flakiness from the early probe (retried reads came later); blocks 64/65 are the phantom tail and fail by design, 66-69 are past the advertised count.",
+    "dsfid": 2,
+    "from_baseline_probe": false,
+    "ic_ref": 15,
+    "locked_blocks": null,
+    "mfg_byte": 22,
+    "nonzero_blocks": [
+     0,
+     1
+    ],
+    "sysinfo": "00 0F DE F6 A2 19 66 3C 16 E0 02 00 41 03 0F",
+    "type": "MATCH EM-Marin SA (Skidata); EM4237 [IC id = 15] 23,5pF",
+    "uid": "E0 16 3C 66 19 A2 F6 DE",
+    "unreadable_blocks": [
+     2,
+     4,
+     10,
+     12,
+     13,
+     33,
+     35,
+     38,
+     43,
+     52,
+     53,
+     55,
+     56,
+     61,
+     62
+    ],
+    "what_this_is": "NOT this card's identity. It is an ACCESS CREDENTIAL -- the project owner's own, long expired -- that was cloned onto this magic card on 2026-07-26, before any instrumented read of the card existed. It is the first ISO15693 tag the project ever scanned, which is how it came to be the clone source. Kept deliberately and with the owner's say-so, because the credential is dead and because this is the only record of what the identity-clone feature was first validated against. Blocks 0-1 (E3 08 21 56 / 82 18 60 00) are the credential's payload, not the card's. Nothing here describes the magic card: UID, TYPE, IC ref, DSFID, AFI, advertised geometry and block data all belong to the credential. The card's own measured facts are under `physical`."
+   },
+   "classification": {
+    "campaign": "20260727_105923",
+    "gen1_write": false,
+    "gen2_write": true,
+    "gen3_signature": false,
+    "verdict": "gen2 magic"
+   },
+   "count_owned": 1,
+   "form_factor": "credit card, white PVC",
+   "label": "Physically labelled 'gen-2-card' 2026-09-13. It is the only gen2 card in credit-card form factor, which is what the label means; the other white PVC card is 'white-card'.",
+   "note": "THE ORIGINAL GEN2 CARD, and the control the project's central write claim rests on. The 2026-08-17 regression five passed on it, and it was re-run as the control in the 2026-09-12 device session: it ACCEPTS unaddressed WRITE BLOCK, where white-coin and black-tag refuse it (#251). That behavioural contrast is measured and stands on its own.\n\nWHAT THIS CARD IS, is unknown. It presents as EM-Marin EM4237 at IC ref 0x0F advertising 66 blocks because an expired access credential was cloned onto it on 2026-07-26 -- see `carries_cloned_credential`. Every field that names a chip is writable on a gen2 magic card: proxmark's TYPE is a lookup on the UID's manufacturer byte, and IC ref / block count / block size come from GET SYSTEM INFO, which is the CFG block. All of them were watched moving on this one card inside three hours on 2026-07-27 -- 105923: E0 16 3C.. / IC 0x0F / 66 blocks, gen2_write TRUE; 113213: the SAME UID at IC 0x8B / 64 blocks, after the gen2 csetuid stamped proxmark's default CFG; 120636: E0 07 C0 C1 C2 C3 C4 C5 (the synthetic tagit_64 test UID); 123035: E0 04 01 10 A1 A2 A3 A4 at 28 blocks (slix_28). The credential's identity says nothing about the card, and neither does any of the others.\n\nWhat IS measured about the card: 64 physical blocks with a 2-block phantom tail above whatever it is currently advertising, gen2 magic, and that it accepts unaddressed WRITE BLOCK.\n\nConsequence for anything citing it: the 'EM-Marin 0x0F vs TI Tag-it 0x8B' framing used in pr-round-10 reads as a silicon contrast and is not one. Both attributions are UID-manufacturer lookups on cards whose UIDs are writable, and 0x8B is also what THIS card reports after a plain gen2 CFG write. white-coin and black-tag are in a better position -- their TI presentation is the state they ARRIVED in rather than one we wrote -- but 'as shipped' is still not 'as fabricated'. Cite the BEHAVIOUR (accepts vs refuses unaddressed WRITE BLOCK), not the chip name.",
+   "original": {
+    "from_baseline_probe": false,
+    "pre_write": false,
+    "type": null,
+    "uid": null,
+    "unavailable": "THERE IS NONE, and this record exists to say so rather than leave the slot open for a later run to fill with a costume. This card was cloned on 2026-07-26, a day before the first instrumented read, so no read of it predates a write and its factory identity was never captured. What it presents instead is an expired access credential -- see `carries_cloned_credential`. Its physical block count is measured and real; everything that names a chip is not."
+   },
+   "physical": {
+    "campaign": "20260727_101028",
+    "measured": "2026-07-27T10:11:05",
+    "note": "physical_blocks 64 is a real measurement of THIS card -- block 63 reads, 64 and 65 fail both rdbl and wrbl. phantom_blocks is not: it is 66 minus 64, and the 66 came from the cloned credential's CFG, so it counts the costume's over-claim rather than a property of the card. The card's advertised count is whatever it was last written with.",
+    "phantom_blocks": 2,
+    "physical_blocks": 64
+   },
+   "source_url": "https://www.aliexpress.com/item/1005006949791537.html"
+  },
+  "lri2k-keychain": {
+   "armed_gen1_wipe_2026_09_08": {
+    "formatter_first_hardware_sighting": "Incidental but worth having: 'Now reads: 00000000 00000000' is the Iso15693UidFormatGrouped output from the comment-cut delta's one code change, rendering correctly on hardware for the first time -- two 4-byte groups, 17 characters, inside the line budget.",
+    "recovery": "Recoverable, and the original UID is recorded here: hf 15 csetuid -u E002222450008303. gen1's frames are unaddressed (flags 0x02, no UID in the frame), so an invalid UID does not put the card out of reach.",
+    "screen": "UID changed / Wiped 58/58. The card's UID moved. Now reads: 00000000 00000000",
+    "sweep_found_58_of_56_advertised": "The wipe cleared 58 blocks against 56 advertised, with zero failures -- so blocks 56 and 57, the gen1 UID registers, were reached and zeroed. That is the sweep-above-advertised design working on gen1 silicon. It also demonstrates the rule it was built on: our own read-based capacity probe measured 56/56 on this card and UNDER-DETECTED BY TWO. Only a write settles whether a block exists, exactly as ISO15693_POLLER_WIPE_MAX_BLOCKS says -- which means the probe's capacity figure is a lower bound on any card whose high blocks accept writes without answering reads.",
+    "what_it_settles": "THE ARMED-GEN1 WIPE HAZARD IS REAL AND NOW DEMONSTRATED, not inferred. #255's central claim held: the wipe zeroed blocks 56/57, the armed card latched the result on power-up, and its identity moved. AND THE MITIGATION THIS PR SHIPS WORKED -- the post-power-cycle UID re-read caught it, uid_verified reached an answer, and the run reported uid_changed as Partial on the UID-changed screen rather than claiming a clean wipe. Six rounds argued this from proxmark's send order; it is now measured.",
+    "worse_than_documented": "The UID did not move to another VALID identity -- it moved to ALL ZEROS. An ISO15693 UID must begin with 0xE0, so the card now answers with a non-conformant identity. #255 and the poller both describe this as the UID being 'moved' or 'changed', which understates it: the card is left without a valid UID at all. The screen printing 00000000 00000000 is honest and is the only route back, but a reader of either document would not expect zeros."
+   },
+   "bag_label": "ST LRI2K UID 0-55B",
+   "bag_label_note": "The bag carried the \"compatible with\" characters, but this tag probably is not what that bag describes. It is a FINISHED COMMERCIAL PRODUCT -- branded \"terminus shanghai\", an AIoT company -- in a form factor shared with nothing else in the order, and the seller said he would include extras. An extra thrown in loose can easily end up in whatever bag was to hand, so the label is weak evidence about THIS tag. Read the measurements instead, and they are coherent for genuine ST: manufacturer byte 0x02, proxmark identifies it as ST Microelectronics SA France, 56 blocks matching the label range, unlocked and blank as unprogrammed stock would be. The write probe settles it -- if gen2 and gen1 both refuse, genuine non-magic is the reading that fits everything.",
+   "classification": {
+    "armed": "THIS CARD IS NOW ARMED, and deliberately so. 0x6996 went into block 63 twice -- the test write and the restore -- and per #255 and the OPEN QUESTION in iso15693_poller_wipe_blocks NOTHING ever clears it. So its UID can move on ANY later write to blocks 56/57, including the app's own wipe. That is a hazard and an asset at once: it is exactly the state #255's armed-gen1 case describes, and it has never been reproducible before.",
+    "campaign": "20260908_025701",
+    "gen1_confirmed": "CONFIRMED ON HARDWARE 2026-09-08, campaign iso15_20260908_025701. The four-frame sequence set E0F1E2D3C4B5A697, it read back exactly, and the original UID restored via gen1. First gen1 card this project has ever had.",
+    "gen1_write": true,
+    "gen2_still_valid": "The gen2 half of that run is unaffected -- `hf 15 csetuid --v2` goes through the ARM helper, which builds its own E0 09 frames unaddressed.",
+    "gen2_write": false,
+    "gen3_signature": false,
+    "verdict": "gen1 magic"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 56,
+    "corrected": "2026-09-08: recorded as unmarked at first. The bag DOES carry the pm3 mark, which matters -- it turns a negative gen1 result from 'confirms the seller's annotation' into 'contradicts his specific claim'.",
+    "listing_text": "ST LRI2K UID 0-55B  [hand-written: pm3]  [+ 'compatible with' characters]",
+    "magic": true,
+    "pm3_writable": true,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "50x30mm plastic keychain, branded \"terminus shanghai\"",
+   "note": "GEN1 MAGIC, confirmed on hardware 2026-09-08. Bag: 'ST LRI2K UID 0-55B', hand-marked pm3, with the 'compatible with' characters. 50x30mm plastic keychain branded 'terminus shanghai'. ST manufacturer byte 0x02, IC ref 0x22, 56 blocks x 4, blank, no locked blocks. THE PROJECT'S FIRST GEN1 CARD and its most valuable tag: it is a REUSABLE ARMED FIXTURE, since a wipe writes zero to block 63 rather than 0x6996 and so cannot clear the existing arm. Restore the UID, run a test, restore again -- `hf 15 csetuid -u E002222450008303`, unaddressed, so an invalid UID does not put it out of reach. Full findings and the work list they imply: ../.notes/gen1-hardware-findings.md and armed_gen1_wipe_2026_09_08 below.",
+   "note_history": {
+    "superseded_readings": [
+     "freebie: a branded commercial product that fell into the wrong bag",
+     "probably ordered: its label matches an ordered line item exactly",
+     "probably gen1: that line item's listing advertises Iceman's Lua script, which IS gen1",
+     "gen1 CONFIRMED on hardware"
+    ],
+    "the_original_error": "The first inventory pass recorded 'NOT marked pm3'. The user's tag description had not said 'note' or 'no note' for this tag, and absence of a mention was read as absence of a mark. Inferred from silence and then written down as fact.",
+    "void_runs": "Two runs reported confident gen1 negatives and both were void: the first sent an ADDRESSED write where gen1 sends unaddressed, the second got no ACK -- which proves nothing, because these registers accept writes without answering.",
+    "why_this_is_recorded": "The note was WRONG for most of 2026-09-08 and stayed wrong through five corrections, because each one was APPENDED. Six revisions cannot fix a false first sentence: the entry opened 'NOT marked pm3' and that is what --identify printed, long after the mark had been confirmed. Same defect as the comment drift this PR spent a round cutting -- a superseded claim left at the front reads as current. Notes get REPLACED, with the history in its own field."
+   },
+   "original": {
+    "advertised_blocks": 56,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:44:57",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 34,
+    "locked_blocks": [],
+    "mfg_byte": 2,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 03 83 00 50 24 22 02 E0 00 00 37 03 22",
+    "type": "MATCH ST Microelectronics SA France",
+    "uid": "E0 02 22 24 50 00 83 03",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:44:57",
+    "phantom_blocks": 0,
+    "physical_blocks": 56
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "slix-1k-50mm": {
+   "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+   "classification": {
+    "campaign": "20260912_172807",
+    "gen1_write": true,
+    "gen2_write": false,
+    "gen3_signature": false,
+    "verdict": "gen1 magic"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+    "magic": true,
+    "note": "NXP ICODE SLIX. Same part family and geometry as the first order's plain tags, but with a UID claim they did not have -- so if this measures 28 blocks at IC ref 0x01 and takes a UID write, it is the same silicon in a magic variant.",
+    "pm3_writable": true,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "50mm round sticker, white",
+   "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. The bag labels use `UID 0-NNB`, which decodes consistently across BOTH orders: `UID` is a claim that the UID is changeable, and `0-NN` is the writable block range, so 0-27B = 28 blocks, 0-63B = 64, 0-55B = 56. Cross-checked against measurement: our 28-block SLI tags, our 64-block TI cards, and the tool's own LRi2K-56 impersonation target all agree. The FIRST order's plain tags were labelled '1024 bit' with NO UID claim and measured non-magic, so the notation distinguishes magic from plain rather than being decoration. || MEASURED 2026-09-08: SLIX, IC ref 0x01, advertises 28. ANOMALY: blocks 0 and 1 would not read -- 6 retries each in baseline and 6 more in capacity, so 12 consecutive failures -- while blocks 2-27 read fine. Capacity aborted entirely, since it needs block 0 as its anchor, so this tag has NO physical measurement. Marginal coupling is the obvious explanation (it is the only tag too large to sit flat on the HF pad) but it does not fit well: coupling drops reads at RANDOM, and this failed the same two addresses every time while its three siblings read all 28 blocks. Re-run it: if 0 and 1 fail again with the tag repositioned, that is a property of the tag rather than the placement. || 2026-09-08 RE-RUN TWICE MORE, 12 retries each, one contact-but-realigned and one with a ~20mm air gap: blocks 0 and 1 unreadable every time while 2-27 read fine. That is three sessions and 36+ attempts per block across three different couplings, so IT IS NOT COUPLING -- it is a property of the tag. The air gap did fix whatever was stopping the tag reading at all, which supports the over-coupling guess for the FIRST failure, but blocks 0/1 survived the fix. Still no physical measurement: capacity anchors on block 0. Hypothesis to test with the write probe -- if this is a magic tag, blocks 0/1 may be reserved or remapped by its magic implementation rather than faulty. || 2026-09-12 RESOLVED, AND IT WAS NEVER THE TAG. The 'unreadable' blocks 0/1 were a HARNESS bug: pm3_exec decoded the pm3 client's stdout as UTF-8 strictly, `hf 15 rdbl` prints an ASCII rendering of the block it read, and these two blocks hold a byte that is not valid UTF-8 (0xE1). The decode raised, the exception was caught and recorded as a failed read, and three sessions went looking for an RF cause. THE TELL WAS IN THE CAPTURED OUTPUT THE WHOLE TIME: every failure named the same byte offset -- 472 for block 0, 474 for block 1, identical across all 6 retries and all 3 sessions -- and RF flakiness does not fail deterministically to the byte. Fixed by decoding with errors='replace'; the hex column the parser actually uses is ASCII and survives intact. CONSEQUENCE FOR THIS RECORD: this tag is NOT blank. Blocks 0 and 1 hold data, and 'none found, [0,1] unread' is a record of the tool failing rather than of the card. Its `original` baseline is therefore incomplete -- and `original` is WRITE-ONCE, so a re-run will not replace it. Decide deliberately before re-baselining. Its three siblings read all 28 blocks because they are genuinely blank, so all-zero ASCII columns decoded fine -- which is why only this tag showed it.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one. || 2026-09-12: nonzero_blocks and unreadable_blocks CORRECTED. The [0,1] 'unreadable' record was the UTF-8 decode bug in pm3_exec, not the tag. Blocks 0 and 1 read fine with the fixed tool (campaign iso15_20260912_172719) and hold E1 40 0E 01 / 03 00 FE 00 -- an NDEF capability container and an empty NDEF TLV. Backfilling rather than re-baselining is sound HERE and only here: no probe has ever written to blocks 0-27 on this tag (gen1 touches 56/57/62/63 only), so today's read of them is still pristine. The rest of the original record is untouched.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:28:45",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [
+     0,
+     1
+    ],
+    "sysinfo": "00 0F 63 08 26 20 50 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
+    "uid": "E0 04 01 50 20 26 08 63",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "correction": "No physical measurement exists: capacity aborted because block 0 would not read. Absent, not zero."
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "slix-1k-50x28": {
+   "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+   "classification": {
+    "campaign": "20260912_170728",
+    "gen1_write": true,
+    "gen2_write": false,
+    "gen3_signature": false,
+    "verdict": "gen1 magic"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+    "magic": true,
+    "pm3_writable": true,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "50x28mm sticker, white",
+   "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-coin18. AMBIGUOUS BY SIGHT with SL2S5302, the other 50x28mm white sticker -- that one is physically marked SL2S5302. Use --identify if there is any doubt. || MEASURED 2026-09-08: SLIX, IC ref 0x01, 28/28, blank. Matches the label exactly.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:32:23",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 8C 06 26 20 50 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
+    "uid": "E0 04 01 50 20 26 06 8C",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:32:23",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214",
+   "latch_2026_09_15": {
+    "chip": "NXP ICODE SLIX, IC ref 0x01",
+    "result": "no power-up latch; UID changes immediately",
+    "refusal_rendering": "as SL2S5302: 'command failed' for 62/63",
+    "method": "The four gen1 frames, then an INVENTORY in the SAME field session with the field held up (-k), no power-cycle: the inventory returns the NEWLY written UID. So the UID change is immediate and there is no power-up latch on this chip. 62/63 were refused and 56/57 accepted, the same split as every other armed card here. Original UID restored from this record and confirmed byte-identical with hf 15 reader."
+   }
+  },
+  "slix-1k-coin18": {
+   "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
+   "classification": {
+    "campaign": "20260912_171618",
+    "gen1_write": true,
+    "gen2_write": false,
+    "gen3_signature": false,
+    "verdict": "gen1 magic"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B  [hand-written: pm3]",
+    "magic": true,
+    "pm3_writable": true,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "18mm coin, green",
+   "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-50x28, so same silicon expected in another form factor -- the pair is a free check on that, the way white-coin and black-tag were. || MEASURED 2026-09-08: SLIX, IC ref 0x01, 28/28, blank. Matches. Same bag as slix-1k-50x28 and they agree on every field, so the same-silicon claim for that pair holds.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:33:28",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F E2 00 22 20 50 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
+    "uid": "E0 04 01 50 20 22 00 E2",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:33:28",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "slix-black-38x25": {
+   "bag_label": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B",
+   "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
+   "classification": {
+    "campaign": "20260908_012746",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "SL2S2002_SL2S2012 ICODE SLIX UID 0-27B  [no note]",
+    "magic": true,
+    "pm3_writable": false,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "38x25mm sticker, black",
+   "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. Label reads SL2S2012, which is probably a typo for SL2S2102 as on the other SLIX bags -- SL2S2012 is not a part number I can place. Recorded as written, not corrected. Also the only SLIX bag WITHOUT '1K', which may or may not mean anything. || MEASURED 2026-09-08: SLIX, 28/28, blank -- but IC ref 0x21, where the three genuine-looking SLIX tags all report 0x01. Consistent with the 'compatible with' label: NXP manufacturer byte and SLIX type bits, but an IC reference no NXP SLIX is known to use.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:34:33",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 33,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 38 20 D7 D2 12 01 04 E0 00 00 1B 03 21",
+    "type": "MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )",
+    "uid": "E0 04 01 12 D2 D7 20 38",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:34:33",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "slix2-gold-30mm": {
+   "bag_label": "SL2S2602 ICODE SLIX2 UID",
+   "classification": {
+    "campaign": "20260908_012746",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "expected": {
+    "block_size": 4,
+    "listing_text": "SL2S2602 ICODE SLIX2 UID  [no note]",
+    "magic": true,
+    "note": "NXP ICODE SLIX2, IC id 0x01 with the SLIX2 type bits (uid[3] & 0x18 == 0x08) -- see iso15693_info.c:268. proxmark also has a SLIX2-specific GET NXP SYSTEM INFO path.",
+    "pm3_writable": false,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "30mm round sticker with a flat edge, gold",
+   "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. BLOCK COUNT UNKNOWN AND UNCLAIMED -- the label states no range, and nothing here can supply one: neither proxmark nor this app hardcodes SLIX2 geometry, both read GET SYSTEM INFO, and proxmark's SLIX2-specific GET NXP SYSTEM INFO path carries no size table either. So capacity has to measure it. A guess that it is a large part was recorded here on 2026-09-08 and withdrawn the same day as unsourced -- on the labels alone the largest claimed geometry in this batch is the TI pair at 0-63B, not this tag. Which way it lands decides whether a gen1 attempt is destructive, so measure before writing. || MEASURED 2026-09-08: THE INTERESTING ONE. Advertises 79 blocks x 4 -- so the withdrawn guess that it was the largest tag in the batch was numerically right, and withdrawing it was still correct: there was no source for it and now there is a measurement. uid[1]=0x48, not NXP's 0x04, and 'no tag-info available'. AND IT ANSWERS READS PAST ITS ADVERTISED COUNT: every block from 0 to 81 returned data. The capacity figure of 82 is the probe's own search ceiling (advertised + 2, then +1), NOT the card -- real capacity is >= 82 and unmeasured. Re-run with --capacity-max 255. This is the answers-reads-everywhere archetype that ISO15693_POLLER_PASS_MAX_MS exists for, on an off-the-shelf tag rather than a deliberately programmed one. gen1 IS destructive here. || 2026-09-08 RE-RUN with --capacity-max 255: it answers a read at EVERY address in the 8-bit block space, all 256. So no read-based probe can find its edge, and the earlier '82' was purely the default ceiling. This is the answers-reads-everywhere card in its pure form, off the shelf.",
+   "original": {
+    "advertised_blocks": 79,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:42:52",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 72,
+    "nonzero_blocks": [
+     21
+    ],
+    "sysinfo": "00 0F 36 F1 CD 01 00 03 48 E0 00 00 4E 03 01",
+    "type": "no tag-info available",
+    "uid": "E0 48 03 00 01 CD F1 36",
+    "unreadable_blocks": [
+     16,
+     17,
+     20
+    ]
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "correction": "2026-09-08: 82 is (advertised + 2) + 1, i.e. this probe's search bound. Every block 0..81 answered a read, so capacity is >= 82 and UNMEASURED. Recorded before the probe learned to say so; re-run with --capacity-max 255.",
+    "measured": "2026-09-08T01:42:52",
+    "over_advertised": 3,
+    "phantom_blocks": 0,
+    "physical_blocks": 82,
+    "physical_is_lower_bound": true,
+    "search_ceiling": 81
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "ti-2k-silver-1": {
+   "bag_label": "TI 2048 2K UID 0-63B",
+   "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
+   "classification": {
+    "campaign": "20260908_012746",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 64,
+    "listing_text": "TI 2048 2K UID 0-63B  [no note]",
+    "magic": true,
+    "pm3_writable": false,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "25mm round sticker, silver",
+   "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. First of two identical silver rounds. || MEASURED 2026-09-08: 64/64, blank, IC ref 0x8B -- proxmark's gen2 default CFG value, same as white-coin and black-tag. But uid[1] is 0x53, NOT TI's 0x07, and proxmark reports 'no tag-info available': it does not present as a TI part at all, despite emulating one per the label. Both silver rounds share E0 53 01 10 in bytes 0-3 and differ only in bytes 4 and 6, with byte 5 (F3) and byte 7 (1A) identical -- a factory UID scheme with very little entropy. gen1 IS destructive here: 64 blocks means 56/57/62/63 exist.",
+   "original": {
+    "advertised_blocks": 64,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:38:07",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 139,
+    "locked_blocks": [],
+    "mfg_byte": 83,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 1A 38 F3 BB 10 01 53 E0 00 00 3F 03 8B",
+    "type": "no tag-info available",
+    "uid": "E0 53 01 10 BB F3 38 1A",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:38:07",
+    "phantom_blocks": 0,
+    "physical_blocks": 64
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "ti-2k-silver-2": {
+   "bag_label": "TI 2048 2K UID 0-63B",
+   "bag_label_note": "The bag label begins with Chinese characters translating as \"compatible with\", so the part number describes what this tag EMULATES rather than what it is. That is the ordinary state of a magic tag and it reframes the label: a part number is a claim about presentation.",
+   "classification": {
+    "campaign": "20260908_012746",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "expected": {
+    "block_size": 4,
+    "blocks": 64,
+    "listing_text": "TI 2048 2K UID 0-63B  [no note]",
+    "magic": true,
+    "pm3_writable": false,
+    "recorded": "2026-09-08",
+    "source": "seller listing / bag label"
+   },
+   "form_factor": "25mm round sticker, silver",
+   "note": "NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. Likely the SAME silicon as white-coin and black-tag: their first-order label said '64 block/256 byte/2k, 8 bytes uid changeable' and they measured TI Tag-it HF-I Plus at IC ref 0x8B, 64x4. If these match, they are gen2 samples four and five -- and gen2 succeeding means the destructive gen1 probe never runs. Second of two identical silver rounds; visually indistinguishable from ti-2k-silver-1, so keep them apart and use --identify. || MEASURED 2026-09-08: 64/64, blank, IC ref 0x8B, uid[1]=0x53, 'no tag-info available' -- identical in every field to ti-2k-silver-1 except UID bytes 4 and 6. gen1 IS destructive here.",
+   "original": {
+    "advertised_blocks": 64,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260908_012746",
+    "captured": "2026-09-08T01:40:43",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 139,
+    "locked_blocks": [],
+    "mfg_byte": 83,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 1A 62 F3 AC 10 01 53 E0 00 00 3F 03 8B",
+    "type": "no tag-info available",
+    "uid": "E0 53 01 10 AC F3 62 1A",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260908_012746",
+    "measured": "2026-09-08T01:40:43",
+    "phantom_blocks": 0,
+    "physical_blocks": 64
+   },
+   "source_url": "https://www.aliexpress.com/store/1112214"
+  },
+  "white-card": {
+   "classification": {
+    "campaign": "20260913_005922",
+    "gen2_write": false,
+    "gen3_signature": false,
+    "recovered_from_raw": "Measured in campaign 20260913_005922 and lost when the operator declined the gen1 arming prompt -- KeyboardInterrupt escaped the campaign loop before the result store and inventory_update, leaving manifest.json with \"cards\": []. Reconstructed 2026-09-13 from the raw captures that survived, which are the primary evidence either way: white-card_magictype_v3sig.txt reads blocks 0x14/0x15 as 00 00 00 00 (not the V3 signature), and white-card_magictype_gen2.txt shows `hf 15 csetuid -u E0A1B2C3D4E5F607 --v2` -> 'Setting new UID ( fail )' with the verify still reading all zeros. The probe's abort path is fixed as of this commit; see tools/test_probe_abort.py.",
+    "verdict": "not gen2; gen1 untested"
+   },
+   "note": "Arrived in a separate shipment from the 2026-09-08 batch and probed 2026-09-13. Ships BLANK WITH A ZERO UID -- 00 00 00 00 00 00 00 00, returned in the UID field of GET SYSTEM INFO across three separate captures, so it is the card's answer and not a failed read. sysinfo 00 0F 00*10 1B 03 01 = 28 blocks x 4 bytes, IC ref 0x01, DSFID/AFI zero.\n\nThe zero UID is the only discriminator available. Geometry does not separate the candidates: white-tag-1/2/3 are also IC ref 0x01 at 28x4 and white-tag-1 measured NON-magic, while the three slix-1k gen1 cards are also IC ref 0x01 at 28x4. What differs is that every one of those carries a laser-programmed UID beginning 0xE0 plus a manufacturer byte. A UID of all zeros means the UID lives in writable storage and was never programmed, i.e. a magic card that has not been given an identity.\n\ngen2 is excluded more firmly than the run reported. proxmark's `csetuid --v2` writes its own default CFG (64x4, IC ref 0x8B) as a side effect, and the post-attempt sysinfo is byte-identical at 1B 03 01 -- so the card ignored the custom 0xE0 frames outright rather than taking CFG and refusing the UID. No geometry was moved and there is nothing to restore.\n\nNOT ARMED, deliberately, and it is the only card in the inventory that is not. All five gen1 cards carry gen1_write true, which only the full four-frame sequence sets, and nothing clears that register (#255) -- so every gen1 test the app has ever run went against a card that was already unlocked, where the UID moves on a write to 56/57 regardless of whether the app's own unlock/commit frames do anything. On the armed lri2k-keychain those two frames are REFUSED with error 0x10 and the UID still moves. This card is the only instrument that can test the app's own unlock sequence, and the test is one-shot: unlocking is intrinsic to setting a gen1 UID, so whoever writes first spends it. Spend it on the Flipper (gen1 clone from a 28-block source), not on the probe. What it CANNOT answer, despite being the obvious use: whether a wipe moves a virgin gen1 card's UID -- the UID starts at zeros, so a wipe that moved it to zeros is invisible.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "block_size": 4,
+    "campaign": "20260913_005742",
+    "captured": "2026-09-13T00:58:22",
+    "dsfid": 0,
+    "from_baseline_probe": false,
+    "ic_ref": 1,
+    "locked_blocks": null,
+    "mfg_byte": 0,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 00 00 00 00 00 00 00 00 00 00 1B 03 01",
+    "type": "no tag-info available",
+    "uid": "00 00 00 00 00 00 00 00",
+    "unreadable_blocks": null
+   },
+   "physical": {
+    "campaign": "20260913_005742",
+    "measured": "2026-09-13T00:58:22",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://share.temu.com/DYjEAQEkQxA"
+  },
+  "white-coin": {
+   "classification": {
+    "campaign": "20260824_231941",
+    "gen2_write": true,
+    "gen3_signature": false,
+    "verdict": "gen2 magic"
+   },
+   "count_owned": 1,
+   "expected": {
+    "block_size": 4,
+    "blocks": 64,
+    "listing_text": "64 block / 256 byte / 2k, 8 bytes UID changeable",
+    "magic": true,
+    "note": "64 x 4 = 256 bytes = 2048 bits; the three figures agree. UID-changeable means magic; gen2 is the expectation, but the listing does not say which generation.",
+    "recorded": "2026-08-24",
+    "source": "seller listing",
+    "total_bytes": 256
+   },
+   "form_factor": "coin",
+   "note": "Confirmed gen2 magic on hardware 2026-08-24 -- gen2 UID write took and read back, so the destructive gen1 probe never ran and no data block was touched. Already in proxmark's default CFG state (64x4, IC ref 0x8B), so the gen2 probe was geometry-neutral: geometry_dirty false. Different silicon from the original EM-Marin test card, which advertises 66 against 64.",
+   "original": {
+    "advertised_blocks": 64,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260824_225620",
+    "captured": "2026-08-24T22:58:56",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 139,
+    "locked_blocks": [],
+    "mfg_byte": 7,
+    "nonzero_blocks": [],
+    "sysinfo": "00 0F 29 3A E7 E2 3D 80 07 E0 00 00 3F 03 8B",
+    "type": "MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)",
+    "uid": "E0 07 80 3D E2 E7 3A 29",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260824_225620",
+    "measured": "2026-08-24T22:58:56",
+    "phantom_blocks": 0,
+    "physical_blocks": 64
+   },
+   "source_url": "https://www.aliexpress.com/item/1005007586284866.html"
+  },
+  "white-tag-1": {
+   "classification": {
+    "campaign": "20260824_233604",
+    "gen1_write": false,
+    "gen2_write": false,
+    "gen3_signature": false,
+    "reclassified": "2026-09-08: measurement unchanged, wording corrected",
+    "verdict": "no gen1/gen2/gen3"
+   },
+   "count_owned": 3,
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+    "magic": false,
+    "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+    "recorded": "2026-08-24",
+    "source": "seller listing",
+    "total_bytes": 112
+   },
+   "form_factor": "tag",
+   "note": "The probed representative of the three. Classified non-magic on hardware 2026-08-24; the gen1 attempt sent ordinary WRITE BLOCKs at 56/57/62/63, all out of range on a 28-block tag, and block 27 still read its factory 57 5F 4F 4B afterwards -- so no aliasing, and the tag is byte-identical to its baseline.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260824_225620",
+    "captured": "2026-08-24T23:07:00",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [
+     27
+    ],
+    "sysinfo": "00 0F 16 E2 AB 84 00 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+    "uid": "E0 04 01 00 84 AB E2 16",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260824_225620",
+    "measured": "2026-08-24T23:07:00",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/item/32808113402.html"
+  },
+  "white-tag-2": {
+   "classification": {
+    "campaign": "20260824_225620",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "count_owned": 3,
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+    "magic": false,
+    "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+    "recorded": "2026-08-24",
+    "source": "seller listing",
+    "total_bytes": 112
+   },
+   "form_factor": "tag",
+   "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260824_225620",
+    "captured": "2026-08-24T23:09:38",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [
+     27
+    ],
+    "sysinfo": "00 0F A5 E1 AB 84 00 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+    "uid": "E0 04 01 00 84 AB E1 A5",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260824_225620",
+    "measured": "2026-08-24T23:09:38",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/item/32808113402.html"
+  },
+  "white-tag-3": {
+   "classification": {
+    "campaign": "20260824_225620",
+    "gen3_signature": false,
+    "verdict": "unclassified (no write probe run)"
+   },
+   "count_owned": 3,
+   "expected": {
+    "block_size": 4,
+    "blocks": 28,
+    "ic_ref": 1,
+    "listing_text": "Chip type: I-CODE2, Memory capacity: 1024 bit",
+    "magic": false,
+    "note": "THE LISTING'S BIT FIGURE IS TOTAL SILICON, NOT USER MEMORY. 1024 bits = 128 bytes = 32 blocks, but an ICODE SLI/SLIX addresses 28 of them as user blocks (28 x 4 = 112 bytes = 896 bits); the remaining 4 blocks are the system/config area. So expect 28, not 32. Reporting 32 would mean the listing quoted USER memory and this is a different part. IC ref 0x01 is the SLI/SLIX family. Expected non-magic.",
+    "recorded": "2026-08-24",
+    "source": "seller listing",
+    "total_bytes": 112
+   },
+   "form_factor": "tag",
+   "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
+   "original": {
+    "advertised_blocks": 28,
+    "afi": 0,
+    "backfilled": "2026-09-08: unreadable_blocks recovered from the campaign manifest. The field was not copied into the inventory when this record was written, so an incomplete baseline was indistinguishable from a complete one.",
+    "block_size": 4,
+    "campaign": "20260824_225620",
+    "captured": "2026-08-24T23:11:13",
+    "dsfid": 0,
+    "from_baseline_probe": true,
+    "ic_ref": 1,
+    "locked_blocks": [],
+    "mfg_byte": 4,
+    "nonzero_blocks": [
+     27
+    ],
+    "sysinfo": "00 0F C5 DF AB 84 00 01 04 E0 00 00 1B 03 01",
+    "type": "MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI )",
+    "uid": "E0 04 01 00 84 AB DF C5",
+    "unreadable_blocks": []
+   },
+   "physical": {
+    "campaign": "20260824_225620",
+    "measured": "2026-08-24T23:11:13",
+    "phantom_blocks": 0,
+    "physical_blocks": 28
+   },
+   "source_url": "https://www.aliexpress.com/item/32808113402.html"
+  }
+ },
+ "updated": "2026-09-15",
+ "latch_finding_2026_09_15": {
+  "claim": "There is no power-up latch on the gen1 chips tested: a UID written by the gen1 frames is returned by an inventory in the same field session.",
+  "chips_tested": [
+   "ST LRi2K (lri2k-keychain)",
+   "NXP ICODE SLIX-S IC ref 0x02 (SL2S5302)",
+   "NXP ICODE SLIX IC ref 0x01 (slix-1k-50x28)"
+  ],
+  "scope": "Three chips, which is the same sample the set/read-back/restore result cites -- so the immediacy result no longer needs a narrower scope than the sentence beside it. It is still three chips, not the gen1 family.",
+  "test_uid": "E0F1E2D3C4B5A697, the same one the LRi2K run used, so the three results are directly comparable",
+  "in_band_refusal_scope": "Only the LRi2K has been shown to ANSWER on 62/63 (01 10 1E 06, error 0x10). The other two reported a client-level failure that does not distinguish an error frame from silence."
+ }
 }
