@@ -117,6 +117,39 @@ sample, one chip — but on that chip the premise is false, not merely unverifie
 card for a clean read, and the gen2 Write-UID doc leans on the same reasoning for a UID that lives in
 a different register space and was not tested here. What changes is the JUSTIFICATION, not the code.
 
+### Finding 5 extended — the same result on two more chips, so the sample is three
+
+`SL2S5302` (NXP ICODE SLIX-S, IC ref 0x02) and `slix-1k-50x28` (NXP ICODE SLIX, IC ref 0x01), same
+sequence, same test UID `E0F1E2D3C4B5A697`, field held up with `-k`:
+
+```
+hf 15 raw -ackw -d 02213E00000000   -> command failed   unlock  REFUSED
+hf 15 raw -ckw  -d 02213F69960000   -> command failed   commit  REFUSED
+hf 15 raw -ckw  -d 02213897A6B5C4   -> 00 78 F0         blk 56  OK
+hf 15 raw -ckw  -d 022139D3E2F1E0   -> 00 78 F0         blk 57  OK
+hf 15 raw -ck   -d 260100           -> 00 00 97 A6 B5 C4 D3 E2 F1 E0 5F 81
+```
+
+Both returned the newly written UID with no power-cycle. **Three chips, no latch on any of them** --
+and three is the same sample the set/read-back/restore result cites, so the immediacy claim no longer
+needs a narrower scope than the sentence beside it. Still three chips, not the gen1 family.
+
+Both cards were restored from `tag-inventory.json` and confirmed byte-identical with `hf 15 reader`
+(`E0 04 02 50 03 00 35 F8` and `E0 04 01 50 20 26 06 8C`).
+
+**One thing did NOT replicate, and it is the narrower claim.** Finding 6 below reads the LRi2K's
+`01 10 1E 06` as proof the backdoor registers ANSWER rather than sit silent. These two reported a
+client-level "command failed", which does not distinguish an error frame from silence. So the
+in-band-refusal result stays at one chip while the latch result goes to three.
+
+**A `SL2S5302` inventory note was falsified by this run.** It reasoned that 40 blocks puts 56/57/62/63
+out of range, so "a gen1 attempt is harmless here after all". Blocks 56 and 57 accepted the write and
+the UID moved. The UID registers are backdoor registers, not memory, so the advertised geometry says
+nothing about whether they exist -- which is what `4aee03d` already concluded. Corrected in the
+inventory. The app is unaffected: 40 is below 49, so the wipe sweep stops around block 47 and never
+reaches them.
+
+
 ### Finding 6 — the backdoor registers DO answer, and 2026-09-08's "no ACK" was a parse
 
 Blocks 62 and 63 returned `01 10 1E 06` — flags `0x01` with the error bit set, error code `0x10`,
