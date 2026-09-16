@@ -7,6 +7,11 @@ outside the CHANGELOG, `fap_version` still 2.3, nine files, all seven signed.
 and all seven thread replies, each verified by `in_reply_to` AND by the root's file matching what
 the reply discusses.
 
+**THE SIMPLIFICATION PASS IS BUILT AND UNPUSHED** — P1-P3, four shipped-file commits' worth of work
+in three, plus two dev-only. Draft reply and fork messages in [pr-round-12/](pr-round-12/). **Not
+pushed, not posted, and not reviewed by mfcarroll** — drafted while he was away, and his read is the
+check this project has relied on most. Nothing goes out until he has had it.
+
 **The reply says this should NOT merge yet**, and why: TI Tag-it HF-I Plus refuses unaddressed
 WRITE BLOCK with error 0x01, and every ISO15693 write this app sends is unaddressed. Not a
 regression — the write path is unchanged since the passing August run and the EM-Marin control still
@@ -16,9 +21,10 @@ passes. It reframes #251 from a bystander hazard into a compatibility limit.
 
 1. ~~**The comment cut, WITH the release-notes trim**~~ — **DONE, pushed as round 11.** 84 comment
    lines out, code `+0 −0`, and the 2.3 section 177 → 115. Numbers in "Where things stand" below.
-2. **The simplification pass** — P1-P3 in
-   [pr-round-10/self-review/FINDINGS.md](pr-round-10/self-review/FINDINGS.md). P4 is DECLINED and he
-   has been told so.
+2. ~~**The simplification pass**~~ — **BUILT, UNPUSHED.** P1-P3 from
+   [pr-round-10/self-review/FINDINGS.md](pr-round-10/self-review/FINDINGS.md); P4 stays DECLINED and
+   he has been told so. Three shipped commits, each with a test, each mutation-checked. Draft reply
+   and fork messages in [pr-round-12/](pr-round-12/). See "The simplification pass" below.
 3. **Addressed writes**, and the gen1 caveat gate with them — both recorded in
    [pr-round-10/unaddressed-write-finding.md](pr-round-10/unaddressed-write-finding.md).
 4. **Re-test on device**, including the TI cards.
@@ -55,6 +61,39 @@ byte-identical for every shipped `.c`/`.h`). Surface 1,544 → 1,460, block mass
 **The estimate published in round 10 was 250–370 and the answer was 84.** Fourth time a comment-pass
 estimate has missed in the same direction. Do not quote a projected line count to him; quote the
 measurement after the fact, taken against the tree he can open.
+
+### The simplification pass — BUILT, UNPUSHED
+
+Item 2, and the first code change since the comment cut, so none of it has the "code bytes unchanged"
+safety net. Each landed with a test and each was mutation-checked from the committed baseline.
+
+| dev | |
+|---|---|
+| `a5070a1` | **P1** — the clock cut decided in one place, with both halves of the reason |
+| `5ea5a5b` | **P2** — the three succeeded-blocks subtractions say why they saturate |
+| `998e4b4` | **P3** — one clamp for block size, against the macro rather than a buffer |
+| `d6036be` | dev-only: the fake tag modelled a latch the hardware does not have |
+| `6ac73fa` | dev-only: the fake-flash analogy leaves the dev tooling too |
+
+**All three were the same shape**: one rule spelled in two places, each copy carrying part of the
+reason and neither carrying all of it. That is worth knowing before P-items are picked for a later
+pass — it is a better predictor of value than line count.
+
+**Sync points need no reordering this time**: dev order already matches fork order, three shipped
+commits, one decision each. [pr-round-12/fork-messages/README.md](pr-round-12/fork-messages/README.md)
+has the mapping and, more importantly, what those messages must NOT claim — every test is in
+`tools/hosttest/`, which does not sync, so a message citing them would describe a change absent from
+its own diff. That is the round-11 defect, avoided by putting the test evidence in the reply instead.
+
+**DECIDED, and do not re-open without him: P1-P3 is NOT published as a side branch.** It was
+considered while he was away. A loose branch cannot be merged, needs a comment to explain it (which
+lands in the reviewer's queue exactly as a push would), and splits his attention while he is mid-review
+on round 11 — the same objection as pushing, moved sideways. Nothing degrades by waiting.
+
+**Mutation-testing gotcha, cost real confusion:** a scripted revert can land in the same second as the
+object file, and make then treats the target as up to date indefinitely — a stale binary reporting the
+MUTANT's result against restored source. `make clean` belongs in the mutation loop. The harness's own
+dependency tracking is fine; this is a make property, not a Makefile defect.
 
 ### What round 11 cost us, and why
 
