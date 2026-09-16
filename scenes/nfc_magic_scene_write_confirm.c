@@ -46,14 +46,16 @@ void nfc_magic_scene_write_confirm_on_enter(void* context) {
         // "Every" is literal: 56/57/62/63 are cleared too, because on a gen2 card they are ordinary
         // user data and sparing them would leave data behind on the common card. On gen1 those same
         // blocks are the backdoor registers, so the string does not promise the UID survives -- the
-        // wipe re-reads the UID afterwards and reports whether it moved. See the open
-        // question in iso15693_poller_wipe_blocks.
+        // wipe re-reads the UID afterwards and reports a move when it sees one. It cannot report
+        // the absence of a move: a card bricked past inventorying goes unreported, which is why
+        // uid_verified is a separate field. See the open question in iso15693_poller_wipe_blocks.
         //
         // The gen3 line is the only warning that names the COST; the title above it warns about scope
         // only. The wipe performs NO magic detection -- menu, confirm, sweep -- so this cannot say
-        // "your card is gen3", only what a gen3 card would cost, which per proxmark's V3 author is the
-        // card itself, permanently. A pre-flight probe would go in #255; until then the static line is
-        // the whole mitigation.
+        // "your card is gen3", only what a gen3 card would cost, which per 0x6r1an0y (who wrote
+        // proxmark's ISO15693 magic V3 support) is the card itself, permanently -- reported on
+        // their authority, not observed here. A pre-flight probe would go in #255; until then the
+        // static line is the whole mitigation.
         //
         // FontSecondary is u8g2_font_haxrcorp4089_tr, and two things follow. No `m` in the suffix means
         // it is PROPORTIONAL (profont11_mr / FontKeyboard is the monospace one), so WHAT BINDS IS PIXEL

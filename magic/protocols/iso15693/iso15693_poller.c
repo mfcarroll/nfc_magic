@@ -137,7 +137,8 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 //
 // VIEW_DISPATCHER_QUEUE_LEN, the FuriWaitForever in the send, iso15693_3_poller_filter_error and
 // write_block_response_parse are not greppable from the shipped SDK headers: they are in the firmware
-// source the app builds against (services/gui/view_dispatcher.c, lib/nfc/protocols/iso15693_3/).
+// source the app builds against (applications/services/gui/view_dispatcher.c and
+// lib/nfc/protocols/iso15693_3/).
 //
 // Staying well under 16 keeps that impossible. At 8 the whole worst case is 11: CardDetected, then
 // 8 + 1 progress events, then one terminal event. Emitting per block does NOT -- if you want that, the
@@ -183,15 +184,17 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 // second case -- the block ceiling already caps that at roughly the 18s above.
 //
 // 10 seconds, against the ~3-4s a sweep of 256 accepting blocks costs -- the largest any card can ask
-// for, an accepted block being a fraction of a refused one.
+// for, an accepted block being a fraction of a refused one. Those are estimates, which is itself an
+// argument for the wide margin.
 // Not the true worst case: one re-probe of the trailing run follows it, is not deadline-checked (it
 // would have to abandon the run half-classified), and is bounded by the run length.
 //
-// BOTH passes use this, and the shared name is deliberate: the value has to be defensible for the more
-// expensive of the two. Neither dominates. The wipe's extra costs are all driven by absences -- a
-// card-present inventory every ISO15693_POLLER_WIPE_ABSENT_RUN of them, and a re-probe of a tripped run
-// -- so on the very card this bound exists for, which accumulates none, the two cost the same. The
-// clone pays more only when the source's block size exceeds the target's.
+// BOTH passes use this, and the shared name is deliberate: the value has to be defensible for the
+// more expensive of the two. Neither dominates. The wipe's extra costs RELATIVE TO THE CLONE are
+// driven by absences -- a card-present inventory every ISO15693_POLLER_WIPE_ABSENT_RUN of them,
+// and a re-probe of a tripped run -- so on the very card this bound exists for, which accumulates
+// none, the two cost the same. The clone pays more only when the source's block size exceeds the
+// target's.
 //
 // The per-block figures are not "a 4-byte write" as a property of the code: the wipe's payload is
 // iso15693_3_get_block_size(target) clamped to ISO15693_MAX_BLOCK_SIZE. 4 is the sample card.
@@ -210,9 +213,13 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 // sweep exists to remove. (An actual removal is a different case and is already handled: a hand takes
 // 200ms+, so the inventory finds the card gone and the wipe reports CardLost.)
 //
-// Writing one block off costs 40-70ms (three refused writes, three 5ms waits, one refused read), so 8
-// blocks is a few hundred ms of tolerance and about the same again spent past the card's real top on
-// every wipe, against a ~1s wipe. That cost is the reason not to keep raising it.
+// Writing one block off costs 40-70ms (three refused writes, three 5ms waits, one refused read). A
+// refused write answers IN BAND (Iso15693_3ErrorInternal) rather than burning the full FDT timeout, so
+// the waits are a large share of that -- which is what makes ISO15693_POLLER_VERIFY_RETRY_MS move the
+// figure materially. Two bench runs disagree by about 2x and neither was instrumented for this, so
+// treat 40-70ms as an estimate, not a measurement. At 8 blocks it is a few hundred ms of tolerance and
+// about the same again spent past the card's real top on every wipe, against a ~1s wipe. That cost is
+// the reason not to keep raising it.
 //
 // The run length is deliberately NOT the only guard: above the advertised count the re-probe at the
 // trip is what makes a filled run recoverable, so this number sets how much dropout is absorbed
@@ -734,9 +741,10 @@ static bool iso15693_poller_write_source_blocks(
     // hardware claim the read-probe above exists to prevent, reached from the other direction.
     //
     // KNOWN OVERLAP, and deliberate. A genuinely-too-small card presents one long run of failing
-    // blocks, and failing blocks cost 40-70ms each, so a source ~150+ blocks larger than the target
-    // spends ISO15693_POLLER_PASS_MAX_MS inside that run, truncates, and loses the "Card too small"
-    // line to this guard. Retrying is cut in the same place, so nothing ever names the cause.
+    // blocks, and failing blocks cost an estimated 40-70ms each, so a source ~150+ blocks larger
+    // than the target spends ISO15693_POLLER_PASS_MAX_MS inside that run, truncates, and loses the
+    // "Card too small" line to this guard. Retrying is cut in the same place, so nothing ever
+    // names the cause.
     //
     // Left as it is because of the direction of the error: dropping the guard would let a cut claim
     // capacity from partial evidence, since the run below the cut looks like a top tail whether or not
@@ -843,8 +851,9 @@ static uint16_t iso15693_poller_wipe_blocks(
     // unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses writes to 62/63
     // with error 0x10, so the sweep reaches commit and is turned away rather than clearing it. A
     // card left armed by an earlier gen1 UID write therefore stays armed while its UID moves.
-    // Reproduced on an armed LRi2K: it reported "Wiped 58/58", the UID changed immediately, the
-    // re-read below caught it as Partial, and the card was still armed afterwards.
+    // Reproduced end-to-end on an armed LRi2K: it reported "Wiped 58/58", the UID changed
+    // immediately, the re-read below caught it as Partial, and the card was still armed
+    // afterwards.
     //
     // Do NOT try to de-arm by pre-writing the commit block. On an armed card that write is refused
     // outright, so there is nothing to reorder; on any other, writing commit before unlock reverses
@@ -986,7 +995,7 @@ static uint16_t iso15693_poller_wipe_blocks(
         // half-classified. On a card advertising far more than it holds the run never trips below the
         // claim (the trip needs block + 1 >= advertised), so it can grow to the whole claimed range and
         // be re-probed in one go, with Back swallowed throughout -- the worst case iso15693_poller.h
-        // states beside the budget, not "once, on a healthy card".
+        // states beside the budget, rather than the one short run a healthy card gives.
         const uint16_t run_start = (uint16_t)(block + 1 - absent_run);
         uint16_t still_absent = 0;
         for(uint16_t probe = run_start; probe <= block; probe++) {
@@ -1238,9 +1247,9 @@ static NfcCommand
             // lands here, since it returns 0.
             //
             // 49 is not a threshold about the claim CONTAINING 56. The sweep runs past the advertised
-            // count until ISO15693_POLLER_WIPE_ABSENT_RUN blocks answer nothing, so a card silent
-            // from block A is attempted through A+7, and a write that lands resets the run -- which
-            // is why 57 goes with 56 rather than one claim later.
+            // count until ISO15693_POLLER_WIPE_ABSENT_RUN blocks answer nothing, so a card silent from
+            // block A is attempted through A+7, and a write that lands resets the run -- which is why
+            // 57 goes with 56 rather than one claim later.
             //
             // So on an ARMED gen1 card this path can move the UID, report "Wipe failed", never run the
             // check and never say the check did not run -- the one path where the mitigation #255

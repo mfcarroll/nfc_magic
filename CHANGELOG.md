@@ -32,8 +32,8 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   a run of blocks answers neither a write nor a read.
 - **A wipe reports the range it covered** — "Cleared *N* blocks. Card claims *M*." Both figures, no
   verdict, because the count is programmable and a mismatch either way is usually benign: a card cloned
-  from a smaller source advertises less than it holds, and one cloned from a larger source advertises
-  more. Blocks above the real top answer nothing at all, so nothing is silently lost either way.
+  from a smaller source advertises less than it holds, and a card that over-claims — from the factory,
+  or cloned from a larger source — advertises more.
   A sweep cut short by its time limit is **partial** if anything was cleared, names where it stopped
   and offers a retry; one that cleared nothing is a failure and offers none.
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
@@ -54,9 +54,12 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   are re-read and compared, and a field the copy doesn't carry is reported as Partial with a note.
   Block contents are not compared — a data block counts as written when the card acknowledges it.
 - **A wipe counts a block as unwiped unless it can show the block is clear**, by reading it back after
-  a failed write. Where it cannot tell memory that never existed from memory that stopped answering
-  while still holding data, it says so rather than guessing; a run of silent blocks is re-probed first,
-  so a momentary dropout is not mistaken for the end of the card.
+  a failed write. An *interior* dead stretch — one with a block above it that still answers — is
+  reported rather than written off; a run of silent blocks is re-probed first, so a momentary dropout is
+  not mistaken for the end of the card.
+  **Limit:** the read taken at activation stops at the first block that does not answer, so nothing
+  above that point can be proven either way. A stretch that was already dead when the card was presented
+  therefore cannot be told apart from memory the card never had, and is dropped rather than reported.
 - **A wipe re-reads the UID when it finishes.** It sends no UID command, but on a gen1 card blocks
   56/57 *are* the UID registers. A UID that differs from the one the card presented gets a **"UID
   changed"** screen printing the UID the card now answers to — without which the card would be
@@ -96,8 +99,10 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   clone or Write UID lands on the **"Not gen2 magic card"** opt-in, and accepting that sends four
   ordinary writes into 56/57/62/63. **A wipe does not check at all** — it sweeps any ISO15693 tag
   presented to it, zeroing an un-finalized gen3 card's UID registers and configuration signature. Per
-  the author of proxmark's ISO15693 V3 magic support that **bricks the card permanently**: the cost is
-  the card, not just its identity. Tracked as #255.
+  0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support, that **bricks the card permanently**: the
+  cost is the card, not just its identity — and the opt-in writes above reach the same blocks. Stated on
+  their authority rather than ours: no gen3 card exists on either side of this PR, so nothing here has
+  been observed. Tracked as #255.
 - **Every ISO15693 write reaches every tag in the field, not just the selected one** — any generation,
   magic or not, on a wipe and a clone alike. No frame this app builds carries an address, so a second
   tag in range takes all of it with nothing on screen saying it was there: a wipe zeros its data

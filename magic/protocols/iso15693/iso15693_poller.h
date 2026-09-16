@@ -150,16 +150,17 @@ typedef struct {
     // Wipe only: the block count the card ADVERTISED, so a report can put the measured figure beside
     // the claim. The gen2 CFG frame programs this number, which is why the two differing is
     // information rather than an error: a card cloned from a smaller source advertises less than it
-    // still holds and serves reads for, and one cloned from a larger source advertises more. 0 for a
-    // clone.
+    // still holds and serves reads for, and a card that over-claims -- from the factory, or cloned from
+    // a larger source -- advertises more. 0 for a clone.
     uint16_t blocks_advertised;
     // The run stopped on its wall-clock bound (ISO15693_POLLER_PASS_MAX_MS) rather than at its natural
     // end, so its range is a cut and no report may pass that range off as a finding about the card.
     // BOTH modes carry the same bound, but what the flag SAVES differs. The clone's back-fill records
     // every block above the cut as a failure, so without the flag a reader cannot tell a block the card
     // REFUSED from one nothing was sent to, and every screen downstream states the stronger claim. A
-    // cut WIPE has no back-fill -- its unreached blocks fall outside the denominator rather than inside
-    // the numerator -- so there the flag is the only thing that mentions them at all.
+    // cut WIPE has no back-fill -- both of its bit-setting sites are inside the body the deadline
+    // gates, so its unreached blocks fall outside the denominator rather than inside the numerator --
+    // so there the flag is the only thing that mentions them at all.
     //
     // What a re-run can do about it, since two screens have to answer that: the bound is a WALL CLOCK,
     // not a position, so a card that is consistently this slow is cut in the same place every time and
