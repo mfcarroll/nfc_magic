@@ -38,11 +38,17 @@ The power-cycle stays regardless, which was your point.
 ## `CHANGELOG.md:112` — comment 4018550923
 
 ~~~~
-Done your way: no number, and the card that answers reads at every address named as the case it
-happens to. The bullet now follows the poller's rule instead of restating it with a threshold.
+Done: the number is gone and the bullet follows the poller's rule instead of restating it with a
+threshold.
 
-The poller wording you quoted is unchanged apart from losing its cross-reference to the backstop
-note at `ISO15693_POLLER_PASS_MAX_MS`, which is gone from this round.
+It states the SAFE case rather than the dangerous one, which is the part I would flag. Naming only
+the read-everywhere card is the same mistake pointing the other way — it is not the only card that
+reaches 56/57, so an armed 56-block LRi2K reads as exempt. The rule that can be stated completely is
+the conjunction: a card stays short only if it BOTH claims fewer than 49 blocks AND stops answering
+above that claim.
+
+The poller wording you quoted is also now slightly different, for a reason worth its own commit —
+see "block 57 needs one more silent block than 56".
 ~~~~
 
 ---
@@ -94,7 +100,8 @@ passing test appearing to justify it. Corrected there too.
 ## `iso15693_poller.c:59` — comment 4018550970
 
 ~~~~
-All four rewrapped, text unchanged.
+Three of them rewrapped as their own change, text unchanged; the `iso15693_poller.c` one rides with
+the comment cut, since that paragraph was being rewritten anyway.
 ~~~~
 
 ---

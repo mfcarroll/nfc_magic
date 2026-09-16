@@ -1,8 +1,8 @@
-# Round 11 — fork messages, and why these six sync points
+# Round 11 — fork messages, and why these seven sync points
 
 `replay-to-fork.sh` makes one fork commit per message here, syncing the **tree at that dev commit**.
-So the sync points are the lever that decides what the reviewer watches happen. Twelve dev commits
-touch shipped files this round; six become fork commits.
+So the sync points are the lever that decides what the reviewer watches happen. Fifteen dev commits
+touch shipped files this round; seven become fork commits.
 
 ## The churn these points avoid
 
@@ -22,12 +22,24 @@ commit ever contains a wrong intermediate.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `848adfb` | the cut — source and release notes, final form |
-| 02 | `1c54240` | the card-lost term is defensive |
-| 03 | `9450aba` | four rewraps, and the mode-specific word |
-| 04 | `a45c478` | no-latch covers three chips |
-| 05 | `4075026` | the consent screen's missing note |
-| 06 | `bbdf965` | the sweep's reach |
+| 01 | `1d110ec` | the cut — source and release notes, restorations folded in |
+| 02 | `dec4ef4` | the card-lost term is defensive |
+| 03 | `1ae6e0f` | three rewraps, and the mode-specific word |
+| 04 | `c541b67` | no-latch covers three chips |
+| 05 | `7c38832` | the consent screen's missing note |
+| 06 | `b415009` | the sweep's reach, stated as the safe case |
+| 07 | `776806e` | block 57 needs one more silent block than 56 |
+
+## Why the review round's corrections do not get their own commits
+
+Dev history was REORDERED so the restorations sit immediately after the cut, which is what lets 01
+sync at a tree that already has them. Without that, 01 would have shipped a dropped negation and a
+later commit would have put it back -- the exact churn these points exist to avoid.
+
+Two corrections stay separate on purpose. The reach correction folds into 06 because it corrects
+06's own sentence. The 56/57 boundary does NOT fold into 01: it is a factual fix to a claim older
+than this round, and one he quoted approvingly in round 11, so it needs to be visible as its own
+decision rather than buried in a commit about comment volume.
 
 The CHANGELOG is touched in 01 and again in 06. That is two decisions, not churn: after 01 it is
 silent on the reach, which is not wrong, and 06 answers his thread on it.
