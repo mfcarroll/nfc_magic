@@ -89,7 +89,7 @@ by hand each review round:
 
 - clean 64/64
 - advertised 28 / physical 64 — the case the sweep exists for, measured on hardware
-- advertised 66 / physical 64 — fake flash; the phantom tail must be dropped, not reported
+- advertised 66 / physical 64 — claims more than it holds; the phantom tail must be dropped, not reported
 - a dead stretch inside the claimed range that answered at activation — **the Round 4 blocking finding's
   positive case**, previously shipped on reasoning alone
 - the same stretch dead *before* activation — the residual he named and we did not close, pinned as a test

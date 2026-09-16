@@ -111,8 +111,9 @@ static void test_advertises_28_holds_64(void) {
     end();
 }
 
-// Fake flash: claims 66, holds 64. The two phantom blocks are above the card's real top and were never
-// its to clear, so they must be DROPPED rather than reported as "not cleared: 2".
+// A card claiming more than it holds: 66 advertised, 64 real. The two phantom blocks are above the
+// card's real top and were never its to clear, so they must be DROPPED rather than reported as
+// "not cleared: 2".
 static void test_advertises_66_holds_64(void) {
     begin("advertised 66 / physical 64 drops the phantom tail");
     fake_tag_init(66, 64, 4);

@@ -12,7 +12,7 @@ nfc_magic app:
                             geometry back. Run this BEFORE anything destructive -- a gen1 UID attempt
                             overwrites four blocks and cannot be undone without this record.
   capacity    (safe)        read blocks upward until a read FAILS -> the PHYSICAL block count, and how
-                            many the card OVER-reports (the "fake-flash" phantom tail). Reads only.
+                            many the card OVER-reports (the phantom tail). Reads only.
   magictype   (safe + opt)  V3 config-mode signature read (blocks 0x14/0x15); with --destructive also
                             tries gen2 then gen1 `csetuid` to see which UID-write the card accepts, then
                             restores the original UID. GEN2 FIRST, stopping on success: gen2 sends custom
@@ -1209,8 +1209,8 @@ def check_expected(entry):
     """Compare the seller's claim against what was measured. Returns (verdict, [notes]).
 
     A mismatch is a RESULT, not an error: a tag advertising fewer blocks than the listing says is the
-    fake-flash / programmed-count case this whole project exists around, and one advertising more is the
-    phantom tail. So this reports the difference and never "corrects" either side."""
+    programmed-count case this whole project exists around, and one advertising more than it holds is
+    the phantom tail. So this reports the difference and never "corrects" either side."""
     exp = entry.get("expected")
     if not exp:
         return "no claim recorded", []
