@@ -63,9 +63,9 @@ are exercised rather than assumed. The reported events are recorded, so the test
 sequence (`CardDetected` exactly once) and not just the terminal one.
 
 This is where the fake earns its keep: it decodes the magic backdoor frames off the wire, so
-`is_gen2_magic` / `is_gen1_magic` decide whether a UID write actually takes, and a gen1 UID latches only
-on the next `fake_tag_power_cycle()` — which is the entire reason every UID verify in the poller sits
-behind a reset. Covers the armed-gen1 wipe reporting a UID change, a card that never returns from the
+`is_gen2_magic` / `is_gen1_magic` decide whether a UID write actually takes, and the fake defers a gen1
+UID to the next `fake_tag_power_cycle()` — deliberately stricter than the hardware, which applies it in
+the same field session, so that a UID verify skipping its reset fails here instead of passing by luck. Covers the armed-gen1 wipe reporting a UID change, a card that never returns from the
 reset still getting its wipe reported (`uid_verified` false), and that a clone writes no data at all onto
 a tag that refuses the gen2 UID.
 

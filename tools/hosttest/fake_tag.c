@@ -271,7 +271,8 @@ Iso15693_3Error iso15693_3_poller_send_frame(
         if(block == 0x38 || block == 0x39) {
             if(fake_tag.is_gen1_magic) fake_stage_uid_half(block == 0x38, &buf->data[3]);
             if(fake_tag.is_gen1_magic && staged_low && staged_high) {
-                // gen1 latches on the next power-up, never immediately.
+                // Deferred to the power-cycle on purpose, not because hardware defers it; see
+                // gen1_uid_pending in fake_tag.h.
                 fake_tag_arm_gen1_uid(staged_uid);
                 staged_low = staged_high = false;
             }
