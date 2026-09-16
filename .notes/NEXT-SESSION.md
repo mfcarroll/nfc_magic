@@ -1,10 +1,11 @@
-# Next session — ROUND 10 IS PUSHED AND POSTED. Waiting on his round 11.
+# Next session — ROUND 11 IS PUSHED AND POSTED. Waiting on his round 12.
 
-**Pushed 2026-09-13: `09778b6d..536e0d4f`, a fast-forward of 9.** All nine verified on GitHub, his
-key_cache work untouched, `fap_version` still 2.3, ten files, pack builds warning-free.
+**Pushed `536e0d4f..a27d187d`, a fast-forward of 7.** PR head confirmed via the API, comment-only
+outside the CHANGELOG, `fap_version` still 2.3, nine files, all seven signed.
 
-**Posted:** the main reply as [issuecomment-5652071967](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5652071967),
-and all eleven thread replies, each verified attached to the right root comment.
+**Posted:** the main reply as [issuecomment-5703486508](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5703486508),
+and all seven thread replies, each verified by `in_reply_to` AND by the root's file matching what
+the reply discusses.
 
 **The reply says this should NOT merge yet**, and why: TI Tag-it HF-I Plus refuses unaddressed
 WRITE BLOCK with error 0x01, and every ISO15693 write this app sends is unaddressed. Not a
@@ -13,9 +14,8 @@ passes. It reframes #251 from a bystander hazard into a compatibility limit.
 
 ## THE PLAN HE HAS BEEN GIVEN, in the order stated in the reply
 
-1. ~~**The comment cut, WITH the release-notes trim**~~ — **BUILT 2026-09-15, unpushed.** Six shipped
-   commits, deletion-only promise held, numbers in "Where things stand" below. Both halves done: the
-   source at −115 and the 2.3 section at 178 → 107 lines.
+1. ~~**The comment cut, WITH the release-notes trim**~~ — **DONE, pushed as round 11.** 84 comment
+   lines out, code `+0 −0`, and the 2.3 section 177 → 115. Numbers in "Where things stand" below.
 2. **The simplification pass** — P1-P3 in
    [pr-round-10/self-review/FINDINGS.md](pr-round-10/self-review/FINDINGS.md). P4 is DECLINED and he
    has been told so.
@@ -31,39 +31,68 @@ scoping decision is with mishamyte.
 
 ## Where things stand
 
-**Everything through round 10 is PUSHED and POSTED** — fork head `536e0d4f`, and the eleven thread
-replies plus the main reply went up 2026-09-13. **He has not replied since.** The PR is waiting on
-him, not on us.
+**Everything through round 11 is PUSHED and POSTED** — fork head `a27d187d`. **The PR is waiting on
+him, not on us.**
 
-**THE CUT IS BUILT AND UNPUSHED — step 1 of the plan above.** Ten commits sit on dev after
-`bd50bf5`: four dev-only (`tools/`, `.notes/`) and **six shipped**.
+Round 11 was his review of the round-10 push: seven findings, nothing blocking. Two needed no fix
+(the cut had already removed the cost footnote and the "claim of 49" sentence). The rest became the
+seven fork commits:
 
 | | |
 |---|---|
-| `d04f20d` | cut the argument out of the poller's comments, keeping the constraints |
-| `1d86a9c` | the same cut across the header and the four scenes |
-| `5c62d6d` | the 2.3 release notes stop explaining themselves |
-| `6a1a265` | two sentences that did not parse after the cut |
-| `4ab1b7a` | drop the fake-flash analogy |
-| `fa31120` | read the cut back for sense, not for category |
+| `9b80e348` | the comments state the constraints and stop arguing for them |
+| `ab647375` | the write-fail card-lost term is defensive, and says so |
+| `7350fbd3` | three mangled comment wraps, and a note naming one mode of three |
+| `0bd82c19` | the no-latch result covers three chips, not gen1 silicon |
+| `8d419a09` | the gen1 consent screen says why it has no validation line |
+| `44a2a0c1` | the sweep's reach depends on reads, not on the card's claim |
+| `a27d187d` | block 57 needs one more silent block than 56, and the clock is a third exit |
 
-**Measured, and it holds the deletion-only promise: comment +170 −285, net −115, and ZERO C code
-changed** (`tools/comment-only.py` — the three commits it flags as CODE are all CHANGELOG.md, which
-it correctly classes as non-source). `comment-ratio.py` reports a `code −73` on the same range; that
-is the same markdown being counted as code, so use the `-- magic scenes views helpers '*.c' '*.h'`
-form when checking this promise.
+**The cut, measured on the tree he has:** 84 comment lines out, code `+0 −0` (preprocessed output
+byte-identical for every shipped `.c`/`.h`). Surface 1,544 → 1,460, block mass 740 → 610 across
+40 → 36 blocks, 2.3 section 177 → 115.
 
-Where it landed against the estimate:
+**The estimate published in round 10 was 250–370 and the answer was 84.** Fourth time a comment-pass
+estimate has missed in the same direction. Do not quote a projected line count to him; quote the
+measurement after the fact, taken against the tree he can open.
 
-| | estimated | actual |
-|---|---|---|
-| `iso15693_poller.c` | 250–370 lines out | **−76** |
-| the whole ISO15693 surface | — | −115; comment 1,318 → 1,219, ratio 43% → **41%** |
-| CHANGELOG 2.3 section | 178 lines | **107** (whole file 357 → 286) |
+### What round 11 cost us, and why
 
-**The estimate was optimistic by 3-5x on the source**, which is the third time a comment-pass
-estimate has missed in the same direction. The release-notes half beat expectations instead. Do not
-quote a projected line count to him; quote the measurement after the fact.
+Three things went wrong and all three are the same shape — a claim that was true when written and
+went stale when the tree moved under it.
+
+- **The cut deleted the carve-out he quoted as correct** (`a card that refuses every write but still
+  serves a read never accumulates a run`). Restored before it shipped, so he never saw it.
+- **The cut dropped a negation**: `A cut wipe records nothing above its cut` became `records above
+  its cut`, which inverts the claim. The sense pass missed it; the review workflow caught it.
+- **Three fork messages claimed more than the final tree supported**, including one asserting an
+  armed 56-block LRi2K "satisfies neither" conjunct in a commit whose point is that the rule IS a
+  conjunction. Caught by re-checking every claim against the tree before the replay.
+
+**The rule that comes out of it:** re-verify every number and every claim against the tree at the
+moment of publishing, not against the round the sentence was drafted for.
+
+### Churn control — how the seven were chosen
+
+`replay-to-fork.sh` syncs the TREE at a named dev commit, so sync points decide what he watches
+happen. Fifteen dev commits touched shipped files; seven became fork commits. **Dev history was
+REORDERED** so the restorations sit immediately after the cut — otherwise 01 would have shipped the
+dropped negation and a later commit would have put it back. Reordering was verified by tree hash:
+identical before and after.
+
+Residual churn is 11 lines, all one paragraph written in 01 and rewritten later for a DIFFERENT
+reason (the latch paragraph, the carve-out, one CHANGELOG line). The harmful kind — delete-then-
+restore — is absent. See [pr-round-11/fork-messages/README.md](pr-round-11/fork-messages/README.md).
+
+### Prose rules he made us learn, round 11 edition
+
+**No internal process in anything posted.** Not when something was cut, not that an earlier commit
+in the same push already removed it, not that we broke and restored something he never saw broken.
+He reads the delta between the round he reviewed and the next one. "Cut" is a complete answer.
+
+This applies to COMMIT MESSAGES too: `replay-to-fork.sh` takes its message from the `.msg` file, and
+round 10's were reflowed copies of the dev messages — which is how he came to quote one. Round 11's
+dev messages were NOT copyable and the fork messages were written fresh.
 
 ### THE BENCH RUN IS DONE — 4/4 gen1, and it corrected one of round 9's own fixes
 
@@ -128,10 +157,10 @@ three have the backdoor blocks genuinely IN range, so the probe is destructive t
 or restorable, but run them last and restore from baseline.
 
 **Then the cut**, scoped in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md).
-Its projection was ~250-370 lines out of `iso15693_poller.c` alone; **the actual figure was −76 from
-that file and −115 across the surface**. The advice that held: do not go after the header, whose 66%
-is per-field contract and the least compressible comment here. The advice that did not: the
-opportunity in the poller was roughly a quarter of what was projected.
+Its projection was ~250-370 lines out of `iso15693_poller.c` alone; **the shipped figure was −84
+across the surface**. The advice that held: do not go after the header, whose 64% is per-field
+contract and the least compressible comment here. The advice that did not: the opportunity in the
+poller was a fraction of what was projected.
 
 **ROUND 10 = the self-review mishamyte asked for**, run 2026-09-12 with
 `/pr-review-toolkit:review-pr` (seven agents) over the reconstructed FINAL-STATE PR diff — 27
@@ -304,8 +333,8 @@ Labels live on paper, UIDs live on silicon, and three of the tags are physically
 
 **The round-7 comment cut was BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed.** (It
 shipped long ago — this paragraph is the round-7 state as it stood. NOT the 2026-09-15 cut, which is
-a separate, later pass; see "Where things stand" at the top. Two different deltas have been called
-"the comment cut" and only the later one is unpushed.)
+a separate, later pass that shipped as round 11; see "Where things stand" at the top. Two different
+deltas have been called "the comment cut" and BOTH are now pushed.)
 Eight of them are the cut itself; the rest are the corrections and citations found afterwards, plus notes. Results and the full argument are in
 [pr-round-7/comment-cut-plan.md](pr-round-7/comment-cut-plan.md) under "EXECUTED". Headline: comment
 **−95**, code **+11**, seven of eight commits comment-only and proven so, zero intra-batch churn, both
@@ -457,10 +486,10 @@ which means **the scope is ours, not his.**
    items are comment corrections, so it is a **B pass, and B precedes C/D.** It also SHRINKS the surface
    (inference -> measurement removes the hedging), so it makes the comment passes easier rather than
    harder. The card is a reusable fixture — restore, test, restore — so it is not one-shot.
-5. **C — does it need to be there?** Deletion only. Verifiable by code bytes unchanged. **Measured
-   2026-09-12** in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md):
-   1,576 comment lines, 787 in 43 blocks of 10+, ~250-370 removable, two thirds of it in
-   `iso15693_poller.c` alone. Re-measure before running it — round 10 added +103.
+5. ~~**C — does it need to be there?**~~ **DONE, shipped as round 11**: 84 comment lines out, code
+   `+0 −0`, surface 1,544 → 1,460. The 1,576 / 787 / 43 / 250-370 figures this step used to carry
+   were measured against a tree that never shipped and the estimate missed by 3x; both are recorded
+   in [pr-round-10/comment-cut-measurement.md](pr-round-10/comment-cut-measurement.md).
 6. **D — can it be correctly simplified?** SMALLER than C and separate from it. The live items are
    the self-review's P1-P3: the duplicated pass-cut (two write points for the two fields that gate
    Retry, half the rationale at each), the three saturating `total - bad` subtractions whose shared
@@ -532,7 +561,11 @@ and both are done.
 
 ## Open, waiting on him
 
-- **The comment cut's scope** — asked at the end of the reply.
+- **The scoping call on addressed writes** — whether they land inside this PR or as a follow-up.
+  mfcarroll leans toward inside and has said so twice; the decision is his. This is what "should not
+  merge yet" rests on.
+- **The comment cut's scope** — asked at the end of the round-10 reply, and round 11 did not answer
+  it either way. The cut shipped regardless; the open part is whether he wants more taken.
 - **Whether he wants the gen3 pre-flight probe as its own PR.** Filed as
   [#255](https://github.com/xMasterX/all-the-plugins/issues/255) (`type/enhancement`, filed 2026-08-20)
   carrying both register hazards: gen3 is detectable via the `0x14`/`0x15` signature, armed gen1 is not.

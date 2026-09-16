@@ -7,7 +7,7 @@ one. When something was cut, which commit in this push removed it, and anything 
 before he saw it are all dev bookkeeping.
 
 ~~~~
-## Round 11 addressed, the no-latch result extended to three chips, and a correction you are owed
+## Round 11 addressed, and the no-latch result extended to three chips
 
 All seven threads are fixed; replies are on each.
 
