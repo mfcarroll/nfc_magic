@@ -532,6 +532,18 @@ static bool iso15693_poller_block_is_empty(const uint8_t* block, uint8_t size) {
     return true;
 }
 
+// Clamp a block size to what the fixed buffers in this file hold. Both callers need it and neither
+// controls its input: the clone's comes out of a loaded .nfc, hand-editable and unbounded by anything
+// this app decides, and the wipe's comes off the wire in the card's own GET SYSTEM INFO. Both then
+// feed an ISO15693_MAX_BLOCK_SIZE stack buffer.
+//
+// Against the MACRO, never against sizeof a particular buffer. The wipe used to clamp against
+// sizeof(zeros), which agreed with this only because that array is declared from the same macro --
+// true today, silent to break, and nothing obliges the next buffer to be declared the same way.
+static uint8_t iso15693_poller_clamp_block_size(uint8_t block_size) {
+    return block_size > ISO15693_MAX_BLOCK_SIZE ? (uint8_t)ISO15693_MAX_BLOCK_SIZE : block_size;
+}
+
 // Has this pass spent its wall-clock budget? The clone's write loop and the wipe's sweep both ask,
 // and both have to answer it identically, so the answer lives here rather than once per loop.
 //
@@ -582,15 +594,10 @@ static bool iso15693_poller_write_source_blocks(
     bool skip_backdoor) {
     const Iso15693_3Data* source = instance->clone_source;
     uint16_t source_count = iso15693_3_get_block_count(source);
-    // Straight out of a loaded .nfc, so hand-editable and unbounded by anything this app controls,
-    // while the read-probe below fills a fixed 32-byte stack buffer. The wipe clamps the same value for
-    // the same reason. Note this is the SOURCE's geometry: on gen2 the CFG frame makes the target match
-    // it, but a gen1 target keeps its own block size, so a mismatch there makes every empty failure read
-    // as absent and fabricates an over-capacity "Holds X/Y".
-    const uint8_t source_block_size = iso15693_3_get_block_size(source);
-    const uint8_t block_size = source_block_size > ISO15693_MAX_BLOCK_SIZE ?
-                                   (uint8_t)ISO15693_MAX_BLOCK_SIZE :
-                                   source_block_size;
+    // Note this is the SOURCE's geometry: on gen2 the CFG frame makes the target match it, but a gen1
+    // target keeps its own block size, so a mismatch there makes every empty failure read as absent
+    // and fabricates an over-capacity "Holds X/Y".
+    const uint8_t block_size = iso15693_poller_clamp_block_size(iso15693_3_get_block_size(source));
 
     // A block number is a uint8_t on the wire and the failure bitmap holds this many bits, so only the
     // first 256 blocks can be attempted or accounted for. Real ISO15693 tags never exceed this; clamp
@@ -869,9 +876,9 @@ static uint16_t iso15693_poller_wipe_blocks(
     // doc forbids.
     instance->clone_blocks_total = advertised;
 
-    // 32-byte zero buffer covers every valid geometry; the clamp is belt-and-braces.
+    // The zero buffer covers every valid geometry; the clamp is belt-and-braces.
     uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
-    const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
+    const uint8_t size = iso15693_poller_clamp_block_size(block_size);
     uint16_t wiped = 0;
 
     // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle either

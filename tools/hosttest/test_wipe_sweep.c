@@ -465,6 +465,18 @@ static void test_pass_cut_survives_a_tick_wraparound(void) {
     end();
 }
 
+// The clamp both the clone and the wipe run their block size through. Neither controls its input --
+// one is a loaded .nfc, the other the card's own GET SYSTEM INFO -- and both feed a fixed buffer.
+static void test_block_size_clamps_to_the_buffer(void) {
+    begin("an over-large block size clamps to the fixed buffer, and valid sizes pass through");
+    CHECK_EQ(iso15693_poller_clamp_block_size(4), 4);
+    CHECK_EQ(iso15693_poller_clamp_block_size(32), 32); // exactly the buffer is not over it
+    CHECK_EQ(iso15693_poller_clamp_block_size(33), 32);
+    CHECK_EQ(iso15693_poller_clamp_block_size(255), 32); // the whole of a hand-edited uint8_t
+    CHECK_EQ(iso15693_poller_clamp_block_size(0), 0); // callers reject 0 themselves; do not mask it
+    end();
+}
+
 int main(void) {
     printf("iso15693 wipe sweep\n");
     test_clean_64();
@@ -487,6 +499,7 @@ int main(void) {
     test_summary_line_is_emitted();
     test_pass_cut_records_it_on_the_instance();
     test_pass_cut_survives_a_tick_wraparound();
+    test_block_size_clamps_to_the_buffer();
 
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed == 0 ? 0 : 1;
