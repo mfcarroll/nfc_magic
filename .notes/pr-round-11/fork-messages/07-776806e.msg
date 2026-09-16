@@ -1,4 +1,4 @@
-NFC Magic ISO15693: block 57 needs one more silent block than 56
+NFC Magic ISO15693: block 57 needs one more silent block than 56, and the clock is a third exit
 
 Pre-existing, in the wiped == 0 branch of the wipe.
 

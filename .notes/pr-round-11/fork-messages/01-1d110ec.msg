@@ -6,9 +6,9 @@ this is undone -- and can do without the derivation that reached it.
 
 So the argument comes out and the constraints stay. 84 comment lines across the
 feature, with no code change: the diff is comment-only and the preprocessed
-output is byte-identical. The largest single cut is the pass-time bound, where
-twenty lines comparing wipe and clone airtime become the one sentence the bound
-actually rests on.
+output is byte-identical. The largest single removal is cut_block's gap
+derivation in the header, where eighteen lines working out the two bounds on
+cut_block - blocks_total become nine that state them and keep the worked example.
 
 The 2.3 release notes get the same treatment, 177 lines to 115. They had begun
 explaining their own reasoning rather than saying what changed.

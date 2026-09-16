@@ -9,8 +9,8 @@ claims.
 Naming that card alone would be the same mistake in the other direction, since
 it is not the only one that gets there. The rule is a conjunction: a card stays
 short of 56/57 only if it BOTH claims fewer than 49 blocks AND stops answering
-above that claim. An armed 56-block LRi2K, the chip the hazard was reproduced on,
-satisfies neither.
+above that claim. An armed LRi2K advertising 56, the chip the hazard was
+reproduced on, fails the first conjunct outright.
 
 So the bullet states the safe case, which is the one that can be stated
 completely, instead of a number that holds for one shape of card.
