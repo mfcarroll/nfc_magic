@@ -1,0 +1,44 @@
+[
+ {
+  "body": "**The headline measurement, with its scope flattened - and this is the header contract.**\n\n> There is no power-up latch on **gen1 silicon**\n\nThe `.c` this line points at scopes it correctly, at `:39-41`:\n\n> **On the one tested while ARMED, an ST LRi2K**: the UID changes IMMEDIATELY -- an inventory in the SAME field session as the write already returns the new one -- so there is no power-up latch on **that chip**\n\nOne armed chip, not the family. And the three-chip result at `:38` cannot be doing any work here: \"the sequence sets the UID, it reads back, and the original restores byte-identically\" all passes *through* a power-cycle, so it is silent on whether a latch exists. Only the same-session inventory on the LRi2K shows immediacy.\n\n`7818909c` wrote both lines. `.c:41` says \"that chip\", the commit message says \"this chip\", and `:105` of this same header says \"Hardware-validated across three chips ... says what that does and does not cover\". This one line is the only place it becomes a property of gen1 silicon.\n\nIt matters more here than it would in the `.c` because this is the public API doc. A maintainer meeting a different gen1 chip reads this as settled and drops the power-cycle - and the rest of the sentence is the reason to keep it anyway, so the over-claim buys nothing.\n\n\"on the gen1 chip tested\" and it matches everything around it. (`:36`'s heading, \"WHAT IS MEASURED on gen1 silicon\", has the same looseness, but its body is precise so it reads as a topic label - much less load-bearing.)",
+  "id": 4018550915,
+  "line": 83,
+  "path": "base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.h"
+ },
+ {
+  "body": "The poller works this out correctly and the release notes got the lossy version.\n\n> the sweep continues past the advertised count until eight blocks in a row answer nothing, so it touches 56/57 **only from a claim of 49 or more**\n\n`iso15693_poller.c:1303-1308`, same delta:\n\n> Two things stop the sweep short of 56/57, and only two: the card ANSWERS NOTHING **above its claim** AND claims fewer than 49 blocks -- **a card that refuses every write but still serves a read never accumulates a run, so it walks past 56/57 whatever it claims**\n\nand `:1311` even adds \"49 is not a threshold about the claim CONTAINING 56.\"\n\nThat carve-out is the whole point and the CHANGELOG drops it. `absent_run` increments only at `:996`, where the write *and* the read both failed, and is reset by `wipe_note_present` (`:838`), never at the claim boundary. So the reach depends on when the card stops answering READS:\n\n| card | last block attempted | needs claim |\n|---|---|---|\n| answers reads everywhere | 256 ceiling or the 10s clock | **any** - a claim of 20 reaches 56/57 |\n| answers to its claim, then silent | N+7 | >= 49 |\n| silent throughout | max(7, N-1) | >= 57 |\n\n49 is exactly the middle row, published as the general rule. The top row is the card this feature's time limit exists for and the card that produces `wiped == 0`, so it is the one the bullet is about.\n\nNote the edit also removed the old sentence's correct identification of that card (\"on the card it can actually happen to - one that answers reads at every address\"), so this went from right-with-a-wrong-number to wrong-in-kind.\n\nThird round running for this sentence - unconditional in r8, the `<57` exception in r9, this now. I would stop giving a number and say the reach depends on when the card stops answering reads, naming the read-everywhere card as the dangerous case. The poller's wording is already that; the CHANGELOG can just follow it.",
+  "id": 4018550923,
+  "line": 112,
+  "path": "base_pack/nfc_magic/CHANGELOG.md"
+ },
+ {
+  "body": "`1cb693de`'s message ends:\n\n> A note at the branch says why there is no validation line, so a later pass does not add one back.\n\nThere is no such note. This scene has 18 comment lines and none mentions validation, testing or hardware - `grep -niE \"valid|test|hardware\"` over the file returns nothing.\n\nThe removals themselves are right, and I checked the consent text still carries all three things it owes a user before a destructive write: what gen1 writes, which four blocks, and what is lost on a tag that turns out not to be gen1. Nothing else on the screen or in the CHANGELOG overstates the safety.\n\nBut the guard the message describes is the whole reason a later pass would not quietly restore a validation claim to a **consent screen**, and it does not exist. Either write it or drop the sentence from the message - right now the commit log asserts a protection the tree does not have.",
+  "id": 4018550936,
+  "line": 4,
+  "path": "base_pack/nfc_magic/scenes/nfc_magic_scene_iso15693_gen1_optin.c"
+ },
+ {
+  "body": "> the card-present check beside it is an inventory, and on this card it DOES run, since it is gated on `failed_count > 0` and **every block here fails**\n\nEvery block's *write* fails. That is not the same as counting as a failure. `:984-987`:\n\n```c\nif(!iso15693_poller_block_is_empty(remaining, size)) {\n    instance->clone_failed_count++;\n    iso15693_poller_mark_failed(instance, block);\n}\n```\n\nA refused write whose block reads back EMPTY increments nothing. So the card described two lines up - \"refuses every write, answers a read at every address\" - ends with `failed_count == 0` whenever its blocks already read as zeros, and the gate at `:1160` is false. The inventory does not run.\n\nOnly a cost estimate, so nothing downstream moves, but the \"since\" does not hold in general. \"on a card whose blocks still hold data\" would.",
+  "id": 4018550949,
+  "line": 218,
+  "path": "base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c"
+ },
+ {
+  "body": "Dead conjunct, and the comment above it explains why.\n\n```c\nreturn instance->iso15693_mode == NfcMagicIso15693ModeWipe && !result->uid_verified;\n```\n\n`uid_verified` is set true at exactly one place, `iso15693_poller.c:1466`, inside `Iso15693WriteStateVerifyWipe` - and that state's only exit is `success_or_partial`, never CardLost. So a CardLost result always has `uid_verified == false` and the second term cannot be false here.\n\n`:66-67` says it itself: \"the run returns before Iso15693WriteStateVerifyWipe is entered\".\n\nHarmless as belt-and-braces, and I would not raise it except that `d431fea9`'s message justifies the term with \"a wipe that lost the card after the check answered has nothing left to report\" - a state the poller cannot produce. Same class as the `mode != Info` conjunct from round 7. Either drop the term or keep it and say it is defensive rather than load-bearing.",
+  "id": 4018550959,
+  "line": 69,
+  "path": "base_pack/nfc_magic/scenes/nfc_magic_scene_iso15693_write_fail.c"
+ },
+ {
+  "body": "Four mangled comment wraps, bundled - all pre-existing, none from this round, and `ReflowComments: false` means `ufbt format` cannot see any of them. Flagging as a set since the rewrap pass in `5bc041d4` reached some and missed these.\n\n- **here, `:59`** (17 cols) - \"// written out at\" / \"// its call site, where the order is the point.\" [`297b5ca9`]\n- `iso15693_poller.h:44` (56 cols) - \"... Which of those it was is\" / \"// in Iso15693PollerResult ...\" [`de233993`]\n- `nfc_magic_scene_iso15693_partial_details.c:88` (42 cols) - \"// under-reports (the trailing run\" / \"// the tail-drop discards ...\" [`0bee8cb6`]\n- `magic/protocols/iso15693/iso15693_info.c:261` (27 cols) - \"// decodes the same bits in\" / \"// slix.c (...)\" [`acc486b1`]\n\nEach is a paragraph that lost its reflow when text above it was edited. Purely cosmetic.",
+  "id": 4018550970,
+  "line": 59,
+  "path": "base_pack/nfc_magic/magic/protocols/iso15693/iso15693_poller.c"
+ },
+ {
+  "body": "Small one, pre-existing: this comment says\n\n> ISO15693 **clone** treats card-lost as terminal\n\nbut the branch it sits on fires for a wipe and a Write-UID too - `Iso15693PollerEventCardLost` reaches here from `iso15693_poller.c:1293` (wipe) and from the gen1/gen2 verifies, not only the clone.\n\nNothing acts on it, and everything the branch does is right for all three modes. Just drop \"clone\" - the reasoning underneath is mode-independent.",
+  "id": 4018550983,
+  "line": 353,
+  "path": "base_pack/nfc_magic/scenes/nfc_magic_scene_write.c"
+ }
+]

@@ -108,5 +108,6 @@ constraint-dense than the sampled ones, the real figure lands nearer **240-300**
 
 The reply quoted **"1,576 comment lines on this surface, 787 of them in 43 blocks of ten lines or
 more, and roughly 250–370 removable"**. Every one of those is from the unshipped tree. The true
-figures are **1,550 / 740 / 40 / ~240-350**. Small, but it is a measurement stated as a measurement,
+figures are **1,544 / 740 / 40 / ~240-350** -- re-measured against bd50bf5 itself, which is the
+tree he has; an earlier pass here said 1,550 and was six lines out. Small, but it is a measurement stated as a measurement,
 and the correction costs a line in whatever goes out next.
