@@ -350,7 +350,8 @@ static void iso15693_poller_build_gen2_frame(
 }
 
 // Per-frame transceive results are intentionally ignored, and the reason is measured rather than
-// assumed: on an armed card the 62/63 writes come back REFUSED (error 0x10) and the UID moves
+// assumed: on an armed card the 62/63 writes come back REFUSED (error 0x10 on the LRi2K; see
+// ISO15693_MAGIC_BLK_UNLOCK for what that code is and is not evidence of) and the UID moves
 // anyway. Acting on these returns would abort a run that worked. The UID read-back is the only
 // honest check.
 static void
@@ -911,14 +912,14 @@ static uint16_t iso15693_poller_wipe_blocks(
     const uint8_t size = iso15693_poller_clamp_block_size(block_size);
     uint16_t wiped = 0;
 
-    // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle either
-    // are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm sequence is
-    // unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses writes to 62/63
-    // with error 0x10, so the sweep reaches commit and is turned away rather than clearing it. A
-    // card left armed by an earlier gen1 UID write therefore stays armed while its UID moves.
-    // Reproduced end-to-end on an armed LRi2K: it reported "Wiped 58/58", the UID changed
-    // immediately, the re-read below caught it as Partial, and the card was still armed
-    // afterwards.
+    // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle
+    // either are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm
+    // sequence is unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses
+    // writes to 62/63 (in band, error 0x10, on the LRi2K; see ISO15693_MAGIC_BLK_UNLOCK), so the
+    // sweep reaches commit and is turned away rather than clearing it. A card left armed by an
+    // earlier gen1 UID write therefore stays armed while its UID moves. Reproduced end-to-end on
+    // an armed LRi2K: it reported "Wiped 58/58", the UID changed immediately, the re-read below
+    // caught it as Partial, and the card was still armed afterwards.
     //
     // Do NOT try to de-arm by pre-writing the commit block. On an armed card that write is refused
     // outright, so there is nothing to reorder; on any other, writing commit before unlock reverses

@@ -18,7 +18,8 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **Wipe** — zeros every data block the card physically holds, **including 56/57/62/63**. On a gen2
   card those are ordinary user data, so sparing them would leave real data behind. On a **gen1** card
   they are the UID / unlock / commit registers, so a wipe cannot promise to leave the UID intact — it
-  **re-reads the UID afterwards, where it can, and reports whether it moved**.
+  **re-reads the UID afterwards, where it can, and reports a move when it sees one**. It cannot
+  report the absence of one: a card that no longer inventories is not re-checked at all.
 - **Write UID** — manual backdoor UID write. Tries gen2 first and, only if that leaves the UID
   unchanged, offers the same opt-in gen1 attempt the clone does.
 - **Live "Writing X / N" progress** during a clone or wipe, as the USCUID-UL clone already had.
