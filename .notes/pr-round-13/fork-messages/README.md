@@ -27,15 +27,18 @@ in the reply, framed as the harness rather than as this PR.
 Dev-only, no fork commit at all: the fake tag's latch premise and the fake-flash removal from
 `tools/`.
 
-## ⚠️ THE DEV COMMITS IN THIS ROUND ARE UNSIGNED
+## ⚠️ UNSIGNED, DELIBERATELY, UNTIL THE PUSH
 
-1Password was locked and unavailable while mfcarroll was away, and `git commit` fails opaquely in
-that state. The four round-12-fix commits carry a note saying so.
+1Password was locked while mfcarroll was away and `git commit` fails opaquely in that state. **Agreed
+with him: leave it unsigned for now and sign before the push next week.** The round-13 dev commits
+carry a note saying so, and the fork replay was run with `commit.gpgsign=false` set LOCALLY in the
+fork and unset again immediately after -- check `git -C ../all-the-plugins config --local --get
+commit.gpgsign` returns nothing before doing anything else.
 
-This does **not** affect the fork: `replay-to-fork.sh` creates its own commits and signs them at
-replay time, so re-running it with 1Password unlocked produces a fully signed chain. Re-signing the
-dev commits would mean rewriting history and renaming every `NN-<sha>.msg` here, which is not worth
-it -- but the replay must be run with signing available, and the result checked for `7 of 7`.
+**BEFORE PUSHING: re-run `replay-to-fork.sh` with 1Password unlocked** and confirm the script reports
+`7 of 7`. The current chain reports `0 of 7`. Re-signing the DEV commits is not worth it -- it
+rewrites history and renames every `NN-<sha>.msg` here -- and it is not needed, since the fork
+commits are created fresh at replay time.
 
 ## Verified before drafting
 
