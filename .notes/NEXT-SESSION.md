@@ -633,6 +633,32 @@ and both are done.
 
 **Nothing is owed outward now.** Everything else waits on him.
 
+### Surfaced by the round-14 self-review, UNFILED and not in this round — 2026-09-17
+
+Both are pre-existing, neither is touched by round 14, and neither was on any list before now, which
+is the only reason they are written down here. Checked against the notes first: the third item the
+review raised -- `NothingWiped` having no `uid_verified` route -- is ALREADY settled above and in
+[#255](https://github.com/xMasterX/all-the-plugins/issues/255), so it is not repeated.
+
+1. **The gen2 CFG frame programs an UNCLAMPED block size.** `cfg_blocksize = (uint8_t)(sys->block_size - 1)`
+   takes the source's raw value while every data write goes through `iso15693_poller_clamp_block_size`
+   and is capped at 32. Reachable only through a hand-edited `.nfc`: the SDK's loader checks
+   `block_size > 0` and nothing else, and that is byte-identical in Momentum, Unleashed, RogueMaster,
+   Xero and official, so 1..255 can arrive. A source claiming 200 programs 199 into the card's
+   geometry register while writing 32 bytes a block, leaving a clone whose reported geometry its own
+   contents do not match. Not a safety issue -- the write path is clamped -- but the two should agree
+   on one number, and the clamp's new note now makes the asymmetry easy to see.
+
+2. **The unusable-geometry return blames the card for a refusal it was never asked for.**
+   `iso15693_poller_wipe_blocks` returns 0 on `advertised == 0 || block_size == 0` before a single
+   frame goes out, and that lands on the same `wiped == 0` branch as a card that refused everything --
+   where the screen reads "No blocks could be cleared: the card accepted no zero-write." It accepted
+   nothing because nothing was sent. Nothing is logged at that return either, so a card reporting no
+   geometry is indistinguishable from a card refusing writes, both on screen and in the log. It also
+   carries `wipe_advertised` (set above the guard) against `blocks_total` 0 (set below it), so the
+   screen can show a claim of 64 beside a total of 0 with nothing explaining the gap. A third branch
+   in the `nothing_wiped` body and one `FURI_LOG_E` would close both halves.
+
 ## Open, waiting on him
 
 - **The scoping call on addressed writes** — whether they land inside this PR or as a follow-up.
