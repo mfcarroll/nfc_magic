@@ -553,8 +553,15 @@ static uint8_t iso15693_poller_clamp_block_size(uint8_t block_size) {
     return block_size > ISO15693_MAX_BLOCK_SIZE ? (uint8_t)ISO15693_MAX_BLOCK_SIZE : block_size;
 }
 
-// Has this pass spent its wall-clock budget? The clone's write loop and the wipe's sweep both ask,
-// and both have to answer it identically, so the answer lives here rather than once per loop.
+// If this pass has spent its wall-clock budget, CUT IT: record the cut and return true. The clone's
+// write loop and the wipe's sweep both ask, and both have to answer identically, so the decision
+// lives here rather than once per loop.
+//
+// Named as an imperative because it WRITES. A bool-returning `..._expired` reads as a query, and the
+// two fields it sets are not incidental: pass_cut_block is the exclusive end of the ATTEMPTED range,
+// which the clone's back-fill and the wipe's tail-drop both rely on. A third caller that adopted this
+// from inside a loop over something other than the block cursor -- the re-probe is the tempting one --
+// would record a cut index that is not that, and every screen downstream would state it as fact.
 //
 // The cut is recorded on the INSTANCE rather than returned into a local, because pass_truncated and
 // pass_cut_block are what let a report tell a block the card REFUSED from one nothing was sent to.
