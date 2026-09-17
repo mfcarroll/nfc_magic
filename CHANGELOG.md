@@ -40,7 +40,7 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
   won't write is **Partial**, naming the blocks. An empty block past the card's real capacity loses
   nothing, so the clone is a **Success** carrying a note that the card advertises more blocks than it
-  physically holds — the blocks that do fit are copied exactly.
+  physically holds — every block the card acknowledged was written.
 - **No data is written until the card takes the magic UID.** Data blocks and identity fields follow
   only once the UID reads back as the target, so a card that doesn't take it is left untouched — which
   is why cloning has no up-front prompt. A wipe does prompt, since destruction is a wipe's only product.
