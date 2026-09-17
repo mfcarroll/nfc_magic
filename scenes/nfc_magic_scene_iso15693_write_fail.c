@@ -8,6 +8,13 @@
 //   y=20 -- tops at 20/31/42, and a fourth at 53 sits inside the box entirely.
 // Where the body carries a UID that budget decides the prose, because a clipped hex digit is a
 // mis-readable UID.
+//
+// The x that rides with each is not this file's choice to make freely: y=20 goes with x=4, which is
+// the shared partial-summary layout -- nfc_magic_scene_gen2_wipe_partial.c and
+// nfc_magic_scene_uscuid_ul_partial.c place their bodies at exactly (4, 20) -- and the two branches
+// here that use it are the two whose comments say they are matching those screens. y=13 goes with
+// x=0, which is this file's own. Read without that, the x=4 on two branches out of twelve looks
+// arbitrary and invites being "tidied" into agreement with the other ten.
 
 void nfc_magic_scene_iso15693_write_fail_widget_callback(
     GuiButtonType result,
