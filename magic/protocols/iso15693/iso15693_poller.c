@@ -570,9 +570,10 @@ static uint8_t iso15693_poller_clamp_block_size(uint8_t block_size) {
 // deliberately: #253 contemplates a longer budget for the clone alone, which is a change of one
 // argument rather than of this function. It does not own the value and must not read the macro.
 //
-// Call it BEFORE the block is attempted, so `block` stays the EXCLUSIVE end of the attempted range:
-// the tail arithmetic in both callers reads it that way. Logging stays at the call sites, which is
-// the one thing that genuinely differs between them.
+// Call it BEFORE the block is attempted, so it breaks without incrementing and `block` stays the
+// count of blocks attempted, which is what the tail arithmetic in both callers reads. The wipe's
+// loop head states that invariant across its several exits; the clone's deadline break is its only one.
+// Logging stays at the call sites, which is the one thing that genuinely differs between them.
 static bool iso15693_poller_cut_pass_if_expired(
     Iso15693Poller* instance,
     uint32_t pass_start,
@@ -916,6 +917,12 @@ static uint16_t iso15693_poller_wipe_blocks(
     // resolves every absence below it and zeroes the counter, so unresolved absences are always
     // exactly the current run.
     uint16_t absent_run = 0;
+    // INVARIANT, relied on by the arithmetic after the loop: at EVERY exit `block` is the count of
+    // blocks attempted -- equivalently, the exclusive end of the attempted range. The deadline check
+    // runs before its block is attempted and so breaks WITHOUT incrementing; every other break
+    // increments first. The tail-drop below reads it this way, as does the cut index the deadline
+    // records. Four breaks and the loop condition all land on it, which is why it is stated once
+    // here rather than re-argued at each of them.
     uint16_t block = 0;
     const uint32_t sweep_start = furi_get_tick();
     const uint32_t sweep_budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
@@ -998,8 +1005,8 @@ static uint16_t iso15693_poller_wipe_blocks(
             if(absent_run % ISO15693_POLLER_WIPE_ABSENT_RUN == 0 &&
                !iso15693_poller_card_still_present(iso_poller)) {
                 *card_lost = true;
-                block++; // this block was attempted; keep `block` the attempted count, as every
-                break; // other exit does
+                block++; // attempted; see the invariant at the loop head
+                break;
             }
             continue;
         }
@@ -1009,7 +1016,7 @@ static uint16_t iso15693_poller_wipe_blocks(
         // like. Ask before concluding anything.
         if(!iso15693_poller_card_still_present(iso_poller)) {
             *card_lost = true;
-            block++; // attempted, so it counts -- see the note at the other card-lost exit
+            block++; // attempted; see the invariant at the loop head
             break;
         }
 
@@ -1061,7 +1068,7 @@ static uint16_t iso15693_poller_wipe_blocks(
 
         FURI_LOG_I(
             TAG, "wipe: card ends at block %u (advertised %u)", highest_present, advertised);
-        block++; // count this block into the tail arithmetic below
+        block++; // attempted; see the invariant at the loop head
         break;
     }
 
