@@ -43,22 +43,26 @@ which half is current. The three are fixed together and the round says so.
 ## `iso15693_poller.c:1253` — comment 4035110573
 
 ~~~~
-Taken in full, including the shape of the fix. It is a closed form now, stated once in the poller,
-and the release notes carry only the qualitative half.
+Taken in full, including the shape of the fix: it is a closed form now, stated once in the poller,
+with the release notes carrying only the qualitative half.
 
-Your derivation is right, and I checked it against the code rather than reading it: the run has to
-reach `ISO15693_POLLER_WIPE_ABSENT_RUN`, the advertised range has to have been attempted
-(`block + 1 >= advertised`), and below the claim the trip falls through to `continue`. Both gates
-must pass, so `L = max(A + 7, claim - 1)` and 56 is reached from `A >= 49` **or** `claim >= 57`. The paragraph modelled the first term only,
-which under-warns on the one path where the UID check never runs.
+Your derivation is right and I checked it against the code rather than reading it. Writing it out
+then turned up a third gate and a bad definition, both in the under-warning direction, so what
+shipped is:
 
-Your second point is the one I would have missed. A landing **read** resets the run too:
-`wipe_note_present` is called from the read-success path and does not increment `wiped`, so the run
-genuinely can have been reset inside the `wiped == 0` branch. "A block that ANSWERS" is what the
-comment says now.
+    L = min(max(A + 7, claim - 1), ISO15693_POLLER_WIPE_MAX_BLOCKS - 1)
+    56 reached  <=>  A >= 49  OR  claim >= 57
 
-Four rounds is the right count, and each time it was a paraphrase of something the code states
-exactly. That is the argument for the form you suggested rather than for a better sentence.
+The run must also SURVIVE the re-probe, and that gate is what fixes what A means. Your point about a
+landing read is the load-bearing half of it: `wipe_note_present` zeroes `absent_run` from three
+sites and only the write path increments `wiped`, so A is the first block of the FINAL unbroken run,
+not the first silence anywhere. A card reading 0-4, silent at 5, reading 6-59 and silent from 60
+does reach 56/57 -- and "first silence" would have said it does not, on the one path where the UID
+check never runs.
+
+Five rounds now, each a paraphrase of something the code states exactly. That is the argument for
+the form rather than for a better sentence, and it is why the fixtures changed too: every one had
+staged A == claim, where the two terms collapse into one and an incomplete rule passes.
 ~~~~
 
 ---
@@ -81,11 +85,15 @@ the wrong half to fix first.
 
 ~~~~
 Restored, in the poller rather than the release notes, which is the option you offered and the right
-one — the CHANGELOG stays lean and the fact sits where both things that depend on it are.
+one -- the CHANGELOG stays lean and the fact sits where both things that depend on it are, each now
+named rather than left as "load-bearing twice below".
 
-Your grep matches mine: nothing at HEAD stated it. And both dependencies are real. It is why
-overshoot past the claim is a question at all rather than a matter of geometry, and it is what
-reconciles "Wiped 58/58" with a card the same notes describe as advertising 56.
+Your grep matches mine: nothing at HEAD stated it. One clause did NOT come back with it. The
+original sentence carried "so a card's advertised block count is its capacity", and that contradicts
+the premise of the sweep itself, the 36-of-64 measurement recorded beside it, the clone's reason for
+not capping at the claim, and `blocks_advertised` in the header -- all of which exist because the
+claim and what a card holds differ. Neither dependency needs it: "Wiped 58/58" needs only that 56/57
+sit above THAT card's claim, and the reach form needs only that they can lie past a claim at all.
 ~~~~
 
 ---
