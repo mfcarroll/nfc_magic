@@ -66,12 +66,10 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   unreachable. Observed on a gen1 card left armed by an earlier UID write: it went to **all zeros**,
   which is not a valid ISO15693 identity at all. Where the check cannot run the screen says **"UID not
   re-checked"** rather than implying the identity was confirmed. **Limit:** a wipe that clears
-  *nothing* reports "Wipe failed" and does not attempt the check at all, yet on an armed gen1 card the
-  UID may still have moved. How far the sweep reaches is set not by the card's claim but by when it
-  stops answering *reads*: a card that answers a read at every address never accumulates a run of
-  silence, so it walks past 56/57 whatever it claims. It is not the only card that does: only one that
-  *both* claims fewer than 49 blocks *and* stops answering above that claim stays short of 56/57.
-  Tracked in #255.
+  *nothing* reports "Wipe failed" and does not attempt the check at all, yet on an armed gen1 card
+  the UID may still have moved. A card that keeps answering reads walks past 56/57 whatever it
+  claims; otherwise how far the sweep reaches depends on where the silence starts and what the card
+  advertises, and the poller states that exactly. Tracked in #255.
 - **A card lifted mid-write says so** rather than being reported as a card too small: losing the card
   makes every remaining block fail, which looks identical to reaching its capacity, so presence is
   re-checked before any capacity verdict. A time limit bounds both passes, so the screen is not held
