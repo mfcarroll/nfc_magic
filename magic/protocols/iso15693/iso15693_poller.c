@@ -532,10 +532,19 @@ static bool iso15693_poller_block_is_empty(const uint8_t* block, uint8_t size) {
     return true;
 }
 
-// Clamp a block size to what the fixed buffers in this file hold. Both callers need it and neither
-// controls its input: the clone's comes out of a loaded .nfc, hand-editable and unbounded by anything
-// this app decides, and the wipe's comes off the wire in the card's own GET SYSTEM INFO. Both then
-// feed an ISO15693_MAX_BLOCK_SIZE stack buffer.
+// Clamp a block size to what the fixed buffers in this file hold. Both callers feed an
+// ISO15693_MAX_BLOCK_SIZE stack buffer and both clamp, but only one of them can actually trip, and
+// saying "neither controls its input" flattens that into an invitation to delete one:
+//
+//   - the CLONE's comes out of a loaded .nfc. The SDK's loader checks it is non-zero and nothing
+//     else -- identically in Momentum, Unleashed, RogueMaster, Xero and official -- so 1..255
+//     arrives here and this call is the only bound between a hand-edited file and that buffer.
+//   - the WIPE's comes off the wire, where Get System Info carries (size - 1) in a five-bit field
+//     (see ISO15693_MAX_BLOCK_SIZE), so it is 1..32 before it reaches this function and the clamp
+//     cannot fire.
+//
+// The one that looks redundant is not the one that is. Both clamp anyway, so the two sites cannot
+// drift apart and neither has to carry a note explaining which it is.
 //
 // Against the MACRO, never against sizeof a particular buffer. The wipe used to clamp against
 // sizeof(zeros), which agreed with this only because that array is declared from the same macro --
@@ -876,7 +885,6 @@ static uint16_t iso15693_poller_wipe_blocks(
     // doc forbids.
     instance->clone_blocks_total = advertised;
 
-    // The zero buffer covers every valid geometry; the clamp is belt-and-braces.
     uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
     const uint8_t size = iso15693_poller_clamp_block_size(block_size);
     uint16_t wiped = 0;
