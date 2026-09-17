@@ -40,3 +40,9 @@ the clamp fails both over-large ones. 120 tests, both firmwares clean, `ufbt for
 limit. Addressed writes and the gen1 caveat gate are what is next, and the scoping call on whether
 they belong inside this PR is yours.
 ~~~~
+
+---
+
+**SUPERSEDED by [../pr-round-13/reply.md](../pr-round-13/reply.md).** His round 12 arrived before
+this went out, so the simplification pass and the round-12 fixes became one round. The fork messages
+here for P1-P3 are carried over into round 13 unchanged; this reply is not.

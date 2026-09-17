@@ -1,4 +1,39 @@
-# Next session — ROUND 11 IS PUSHED AND POSTED. Waiting on his round 12.
+# Next session — ROUND 12 IS IN. Round 13 is BUILT and UNPUSHED, and NOT reviewed by mfcarroll.
+
+**HIS ROUND 12 ARRIVED 2026-09-17** and is fully addressed: seven findings, all verified against the
+tree before fixing, all fixed. Round 13 combines those with the simplification pass, since his review
+landed before P1-P3 went out. Draft reply, thread replies and fork messages in
+[pr-round-13/](pr-round-13/); his review is cached in `pr-round-13/received/`.
+
+**NOTHING HAS BEEN PUSHED OR POSTED, AND NONE OF IT HAS HAD MFCARROLL'S READ.** That read has caught
+more than any other check on this project, so it is the gate. Seven fork sync points, no reorder
+needed, and **zero intra-round churn** -- the first round with none.
+
+**⚠️ THE ROUND-13 DEV COMMITS ARE UNSIGNED.** 1Password was locked while he was away. Fork commits
+are signed at replay time, so re-running `replay-to-fork.sh` with it unlocked gives a signed chain --
+check for `7 of 7`. Do NOT re-sign the dev commits: it rewrites history and renames every
+`NN-<sha>.msg`.
+
+## What round 12 found, and the pattern under it
+
+All seven were correct and all were verified here rather than taken on trust. Two of them are the
+shape worth remembering:
+
+- **The trim escalated a claim and deleted its evidence in the same edit.** The gen3 bullet came to
+  say the gen1 opt-in writes "reach the same blocks" as the registers a wipe bricks -- false, since
+  gen3 keeps its UID at 0x10/0x11 and its signature at 0x14/0x15 -- while the same commit removed the
+  only record of those addresses. Unfalsifiable and wrong arrived together.
+- **Three of the seven were one defect: a claim corrected in one place and left in its twin.** The
+  consent screen fixed and the release notes not; the in-band error code scoped at its definition and
+  not at its two users. Worse than uniform wrongness, because the reader has to work out which half
+  is current. **When a claim appears in N places, fix all N or none.**
+
+The reach rule had been wrong in four consecutive rounds, each time in a new corner, so it is now a
+closed form stated once in the poller (`L = max(A + 7, claim - 1)`; 56 reached iff `A >= 49` or
+`claim >= 57`) with the CHANGELOG carrying only the qualitative half. His catch that a landing READ
+resets the run -- not just a landing write -- is one this session would have missed.
+
+## Where things stood before that
 
 **Pushed `536e0d4f..a27d187d`, a fast-forward of 7.** PR head confirmed via the API, comment-only
 outside the CHANGELOG, `fap_version` still 2.3, nine files, all seven signed.
