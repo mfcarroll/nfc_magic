@@ -542,7 +542,12 @@ static bool iso15693_poller_block_is_empty(const uint8_t* block, uint8_t size) {
 // and Finish rather than Retry, about blocks the card refused none of.
 //
 // Elapsed-against-budget, never against an absolute deadline, which would not survive a tick
-// wraparound. See ISO15693_POLLER_PASS_MAX_MS for the value.
+// wraparound.
+//
+// The budget is a PARAMETER although both callers currently pass
+// furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS), and that is the one duplication here left
+// deliberately: #253 contemplates a longer budget for the clone alone, which is a change of one
+// argument rather than of this function. It does not own the value and must not read the macro.
 //
 // Call it BEFORE the block is attempted, so `block` stays the EXCLUSIVE end of the attempted range:
 // the tail arithmetic in both callers reads it that way. Logging stays at the call sites, which is
@@ -900,8 +905,6 @@ static uint16_t iso15693_poller_wipe_blocks(
     const uint32_t sweep_start = furi_get_tick();
     const uint32_t sweep_budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
     for(; block < ISO15693_POLLER_WIPE_MAX_BLOCKS; block++) {
-        // Time bound; iso15693_poller_cut_pass_if_expired carries why it is asked before the block is
-        // attempted, and why the cut is recorded on the instance.
         if(iso15693_poller_cut_pass_if_expired(instance, sweep_start, sweep_budget, block)) {
             FURI_LOG_W(
                 TAG, "wipe: time limit reached at block %u (advertised %u)", block, advertised);
