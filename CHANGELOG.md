@@ -103,7 +103,7 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   **0x10/0x11** with a configuration signature in **0x14/0x15**, and ignores the gen2 backdoor — so a
   clone or Write UID lands on the **"Not gen2 magic card"** opt-in, and accepting that sends four
   ordinary writes into 56/57/62/63. On a gen3 card those four are ordinary user data, so the opt-in
-  can **damage** a gen3 card; it does not reach the registers above. **A wipe does not check at all**
+  can **damage** a gen3 card; it never addresses 0x10/0x11 or 0x14/0x15. **A wipe does not check at all**
   — it sweeps any ISO15693 tag presented to it, so it reaches 0x10/0x11 and 0x14/0x15 along with
   everything else and zeroes an un-finalized gen3 card's UID registers and configuration signature.
   Per 0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support, that **bricks the card
