@@ -42,10 +42,18 @@
 // client reported a failure that does not separate an error frame from silence, so "the registers
 // answer" is one chip.
 //
-// ALSO MEASURED, and load-bearing twice below: these four addresses are NOT memory. They answer no
-// read at any point, so a card's advertised block count is its capacity and 56/57/62/63 are
-// write-only registers sitting OUTSIDE it. That is why an LRi2K advertising 56 blocks reports
-// "Wiped 58/58" -- the two extra are 56 and 57, above its claim -- and it is what makes "how far
+// ALSO MEASURED, and on the same chips: these four addresses are NOT memory. They answer no read at
+// any point, so on a gen1 chip 56/57/62/63 are write-only registers that can sit ABOVE the
+// advertised block count rather than inside it.
+//
+// That does NOT widen to cards in general, and reads as though it does if the qualifier is dropped:
+// an advertised count is programmable and says nothing about physical memory, which is the premise
+// the sweep is built on (ISO15693_POLLER_WIPE_MAX_BLOCKS, and blocks_advertised in the header), and
+// on a gen2 or gen3 card these same four are ordinary user data.
+//
+// Load-bearing in exactly two places, both of which need only the narrow claim. In
+// iso15693_poller_wipe_blocks it is why an LRi2K advertising 56 blocks reports "Wiped 58/58" -- the
+// two extra are 56 and 57, above ITS claim. In iso15693_poller_write_step it is what makes "how far
 // past the claim does the sweep run" a question at all rather than a matter of geometry.
 //
 // STILL INFERENCE: what 0x3E and 0x3F actually do. proxmark sends them first and names neither, and
