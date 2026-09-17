@@ -23,14 +23,19 @@ void nfc_magic_scene_iso15693_write_fail_widget_callback(
 // How many blocks succeeded, saturating at zero. Three lines on this screen need that figure and all
 // three take it as a subtraction, so the reason it cannot be a bare one lives here.
 //
-// blocks_total and failed_count are not two halves of a single count. The total is what the run
-// MEASURED -- the wipe reports the range the card proved, not what it advertised -- or, on a gen1
-// clone, a logical count with the four backdoor blocks deducted; failures are recorded at TRUE block
-// indices. Two different accountings, and they have disagreed before: the sweep's back-fill could
-// leave failed_count above blocks_total and render "Wiped 0/20, not cleared: 44". That is fixed where
-// it belongs, in iso15693_poller_wipe_blocks, and this is not a second fix for it -- it is a promise
-// about what reaches the user if it ever recurs. Unsigned, an inversion prints as a number near
-// 65535; here it prints as 0.
+// The total and the deduction are not two halves of a single count, whichever pair a caller passes.
+// blocks_total is mode-dependent and only one of its three forms is a tally of this run (see its doc
+// in iso15693_poller.h): a gen2 clone reports the SOURCE's block count, a gen1 clone that count minus
+// the four skipped backdoor registers, and a wipe the range the card PROVED rather than the one it
+// advertised. What gets subtracted is counted independently -- failures are recorded at TRUE block
+// indices, and the clone's caller subtracts failed_count plus over_capacity, which is a second
+// accounting again.
+//
+// Those accountings have disagreed before: the sweep's back-fill could leave failed_count above
+// blocks_total and render "Wiped 0/20, not cleared: 44". That is fixed where it belongs, in
+// iso15693_poller_wipe_blocks, and this is not a second fix for it -- it is a promise about what
+// reaches the user if it ever recurs. Unsigned, an inversion prints as a number near 65535; here it
+// prints as 0.
 static uint16_t nfc_magic_iso15693_blocks_ok(uint16_t total, uint16_t bad) {
     return (total >= bad) ? (uint16_t)(total - bad) : 0;
 }
