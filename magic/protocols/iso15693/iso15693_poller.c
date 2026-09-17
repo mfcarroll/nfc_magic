@@ -1307,27 +1307,34 @@ static NfcCommand
             // WRITE BLOCKs each went out there before it gave up, and a tag can apply a write without
             // answering. HOW FAR THE SWEEP GOT IS A CLOSED FORM, and it belongs here once rather
             // than paraphrased per screen -- four rounds of paraphrase were wrong in four
-            // different corners. TWO gates must both pass before the loop can break: the absent
-            // run has to reach ISO15693_POLLER_WIPE_ABSENT_RUN, and the advertised range has to
-            // have been attempted (block + 1 >= advertised). Below the claim the trip falls
-            // through to continue -- the advertised-count floor doing its job -- so eight absences
-            // alone do not end it. With A the first block that answers nothing and `claim` the
-            // advertised count, the last block attempted is
+            // different corners. THREE gates must all pass before the loop can break: the absent
+            // run has to reach ISO15693_POLLER_WIPE_ABSENT_RUN, the advertised range has to have
+            // been attempted (block + 1 >= advertised), and the run has to survive the RE-PROBE
+            // that follows. Below the claim the trip falls through to continue -- the
+            // advertised-count floor doing its job -- so eight absences alone do not end it.
             //
-            //     L = max(A + 7, claim - 1)
+            // That third gate is why A is the run the sweep ENDS on and not the first silence
+            // anywhere. wipe_note_present zeroes absent_run from three sites -- write success,
+            // read success and the re-probe -- and only the first increments wiped, so on this
+            // branch, where nothing was cleared, a run can still have been reset and an earlier
+            // stretch of silence sets no floor at all. With A the first block of the FINAL
+            // unbroken run of non-answering blocks and `claim` the advertised count:
+            //
+            //     L = min(max(A + 7, claim - 1), ISO15693_POLLER_WIPE_MAX_BLOCKS - 1)
             //     56 reached  <=>  A >= 49  OR  claim >= 57
             //     57 reached  <=>  A >= 50  OR  claim >= 58
             //
-            // Both terms carry cards. One answering no read at all but advertising 57+ reaches
-            // 56/57 on the floor alone; one that keeps answering reads never accumulates a run, so
-            // there is no A and it walks past 56/57 whatever it claims. And A resets on any block
-            // that ANSWERS, a read included -- wipe_note_present is called from the read-success
-            // path and does not increment wiped -- so a run can have been reset even on this
-            // branch, where nothing was cleared.
+            // A is infinite when no run survives: a card that keeps answering reads accumulates
+            // none, so it walks to the ceiling past 56/57 whatever it claims. The claim term
+            // carries cards by itself -- one answering no read at all reaches 56 from claim >= 57,
+            // and 57 only from claim >= 58. The ceiling binds the A term alone; claim - 1 cannot
+            // exceed it, since the wire caps a block count at 256.
             //
             // Two further exits stop it short of 56/57: the clock cuts the sweep below 56 (see the
             // backstop note at ISO15693_POLLER_PASS_MAX_MS), or the geometry guard above returned
-            // before the first write, which also lands here since it returns 0.
+            // before the first write, which also lands here since it returns 0. The sweep's two
+            // card-lost breaks are absent from that list because they cannot reach this branch --
+            // a lost card returns above, before wiped is tested.
             //
             // So on an ARMED gen1 card this path can move the UID, report "Wipe failed", never run the
             // check and never say the check did not run -- the one path where the mitigation #255
