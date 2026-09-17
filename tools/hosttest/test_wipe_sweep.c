@@ -296,6 +296,68 @@ static void test_sweep_reaches_56_and_57_at_49(void) {
     end();
 }
 
+// The OTHER term of the closed form: the advertised-count floor, on its own. Both cards here answer
+// no read anywhere, so there is no run to carry them -- the claim alone decides how far the sweep
+// goes, because below the claim a tripped run falls through to continue instead of ending the sweep.
+// 56 and 57 are writable, as gen1 silicon presents them, so a reached block shows up as a zeroed one.
+static void test_sweep_stops_short_of_56_on_the_claim_at_56(void) {
+    begin("a silent card claiming 56 stops one block short of 56");
+    fake_tag_init(56, 0, 4);
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_tag_fill(56, 57, FAKE_MARKER);
+    Iso15693Poller inst;
+    bool card_lost;
+    const uint16_t wiped = run_sweep(&inst, &card_lost);
+
+    // The range is first "attempted" at block 55 (block + 1 >= 56), and the re-probe leaves the run
+    // at full length, so the sweep breaks there and never asks 56.
+    CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
+    CHECK_EQ(wiped, 0);
+    CHECK(!card_lost);
+    end();
+}
+
+// One more block of claim and the floor carries the sweep to 56 with no run involved at all. This is
+// the case four rounds of prose missed: A is infinite here, and the claim term reaches the backdoor
+// on its own. 57 follows only because the write to 56 LANDS and resets the run -- on the "Wipe
+// failed" path, where nothing lands, claim 57 reaches 56 and stops.
+static void test_sweep_reaches_56_on_the_claim_alone_at_57(void) {
+    begin("a silent card claiming 57 reaches 56 on the claim alone");
+    fake_tag_init(57, 0, 4);
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_tag_fill(56, 57, FAKE_MARKER);
+    Iso15693Poller inst;
+    bool card_lost;
+    const uint16_t wiped = run_sweep(&inst, &card_lost);
+
+    CHECK_EQ(fake_tag.content[56][0], 0x00);
+    CHECK_EQ(fake_tag.content[57][0], 0x00);
+    CHECK_EQ(wiped, 2);
+    CHECK(!card_lost);
+    end();
+}
+
+// An EARLIER stretch of silence sets no floor, because any block that answers zeroes the run. So the
+// A in the closed form is the start of the run the sweep ENDS on, not the first silence anywhere --
+// a card whose first silent block is 5 and which claims only 20 still reaches 56. Read the other way
+// round, "first block that answers nothing" would put this card's reach at block 19 and conclude the
+// backdoor was never touched, which is the unsafe direction on the one path that skips the UID check.
+static void test_early_silence_sets_no_floor(void) {
+    begin("an early dropout does not shorten the sweep: claim 20, silent at 5, still reaches 56");
+    fake_tag_init(20, 49, 4);
+    fake_tag_set_range(5, 5, FakeBlockAbsent);
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_tag_fill(56, 57, FAKE_MARKER);
+    Iso15693Poller inst;
+    bool card_lost;
+    run_sweep(&inst, &card_lost);
+
+    CHECK_EQ(fake_tag.content[56][0], 0x00);
+    CHECK_EQ(fake_tag.content[57][0], 0x00);
+    CHECK(!card_lost);
+    end();
+}
+
 // The block-number space is 256 wide and the bitmap holds exactly that many bits. A card that is
 // writable all the way to the ceiling must stop there rather than run past the bitmap.
 static void test_full_256_hits_the_ceiling(void) {
@@ -492,6 +554,9 @@ int main(void) {
     test_zero_block_size_reports_no_claim();
     test_sweep_stops_short_of_56_at_48();
     test_sweep_reaches_56_and_57_at_49();
+    test_sweep_stops_short_of_56_on_the_claim_at_56();
+    test_sweep_reaches_56_on_the_claim_alone_at_57();
+    test_early_silence_sets_no_floor();
     test_full_256_hits_the_ceiling();
     test_clock_cuts_the_sweep();
     test_cut_index_exceeds_total_after_a_tail_drop();
