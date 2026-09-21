@@ -8,13 +8,6 @@
 //   y=20 -- tops at 20/31/42, and a fourth at 53 sits inside the box entirely.
 // Where the body carries a UID that budget decides the prose, because a clipped hex digit is a
 // mis-readable UID.
-//
-// The x that rides with each is not this file's choice to make freely: y=20 goes with x=4, which is
-// the shared partial-summary layout -- nfc_magic_scene_gen2_wipe_partial.c and
-// nfc_magic_scene_uscuid_ul_partial.c place their bodies at exactly (4, 20) -- and the two branches
-// here that use it are the two whose comments say they are matching those screens. y=13 goes with
-// x=0, which is this file's own. Read without that, the x=4 on two branches out of twelve looks
-// arbitrary and invites being "tidied" into agreement with the other ten.
 
 void nfc_magic_scene_iso15693_write_fail_widget_callback(
     GuiButtonType result,
@@ -25,26 +18,6 @@ void nfc_magic_scene_iso15693_write_fail_widget_callback(
     if(type == InputTypeShort) {
         view_dispatcher_send_custom_event(instance->view_dispatcher, result);
     }
-}
-
-// How many blocks succeeded, saturating at zero. Three lines on this screen need that figure and all
-// three take it as a subtraction, so the reason it cannot be a bare one lives here.
-//
-// The total and the deduction are not two halves of a single count, whichever pair a caller passes.
-// blocks_total is mode-dependent and only one of its three forms is a tally of this run (see its doc
-// in iso15693_poller.h): a gen2 clone reports the SOURCE's block count, a gen1 clone that count minus
-// the four skipped backdoor registers, and a wipe the range the card PROVED rather than the one it
-// advertised. What gets subtracted is counted independently -- failures are recorded at TRUE block
-// indices, and the clone's caller subtracts failed_count plus over_capacity, which is a second
-// accounting again.
-//
-// Those accountings have disagreed before: the sweep's back-fill could leave failed_count above
-// blocks_total and render "Wiped 0/20, not cleared: 44". That is fixed where it belongs, in
-// iso15693_poller_wipe_blocks, and this is not a second fix for it -- it is a promise about what
-// reaches the user if it ever recurs. Unsigned, an inversion prints as a number near 65535; here it
-// prints as 0.
-static uint16_t nfc_magic_iso15693_blocks_ok(uint16_t total, uint16_t bad) {
-    return (total >= bad) ? (uint16_t)(total - bad) : 0;
 }
 
 // Is re-running the write the right next action? A run the clock cut may have left real data above the
@@ -91,14 +64,14 @@ static bool
         return result->failed_count > 0 || result->pass_truncated;
     case NfcMagicIso15693WriteFailReasonCardLost:
         // Wipe only, and only where the identity check never answered: the run returns before
-        // Iso15693WriteStateVerifyWipe is entered, and Details is the only route to the note
-        // saying so. A clone has no identity check to skip, hence the mode test. The uid_verified
-        // term is DEFENSIVE, not load-bearing: the flag is set only inside
-        // Iso15693WriteStateVerifyWipe, whose exits are BOTH success_or_partial -- the case body,
-        // and the activation-error path that tests for this state -- so a CardLost result always
-        // carries it false and the term cannot currently bite. It is kept because this scene
-        // cannot enforce that invariant -- it reads a result struct it did not fill -- and a
-        // poller that grew a CardLost exit from that state would need it.
+        // Iso15693WriteStateVerifyWipe is entered, and Details is the only route to the note saying
+        // so. A clone has no identity check to skip, hence the mode test. The uid_verified term is
+        // DEFENSIVE, not load-bearing: the flag is set only inside Iso15693WriteStateVerifyWipe, and
+        // both of that state's exits report success_or_partial (the case body, and the activation-
+        // error path that tests verifying_wipe), so a CardLost result always carries it false and the
+        // term cannot currently bite. It is kept because this scene cannot enforce that invariant --
+        // it reads a result struct it did not fill -- and a poller that grew a CardLost exit from
+        // that state would need it.
         return instance->iso15693_mode == NfcMagicIso15693ModeWipe && !result->uid_verified;
     default:
         return false;
@@ -233,7 +206,7 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         furi_string_printf(
             text,
             "Cleared %u blocks.\nTimed out at block %u.",
-            nfc_magic_iso15693_blocks_ok(reached, failed),
+            (reached >= failed) ? (uint16_t)(reached - failed) : 0,
             instance->iso15693_result.cut_block);
         if(failed > 0) furi_string_cat_printf(text, "\nNot cleared: %u", failed);
         widget_add_string_multiline_element(
@@ -266,7 +239,7 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // Everything that didn't write: real-data losses plus any empty blocks past capacity.
         const uint16_t not_written =
             instance->iso15693_result.failed_count + instance->iso15693_result.over_capacity;
-        const uint16_t ok = nfc_magic_iso15693_blocks_ok(total, not_written);
+        const uint16_t ok = (total >= not_written) ? (uint16_t)(total - not_written) : 0;
         FuriString* text = furi_string_alloc();
         furi_string_printf(
             text,
@@ -355,7 +328,7 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         furi_string_printf(
             text,
             "Wiped %u/%u. The card's\nUID moved. Now reads:\n",
-            nfc_magic_iso15693_blocks_ok(wiped_total, wiped_bad),
+            (wiped_total >= wiped_bad) ? (uint16_t)(wiped_total - wiped_bad) : 0,
             wiped_total);
         iso15693_info_cat_uid(
             text, instance->iso15693_result.uid_readback, Iso15693UidFormatGrouped);

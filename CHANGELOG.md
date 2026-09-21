@@ -19,7 +19,7 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   card those are ordinary user data, so sparing them would leave real data behind. On a **gen1** card
   they are the UID / unlock / commit registers, so a wipe cannot promise to leave the UID intact — it
   **re-reads the UID afterwards, where it can, and reports a move when it sees one**. It cannot
-  report the absence of one: a card that no longer inventories is not re-checked at all.
+  report the absence of one.
 - **Write UID** — manual backdoor UID write. Tries gen2 first and, only if that leaves the UID
   unchanged, offers the same opt-in gen1 attempt the clone does.
 - **Live "Writing X / N" progress** during a clone or wipe, as the USCUID-UL clone already had.
@@ -36,11 +36,13 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   from a smaller source advertises less than it holds, and a card that over-claims — from the factory,
   or cloned from a larger source — advertises more.
   A sweep cut short by its time limit is **partial** if anything was cleared, names where it stopped
-  and offers a retry; one that cleared nothing is a failure and offers none.
+  and offers a retry; one that cleared nothing is a failure and offers none. A cut sweep that also
+  moved the UID reports the UID instead, which takes priority and is deliberately not retryable —
+  the cut is still named in Details.
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
   won't write is **Partial**, naming the blocks. An empty block past the card's real capacity loses
   nothing, so the clone is a **Success** carrying a note that the card advertises more blocks than it
-  physically holds — every block the card acknowledged was written.
+  physically holds — every block that fits is written and acknowledged.
 - **No data is written until the card takes the magic UID.** Data blocks and identity fields follow
   only once the UID reads back as the target, so a card that doesn't take it is left untouched — which
   is why cloning has no up-front prompt. A wipe does prompt, since destruction is a wipe's only product.
@@ -67,10 +69,12 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   unreachable. Observed on a gen1 card left armed by an earlier UID write: it went to **all zeros**,
   which is not a valid ISO15693 identity at all. Where the check cannot run the screen says **"UID not
   re-checked"** rather than implying the identity was confirmed. **Limit:** a wipe that clears
-  *nothing* reports "Wipe failed" and does not attempt the check at all, yet on an armed gen1 card
-  the UID may still have moved. A card that keeps answering reads walks past 56/57 whatever it
-  claims; otherwise how far the sweep reaches depends on where the silence starts and what the card
-  advertises, and the poller states that exactly. Tracked in #255.
+  *nothing* reports "Wipe failed" and does not attempt the check at all, yet on an armed gen1 card the
+  UID may still have moved. How far the sweep reaches depends on both where the card stops answering
+  *reads* and what it claims, and the closed form is stated in the poller beside that branch: a card
+  that answers a read at every address walks past 56/57 whatever it claims, and a card that answers
+  nothing still reaches them if its claim is high enough. Staying short of 56/57 takes a low claim
+  *and* early silence together. Tracked in #255.
 - **A card lifted mid-write says so** rather than being reported as a card too small: losing the card
   makes every remaining block fail, which looks identical to reaching its capacity, so presence is
   re-checked before any capacity verdict. A time limit bounds both passes, so the screen is not held
@@ -98,17 +102,15 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   restores byte-identically. The armed-card hazard above was reproduced on the LRi2K.
 - **gen2** was validated end-to-end: byte-identical clones across 28 / 56 / 64 / 70-block geometries,
   plus wipe and the over-capacity reporting.
-- **gen3 is not supported, and a wipe can destroy one.** A gen3 card keeps its UID in blocks
-  **0x10/0x11** with a configuration signature in **0x14/0x15**, and ignores the gen2 backdoor — so a
+- **gen3 is not supported, and a wipe can destroy one.** A gen3 card ignores the gen2 backdoor, so a
   clone or Write UID lands on the **"Not gen2 magic card"** opt-in, and accepting that sends four
-  ordinary writes into 56/57/62/63. On a gen3 card those four are ordinary user data, so the opt-in
-  can **damage** a gen3 card; it never addresses 0x10/0x11 or 0x14/0x15. **A wipe does not check at all**
-  — it sweeps any ISO15693 tag presented to it, so it reaches 0x10/0x11 and 0x14/0x15 along with
-  everything else and zeroes an un-finalized gen3 card's UID registers and configuration signature.
-  Per 0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support, that **bricks the card
-  permanently**: the cost is the card, not just its identity. Stated on their authority rather than
-  ours: no gen3 card exists on either side of this PR, so nothing here has been observed. Tracked as
-  #255.
+  ordinary writes into 56/57/62/63 — user data on a gen3 card, so what that costs is those four
+  blocks. **A wipe does not check at all** — it sweeps any ISO15693 tag presented to it, and a gen3
+  card keeps its UID in blocks 0x10/0x11 with a configuration signature in 0x14/0x15, well inside any
+  claim, so the sweep zeroes both. Per 0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support,
+  zeroing those on an un-finalized card **bricks it permanently**: the cost is the card, not just its
+  identity. Stated on their authority rather than ours: no gen3 card exists on either side of this PR,
+  so nothing here has been observed. Tracked as #255.
 - **Every ISO15693 write reaches every tag in the field, not just the selected one** — any generation,
   magic or not, on a wipe and a clone alike. No frame this app builds carries an address, so a second
   tag in range takes all of it with nothing on screen saying it was there: a wipe zeros its data

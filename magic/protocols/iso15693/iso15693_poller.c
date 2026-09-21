@@ -15,8 +15,10 @@
 
 // Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3 (GPLv3)
 // SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Unaddressed frames are sent to
-// hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card
-// generations exist: the write always tries gen2 first, and offers gen1 -- which is destructive on a
+// hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card generations
+// are handled here -- a third, gen3, is neither detected nor supported, and a wipe can destroy one
+// (see the hazard note in nfc_magic_scene_write_confirm.c). The write always tries gen2 first, and
+// offers gen1 -- which is destructive on a
 // non-magic tag -- only as an explicit user opt-in after gen2 leaves the UID unchanged.
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
@@ -42,19 +44,14 @@
 // client reported a failure that does not separate an error frame from silence, so "the registers
 // answer" is one chip.
 //
-// ALSO MEASURED, and on the same chips: these four addresses are NOT memory. They answer no read at
-// any point, so on a gen1 chip 56/57/62/63 are write-only registers that can sit ABOVE the
-// advertised block count rather than inside it.
-//
-// That does NOT widen to cards in general, and reads as though it does if the qualifier is dropped:
-// an advertised count is programmable and says nothing about physical memory, which is the premise
-// the sweep is built on (ISO15693_POLLER_WIPE_MAX_BLOCKS, and blocks_advertised in the header), and
-// on a gen2 or gen3 card these same four are ordinary user data.
-//
-// Load-bearing in exactly two places, both of which need only the narrow claim. In
-// iso15693_poller_wipe_blocks it is why an LRi2K advertising 56 blocks reports "Wiped 58/58" -- the
-// two extra are 56 and 57, above ITS claim. In iso15693_poller_write_step it is what makes "how far
-// past the claim does the sweep run" a question at all rather than a matter of geometry.
+// ALSO MEASURED, on the three gen1 chips: the four addresses are not memory. They answer no read at
+// any point. On those chips the advertised count is fixed silicon rather than the gen2 CFG frame, so
+// it enumerates memory only and 56/57/62/63 sit OUTSIDE it -- which is why a 56-block LRi2K can
+// report 58 cleared. Do NOT read that as a general rule: on gen2 the claim is PROGRAMMED and a card
+// serves reads above it, which is the whole reason the wipe sweeps past the claim (see
+// blocks_advertised, and the sweep's own note at the wipe entry point). It is that gap, not the
+// registers, that makes "how far past the claim does the sweep run" a question -- see the reach rule
+// at the wiped == 0 branch.
 //
 // STILL INFERENCE: what 0x3E and 0x3F actually do. proxmark sends them first and names neither, and
 // doc/magic_cards_notes.md's ISO15693-magic section is a TODO, so "unlock" and "arms" are our reading.
@@ -106,7 +103,15 @@ static bool iso15693_poller_is_backdoor_block(uint16_t block) {
 #define ISO15693_MAGIC_V2_CFG_BLOCKSIZE (0x03U)
 #define ISO15693_MAGIC_V2_CFG_IC_REF    (0x8BU)
 
-#define ISO15693_POLLER_BUF_SIZE (32U)
+// Sized to the SDK's own ISO15693_3_POLLER_MAX_BUFFER_SIZE, not to the 1-4 bytes a conforming tag
+// answers these frames with. iso15693_3_poller_send_frame ends in
+// bit_buffer_copy(caller_rx, instance->rx_buffer), and bit_buffer_copy enforces capacity with a
+// furi_check -- a halt, not an error return. Every in-firmware caller passes instance->rx_buffer
+// as the destination as well, so copy's `buf == other` short-circuit fires first and that check
+// is dead for them; the raw-frame senders below are the first callers to hand it a foreign
+// buffer, which makes it live. At 32 a CRC-valid 33-62 byte answer would halt the Flipper, and
+// non-conforming tags are what this app exists to talk to.
+#define ISO15693_POLLER_BUF_SIZE (64U)
 
 // ISO15693 Get System Info stores (block size - 1) in a 5-bit field, so a block is at most 32 bytes.
 #define ISO15693_MAX_BLOCK_SIZE (32U)
@@ -299,11 +304,16 @@ struct Iso15693Poller {
     uint8_t progress_step;
     bool uid_unexpected;
     uint8_t uid_readback[ISO15693_3_UID_SIZE];
-    // Equal to attempt_gen1, kept as its own field so the scene needn't know when the gen1 frames go
-    // out. "Unconditionally" would be too strong: on a gen1 run two paths return from Start before the
-    // send -- a Write-UID asking for the card's own UID, and an empty clone source -- leaving this
-    // true with nothing transmitted. Neither is reachable from the opt-in screen today, but
-    // start_clone_gen1 and start_write_uid_gen1 are public entry points.
+    // Kept as its own field, separate from attempt_gen1, so the scene needn't know when the gen1
+    // frames go out -- and set immediately before that send, so it means they DID. It was previously
+    // set in start_internal beside attempt_gen1, which made it true for any run that merely ASKED for
+    // gen1. That included a run whose card never activated, where write_step is never entered and
+    // nothing is transmitted, and that one was reachable straight from the opt-in screen: the field
+    // is off while the user reads the consent text, and the budget to re-present the card is then
+    // ISO15693_POLLER_MAX_ACTIVATION_ERRORS x ~100 ms, about four seconds. The scene reports spent
+    // gen1 registers on card-lost, so the flag was asserting destroyed blocks on the likeliest
+    // outcome of that screen. The two paths that return from Start before the send -- a Write-UID
+    // asking for the card's own UID, and an empty clone source -- are covered by the same move.
     bool gen1_attempted;
     bool uid_unverifiable;
     bool uid_changed; // set only from a positive observation -- see Iso15693WriteStateVerifyWipe
@@ -350,9 +360,9 @@ static void iso15693_poller_build_gen2_frame(
 }
 
 // Per-frame transceive results are intentionally ignored, and the reason is measured rather than
-// assumed: on an armed card the 62/63 writes come back REFUSED (error 0x10 on the LRi2K; see
-// ISO15693_MAGIC_BLK_UNLOCK for what that code is and is not evidence of) and the UID moves
-// anyway. Acting on these returns would abort a run that worked. The UID read-back is the only
+// assumed: on an armed card the 62/63 writes come back REFUSED -- in band, error 0x10, on the LRi2K;
+// see ISO15693_MAGIC_BLK_UNLOCK for what the other two chips could and could not show -- and the UID
+// moves anyway. Acting on these returns would abort a run that worked. The UID read-back is the only
 // honest check.
 static void
     iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
@@ -547,66 +557,6 @@ static bool iso15693_poller_block_is_empty(const uint8_t* block, uint8_t size) {
     return true;
 }
 
-// Clamp a block size to what the fixed buffers in this file hold. Both callers feed an
-// ISO15693_MAX_BLOCK_SIZE stack buffer and both clamp, but only one of them can actually trip, and
-// saying "neither controls its input" flattens that into an invitation to delete one:
-//
-//   - the CLONE's comes out of a loaded .nfc. The SDK's loader checks it is non-zero and nothing
-//     else -- identically in Momentum, Unleashed, RogueMaster, Xero and official -- so 1..255
-//     arrives here and this call is the only bound between a hand-edited file and that buffer.
-//   - the WIPE's comes off the wire, where Get System Info carries (size - 1) in a five-bit field
-//     (see ISO15693_MAX_BLOCK_SIZE), so it is 1..32 before it reaches this function and the clamp
-//     cannot fire.
-//
-// The one that looks redundant is not the one that is. Both clamp anyway, so the two sites cannot
-// drift apart and neither has to carry a note explaining which it is.
-//
-// Against the MACRO, never against sizeof a particular buffer. The wipe used to clamp against
-// sizeof(zeros), which agreed with this only because that array is declared from the same macro --
-// true today, silent to break, and nothing obliges the next buffer to be declared the same way.
-static uint8_t iso15693_poller_clamp_block_size(uint8_t block_size) {
-    return block_size > ISO15693_MAX_BLOCK_SIZE ? (uint8_t)ISO15693_MAX_BLOCK_SIZE : block_size;
-}
-
-// If this pass has spent its wall-clock budget, CUT IT: record the cut and return true. The clone's
-// write loop and the wipe's sweep both ask, and both have to answer identically, so the decision
-// lives here rather than once per loop.
-//
-// Named as an imperative because it WRITES. A bool-returning `..._expired` reads as a query, and the
-// two fields it sets are not incidental: pass_cut_block is the exclusive end of the ATTEMPTED range,
-// which the clone's back-fill and the wipe's tail-drop both rely on. A third caller that adopted this
-// from inside a loop over something other than the block cursor -- the re-probe is the tempting one --
-// would record a cut index that is not that, and every screen downstream would state it as fact.
-//
-// The cut is recorded on the INSTANCE rather than returned into a local, because pass_truncated and
-// pass_cut_block are what let a report tell a block the card REFUSED from one nothing was sent to.
-// Kept local, a cut clone stopped the poller fabricating "Card too small" and let every screen
-// fabricate the same claim per block instead: each unreached index named under "Blocks not written",
-// and Finish rather than Retry, about blocks the card refused none of.
-//
-// Elapsed-against-budget, never against an absolute deadline, which would not survive a tick
-// wraparound.
-//
-// The budget is a PARAMETER although both callers currently pass
-// furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS), and that is the one duplication here left
-// deliberately: #253 contemplates a longer budget for the clone alone, which is a change of one
-// argument rather than of this function. It does not own the value and must not read the macro.
-//
-// Call it BEFORE the block is attempted, so it breaks without incrementing and `block` stays the
-// count of blocks attempted, which is what the tail arithmetic in both callers reads. The wipe's
-// loop head states that invariant across its several exits; the clone's deadline break is its only one.
-// Logging stays at the call sites, which is the one thing that genuinely differs between them.
-static bool iso15693_poller_cut_pass_if_expired(
-    Iso15693Poller* instance,
-    uint32_t pass_start,
-    uint32_t pass_budget,
-    uint16_t block) {
-    if(furi_get_tick() - pass_start <= pass_budget) return false;
-    instance->pass_truncated = true;
-    instance->pass_cut_block = block;
-    return true;
-}
-
 // Defined below, next to the inventory helper it wraps.
 static bool iso15693_poller_card_still_present(Iso15693_3Poller* iso_poller);
 
@@ -626,10 +576,18 @@ static bool iso15693_poller_write_source_blocks(
     bool skip_backdoor) {
     const Iso15693_3Data* source = instance->clone_source;
     uint16_t source_count = iso15693_3_get_block_count(source);
-    // Note this is the SOURCE's geometry: on gen2 the CFG frame makes the target match it, but a gen1
-    // target keeps its own block size, so a mismatch there makes every empty failure read as absent
-    // and fabricates an over-capacity "Holds X/Y".
-    const uint8_t block_size = iso15693_poller_clamp_block_size(iso15693_3_get_block_size(source));
+    // Straight out of a loaded .nfc, so hand-editable and unbounded by anything this app controls,
+    // while the read-probe below fills a fixed 32-byte stack buffer. The gen2 CFG derivation clamps
+    // these same two values, for the stronger reason that it writes them into the card. (The wipe
+    // clamps the TARGET's block size into its zero buffer, which its own note there calls
+    // belt-and-braces, since a card's 5-bit field cannot over-report.) Note this is the SOURCE's
+    // geometry: on gen2 the CFG frame makes the target match
+    // it, but a gen1 target keeps its own block size, so a mismatch there makes every empty failure read
+    // as absent and fabricates an over-capacity "Holds X/Y".
+    const uint8_t source_block_size = iso15693_3_get_block_size(source);
+    const uint8_t block_size = source_block_size > ISO15693_MAX_BLOCK_SIZE ?
+                                   (uint8_t)ISO15693_MAX_BLOCK_SIZE :
+                                   source_block_size;
 
     // A block number is a uint8_t on the wire and the failure bitmap holds this many bits, so only the
     // first 256 blocks can be attempted or accounted for. Real ISO15693 tags never exceed this; clamp
@@ -648,8 +606,10 @@ static bool iso15693_poller_write_source_blocks(
         source_count = ISO15693_POLLER_MAX_BLOCKS;
     }
 
-    // Report the count of blocks we actually attempt: for gen1, exclude the 4 backdoor registers we
-    // skip below so the "Cloned X/Y" total isn't inflated by blocks that only ever hold the UID.
+    // Report the count of blocks we actually attempt: for gen1, exclude whichever of the 4 backdoor
+    // registers fall below source_count, so the "Cloned X/Y" total isn't inflated by blocks that only
+    // ever hold the UID. On a source under 57 blocks none of them do, so nothing is deducted -- two of
+    // the three chips this was validated on (SLIX 28, SLIX-S 40) are in that case.
     uint16_t total = source_count;
     if(skip_backdoor) {
         for(size_t i = 0; i < COUNT_OF(iso15693_poller_backdoor_blocks); i++) {
@@ -697,8 +657,14 @@ static bool iso15693_poller_write_source_blocks(
     const uint32_t pass_budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
     uint16_t block = 0;
     for(; block < source_count; block++) {
-        if(iso15693_poller_cut_pass_if_expired(instance, pass_start, pass_budget, block)) {
+        if(furi_get_tick() - pass_start > pass_budget) {
             FURI_LOG_W(TAG, "clone: time limit reached at block %u of %u", block, source_count);
+            // On the instance, not a local: the report needs this as much as the capacity test below
+            // does. Kept local, it made the clone claim the card had REFUSED every block above the cut
+            // -- named, counted and offered no Retry -- which is the same fabrication the capacity
+            // guard exists to stop, one layer further out.
+            instance->pass_truncated = true;
+            instance->pass_cut_block = block;
             break;
         }
         if(skip_backdoor && iso15693_poller_is_backdoor_block(block)) {
@@ -908,18 +874,21 @@ static uint16_t iso15693_poller_wipe_blocks(
     // doc forbids.
     instance->clone_blocks_total = advertised;
 
+    // 32-byte zero buffer covers every valid geometry; the clamp is belt-and-braces.
     uint8_t zeros[ISO15693_MAX_BLOCK_SIZE] = {0};
-    const uint8_t size = iso15693_poller_clamp_block_size(block_size);
+    const uint8_t size = block_size > sizeof(zeros) ? (uint8_t)sizeof(zeros) : block_size;
     uint16_t wiped = 0;
 
-    // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle
-    // either are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm
-    // sequence is unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses
-    // writes to 62/63 (in band, error 0x10, on the LRi2K; see ISO15693_MAGIC_BLK_UNLOCK), so the
-    // sweep reaches commit and is turned away rather than clearing it. A card left armed by an
-    // earlier gen1 UID write therefore stays armed while its UID moves. Reproduced end-to-end on
-    // an armed LRi2K: it reported "Wiped 58/58", the UID changed immediately, the re-read below
-    // caught it as Partial, and the card was still armed afterwards.
+    // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle either
+    // are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm sequence is
+    // unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses writes to 62/63, so
+    // the sweep reaches commit and is turned away rather than clearing it. That the refusal is IN
+    // BAND -- error 0x10, the card answering rather than staying silent -- is measured on the LRi2K
+    // and on the LRi2K alone; see ISO15693_MAGIC_BLK_UNLOCK. A card left armed by an earlier gen1 UID
+    // write therefore stays armed while its UID moves.
+    // Reproduced end-to-end on an armed LRi2K: it reported "Wiped 58/58", the UID changed
+    // immediately, the re-read below caught it as Partial, and the card was still armed
+    // afterwards.
     //
     // Do NOT try to de-arm by pre-writing the commit block. On an armed card that write is refused
     // outright, so there is nothing to reorder; on any other, writing commit before unlock reverses
@@ -939,19 +908,19 @@ static uint16_t iso15693_poller_wipe_blocks(
     // resolves every absence below it and zeroes the counter, so unresolved absences are always
     // exactly the current run.
     uint16_t absent_run = 0;
-    // INVARIANT, relied on by the arithmetic after the loop: at EVERY exit `block` is the count of
-    // blocks attempted -- equivalently, the exclusive end of the attempted range. The deadline check
-    // runs before its block is attempted and so breaks WITHOUT incrementing; every other break
-    // increments first. The tail-drop below reads it this way, as does the cut index the deadline
-    // records. Four breaks and the loop condition all land on it, which is why it is stated once
-    // here rather than re-argued at each of them.
     uint16_t block = 0;
     const uint32_t sweep_start = furi_get_tick();
     const uint32_t sweep_budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
     for(; block < ISO15693_POLLER_WIPE_MAX_BLOCKS; block++) {
-        if(iso15693_poller_cut_pass_if_expired(instance, sweep_start, sweep_budget, block)) {
+        // Time bound, checked before the block is attempted so `block` stays the exclusive end of the
+        // attempted range for the tail arithmetic below. Compared as elapsed-against-budget rather
+        // than against an absolute deadline, which would not survive a tick wraparound. See
+        // ISO15693_POLLER_PASS_MAX_MS.
+        if(furi_get_tick() - sweep_start > sweep_budget) {
             FURI_LOG_W(
                 TAG, "wipe: time limit reached at block %u (advertised %u)", block, advertised);
+            instance->pass_truncated = true;
+            instance->pass_cut_block = block;
             break;
         }
 
@@ -1027,8 +996,8 @@ static uint16_t iso15693_poller_wipe_blocks(
             if(absent_run % ISO15693_POLLER_WIPE_ABSENT_RUN == 0 &&
                !iso15693_poller_card_still_present(iso_poller)) {
                 *card_lost = true;
-                block++; // attempted; see the invariant at the loop head
-                break;
+                block++; // this block was attempted; keep `block` the attempted count, as every
+                break; // other exit does
             }
             continue;
         }
@@ -1038,7 +1007,7 @@ static uint16_t iso15693_poller_wipe_blocks(
         // like. Ask before concluding anything.
         if(!iso15693_poller_card_still_present(iso_poller)) {
             *card_lost = true;
-            block++; // attempted; see the invariant at the loop head
+            block++; // attempted, so it counts -- see the note at the other card-lost exit
             break;
         }
 
@@ -1090,7 +1059,7 @@ static uint16_t iso15693_poller_wipe_blocks(
 
         FURI_LOG_I(
             TAG, "wipe: card ends at block %u (advertised %u)", highest_present, advertised);
-        block++; // attempted; see the invariant at the loop head
+        block++; // count this block into the tail arithmetic below
         break;
     }
 
@@ -1306,36 +1275,29 @@ static NfcCommand
             // safe. "No write landed, so the UID cannot have moved" is the one inference this file
             // declines to draw anywhere else: on a card the sweep reached index 56/57 on, three
             // WRITE BLOCKs each went out there before it gave up, and a tag can apply a write without
-            // answering. HOW FAR THE SWEEP GOT IS A CLOSED FORM, and it belongs here once rather
-            // than paraphrased per screen -- four rounds of paraphrase were wrong in four
-            // different corners. THREE gates must all pass before the loop can break: the absent
-            // run has to reach ISO15693_POLLER_WIPE_ABSENT_RUN, the advertised range has to have
-            // been attempted (block + 1 >= advertised), and the run has to survive the RE-PROBE
-            // that follows. Below the claim the trip falls through to continue -- the
-            // advertised-count floor doing its job -- so eight absences alone do not end it.
+            // answering. Only three things stop the sweep short of 56/57: the reach rule below leaves
+            // it short, or the clock cuts the sweep below 56 (see the backstop note at
+            // ISO15693_POLLER_PASS_MAX_MS), or the geometry guard above returned before the first
+            // write, which also lands here, since it returns 0.
             //
-            // That third gate is why A is the run the sweep ENDS on and not the first silence
-            // anywhere. wipe_note_present zeroes absent_run from three sites -- write success,
-            // read success and the re-probe -- and only the first increments wiped, so on this
-            // branch, where nothing was cleared, a run can still have been reset and an earlier
-            // stretch of silence sets no floor at all. With A the first block of the FINAL
-            // unbroken run of non-answering blocks and `claim` the advertised count:
+            // THE REACH RULE, and 49 is not a threshold about the claim CONTAINING 56. TWO gates must
+            // both pass before the sweep can stop, so the last block attempted is the later of them:
+            //   - ISO15693_POLLER_WIPE_ABSENT_RUN blocks in a row answer nothing. ANSWER, not take the
+            //     write: a read is enough, and wipe_note_present zeroes the run from the read path and
+            //     from the re-probe as well as from a landed write. A card silent from block A is
+            //     therefore attempted through A+7.
+            //   - the claimed range has been attempted, block + 1 >= advertised. Below the claim the
+            //     trip falls through to `continue`, because the card says those blocks exist.
+            // So with A the first block that answers nothing and `claim` the advertised count, the
+            // last block attempted is
             //
-            //     L = min(max(A + 7, claim - 1), ISO15693_POLLER_WIPE_MAX_BLOCKS - 1)
-            //     56 reached  <=>  A >= 49  OR  claim >= 57
-            //     57 reached  <=>  A >= 50  OR  claim >= 58
+            //     L = max(A + 7, claim - 1)  =>  56 is reached from A >= 49 OR claim >= 57
+            //                                    57 is reached from A >= 50 OR claim >= 58
             //
-            // A is infinite when no run survives: a card that keeps answering reads accumulates
-            // none, so it walks to the ceiling past 56/57 whatever it claims. The claim term
-            // carries cards by itself -- one answering no read at all reaches 56 from claim >= 57,
-            // and 57 only from claim >= 58. The ceiling binds the A term alone; claim - 1 cannot
-            // exceed it, since the wire caps a block count at 256.
-            //
-            // Two further exits stop it short of 56/57: the clock cuts the sweep below 56 (see the
-            // backstop note at ISO15693_POLLER_PASS_MAX_MS), or the geometry guard above returned
-            // before the first write, which also lands here since it returns 0. The sweep's two
-            // card-lost breaks are absent from that list because they cannot reach this branch --
-            // a lost card returns above, before wiped is tested.
+            // Either disjunct is enough on its own. A card that answers no read at all still has 56
+            // attempted once it advertises 57 or more; a card that refuses every write while serving a
+            // read never accumulates a run, so it walks past 56/57 whatever it claims. Staying short
+            // of 56 takes A < 49 AND claim < 57 together.
             //
             // So on an ARMED gen1 card this path can move the UID, report "Wipe failed", never run the
             // check and never say the check did not run -- the one path where the mitigation #255
@@ -1395,6 +1357,11 @@ static NfcCommand
             // ONLY the gen1 UID sequence now, verify it in VerifyGen1, and write the data blocks there
             // only if the UID took -- so a non-magic tag that can't do gen1 loses at most the four
             // backdoor registers, not all its data.
+            // Set on the line before the send rather than in start_internal, because the flag's
+            // whole meaning is that these frames went out. A run whose card never activates never
+            // reaches this line: write_step is entered only from the Ready event, so at start the
+            // flag claimed spent gen1 registers for a card the field never saw.
+            instance->gen1_attempted = true;
             iso15693_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
             instance->write_state = Iso15693WriteStateVerifyGen1;
             return NfcCommandReset;
@@ -1411,8 +1378,20 @@ static NfcCommand
         if(instance->mode == Iso15693PollerModeClone) {
             const Iso15693_3SystemInfo* sys = &instance->clone_source->system_info;
             if(sys->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) {
-                if(sys->block_count > 0) cfg_maxblock = (uint8_t)(sys->block_count - 1);
-                if(sys->block_size > 0) cfg_blocksize = (uint8_t)(sys->block_size - 1);
+                // Clamped for the same reason the clone pass clamps them: straight out of a
+                // loaded .nfc, so hand-editable and unbounded by anything this app controls. This is
+                // the site where it matters most -- the other two clamps guard a stack buffer and a
+                // screen, while these two bytes are PROGRAMMED INTO THE CARD and outlive the run.
+                // Unclamped, a source claiming 257 blocks wrapped the cast to 0 and left the card
+                // permanently advertising a single block while the pass wrote 256.
+                const uint16_t cfg_count = sys->block_count > ISO15693_POLLER_MAX_BLOCKS ?
+                                               (uint16_t)ISO15693_POLLER_MAX_BLOCKS :
+                                               sys->block_count;
+                const uint8_t cfg_size = sys->block_size > ISO15693_MAX_BLOCK_SIZE ?
+                                             (uint8_t)ISO15693_MAX_BLOCK_SIZE :
+                                             sys->block_size;
+                if(cfg_count > 0) cfg_maxblock = (uint8_t)(cfg_count - 1);
+                if(cfg_size > 0) cfg_blocksize = (uint8_t)(cfg_size - 1);
             }
             if(sys->flags & ISO15693_3_SYSINFO_FLAG_IC_REF) cfg_icref = sys->ic_ref;
         }
@@ -1494,8 +1473,7 @@ static NfcCommand
         return NfcCommandStop;
     }
 
-    case Iso15693WriteStateVerifyGen1:
-    default: {
+    case Iso15693WriteStateVerifyGen1: {
         if(iso15693_poller_verify_inventory(iso_poller, readback) != Iso15693_3ErrorNone) {
             iso15693_poller_report(instance, Iso15693PollerEventCardLost);
             return NfcCommandStop;
@@ -1518,6 +1496,10 @@ static NfcCommand
         return iso15693_poller_finish_write(instance, iso_poller, true);
     }
     }
+    // No default above, so -Wswitch (in -Wall, with -Werror) makes a forgotten state a build error
+    // rather than a silent fall-through. It used to fall through to VerifyGen1, which is the worst of
+    // the four arms to land in by accident: it sets clone_used_gen1 and writes the clone payload.
+    furi_crash("iso15693: unreachable write state");
 }
 
 // Runs on the Nfc worker thread. Returns NfcCommand to control the poller.
@@ -1644,7 +1626,7 @@ static void iso15693_poller_start_internal(
     instance->clone_afi_failed = false;
     instance->clone_dsfid_failed = false;
     instance->uid_unexpected = false;
-    instance->gen1_attempted = gen1;
+    instance->gen1_attempted = false; // set at the send site in write_step, not here
     instance->uid_unverifiable = false;
     instance->uid_changed = false;
     memset(instance->uid_readback, 0, sizeof(instance->uid_readback));

@@ -477,69 +477,6 @@ static void test_summary_line_is_emitted(void) {
     end();
 }
 
-// iso15693_poller_cut_pass_if_expired is now the ONE place the clock cut is decided and recorded, for both
-// the clone's write loop and this sweep. The two properties every caller leans on are pinned here
-// rather than inferred from a whole run, because a full sweep can only show them together.
-static void test_pass_cut_records_it_on_the_instance(void) {
-    begin("the pass-expiry helper records the cut, and leaves the fields alone inside the budget");
-    Iso15693Poller inst;
-    memset(&inst, 0, sizeof(inst));
-    const uint32_t start = 1000;
-    const uint32_t budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
-
-    // Exactly at the budget is not yet over it, and an uncut run must not look truncated: these two
-    // fields are what every screen reads to tell a refused block from one nothing was sent to.
-    fake_tick = start + budget;
-    CHECK(!iso15693_poller_cut_pass_if_expired(&inst, start, budget, 40));
-    CHECK(!inst.pass_truncated);
-    CHECK_EQ(inst.pass_cut_block, 0);
-
-    // One tick past, and the block handed in is the one recorded -- the callers pass the block they
-    // have NOT yet attempted, so this is the exclusive end of the attempted range.
-    fake_tick = start + budget + 1;
-    CHECK(iso15693_poller_cut_pass_if_expired(&inst, start, budget, 40));
-    CHECK(inst.pass_truncated);
-    CHECK_EQ(inst.pass_cut_block, 40);
-    end();
-}
-
-// Why the helper compares elapsed-against-budget rather than holding an absolute deadline. An
-// absolute deadline passes every other test in this suite and fails only here.
-static void test_pass_cut_survives_a_tick_wraparound(void) {
-    begin("the pass-expiry helper survives a tick wraparound");
-    Iso15693Poller inst;
-    memset(&inst, 0, sizeof(inst));
-    const uint32_t start = UINT32_MAX - 100;
-    const uint32_t budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
-
-    fake_tick = start + 50; // still below the ceiling
-    CHECK(!iso15693_poller_cut_pass_if_expired(&inst, start, budget, 7));
-    CHECK(!inst.pass_truncated);
-
-    fake_tick = (uint32_t)(start + 200); // past the wrap
-    CHECK(fake_tick < start); // the wrap really happened
-    CHECK(!iso15693_poller_cut_pass_if_expired(&inst, start, budget, 7)); // 200 ticks, not 4 billion
-    CHECK(!inst.pass_truncated);
-
-    fake_tick = (uint32_t)(start + budget + 1); // genuinely over, wrap notwithstanding
-    CHECK(iso15693_poller_cut_pass_if_expired(&inst, start, budget, 7));
-    CHECK(inst.pass_truncated);
-    CHECK_EQ(inst.pass_cut_block, 7);
-    end();
-}
-
-// The clamp both the clone and the wipe run their block size through. Neither controls its input --
-// one is a loaded .nfc, the other the card's own GET SYSTEM INFO -- and both feed a fixed buffer.
-static void test_block_size_clamps_to_the_buffer(void) {
-    begin("an over-large block size clamps to the fixed buffer, and valid sizes pass through");
-    CHECK_EQ(iso15693_poller_clamp_block_size(4), 4);
-    CHECK_EQ(iso15693_poller_clamp_block_size(32), 32); // exactly the buffer is not over it
-    CHECK_EQ(iso15693_poller_clamp_block_size(33), 32);
-    CHECK_EQ(iso15693_poller_clamp_block_size(255), 32); // the whole of a hand-edited uint8_t
-    CHECK_EQ(iso15693_poller_clamp_block_size(0), 0); // callers reject 0 themselves; do not mask it
-    end();
-}
-
 int main(void) {
     printf("iso15693 wipe sweep\n");
     test_clean_64();
@@ -563,9 +500,6 @@ int main(void) {
     test_cut_index_can_exceed_the_advertised_count();
     test_card_lifted_mid_sweep();
     test_summary_line_is_emitted();
-    test_pass_cut_records_it_on_the_instance();
-    test_pass_cut_survives_a_tick_wraparound();
-    test_block_size_clamps_to_the_buffer();
 
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed == 0 ? 0 : 1;

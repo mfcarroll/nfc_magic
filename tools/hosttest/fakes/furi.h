@@ -55,6 +55,15 @@ static inline void furi_delay_ms(uint32_t ms) {
         }                                                                           \
     } while(0)
 
+// furi_crash is unconditional: reaching it at all is the failure. The write-state switch relies on it
+// to make an unhandled state a crash rather than a silent fall-through into the clone arm, so the
+// harness has to have it or that file will not compile here.
+#define furi_crash(...)                                                             \
+    do {                                                                            \
+        fprintf(stderr, "furi_crash reached: %s:%d\n", __FILE__, __LINE__);         \
+        abort();                                                                    \
+    } while(0)
+
 // Log lines are captured rather than printed, so a test can assert on them -- the sweep's summary line
 // ("wipe: N blocks attempted, M cleared, Xms") was added to be a parseable assertion target.
 void fake_log(char level, const char* fmt, ...);
