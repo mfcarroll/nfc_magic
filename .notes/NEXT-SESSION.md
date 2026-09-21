@@ -1,4 +1,49 @@
-# Next session — ROUND 12 IS IN. Round 13 is BUILT and UNPUSHED, and NOT reviewed by mfcarroll.
+# Next session — THE MAINTAINER PUSHED TWELVE COMMITS. Round 14 is built, unpushed, undrafted-to-him.
+
+**mishamyte pushed `a27d187d..749f10e6` to the PR branch himself** — five prose fixes answering
+round 11, a six-commit sweep of the whole PR, and an rx-buffer fix. **Four are behavioural**, which
+is new; he had only pushed prose before. He invites rebasing, rewording or dropping any of them.
+
+**ALL TWELVE ARE ADOPTED into dev** (`7bd719d`), since dev is what sync-to-fork overlays from and the
+fork is no longer downstream of it. Our round-13 gen3 text, twin-site fixes and "copied exactly" came
+off with them as moot — he reached the same conclusions independently.
+
+**⚠️ THREE BEHAVIOURAL COMMITS ARE UNBENCHED.** `0c5a7d69` (gen1_attempted set before the frames go
+out), `4d20f06e` (CFG geometry clamp), `62b60e2b` (menu cursor). He has no ISO15693 hardware and says
+so. mfcarroll is at the bench 2026-09-21. The fourth, `749f10e6`, needed no bench and was verified
+against the firmware source here: bit_buffer_copy's furi_check, the 64-byte poller buffer, and all
+five in-tree callers passing instance->rx_buffer as both source and destination.
+
+**Drafts in [pr-round-14/](pr-round-14/)** — reply and seven thread replies, checker-clean, every
+cited SHA verified against the branch. NOT posted, NOT reviewed by mfcarroll.
+
+## What we added on top of his twelve
+
+| dev | |
+|---|---|
+| `26df4dd` | P1 the clock cut |
+| `a58de0b` | P3 the clamp -- his 4d20f06e made it three callers, not two |
+| `155675a` | P2 the succeeded-blocks figure |
+| `be1795e` | the sweep's attempted-count invariant |
+| `ada1d98` | the layout note's x convention, which answers the P4 wrapper question |
+| `9b68f3e` | the reach rule's third gate -- offered as a fix TO his 5c97e16f |
+
+Two of the old ten folded away: the naming rationale now lives in P1's helper doc, and 07 became a
+correction to his commit rather than a parallel rewrite.
+
+## ⚠️ HIS -Wswitch COMMIT BROKE THE HOST HARNESS
+
+`e32e6242` added `furi_crash`, which was not in `tools/hosttest/fakes/furi.h`, so the poller stopped
+compiling there. Fixed in the adoption commit. **Nothing on his side could have shown this** — the
+harness is dev-only and never syncs. It is now the concrete argument for releasing it, and the reply
+says we will put it up as its own PR rather than adding it here.
+
+## Still unsigned
+
+1Password was locked through this work. Fork commits are signed at replay time; re-run
+`replay-to-fork.sh` with it unlocked before any push and confirm the count.
+
+## Where things stood before
 
 **HIS ROUND 12 ARRIVED 2026-09-17** and is fully addressed: seven findings, all verified against the
 tree before fixing, all fixed. Round 13 combines those with the simplification pass, since his review
