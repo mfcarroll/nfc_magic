@@ -73,16 +73,14 @@ term carries it anyway.
 
 The 256 ceiling is in the form now too. It binds the A term alone.
 
-## A note on the test harness, since your commit found it
+## The harness caught one of yours, which is the case for the follow-up PR
 
-`e32e6242` broke a build you cannot see. There is a host-side test harness in this repo — it compiles
-the shipped `.c` files verbatim against fakes and runs 123 cases over the sweep, the outcome
-function and the result screens — and `furi_crash` was not in its `furi` fake, so the poller stopped
-compiling there. One line to fix, and nothing on your side could have shown it.
+`e32e6242` broke the host build: `furi_crash` was not in the fake, so the poller stopped compiling
+there. One line, and nothing on your side could have shown it.
 
-That is the argument for releasing it, which you asked about several rounds ago. It catches exactly
-this class: a change that is correct in the firmware and wrong against a second consumer of the same
-source. I will put it up as a separate PR rather than adding it here.
+Worth mentioning because it is the first time it has caught a change of yours rather than one of
+mine, and it is precisely the class the follow-up is for — correct in the firmware, wrong against a
+second consumer of the same source. Still out of this branch.
 
 ## Where this stands
 
