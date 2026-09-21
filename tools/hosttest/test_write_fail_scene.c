@@ -618,6 +618,20 @@ static void test_pressing_a_button_sends_its_own_type(void) {
     end();
 }
 
+// The saturation the three "how many succeeded" lines share. The total and the deduction are
+// separate accountings and have disagreed before, so the promise is about what reaches the user if
+// that recurs: 0, not a number near 65535.
+static void test_blocks_ok_saturates_instead_of_wrapping(void) {
+    begin("the succeeded-blocks figure saturates at zero rather than wrapping");
+    CHECK(nfc_magic_iso15693_blocks_ok(64, 4) == 60);
+    CHECK(nfc_magic_iso15693_blocks_ok(20, 20) == 0);
+    CHECK(nfc_magic_iso15693_blocks_ok(0, 0) == 0);
+    // The case it exists for: more deducted than the total.
+    CHECK(nfc_magic_iso15693_blocks_ok(20, 44) == 0);
+    CHECK(nfc_magic_iso15693_blocks_ok(0, 1) == 0);
+    end();
+}
+
 int main(void) {
     printf("iso15693 result screens\n");
     test_right_button_label_matches_where_it_goes();
@@ -640,6 +654,7 @@ int main(void) {
     test_left_button_routes_by_retryability();
     test_back_always_leaves();
     test_pressing_a_button_sends_its_own_type();
+    test_blocks_ok_saturates_instead_of_wrapping();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
 }
