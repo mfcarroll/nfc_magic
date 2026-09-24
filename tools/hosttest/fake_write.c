@@ -174,6 +174,11 @@ void uscuid_ul_poller_stop(UscuidUlPoller* instance) {
     UNUSED(instance);
 }
 
+// Which ISO15693 entry point on_enter chose. The stubs are otherwise inert; this exists so a test can
+// assert the BRANCH as well as the state on_enter leaves behind, which is the pair that matters when
+// a flag is consumed rather than merely read.
+const char* fake_iso15693_started = NULL;
+
 Iso15693Poller* iso15693_poller_alloc(Nfc* nfc) {
     UNUSED(nfc);
     return NULL;
@@ -188,6 +193,7 @@ void iso15693_poller_start_wipe(
     Iso15693Poller* instance,
     Iso15693PollerCallback callback,
     void* context) {
+    fake_iso15693_started = "wipe";
     UNUSED(instance);
     UNUSED(callback);
     UNUSED(context);
@@ -197,6 +203,7 @@ void iso15693_poller_start_write_uid(
     const uint8_t* uid,
     Iso15693PollerCallback callback,
     void* context) {
+    fake_iso15693_started = "write_uid";
     UNUSED(instance);
     UNUSED(uid);
     UNUSED(callback);
@@ -207,6 +214,7 @@ void iso15693_poller_start_write_uid_gen1(
     const uint8_t* uid,
     Iso15693PollerCallback callback,
     void* context) {
+    fake_iso15693_started = "write_uid_gen1";
     UNUSED(instance);
     UNUSED(uid);
     UNUSED(callback);
@@ -217,6 +225,7 @@ void iso15693_poller_start_clone(
     const Iso15693_3Data* source,
     Iso15693PollerCallback callback,
     void* context) {
+    fake_iso15693_started = "clone";
     UNUSED(instance);
     UNUSED(source);
     UNUSED(callback);
@@ -227,6 +236,7 @@ void iso15693_poller_start_clone_gen1(
     const Iso15693_3Data* source,
     Iso15693PollerCallback callback,
     void* context) {
+    fake_iso15693_started = "clone_gen1";
     UNUSED(instance);
     UNUSED(source);
     UNUSED(callback);

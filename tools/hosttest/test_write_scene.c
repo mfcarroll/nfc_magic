@@ -282,6 +282,56 @@ static void test_back_is_not_swallowed_for_other_protocols(void) {
     end();
 }
 
+// The opt-in's grant is for ONE run. It is set in one place, the gen1 opt-in, and used to be cleared
+// in one place, the ISO15693 menu -- so Retry, which is scene_manager_previous_scene straight back
+// into this scene, repeated the destructive gen1 write with no consent screen. Observed on hardware.
+//
+// Both halves are asserted together: consuming the grant must not disturb the run it was granted for.
+extern const char* fake_iso15693_started;
+
+static void enter_iso15693(NfcMagicIso15693Mode mode, bool force_gen1) {
+    memset(&app, 0, sizeof(app));
+    app.protocol = NfcMagicProtocolIso15693;
+    app.iso15693_mode = mode;
+    app.iso15693_force_gen1 = force_gen1;
+    fake_iso15693_started = NULL;
+    nfc_magic_scene_write_on_enter(&app);
+}
+
+static void test_gen1_grant_runs_this_pass_and_is_consumed(void) {
+    begin("an opt-in gen1 clone runs gen1 and does not leave the grant set");
+    enter_iso15693(NfcMagicIso15693ModeClone, true);
+    CHECK(fake_iso15693_started && strcmp(fake_iso15693_started, "clone_gen1") == 0); // the run it was granted for is unaffected
+    CHECK(!app.iso15693_force_gen1); // ...and a Retry re-entering here gets gen2 first
+    end();
+}
+
+static void test_gen1_grant_is_consumed_on_write_uid_too(void) {
+    begin("an opt-in gen1 Write-UID runs gen1 and does not leave the grant set");
+    enter_iso15693(NfcMagicIso15693ModeWriteUid, true);
+    CHECK(fake_iso15693_started && strcmp(fake_iso15693_started, "write_uid_gen1") == 0);
+    CHECK(!app.iso15693_force_gen1);
+    end();
+}
+
+static void test_without_the_grant_gen2_runs_first(void) {
+    begin("without the grant a clone tries gen2 first");
+    enter_iso15693(NfcMagicIso15693ModeClone, false);
+    CHECK(fake_iso15693_started && strcmp(fake_iso15693_started, "clone") == 0);
+    CHECK(!app.iso15693_force_gen1);
+    end();
+}
+
+// The wipe arm never reads the grant, which is why it is cleared above the branches rather than in
+// them: a wipe reached while one was standing would otherwise leave it set for whatever came next.
+static void test_a_wipe_clears_a_standing_grant(void) {
+    begin("a wipe clears a standing gen1 grant rather than passing it on");
+    enter_iso15693(NfcMagicIso15693ModeWipe, true);
+    CHECK(fake_iso15693_started && strcmp(fake_iso15693_started, "wipe") == 0);
+    CHECK(!app.iso15693_force_gen1);
+    end();
+}
+
 int main(void) {
     printf("write scene routing\n");
     test_cut_wipe_routes_to_wipe_stopped();
@@ -299,6 +349,10 @@ int main(void) {
     test_back_is_swallowed_for_iso15693_once_a_card_is_found();
     test_back_still_works_during_the_card_search();
     test_back_is_not_swallowed_for_other_protocols();
+    test_gen1_grant_runs_this_pass_and_is_consumed();
+    test_gen1_grant_is_consumed_on_write_uid_too();
+    test_without_the_grant_gen2_runs_first();
+    test_a_wipe_clears_a_standing_grant();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
 }
