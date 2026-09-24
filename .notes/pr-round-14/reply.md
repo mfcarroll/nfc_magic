@@ -5,7 +5,7 @@ Post between the `~~~~` markers. **No internal process in the payload.**
 Answers his two comments covering `a27d187d..749f10e6` (twelve commits, four behavioural).
 
 ~~~~
-## All twelve taken, three of them pending the bench
+## All twelve taken, two of the behavioural three benched
 
 Every one of the twelve is in, unrebased and unreworded. Where your wording and mine covered the
 same ground I kept yours, including in two places where yours is better than what I had written:
