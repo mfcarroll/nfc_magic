@@ -5,7 +5,7 @@ Post between the `~~~~` markers. **No internal process in the payload.**
 Answers his two comments covering `a27d187d..749f10e6` (twelve commits, four behavioural).
 
 ~~~~
-## All twelve taken, two of the behavioural three benched
+## Your commits, and what the bench says
 
 Every one of the twelve is in, unrebased and unreworded. Where your wording and mine covered the
 same ground I kept yours, including in two places where yours is better than what I had written:
@@ -23,9 +23,7 @@ here that accepts unaddressed writes — Info reads `256 blocks x 4 bytes` after
 the cast wraps and it would read 1. The clone's own line corroborates it: "Holds 64/256, top 192 were
 empty" means the pass attempted 256, so the source count was clamped too.
 
-`749f10e6` I checked against the firmware source rather than the bench, since it is decidable there.
-
-**The fourth needed no bench, and I checked it here rather than taking it.** `749f10e6` holds up at
+**The fourth needed no bench, and I checked it rather than taking it.** `749f10e6` holds up at
 every step against the firmware source: `send_frame` ends in
 `bit_buffer_copy(rx_buffer, instance->rx_buffer)` after the CRC trim; `instance->rx_buffer` is
 `ISO15693_3_POLLER_MAX_BUFFER_SIZE`, 64; `bit_buffer_copy` is `if(buf == other) return;` then
@@ -61,7 +59,7 @@ both y values and never the x, so the two bodies at `(4, 20)` read as an inconsi
 appears in exactly three files in the repo, and the two branches here are the ones mirroring the
 other two screens.
 
-## One correction back to you
+## A correction back to you
 
 `5c97e16f` is right in its gates, its derivation and its disjunct framing, and I have built on it
 rather than replaced it. Two things are missing, both in the under-warning direction.
@@ -79,7 +77,7 @@ term carries it anyway.
 
 The 256 ceiling is in the form now too. It binds the A term alone.
 
-## The harness caught one of yours, which is the case for the follow-up PR
+## The harness caught a change of yours, which is the case for the follow-up PR
 
 `e32e6242` broke the host build: `furi_crash` was not in the fake, so the poller stopped compiling
 there. One line, and nothing on your side could have shown it.
@@ -88,7 +86,7 @@ Worth mentioning because it is the first time it has caught a change of yours ra
 mine, and it is precisely the class the follow-up is for — correct in the firmware, wrong against a
 second consumer of the same source. Still out of this branch.
 
-## One of ours, and one to raise
+## Ours, and something to raise
 
 **A consent defect, found while explaining a bench observation that turned out to be innocent.** A
 second write of the same file gave no gen1 consent — correctly, because the first write had already
