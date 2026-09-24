@@ -16,8 +16,11 @@ same ground I kept yours, including in two places where yours is better than wha
 - **`0c7a2515`'s `blocks_total` correction.** "whichever of the four registers fall BELOW it, which on
   a source under 57 blocks is none of them" is exact, and I had the loose version.
 
-**The three behavioural ones are taken but not yet benched.** I am back at the cards tomorrow and
-will report `0c5a7d69`, `4d20f06e` and `62b60e2b` then. Nothing below claims a result for them.
+**Two of the three behavioural ones are benched and pass.** `0c5a7d69`: card lifted during the
+consent screen, the failure screen no longer claims 56/57/62/63 were spent. `62b60e2b`: the cursor
+stays where it was left. I did not run `4d20f06e` — it only bites on a hand-edited source, the
+arithmetic is decidable from the code, and it is the one test that programs a geometry into the only
+gen2 card here that accepts unaddressed writes. Say if you want it run anyway.
 
 **The fourth needed no bench, and I checked it here rather than taking it.** `749f10e6` holds up at
 every step against the firmware source: `send_frame` ends in
@@ -81,6 +84,39 @@ there. One line, and nothing on your side could have shown it.
 Worth mentioning because it is the first time it has caught a change of yours rather than one of
 mine, and it is precisely the class the follow-up is for — correct in the firmware, wrong against a
 second consumer of the same source. Still out of this branch.
+
+## One of ours, and one to raise
+
+**A consent defect, found while explaining a bench observation that turned out to be innocent.** A
+second write of the same file gave no gen1 consent — correctly, because the first write had already
+moved the card's UID to the source's, so gen2 found it matching. Tracing why exposed something real
+underneath: `iso15693_force_gen1` was set at the opt-in and cleared only at the ISO15693 menu, and
+Retry is `scene_manager_previous_scene` straight back into the write scene. So any route back in that
+bypassed the menu repeated the destructive gen1 write without asking.
+
+It matters because Retry does not re-identify the card, and the case Retry exists for is CardLost.
+Benched end to end: consent on card A, remove it, put card B on the coil, hit Retry — before, B took
+four ordinary WRITE BLOCKs into 56/57/62/63 having never been offered the screen. The write scene now
+consumes the grant on enter, so a Retry earns consent again against whatever card is actually there.
+
+Its reach is narrower than "every Retry", which is worth saying rather than leaving implied: on the
+same magic card after a successful UID write the branch is unreachable, since the opt-in fires only
+when gen2 leaves the UID unchanged and wrong. The cases that reach it are a card that never takes the
+UID, and a Retry landing on a different card.
+
+This is the first behavioural change from my side rather than prose, so: bench-confirmed symptom,
+bench-confirmed fix, four harness tests, mutation-checked.
+
+**And one for you rather than for this PR.** The protocol menus keep their cursor across a whole new
+card scan, not just within one — write UID, success, Check Magic Tag, More, and the cursor is still
+on Write UID. It is app-wide: all six set scene state on event, read it on enter and never clear it,
+and `magic_info.c` is the single place a fresh scan dispatches, so it would be about six lines for
+all six or none.
+
+The reason I have not touched it is that index 0 is `Write` in every one of those menus, so resetting
+on a fresh scan puts the cursor on the destructive item — which is what `62b60e2b` was written to
+stop. Preserve within a session, reset across sessions is coherent, but it is shared app code and
+your commit is on the other side of that axis, so it is your call.
 
 ## Where this stands
 
