@@ -78,6 +78,14 @@ PROFILES = {
     # slix_28 over it -- which reprograms the card to ADVERTISE 28 blocks -- then wipe. The wipe stops
     # at the advertised 28, so blocks 28..63 should still read back as 5A <blk> A5 <blk> while the
     # screen says the wipe succeeded.
+    # The CFG clamp's only live input. An ISO15693 tag cannot advertise above 256, so this geometry
+    # is unreachable from any real card and only arises from a hand-edited file -- which is exactly
+    # the threat model the clone's other two clamps were written for. Unclamped, the cast wraps:
+    # (uint8_t)(257 - 1) == 0, and the card is left permanently advertising ONE block.
+    "overclaim_257": dict(uid="E0 04 01 10 C1 07 02 57", ic_ref=0x0F, dsfid=0x00, afi=0x00, blocks=257,
+                          data={0: _HDR0, 1: _HDR1},
+                          note="257 blocks -- above the wire's 256 ceiling; only a hand-edited file "
+                               "reaches the gen2 CFG clamp"),
     "wipeseed_64": dict(uid="E0 04 01 10 5E ED 00 01", ic_ref=0x0F, dsfid=0x00, afi=0x00, blocks=64,
                         data={b: "5A%02XA5%02X" % (b, b) for b in range(64)},
                         note="64 blocks, EVERY block 5A<blk>A5<blk> -- wipe-residue seed for the merge gate"),

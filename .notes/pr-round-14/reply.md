@@ -16,11 +16,14 @@ same ground I kept yours, including in two places where yours is better than wha
 - **`0c7a2515`'s `blocks_total` correction.** "whichever of the four registers fall BELOW it, which on
   a source under 57 blocks is none of them" is exact, and I had the loose version.
 
-**Two of the three behavioural ones are benched and pass.** `0c5a7d69`: card lifted during the
-consent screen, the failure screen no longer claims 56/57/62/63 were spent. `62b60e2b`: the cursor
-stays where it was left. I did not run `4d20f06e` — it only bites on a hand-edited source, the
-arithmetic is decidable from the code, and it is the one test that programs a geometry into the only
-gen2 card here that accepts unaddressed writes. Say if you want it run anyway.
+**All three behavioural ones are benched and pass.** `0c5a7d69`: card lifted during the consent
+screen, and the failure screen no longer claims 56/57/62/63 were spent. `62b60e2b`: the cursor stays
+where it was left. `4d20f06e`: a hand-built source claiming 257 blocks, cloned onto the one gen2 card
+here that accepts unaddressed writes — Info reads `256 blocks x 4 bytes` afterwards, where unclamped
+the cast wraps and it would read 1. The clone's own line corroborates it: "Holds 64/256, top 192 were
+empty" means the pass attempted 256, so the source count was clamped too.
+
+`749f10e6` I checked against the firmware source rather than the bench, since it is decidable there.
 
 **The fourth needed no bench, and I checked it here rather than taking it.** `749f10e6` holds up at
 every step against the firmware source: `send_frame` ends in
