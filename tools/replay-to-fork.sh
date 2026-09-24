@@ -40,6 +40,10 @@ if ! python3 "$DEV/tools/check-writing.py" comments \
   echo "  refusing to replay -- fix the comments, or say why and re-run with SKIP_WRITING_GATE=1"
   [ "${SKIP_WRITING_GATE:-0}" = "1" ] || exit 1
 fi
+if ls "$DEV"/.notes/pr-round-*/reply.md >/dev/null 2>&1; then
+  python3 "$DEV/tools/check-writing.py" headings "$DEV"/.notes/pr-round-*/reply.md \
+    "$DEV"/.notes/pr-round-*/thread-replies.md || true   # advisory: old rounds are history
+fi
 echo
 
 # --- reset to the pushed base, discarding regenerable sync output ---

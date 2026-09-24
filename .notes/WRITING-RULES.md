@@ -48,8 +48,9 @@ Written fresh. Dev messages are NOT copyable — round 10's were, and he quoted 
 - ⚖ **Disposition, what he got wrong, what we found.** Nothing else.
 - ⚖ **No internal process.** Not when we cut it, not that an earlier commit in the same push already
   removed it, not that we broke and restored something he never saw broken. "Cut" is a whole answer.
-- **The heading must survive the body.** Three stale headings in three rounds: the body gets updated
-  and the title does not. *Partly checked.*
+- **A heading states its SUBJECT, never a count or a status.** Four stale headings in four rounds,
+  and "keep them in sync" does not work -- the body is what gets edited. "Your commits, and what the
+  bench says" cannot rot; "two of the three benched" rots the moment the third is run. *Checked.*
 - **No bare `:NNN`.** Cite behaviour, which does not drift. *Checked by check-drafts.*
 - **Verify every SHA against the branch**, by subject, not existence.
 - ⚖ **Correct what we told him that was wrong**, in one sentence, without the archaeology.

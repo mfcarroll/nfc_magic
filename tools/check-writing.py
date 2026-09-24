@@ -66,20 +66,30 @@ def forkmsg(d):
     return bad
 
 
+# A heading goes stale because the body is edited and the title is not -- four times in four rounds
+# here. Chasing that with contradiction-detection failed: a check for "pending" vs "benched" passed
+# clean while a heading said "two of the behavioural three" over a body saying all three.
+#
+# So the rule is not "keep them in sync", it is: A HEADING STATES ITS SUBJECT, NEVER A COUNT OR A
+# STATUS. "Your twelve, and what the bench says" cannot rot. "Two of three benched" rots the moment
+# the third is run. That IS mechanically checkable, which the contradiction was not.
+COUNTY = re.compile(r"\b(all|none|both|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b"
+                    r"|\b(pending|outstanding|remaining|so far|still to|owed|unbenched)\b", re.I)
+
+
 def headings(paths):
-    """A heading that promises something its own section then contradicts. Narrow on purpose:
-    it only knows the pairs that have actually bitten us."""
-    PAIRS = [(r"\bpending\b", r"\bbenched\b|\bpass(?:es|ed)?\b"),
-             (r"\bowed\b|\byou are owed\b", r"^(?!.*owed).*$")]
     bad = []
     for p in paths:
-        text = Path(p).read_text()
-        secs = re.split(r"^(## .*)$", text, flags=re.M)
-        for j in range(1, len(secs) - 1, 2):
-            head, body = secs[j], secs[j + 1]
-            for hpat, bpat in PAIRS:
-                if re.search(hpat, head, re.I) and re.search(bpat, body, re.I):
-                    bad.append((p, 0, "stale-heading?", head.strip()[:70]))
+        for i, line in enumerate(Path(p).read_text().split("\n"), 1):
+            if not line.startswith("## "):
+                continue
+            # A thread heading is an anchor -- `CHANGELOG.md:99 -- comment 4035110593`. Those digits
+            # are references, not claims, and they have to be exact. Strip them and code spans first.
+            probe = re.sub(r"`[^`]*`", "", line)
+            probe = re.sub(r"\S+\.\w+:\d+|comment \d+|#\d+|0x[0-9a-fA-F]+", "", probe)
+            m = COUNTY.search(probe)
+            if m:
+                bad.append((p, i, "heading-count", f"{m.group()!r} in a heading -- state the subject"))
     return bad
 
 
