@@ -113,10 +113,19 @@ on Write UID. It is app-wide: all six set scene state on event, read it on enter
 and `magic_info.c` is the single place a fresh scan dispatches, so it would be about six lines for
 all six or none.
 
-The reason I have not touched it is that index 0 is `Write` in every one of those menus, so resetting
-on a fresh scan puts the cursor on the destructive item — which is what `62b60e2b` was written to
-stop. Preserve within a session, reset across sessions is coherent, but it is shared app code and
-your commit is on the other side of that axis, so it is your call.
+The argument for changing it is consistency with the app's own behaviour rather than taste. The
+scene state is only ever written by the user's own menu selection, so on first load it is 0 and the
+first scan lands on the first item. Every scan after that lands wherever they last were. **The same
+action produces a different cursor depending on whether it is the first scan of the session** — and
+whichever position is right, it should be the same one both times.
+
+That also disposes of the objection I had: index 0 is `Write` in all six menus, so resetting looked
+like it would put the cursor on the destructive item. It already does, on the first scan. Resetting
+adds no exposure — it makes scans two onwards behave like scan one. And it does not cut against
+`62b60e2b`, which is about returning from Info within one flow; that is a different axis.
+
+Leaving it to you because it is shared app code in a PR about ISO15693, not because I think it should
+stay.
 
 ## Where this stands
 
