@@ -27,6 +27,21 @@ echo "dev  : $DEV @ $(git rev-parse --short HEAD)"
 echo "fork : $FORK on $BRANCH"
 echo
 
+# --- the writing gate, BEFORE any fork commit exists ---
+# The rules in .notes/WRITING-RULES.md were written down and broken anyway, because nothing ran them.
+# This is the point where that stops being cheap to ignore: after here, prose becomes fork history.
+echo "writing gate:"
+if ! python3 "$DEV/tools/check-writing.py" forkmsg "$MSGDIR"; then
+  echo "  refusing to replay -- fix the fork messages, or say why and re-run with SKIP_WRITING_GATE=1"
+  [ "${SKIP_WRITING_GATE:-0}" = "1" ] || exit 1
+fi
+if ! python3 "$DEV/tools/check-writing.py" comments \
+     $(git -C "$DEV" ls-files 'magic/**/*.c' 'magic/**/*.h' 'scenes/*.c' 'views/*.c' | sed "s|^|$DEV/|"); then
+  echo "  refusing to replay -- fix the comments, or say why and re-run with SKIP_WRITING_GATE=1"
+  [ "${SKIP_WRITING_GATE:-0}" = "1" ] || exit 1
+fi
+echo
+
 # --- reset to the pushed base, discarding regenerable sync output ---
 git -C "$FORK" fetch origin "$BRANCH" >/dev/null 2>&1
 BASE="$(git -C "$FORK" rev-parse "origin/$BRANCH")"
