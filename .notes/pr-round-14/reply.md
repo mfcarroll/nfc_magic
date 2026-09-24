@@ -7,14 +7,7 @@ Answers his two comments covering `a27d187d..749f10e6` (twelve commits, four beh
 ~~~~
 ## Your commits, and what the bench says
 
-Every one of the twelve is in, unrebased and unreworded. Where your wording and mine covered the
-same ground I kept yours, including in two places where yours is better than what I had written:
-
-- **`88d757b5`.** I had found the same thing in `bb937361` and resolved it worse — I deleted the
-  capacity clause outright. Scoping it to the three gen1 chips and naming the gen2 contrast keeps the
-  measurement instead of losing it, and it belongs in that opening block.
-- **`0c7a2515`'s `blocks_total` correction.** "whichever of the four registers fall BELOW it, which on
-  a source under 57 blocks is none of them" is exact, and I had the loose version.
+Every one of the twelve is in, unrebased and unreworded.
 
 **All three behavioural ones are benched and pass.** `0c5a7d69`: card lifted during the consent
 screen, and the failure screen no longer claims 56/57/62/63 were spent. `62b60e2b`: the cursor stays
@@ -53,11 +46,10 @@ Four of these are the simplification pass, which your twelve did not touch:
   needing a see-also to another exit. Hoisted to the loop head, with the part no site carried: the
   deadline check is the one break that does not increment.
 
-And one answer to a question left open: the twelve `widget_add_string_multiline_element` calls do not
-want a wrapper. The duplication is in *describing* the layout, not in the calls — the note explains
-both y values and never the x, so the two bodies at `(4, 20)` read as an inconsistency. That pair
-appears in exactly three files in the repo, and the two branches here are the ones mirroring the
-other two screens.
+Plus one small thing in the same file: its LINE BUDGET note explained both y values and never the x,
+so the two bodies at `(4, 20)` read as an inconsistency. They are not — that pair appears in exactly
+three files in the repo, and the two branches here are the ones mirroring the other two screens. The
+note now says so, because the tempting fix is to make all twelve agree and break the match.
 
 ## A correction back to you
 
@@ -76,15 +68,6 @@ The claim has to be named there or the example proves nothing, since at any high
 term carries it anyway.
 
 The 256 ceiling is in the form now too. It binds the A term alone.
-
-## The harness caught a change of yours, which is the case for the follow-up PR
-
-`e32e6242` broke the host build: `furi_crash` was not in the fake, so the poller stopped compiling
-there. One line, and nothing on your side could have shown it.
-
-Worth mentioning because it is the first time it has caught a change of yours rather than one of
-mine, and it is precisely the class the follow-up is for — correct in the firmware, wrong against a
-second consumer of the same source. Still out of this branch.
 
 ## Ours, and something to raise
 
@@ -132,6 +115,6 @@ stay.
 
 **Still not ready to merge**, and for the same reason as before: every ISO15693 write this app sends
 is unaddressed, and TI Tag-it HF-I Plus refuses unaddressed WRITE BLOCK outright. Addressed writes
-and the gen1 caveat gate are the next piece of work, and the scoping call on whether they land inside
-this PR is still yours.
+and the gen1 caveat gate that goes with them are the next piece of work, and they belong in this PR —
+shipping ISO15693 support that cannot write a TI Tag-it is not something to fix later.
 ~~~~
