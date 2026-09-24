@@ -12,10 +12,6 @@ Post each payload between its `~~~~` markers, on the comment id named.
 ~~~~
 Fixed by your own `2b64c380`, and taken as written. Damage from the opt-in, bricking from the wipe,
 with both address sets named rather than referred to by position.
-
-The shape is the part I want on the record: the same edit made the claim stronger and deleted the
-only record of the addresses that falsify it. Unfalsifiable and wrong arrived together, which is a
-failure mode worth watching for in any trim rather than a fact about this one.
 ~~~~
 
 ---
@@ -63,11 +59,6 @@ load-bearing one for the reason you gave.
 
 ~~~~
 Restored in `bb937361` and then scoped in `88d757b5`, both taken as written.
-
-Worth saying that I had found the same problem with the restored clause independently and resolved it
-worse — I deleted "the advertised count is its capacity" outright. Scoping it to the three gen1 chips
-and naming the programmable case keeps the measurement rather than losing it, and it reads as one
-rule instead of two halves.
 ~~~~
 
 ---

@@ -55,6 +55,34 @@ Written fresh. Dev messages are NOT copyable — round 10's were, and he quoted 
 - **Verify every SHA against the branch**, by subject, not existence.
 - ⚖ **Correct what we told him that was wrong**, in one sentence, without the archaeology.
 
+## The read-through — what to actually look for
+
+The gate catches phrasings. It cannot catch a paragraph that is well-written, true, and has no
+business being there. Every one of these got through the checkers and was caught by a human read, so
+run them as questions against each paragraph before anything is posted.
+
+1. **Can he see the thing I am comparing to?** "Yours is better than what I had written" compares his
+   commit against a version that exists only in our unpushed history. He has never seen it and never
+   will. This is internal process wearing the clothes of a concession, and it went through twice in
+   one round. If the other half of the comparison is invisible to him, cut the comparison.
+2. **Can he act on it?** A section telling him his commit broke a build he cannot see, whose fix is
+   ours, in a tree that is not in this PR, asks nothing of him. Evidence belongs where it argues for
+   something -- in that case, the other PR's own description.
+3. **Does the conclusion follow from the sentence before it?** Two true paragraphs welded together do
+   not make an argument. "The x=4 convention is deliberate" and "these twelve calls do not want a
+   wrapper" are different claims; asserting the first answered the second made both unreadable.
+4. **Is this question still open?** Phrasing carried forward from an earlier round outlives the
+   decision it described. "The scoping call is yours" was true for three rounds and then was not.
+5. **Am I telling him something he told me?** Restating the lesson from a defect HE found and
+   analysed is not reporting, it is processing at him.
+6. **Would this still be true if the round moved again?** The same rot that hits headings hits
+   paragraphs; they are just harder to check.
+7. **Is this paragraph carrying a disposition, a correction, or a finding?** If none of the three, it
+   is reaching for something to say. Cut it.
+
+The tell for most of them: the passage is about US -- what we tried, what we learned, how we feel
+about it -- rather than about the code or the decision in front of him.
+
 ## The failure mode behind most of these
 
 A claim that was true when written and went stale when the tree moved under it. The counter is not
