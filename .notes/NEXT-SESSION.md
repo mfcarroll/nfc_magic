@@ -16,12 +16,20 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
-## IN FLIGHT: addressed writes — BUILT AND UNBENCHED, nothing pushed
+## IN FLIGHT: addressed writes — BUILT AND BENCHED, nothing pushed
 
-**Dev `c9a8431`, one shipped commit.** What went in, what is reasoned rather than measured, the
-mutation results and the three hardware runs that decide it are in
+**Four shipped commits, `f2701dc..51c2cfe`.** What went in, the mutation results, the nine hardware
+runs with their predictions, and what the round retracts are in
 [pr-round-15/addressed-writes-implemented.md](pr-round-15/addressed-writes-implemented.md). The
-acceptance test is a clone and a wipe on a TI Tag-it: that card could not be written at all before.
+acceptance test was a clone and a wipe on a TI Tag-it -- that card could not be written at all before
+-- and it passes.
+
+**The reply is drafted and NOT posted**, in [pr-round-15/reply.md](pr-round-15/reply.md). It owes him
+a retraction: we told him TI refuses an unaddressed WRITE BLOCK and that addressing was therefore a
+compatibility requirement. It refuses writes without the OPTION flag, addressed or not, and no chip
+here requires addressing.
+
+**Still to do before anything goes out:** the fork messages and the sync-point selection.
 
 Everything below is the measurement the implementation was built from.
 
