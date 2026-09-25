@@ -78,13 +78,20 @@
 #define ISO15693_POLLER_OPTION_FLAG (ISO15693_3_REQ_FLAG_T4_OPTION)
 
 // WHAT REMAINS UNADDRESSED, and the rest of #251 with it:
-//   - the gen1 backdoor: plain 0x21 at 56/57/62/63, ordinary user data on a tag that big. It is the
-//     magic sequence, measured to work unaddressed on all five cards, and nothing has been measured
-//     about addressing it.
+//   - the gen1 backdoor SEQUENCE: plain 0x21 at 56/57/62/63, ordinary user data on a tag that big,
+//     which makes it the most dangerous frame set here -- and it sits behind an opt-in that warns
+//     about the CARD IN HAND, not a second one in the field.
+//
+//     OPEN QUESTION rather than a settled decision, and the evidence leans toward addressing it.
+//     Addressed WRITE BLOCKs to these exact addresses are already MEASURED to work: the wipe's sweep
+//     zeroes 56/57/62/63 through the addressed path, re-addressing when the UID moves under it, and
+//     the clone's conversion path writes 56/57 addressed and watches the UID follow. So "it is the
+//     magic sequence" does not by itself justify leaving it open to bystanders.
+//     What is genuinely unmeasured is narrower: unlock and commit ACCEPTED addressed -- on an armed
+//     card they are refused either way, so no run has ever shown one taken -- and the fact that this
+//     sequence is fire-and-forget, so addressing it needs an inventory between frames. The wipe
+//     already does exactly that; this does not. See iso15693_poller_send_backdoor_uid_gen1.
 //   - the gen2 backdoor: 0xE0, proprietary, so a conforming tag should reject it.
-//   - WRITE AFI / WRITE DSFID, from the clone's identity pass. STANDARD commands, so they reach a
-//     bystander of ANY size, and a changed AFI can drop a tag out of selective inventory. The
-//     strongest case of the three for addressing, and the one with no bench result behind it.
 // Nor does addressing CLOSE #251. Its worst consequence is the post-wipe UID re-read being answered by
 // a bystander, and that one cannot be fixed this way by construction: the check exists to find out
 // whether the UID changed, so it cannot be aimed at a UID already suspected stale. It needs the
@@ -494,6 +501,66 @@ static void iso15693_poller_send_backdoor_uid_gen2(
     bit_buffer_free(rx);
 }
 
+// Did the tag refuse because the OPTION flag was clear, rather than for any of the other reasons a
+// write is refused? Error 0x03 is the only one that means that, and parse_write_response folds it in
+// with NOT_SUPPORTED the way the SDK does -- so it is read here, from the frame, before that happens.
+static bool iso15693_poller_response_wants_option(const BitBuffer* rx) {
+    return bit_buffer_get_size_bytes(rx) >= 2 &&
+           (bit_buffer_get_byte(rx, 0) & ISO15693_3_RESP_FLAG_ERROR) != 0 &&
+           bit_buffer_get_byte(rx, 1) == ISO15693_3_RESP_ERROR_OPTION;
+}
+
+// Every write this app sends takes its flags from here, so a card that wants the OPTION flag gets it
+// on the identity writes as well as on the data blocks.
+static uint8_t iso15693_poller_write_flags(const Iso15693Poller* instance) {
+    return instance->write_option ?
+               (uint8_t)(ISO15693_POLLER_WRITE_FLAGS | ISO15693_POLLER_OPTION_FLAG) :
+               (uint8_t)ISO15693_POLLER_WRITE_FLAGS;
+}
+
+// Sticky, and never cleared inside a run: the answer is about the silicon, and the silicon does not
+// change when the UID does. Clearing it would re-ask the question on a card whose identity this app
+// has just rewritten, which is the one moment the UID cannot be trusted to describe it.
+//
+// Which command drew the 0x03 does not matter -- the card is objecting to the flag, not to the
+// request -- so the identity pass and the block pass answer the same question and share the answer.
+static void iso15693_poller_note_option_wanted(Iso15693Poller* instance, const BitBuffer* rx) {
+    if(instance->write_option || !iso15693_poller_response_wants_option(rx)) return;
+    FURI_LOG_I(TAG, "the card wants the OPTION flag on writes; setting it for this run");
+    instance->write_option = true;
+}
+
+// One identity write: 22 27|29 <uid, LSB first> <value>, or 62 with the OPTION flag.
+//
+// ADDRESSED, like the data blocks, and these had the strongest claim to it of anything left: WRITE
+// AFI and WRITE DSFID are STANDARD commands, so a bystander of any size takes them, and a changed AFI
+// can drop a tag out of a selective inventory -- a card that then looks absent to the reader that
+// uses it. Measured accepted on TI Tag-it, which is the only chip that refuses anything here.
+//
+// Same flags as a data-block write and the same answer learned from: a 0x03 means the card is
+// objecting to the flag, whatever command asked.
+//
+// The send's return is discarded on purpose -- see write_identity below for why it cannot settle
+// anything either way -- but the RESPONSE is still worth reading for that one thing.
+static void iso15693_poller_send_identity_frame(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    uint8_t command,
+    uint8_t value) {
+    bit_buffer_reset(instance->frame_tx);
+    bit_buffer_append_byte(instance->frame_tx, iso15693_poller_write_flags(instance));
+    bit_buffer_append_byte(instance->frame_tx, command);
+    for(uint8_t i = ISO15693_3_UID_SIZE; i > 0; i--) {
+        bit_buffer_append_byte(instance->frame_tx, instance->address_uid[i - 1]);
+    }
+    bit_buffer_append_byte(instance->frame_tx, value);
+    if(iso15693_3_poller_send_frame(
+           iso_poller, instance->frame_tx, instance->frame_rx, ISO15693_3_FDT_WRITE_POLL_FC) ==
+       Iso15693_3ErrorNone) {
+        iso15693_poller_note_option_wanted(instance, instance->frame_rx);
+    }
+}
+
 // Make the clone match the source's AFI / DSFID via the standard ISO15693 WRITE AFI / WRITE DSFID
 // commands (only for fields the source actually reported). Frames: 02 27 <afi> and 02 29 <dsfid>
 // (+CRC). Each field is then READ BACK with GET SYSTEM INFO and compared; a field that doesn't match
@@ -525,18 +592,12 @@ static void
     for(uint32_t attempt = 0; attempt < ISO15693_POLLER_WRITE_ATTEMPTS && (!dsfid_ok || !afi_ok);
         attempt++) {
         if(!dsfid_ok) {
-            bit_buffer_reset(tx);
-            bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
-            bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_DSFID);
-            bit_buffer_append_byte(tx, sys->dsfid);
-            iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+            iso15693_poller_send_identity_frame(
+                instance, iso_poller, ISO15693_MAGIC_CMD_WRITE_DSFID, sys->dsfid);
         }
         if(!afi_ok) {
-            bit_buffer_reset(tx);
-            bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
-            bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE_AFI);
-            bit_buffer_append_byte(tx, sys->afi);
-            iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
+            iso15693_poller_send_identity_frame(
+                instance, iso_poller, ISO15693_MAGIC_CMD_WRITE_AFI, sys->afi);
         }
 
         Iso15693_3SystemInfo readback = {0};
@@ -655,37 +716,24 @@ static Iso15693_3Error iso15693_poller_parse_write_response(const BitBuffer* rx)
     }
 }
 
-// Did the tag refuse because the OPTION flag was clear, rather than for any of the other reasons a
-// write is refused? Error 0x03 is the only one that means that, and parse_write_response folds it in
-// with NOT_SUPPORTED the way the SDK does -- so it is read here, from the frame, before that happens.
-static bool iso15693_poller_response_wants_option(const BitBuffer* rx) {
-    return bit_buffer_get_size_bytes(rx) >= 2 &&
-           (bit_buffer_get_byte(rx, 0) & ISO15693_3_RESP_FLAG_ERROR) != 0 &&
-           bit_buffer_get_byte(rx, 1) == ISO15693_3_RESP_ERROR_OPTION;
-}
-
 static Iso15693_3Error iso15693_poller_write_block_addressed(
     Iso15693Poller* instance,
     Iso15693_3Poller* iso_poller,
     const uint8_t* data,
     uint8_t block,
     uint8_t size) {
-    const uint8_t flags = instance->write_option ? (uint8_t)(ISO15693_POLLER_WRITE_FLAGS |
-                                                             ISO15693_POLLER_OPTION_FLAG) :
-                                                   (uint8_t)ISO15693_POLLER_WRITE_FLAGS;
     iso15693_poller_build_write_frame(
-        instance->frame_tx, flags, instance->address_uid, block, data, size);
+        instance->frame_tx,
+        iso15693_poller_write_flags(instance),
+        instance->address_uid,
+        block,
+        data,
+        size);
     const Iso15693_3Error error = iso15693_3_poller_send_frame(
         iso_poller, instance->frame_tx, instance->frame_rx, ISO15693_3_FDT_WRITE_POLL_FC);
     if(error != Iso15693_3ErrorNone) return error;
 
-    // Sticky, and never cleared inside a run: the answer is about the silicon, and the silicon does
-    // not change when the UID does. Clearing it would re-ask the question on a card whose identity
-    // this app has just rewritten, which is the one moment the UID cannot be trusted to describe it.
-    if(!instance->write_option && iso15693_poller_response_wants_option(instance->frame_rx)) {
-        FURI_LOG_I(TAG, "the card wants the OPTION flag on writes; setting it for this run");
-        instance->write_option = true;
-    }
+    iso15693_poller_note_option_wanted(instance, instance->frame_rx);
     return iso15693_poller_parse_write_response(instance->frame_rx);
 }
 
@@ -725,10 +773,11 @@ static bool iso15693_poller_write_landed(
 // Retries only ever run on a failure, so a card that takes its writes pays nothing for them. There is
 // deliberately no break before the last delay, which is where the per-refused-block figure comes from.
 //
-// Every DATA-block write in this file funnels through here, addressed to instance->address_uid; the
-// gen1 and gen2 backdoor SEQUENCES and the identity pass build their own frames and stay unaddressed,
-// for the reasons at ISO15693_MAGIC_FLAGS. Note that is about the senders, not the addresses -- the
-// wipe's sweep zeroes 56/57/62/63 through this function like any other block.
+// Every DATA-block write in this file funnels through here, addressed to instance->address_uid. The
+// gen1 and gen2 backdoor SEQUENCES build their own frames and stay unaddressed, for the reasons at
+// ISO15693_MAGIC_FLAGS; the identity pass builds its own too but IS addressed. Note that is about the
+// senders, not the addresses -- the wipe's sweep zeroes 56/57/62/63 through this function like any
+// other block, which is where the evidence that addressing those addresses works comes from.
 static Iso15693_3Error iso15693_poller_write_block_retried(
     Iso15693Poller* instance,
     Iso15693_3Poller* iso_poller,

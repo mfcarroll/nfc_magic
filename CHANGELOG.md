@@ -107,11 +107,15 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   refusal. **TI Tag-it HF-I Plus** needs both halves. Without them no data block could be written to
   that chip at all, and with only the first a wipe zeroed the whole card and then reported that
   nothing had been cleared.
+- **The clone's identity writes are addressed too.** **WRITE AFI** and **WRITE DSFID** are *standard*
+  commands, so an unaddressed one lands on a tag of any size, and a changed AFI can drop that tag out
+  of a selective inventory.
 - **A gen1 clone that lost nothing now reports plain success.** gen1 writes the UID into blocks
   56/57/62/63, so a source containing those blocks loses them and the clone is still Partial — but a
   source below block 57 has none of them, nothing is missing, and every such clone was reported as
   Partial with a note saying four blocks "differ" from a file that has no blocks that high. Those runs
   are now a clean success, and where the note does apply it says what was actually skipped.
+
 ### Validation
 
 - **gen1** was validated on hardware across three chips: ST LRi2K (56 blocks), NXP SLIX (28) and NXP
@@ -128,13 +132,11 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   zeroing those on an un-finalized card **bricks it permanently**: the cost is the card, not just its
   identity. Stated on their authority rather than ours: no gen3 card exists on either side of this PR,
   so nothing here has been observed. Tracked as #255.
-- **Some writes still reach every tag in the field** — the gen1 and gen2 backdoor sequences, and
-  **WRITE AFI** / **WRITE DSFID** from a clone. The last two are *standard* commands, so they land on a
-  tag of any size, and a changed AFI can drop it out of a selective inventory. With two tags present
-  the post-wipe UID re-read can also answer with the bystander's UID rather than the card's, which
-  addressing cannot fix: that read exists to find out whether the UID changed, so it cannot be aimed at
-  a UID already in doubt. Keep one tag in the field at a time — a badge holder or a wallet is enough to
-  break this. Tracked as #251.
+- **The gen1 and gen2 backdoor sequences are still unaddressed**, and with two tags present the
+  post-wipe UID re-read can still answer with the bystander's UID rather than the card's — which
+  addressing cannot fix, since that read exists to find out whether the UID changed and so cannot be
+  aimed at a UID already in doubt. Keep one tag in the field at a time; a badge holder or a wallet is
+  enough to break this. Tracked as #251.
 
 ## 2.2
 
