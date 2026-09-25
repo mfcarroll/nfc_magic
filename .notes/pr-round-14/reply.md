@@ -53,9 +53,9 @@ note now says so, because the tempting fix is to make all twelve agree and break
 
 ## A correction back to you
 
-One, on the reach rule, and it is in the thread where you raised it rather than repeated here:
-`5c97e16f` needs a third gate, and `A` is the first block of the final unbroken run rather than the
-first silence anywhere. Both omissions under-warn.
+`5c97e16f` needs a third gate — the run has to survive the re-probe that follows the trip — and `A`
+is the first block of the final unbroken run rather than the first silence anywhere. Both omissions
+under-warn.
 
 ## Ours, and something to raise
 
