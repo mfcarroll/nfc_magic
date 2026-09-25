@@ -1,4 +1,24 @@
-# TI Tag-it HF-I Plus refuses UNADDRESSED WRITE BLOCK — measured 2026-09-13
+# TI Tag-it HF-I Plus and the WRITE BLOCK flags
+
+> **CORRECTED 2026-09-24. The conclusion below is wrong, and the measurement under it is sound.**
+> What TI wants is the **OPTION flag**, not an address. All four combinations, on `white-coin`:
+>
+> | flags | addressed | option | result |
+> |---|---|---|---|
+> | `0x02` | no | no | refused, error 0x01 |
+> | `0x22` | yes | no | refused, error 0x03 |
+> | `0x42` | no | **yes** | **accepted** |
+> | `0x62` | yes | **yes** | **accepted** |
+>
+> The OPTION flag is necessary and sufficient; the addressing is orthogonal. The reading below took
+> the 0x01 answer to `0x02` as a refusal of the UNADDRESSED form, having changed only that variable
+> -- and `hf 15 wrbl`, the control, silently forces OPTION on for TI silicon, so the frame that
+> "worked addressed" differed in two bits. Both halves of the comparison moved.
+>
+> The app still could not write this card, that is still a merge blocker, and it is fixed -- by the
+> OPTION flag. **Addressing is the safety improvement #251 filed it as, not a compatibility
+> requirement.** Everything in this file that says otherwise is superseded by that.
+
 
 ## The measurement
 

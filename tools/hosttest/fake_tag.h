@@ -21,6 +21,11 @@ typedef enum {
     // Answers neither a write nor a read. Past physical capacity, or a phantom block on a card that
     // advertises more than it holds.
     FakeBlockAbsent,
+    // Answers reads, discards writes, and says NOTHING about it -- no error frame, no acknowledgement.
+    // The case that makes a read-back worth comparing rather than merely performing: on a card whose
+    // writes are not acknowledged anyway, this is indistinguishable from a write that landed until
+    // someone looks at what the block actually holds.
+    FakeBlockSilentlyRefuses,
 } FakeBlockKind;
 
 typedef struct {
@@ -80,6 +85,18 @@ typedef struct {
 
     // Get System Info fails outright, so the verify never reaches an answer at all.
     bool sysinfo_fails;
+
+    // Refuse any WRITE BLOCK whose OPTION flag is clear, with error 0x03 -- the tag naming the bit
+    // rather than failing generically. Measured on TI Tag-it HF-I Plus (`white-coin`): flags 0x22 is
+    // answered `01 03`, and the identical frame at 0x62 is taken.
+    bool requires_option;
+
+    // Apply the write and then say NOTHING. The other half of the same card: with OPTION set, the
+    // answer is owed only after the reader sends a standalone EOF, which this SDK cannot do, so the
+    // block is programmed and the acknowledgement never comes. Kept SEPARATE from requires_option,
+    // although one card has both, so a test can put the two failures on their own -- the production
+    // rescue is scoped to cards that asked for the flag, and that scoping needs a case of its own.
+    bool writes_are_unacknowledged;
 
     // Counters, for assertions and for ops_until_lifted.
     uint32_t ops;

@@ -231,8 +231,8 @@ static void fake_apply_uid_half_now(bool is_7654, const uint8_t* d) {
     fake_tag_set_uid_now(uid);
 }
 
-// Addressed WRITE BLOCK: 22 21 <uid, LSB first> <block> <data...>. Every data-block write the app
-// sends is this frame -- the clone's payload and the wipe's zeros alike.
+// Addressed WRITE BLOCK: 22 21 <uid, LSB first> <block> <data...>, or 62 21 ... with the OPTION flag.
+// Every data-block write the app sends is this frame -- the clone's payload and the wipe's zeros alike.
 static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) {
     fake_tag.writes_attempted++;
     // A lifted card answers nothing at all -> the radio layer times out.
@@ -254,6 +254,14 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
     const uint8_t* data = tx->data + 3 + ISO15693_3_UID_SIZE;
     bit_buffer_reset(rx);
 
+    // Checked BEFORE the block rules, because it is a complaint about the frame rather than about the
+    // block: the tag has not looked at the address it names yet.
+    if(fake_tag.requires_option && (tx->data[0] & 0x40) == 0) {
+        bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_ERROR);
+        bit_buffer_append_byte(rx, ISO15693_3_RESP_ERROR_OPTION);
+        return Iso15693_3ErrorNone;
+    }
+
     if(!fake_block_answers(block) || fake_tag.kind[block] == FakeBlockLocked) {
         // An IN-BAND refusal: a well-formed, CRC-valid error frame, which the radio layer reports as
         // a successful exchange. Only the response parse tells it from a write that took. Absent
@@ -266,10 +274,17 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
         return Iso15693_3ErrorNone;
     }
 
+    if(fake_tag.kind[block] == FakeBlockSilentlyRefuses) return Iso15693_3ErrorTimeout;
+
     memcpy(fake_tag.content[block], data, fake_tag.block_size);
     fake_tag.writes_accepted++;
     if(fake_tag.is_gen1_magic && (block == 0x38 || block == 0x39)) {
         fake_apply_uid_half_now(block == 0x38, data);
+    }
+    if(fake_tag.writes_are_unacknowledged) {
+        // Written, and nothing said about it. The radio layer reports this exactly as it reports an
+        // absent card, which is the whole difficulty.
+        return Iso15693_3ErrorTimeout;
     }
     bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_NONE);
     return Iso15693_3ErrorNone;
@@ -287,8 +302,11 @@ Iso15693_3Error iso15693_3_poller_send_frame(
     const BitBuffer* buf = tx;
     if(buf == NULL || buf->size < 3) return Iso15693_3ErrorNone;
 
-    // Addressed WRITE BLOCK: flags, command, 8 address bytes, block, and at least one data byte.
-    if(buf->data[0] == 0x22 && buf->data[1] == 0x21 && buf->size >= 12) {
+    // Addressed WRITE BLOCK: flags, command, 8 address bytes, block, and at least one data byte. The
+    // OPTION bit is masked off before the match, so 0x22 and 0x62 both land here -- whether the tag
+    // then MINDS which one it got is fake_tag.requires_option's business, below.
+    if((buf->data[0] & ~ISO15693_3_REQ_FLAG_T4_OPTION) == 0x22 && buf->data[1] == 0x21 &&
+       buf->size >= 12) {
         return fake_addressed_write(buf, rx);
     }
 

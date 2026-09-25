@@ -16,7 +16,16 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
-## IN FLIGHT: addressed writes — measured, not yet implemented
+## IN FLIGHT: addressed writes — BUILT AND UNBENCHED, nothing pushed
+
+**Dev `c9a8431`, one shipped commit.** What went in, what is reasoned rather than measured, the
+mutation results and the three hardware runs that decide it are in
+[pr-round-15/addressed-writes-implemented.md](pr-round-15/addressed-writes-implemented.md). The
+acceptance test is a clone and a wipe on a TI Tag-it: that card could not be written at all before.
+
+Everything below is the measurement the implementation was built from.
+
+## The measurements behind it
 
 **All five chips accept addressed WRITE BLOCK.** Measured 2026-09-24, full transcripts and frames in
 [pr-round-15/addressed-writes-measured.md](pr-round-15/addressed-writes-measured.md). That file is
@@ -50,7 +59,8 @@ cannot be fixed by addressing at all. Do not report this as closing #251.
 
 **Addressed writes, and the gen1 caveat gate with them.** The reply no longer offers him a scoping
 choice: shipping ISO15693 support that cannot write a TI Tag-it is not a later problem, so this
-belongs in this PR. Both are recorded in
+belongs in this PR. **What makes that card writable turned out to be the OPTION flag, not the
+addressing** -- see the correction at the head of the finding. Both are recorded in
 [pr-round-10/unaddressed-write-finding.md](pr-round-10/unaddressed-write-finding.md).
 
 Raised with him and awaiting his call: the protocol menus keeping their cursor across a fresh scan.
