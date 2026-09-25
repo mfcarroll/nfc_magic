@@ -1,4 +1,7 @@
-# Addressed WRITE BLOCK, measured on gen1 silicon — 2026-09-24
+# Addressed WRITE BLOCK, measured on ONE chip — 2026-09-24
+
+**Scope: NXP ICODE SLIX, IC ref 0x01, one card.** Not gen1 silicon, not the other four chips this
+project writes. The remaining ones are listed at the foot and are not yet run.
 
 `slix-1k-50mm`, UID `E0 04 01 50 20 26 08 63`, freshly wiped. Frames carry the UID LSB-first.
 Flags `0x22` = SUBCARRIER_1 | DATA_RATE_HI | T4_ADDRESSED.
@@ -48,3 +51,18 @@ reports "Wiped 58/58".
 
 **Re-inventory after a write to 56 or 57 lands, and re-address from the result.** At most twice per
 sweep, only on the path where the identity moves. 62/63 do not carry UID and need no re-address.
+
+## NOT YET MEASURED — the other silicon
+
+Addressed WRITE BLOCK is confirmed on exactly two chips across the whole project: TI Tag-it (the
+control in the original unaddressed finding, where `hf 15 wrbl` without `--ua` succeeded) and NXP
+SLIX here. Three remain, and one of them is load-bearing:
+
+| chip | card | why it matters |
+|---|---|---|
+| EM-Marin EM4237 | `gen-2-card` | **critical.** The only gen2 card that accepts unaddressed writes, and the one the whole gen2 path was validated on. If it refuses ADDRESSED, always-addressed breaks the card that currently works -- a regression pointing the opposite way from the TI one. |
+| ST LRi2K | `lri2k-keychain` | the chip the armed-gen1 wipe hazard was reproduced on, so the stale-address re-check belongs here too |
+| NXP SLIX-S 0x02 | `SL2S5302` | completes the three gen1 chips |
+
+Do not write "addressed works" anywhere until these are run. The latch claim was over-scoped from one
+chip in round 11 and he caught it; this is the same shape.
