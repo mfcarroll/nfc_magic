@@ -18,7 +18,7 @@ Re-clone any normal 64-block source to restore it -- the CFG frame sets the geom
 
 ## IN FLIGHT: addressed writes — BUILT AND BENCHED, nothing pushed
 
-**Four shipped commits, `f2701dc..51c2cfe`.** What went in, the mutation results, the nine hardware
+**Four shipped commits, `db3d8ac..721dd30`.** What went in, the mutation results, the nine hardware
 runs with their predictions, and what the round retracts are in
 [pr-round-15/addressed-writes-implemented.md](pr-round-15/addressed-writes-implemented.md). The
 acceptance test was a clone and a wipe on a TI Tag-it -- that card could not be written at all before

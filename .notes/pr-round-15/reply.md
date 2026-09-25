@@ -79,14 +79,16 @@ addressing them.
 
 ## The bench
 
-Five cards across five chips, and the runs that decide it:
+Five cards across four chips — the five-chip figure above is the frame measurements, which include
+two cards this round did not run the app against. The runs that decide it:
 
 - a **TI Tag-it** wipe and clone, which is the card that could not be written at all before this
-- an **armed gen1 LRi2K** wipe, where the UID moves under the sweep — 58/58 and the identity change
-  reported, unchanged from before, which is the point: the re-address is what stops the addressing
-  from breaking that path
-- a **70-block source onto 64-block silicon**, where the six blocks past the top burn their retries
-  and their read-backs fail, so they are reported as refused while every real block is verified
+- an **armed gen1 ST LRi2K** wipe, where the UID moves under the sweep — 58/58 and the identity
+  change reported, unchanged from before, which is the point: the re-address is what stops the
+  addressing from breaking that path
+- a **70-block source onto 64-block silicon**, on the second TI card, where the six blocks past the
+  top burn their retries and their read-backs fail, so they are reported as refused while every
+  real block is verified against a source in which no two blocks are alike
 - regressions on the **EM-Marin** gen2 card and an **NXP SLIX** gen1 card, clone and wipe
 
 ## Where this stands
