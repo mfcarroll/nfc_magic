@@ -3,6 +3,22 @@
 Companion to [WRITING-RULES.md](WRITING-RULES.md). That one is about what we say; this is about what
 we are entitled to say it from. Every rule here was paid for.
 
+## Compare against the artifact the DEVICE used, not your copy of it
+
+Cost most of a bench session on 2026-09-25. A clone was read as writing two blocks wrong and
+reporting them written -- a silent data-loss defect, and the round was declared unshippable on it.
+The card held exactly what the source said. The source on the Flipper was an older generation of a
+GENERATED fixture, and the comparison was made against the copy regenerated locally that morning.
+
+Generated fixtures drift. Nothing keeps a copy on the device in step with the generator, and the
+file that matters is the one the app opened. So: pull it back off the device and diff it, or push
+the whole set before the session and prove you did. `tools/make_test_iso15693_nfc.py` writes to
+`tools/test_nfc/`, and `scripts/storage.py -p <port> send <file> /ext/nfc/<name>` in the firmware
+tree puts it there -- with the toolchain's python, not the system one.
+
+Same shape as the stale FAP earlier the same day, and as the rule below about the control that
+cannot fail: the evidence was about a different object from the one under test.
+
 ## 1. Every measurement needs its control, or you do not know what you measured
 
 A card accepting a correctly-addressed write does not show it MATCHED the address -- a tag ignoring
