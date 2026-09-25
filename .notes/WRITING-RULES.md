@@ -90,7 +90,10 @@ run them as questions against each paragraph before anything is posted.
      rather than restating, because a restatement is what drifts.
 
    A pointer still has to name what it points at, so a shared phrase is fine; a shared argument is
-   not.
+   not. And a pointer POINTS -- it does not announce that it is pointing. "It is in the thread where
+   you raised it rather than repeated here" is narration about how we organised the reply, which is
+   process by another route. Cutting the duplication produced that sentence, so check for it straight
+   after applying this rule.
 
 The tell for most of them: the passage is about US -- what we tried, what we learned, how we feel
 about it -- rather than about the code or the decision in front of him.
