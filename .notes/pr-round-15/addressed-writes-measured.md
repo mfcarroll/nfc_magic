@@ -109,20 +109,21 @@ goes unanswered.
 separate mis-addressed control. And it is the chip the armed-gen1 wipe hazard was reproduced on, so
 the re-address logic is now measured on the silicon where it will actually fire.
 
-## NXP SLIX-S 0x02 — accepts; enforcement NOT tested
+## NXP SLIX-S 0x02 — accepts and enforces
 
 ```
 hf 15 raw -ackw -d 2220F8350003500204E008           addressed READ  blk 8 -> 00 00 00 00 00 77 CF
 hf 15 raw -ackw -d 2221F8350003500204E00811223344   addressed WRITE blk 8 -> 00 78 F0
+
+hf 15 reader                                        -> E0 04 02 50 03 00 35 F8
+hf 15 raw -ackw -d 2221F8350003500204E10855667788   WRONG UID (E0->E1)    -> no answer
+hf 15 reader                                        -> E0 04 02 50 03 00 35 F8
 ```
 
-**Gap, and it is mine rather than the card's**: `gen-2-card` was given a wrong-UID control and this
-one was not. Accepting a correctly-addressed write does not show the address is being MATCHED -- a
-tag that ignored the addressed flag entirely would answer identically. One frame closes it:
-
-```
-hf 15 raw -ackw -d 2221F8350003500204E10855667788   last byte E0 -> E1, expect no answer
-```
+The control was run separately after the gap was spotted, and run better than I specified it:
+**bracketed by `hf 15 reader` either side.** That is what makes the silence mean REFUSED rather than
+the card having drifted off the antenna -- a negative result needs a positive one around it, or it
+is indistinguishable from absence.
 
 ## Running total
 
@@ -132,13 +133,13 @@ hf 15 raw -ackw -d 2221F8350003500204E10855667788   last byte E0 -> E1, expect n
 | NXP ICODE SLIX 0x01 | `slix-1k-50mm` | yes | yes | **yes** |
 | gen-2-card's silicon | `gen-2-card` | yes | yes | n/a -- not gen1 |
 | ST LRi2K | `lri2k-keychain` | yes | yes | **yes** |
-| NXP ICODE SLIX-S 0x02 | `SL2S5302` | yes | **not tested** | not run |
+| NXP ICODE SLIX-S 0x02 | `SL2S5302` | yes | yes | not run |
 
 **Every chip this app can write accepts addressed WRITE BLOCK.** That is the premise of the whole
 approach and it now holds across all five, rather than the one it started from.
 
 TI's enforcement is untested and does not need testing: it REFUSES unaddressed writes, so it is
-already discriminating on the flag. The open item is SLIX-S, one frame.
+already discriminating on the flag. **Nothing is outstanding. The measurement is complete.**
 
 ## What this settles for the implementation
 

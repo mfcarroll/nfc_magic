@@ -19,6 +19,12 @@ It has to be capable of coming out the other way. "Addressed write succeeds" pro
 own; "addressed write succeeds AND a one-byte-wrong address gets silence" pins it, because the second
 could have failed and did not.
 
+## 2b. Bracket a negative result with a positive one
+
+"No answer" and "the card was not there" produce identical output. A refusal only counts as a refusal
+if the card is shown answering immediately before and after -- `hf 15 reader`, the frame, `hf 15
+reader`. mfcarroll did this unprompted on the SL2S5302 control; I had specified the frame alone.
+
 ## 3. Name the chip, never the family
 
 "No power-up latch on gen1 silicon" from one armed LRi2K cost a review round. Then the same shape
