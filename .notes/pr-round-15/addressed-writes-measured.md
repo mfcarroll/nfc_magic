@@ -60,9 +60,41 @@ SLIX here. Three remain, and one of them is load-bearing:
 
 | chip | card | why it matters |
 |---|---|---|
-| EM-Marin EM4237 | `gen-2-card` | **critical.** The only gen2 card that accepts unaddressed writes, and the one the whole gen2 path was validated on. If it refuses ADDRESSED, always-addressed breaks the card that currently works -- a regression pointing the opposite way from the TI one. |
 | ST LRi2K | `lri2k-keychain` | the chip the armed-gen1 wipe hazard was reproduced on, so the stale-address re-check belongs here too |
 | NXP SLIX-S 0x02 | `SL2S5302` | completes the three gen1 chips |
 
 Do not write "addressed works" anywhere until these are run. The latch claim was over-scoped from one
 chip in round 11 and he caught it; this is the same shape.
+
+## gen-2-card — PASSES, and it was the one that could have killed the design
+
+Currently carrying the `edgedata_64` clone, so UID `E0 04 01 10 D1 D2 D3 D4` and it *presents* as NXP
+SLIX. That type line is decoded from the cloned UID, not the silicon; this card's native chip has
+never been known, because its UID has always been someone else's.
+
+```
+hf 15 raw -ackw -d 2220D4D3D2D1100104E008            addressed READ  blk 8 -> 00 00 00 00 00 77 CF
+hf 15 raw -ackw -d 2221D4D3D2D1100104E00811223344    addressed WRITE blk 8 -> 00 78 F0
+hf 15 raw -ackw -d 2221D4D3D2D1100104E10855667788    WRONG UID (E0->E1)    -> no answer
+hf 15 raw -ack  -d 260100                            -> 00 02 D4 D3 D2 D1 10 01 04 E0
+```
+
+Read answers, write is accepted, a one-byte-wrong address is filtered. The inventory's second byte is
+`02` -- this card's DSFID -- where the SLIX showed `00`, which is the response format behaving
+normally rather than anything about addressing.
+
+**This was the one that could have ended always-addressed.** It is the only gen2 card that takes
+unaddressed writes and the one the gen2 path was validated on; had it refused addressed frames, the
+fix for TI would have broken the card that already worked. It does not.
+
+Block 8 of the clone is now `11223344`. Nothing depends on it.
+
+## Running total
+
+| chip | addressed WRITE | how |
+|---|---|---|
+| TI Tag-it HF-I Plus | **accepts** | the control in the original unaddressed finding |
+| NXP ICODE SLIX 0x01 | **accepts, enforces** | `slix-1k-50mm`, above |
+| gen-2-card's silicon | **accepts, enforces** | above |
+| ST LRi2K | not run | `lri2k-keychain` -- also wants the session-B stale-address repeat, since this is the chip the armed wipe hazard was reproduced on |
+| NXP ICODE SLIX-S 0x02 | not run | `SL2S5302` |
