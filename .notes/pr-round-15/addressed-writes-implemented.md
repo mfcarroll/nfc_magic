@@ -98,27 +98,167 @@ the round-14 defect, and it undersells the half that serves his stated priority.
 What we DO owe him is the retraction, in a sentence: we told him TI refuses unaddressed WRITE BLOCK,
 and it does not.
 
-## WHAT THE BENCH STILL HAS TO SAY
+## ⚠️ REPLAY HAZARD — one dev commit message carries a claim that was withdrawn later
 
-Nothing has been run on hardware. Predictions first, so the run can falsify them:
+The first shipped commit of this round argues the change as a compatibility requirement: "TI Tag-it
+HF-I Plus refuses an unaddressed WRITE BLOCK with error 0x01, so before this the app could not write a
+data block on that silicon at all." That was withdrawn in the same round -- what TI refuses is a write
+with the OPTION flag clear, addressed or not.
 
-1. **TI Tag-it HF-I Plus (`white-coin`, `black-tag`) — the acceptance test for the whole feature.**
-   A wipe cleared nothing before this and reported "no blocks could be cleared"; a clone set the UID
-   and failed every data block. Both should now work. If they do not, the feature does not ship.
-2. **An armed gen1 ST LRi2K (`lri2k-keychain`) wipe — the re-address path.** Predicted UNCHANGED from
-   today: "Wiped 58/58", Partial, the UID reported as moved. The re-address is not an improvement on
-   the current behaviour, it is what stops addressing from breaking it, so an unchanged result is the
-   pass and a shorter count is the failure.
-3. **A regression pass on the cards that already worked** -- a gen2 clone on `gen-2-card`, a gen1
-   clone and a wipe on an NXP SLIX. Nothing should change.
+Every LIVE site was corrected: the poller comments, the CHANGELOG and these notes. The commit message
+was not, because dev history is the record of what was believed when and the correction commit is the
+honest form of that. **But whoever writes the fork message for the addressing commit will read that
+message as source material, which is exactly how a dev message reached him once before.** Write it
+from the corrected claim, not from that paragraph.
 
-## Still unaddressed and not yet measured — WRITE AFI / WRITE DSFID
+## Two firmware gaps came out of this
 
-Two frames would settle it, on any card that reports the fields:
+Both in `lib/nfc`, neither fixable from an app, and together they are why a TI Tag-it could not be
+written by any FAP. Written up for an upstream report in [../firmware-gaps.md](../firmware-gaps.md),
+which also says why the workaround here stays whatever happens upstream.
 
-    hf 15 raw -ackw -d 2227<UID-LSB-first><afi>      addressed WRITE AFI
-    hf 15 raw -ackw -d 2229<UID-LSB-first><dsfid>    addressed WRITE DSFID
+## THE BENCH
 
-They are standard commands and they reach a bystander of any size, so they have the strongest claim
-of what is left. Not implemented on a spec reading alone: an addressed WRITE AFI a card refuses would
-downgrade a clone that works today.
+**1. TI Tag-it wipe — PASSES.** `white-coin`, with `DE AD BE EF` / `CA FE BA BE` / `12 34 56 78` /
+`FE ED FA CE` at blocks 0, 8, 32 and 63, all verified present first. "Wipe complete / Cleared 64
+blocks. Card claims 64.", and a full dump afterwards is all zeros. An earlier attempt at this ran
+against an already-blank card and could not have failed.
+
+**2. TI Tag-it clone — PASSES, byte for byte.** `edgedata_64` onto the same card: all 64 blocks match
+the source exactly, including `DE AD BE EF` / `CA FE BA BE` at 62/63, which is what proves the data
+pass reached the top of the range rather than stopping short. `identity_64` likewise, with its zeros
+at 62/63. Both initially reported Partial for AFI/DSFID, which is what led to `f09699b`.
+
+**3. Armed gen1 LRi2K wipe — PASSES, unchanged as predicted.** `lri2k-keychain` dirtied at 0/20/55.
+"Wiped 58/58", UID moved to zeros, all 56 blocks clear afterwards. 1030ms. The log carries the
+mechanism:
+
+```
+[W][Iso15693Poller] the card's UID moved mid-pass; re-addressing
+[W][Iso15693Poller] the card's UID moved mid-pass; re-addressing
+[I][Iso15693Poller] wipe: 66 blocks attempted, 58 cleared, 1030ms (advertised 56)
+[E][Iso15693Poller] wipe: the UID CHANGED
+```
+
+Two re-address lines, one after block 56 and one after 57. Unchanged from before the round is the
+pass here: the re-address is what stops addressing from breaking this path, not an improvement on it.
+
+**4. gen2 regression — PASSES.** `wipeseed_64` onto `gen-2-card`, whose every block is a distinct
+`5A <blk> A5 <blk>` so a partial write shows anywhere. All 64 match, UID `E0 04 01 10 5E ED 00 01`.
+Reported as a bare **Success** popup with no counts, which is correct: `nfc_magic_scene_write.c` sends
+a clean clone there and reserves the counted screen for a wipe or an empty over-capacity tail, the two
+successes that carry something the popup cannot hold.
+
+A first `hf 15 dump` aborted at block 11 with `iso15693 command failed`, and pm3 prints its zeroed
+buffer for every row below an abort -- so that table looked like a clone that stopped at 11 and was
+nothing of the kind. A re-read was clean. **Do not read a pm3 dump past its abort line.**
+
+**5. gen1 regression and the caveat gate — PASSES.** `slix_28` onto `slix-1k-50x28`, via the gen1
+opt-in. Screen: "Cloned 28/28 blocks / Not written: 0 / **gen1: UID in 56/57/62/63**", and Details:
+"the UID was set through 56/57/62/63. The file has no blocks that high, so nothing in it was skipped."
+Both are the `32f03b0` wording; the old build claimed those blocks differed from a file that has none.
+UID `E0 04 01 10 A1 A2 A3 A4`, data matching the source. The card reports its own 28 blocks and IC ref
+0x01 afterwards, which is right -- gen1 has no geometry block to program.
+
+**6. gen1 wipe — PASSES, and it is the reach rule's other side.** Same card: "Cleared 28 blocks. Card
+claims 28.", Success, **UID unchanged**. Claiming 28, the sweep trips out around block 35 and never
+reaches its own UID registers -- the contrast with the LRi2K, which claims 56 and does. Two cards now
+bracket that rule from either side.
+
+**7. The outcome change — PASSES.** Re-cloning `slix_28` after `68d3fb1` gives the plain **Success**
+popup: no counts, no gen1 line. Source data present.
+
+**8. Restores — both clean, and each confirms something.** `white-coin` back to
+`E0 07 80 3D E2 E7 3A 29` with **IC ref 0x8B and 64 blocks**, which is the magic CFG default being
+TI's own identity rather than a coincidence worth re-deriving; then wiped to all zeros.
+`lri2k-keychain` back to `E0 02 22 24 50 00 83 03` with **IC ref 0x22 and 56 blocks**, its own
+silicon, since gen1 programs no geometry.
+
+**9. Over-capacity on TI — PASSES, and it is the read-back rescue's hardest case.**
+`oversize_edgedata_70` onto `black-tag`, from a card first filled with `wipeseed_64` so every block
+was distinct and a pass that did nothing would show. The log has the whole mechanism:
+
+```
+the card wants the OPTION flag on writes; setting it for this run
+   ~64 FWT Timeouts -- one per block, 0..63, each rescued by the read-back
+clone: block 64 refused (err 6)      <- three attempts, then given up
+clone: block 65..69 refused (err 6)
+```
+
+`err 6` is Timeout. Blocks 64-69 do not exist, so each burned its full retry budget and its read-back
+failed every time -- **the rescue does not pass writes to blocks that are not there.** Screen: "Cloned
+64/70 / Not written: 6 / Card too small". A `wipeseed_64` clone beforehand wrote all 64 distinct
+blocks correctly on the same card, one timeout each.
+
+⚠️ **Most of this run was spent chasing a defect that did not exist.** Blocks 0/1 came back holding
+neither the previous content nor what the local source file said, which reads exactly like a silent
+two-block loss reported as success. The file ON THE FLIPPER was an older generation of a generated
+fixture. See the rule added to [../BENCH-RULES.md](../BENCH-RULES.md). All nine device sources have
+since been regenerated and pushed, and four of them were stale.
+
+**WAS WORTH ONE RUN, NOW DONE: over-capacity on TI.** No source larger than its card has been written since
+the read-back rescue went in, and that is the one mechanism that could turn a real failure into a
+false success. It fires only on cards wanting the OPTION flag -- TI -- and a past-capacity block is
+exactly where "the write timed out" and "the write landed" must be separated by a read that has to
+fail. `test_the_read_back_is_compared_not_just_attempted` covers the shape; hardware does not.
+`oversize_edgedata_70` onto `black-tag` closes it and covers the second TI card at the same time.
+Expect Partial, "Cloned 64/70 / Not written: 6 / Card too small"; a Success or a count of 70 is the
+failure.
+
+## SETTLED — a gen1 clone that lost nothing is a clean Success (`68d3fb1`)
+
+Raised by mfcarroll on seeing run 5: "Cloned 28/28 / Not written: 0" under a **Partial** banner, with a
+note underneath saying nothing was skipped.
+
+`iso15693_poller.c:1495` puts `gen1_clone` -- `clone && used_gen1` -- unconditionally in the Partial
+list, on the rationale that the four backdoor blocks differ from the source. That is the same claim
+`32f03b0` just gated, left standing one level up.
+
+And it can never be a claim about the CARD: on all three gen1 chips those four addresses answer no
+read at any point, so they are write-only registers outside the memory map and a gen1 UID write
+displaces nothing. Only SOURCE data at those indices can be lost, which is what gen1_blocks_skipped
+records.
+
+**Done:** the conjunct, so a gen1 clone is Partial only when blocks were skipped, and the outcome
+agrees with the counts above it. Such a run reaches the plain Success popup and says nothing about
+56/57/62/63 -- the user opted into gen1 and gen1 worked.
+
+One thing that cost a mutant: the Write-UID case now sets `gen1_blocks_skipped`, a combination
+production cannot reach, because the `clone &&` guard is what that test exists to hold and with the
+field left false the guard could be deleted with every test still green.
+
+**Considered and not proposed:** a Success routed to the counted screen with a note that the gen1
+sequence sent unlock+commit, so a later wipe may move this card's UID. Real -- run 3 is that hazard --
+but it depends on the card's claim reaching 49, and run 6 is a gen1 card that never will. Scoping that
+warning is a separate question.
+
+⚠️ **`white-coin` and `lri2k-keychain` are both wearing the wrong UID** -- `E0 04 01 10 1D 1D 1D 1D`
+and all-zeros respectively, with DSFID 05 / AFI 27 on the TI. Restore before citing either as stock.
+
+## WRITE AFI / WRITE DSFID — measured and done
+
+Was the strongest remaining piece of #251's blast radius, and is now addressed and OPTION-carrying
+like the data blocks (`f09699b`). Three frames settled it on `white-coin`:
+
+| frame | result |
+|---|---|
+| `hf 15 info` | SYSINFO flags `0x0F` -- DSFID and AFI both advertised, so the verify had something to read |
+| `hf 15 raw -ackw -d 422905` | unaddressed + OPTION, accepted, DSFID reads back `05` |
+| `hf 15 raw -ackw -d 62271D1D1D1D100104E027` | addressed + OPTION, accepted, AFI reads back `27` |
+| `hf 15 raw -ackw -d 22291D1D1D1D100104E005` | addressed, NO option -- refused, `01 03`, DSFID unchanged |
+
+The first rules out the alternative -- that the card simply does not report those fields, in which
+case no flag would have helped and "AFI/DSFID not set" would have been the honest answer.
+
+The last rules out the other one. It was run AFTER the app already passed this case, because a pass is
+consistent with two stories: the card complaining about the flag and the retry carrying it, or the
+addressed frame being accepted outright with the flag never involved. Under the second, addressing
+would have been the fix and OPTION irrelevant here -- the same two-bits-at-once confusion that made
+the original TI finding wrong. It is the first: **the OPTION flag is required for the identity writes
+as well, and addressing alone is not sufficient.**
+
+**Bench: PASSES.** With the fields reset to `00` first, so the run could fail, an `identity_64` clone
+onto `white-coin` reports **Success** and `hf 15 info` reads `DSFID 0x05` / `AFI 0x27`.
+
+**What is left unaddressed is the gen1 and gen2 backdoor sequences**, measured to work that way on all
+five cards, with nothing measured about addressing them.
