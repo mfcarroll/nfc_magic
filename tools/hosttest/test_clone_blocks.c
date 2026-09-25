@@ -244,6 +244,8 @@ static void test_gen1_skips_the_backdoor_blocks(void) {
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 60); // 64 less 56, 57, 62, 63
+    CHECK(inst.clone_gen1_blocks_skipped); // and the result screens may say so
+    CHECK(inst.clone_gen1_data_lost); // the file held data there, so the clone lost it
     CHECK_EQ(inst.clone_failed_count, 0);
     // The four were never written, so the target still holds its OWN byte, not the source's.
     CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
@@ -270,8 +272,30 @@ static void test_gen1_small_source_deducts_nothing(void) {
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 32); // all 32, no phantom deduction
+    // ...and nothing was skipped, so no screen may tell the user those blocks are missing from the
+    // card. The deduction and the caveat come off the same count for exactly this reason.
+    CHECK(!inst.clone_gen1_blocks_skipped);
+    CHECK(!inst.clone_gen1_data_lost);
     CHECK_EQ(inst.clone_failed_count, 0);
     CHECK_EQ(inst.clone_over_capacity, 0);
+    end();
+}
+
+// Reaching those addresses is not the same as losing anything there. A file whose 56/57/62/63 are empty
+// has the same four deducted -- gen1 cannot store them either way -- but lost nothing, and the result has
+// to be able to tell the two apart.
+static void test_gen1_reaching_empty_backdoor_blocks_loses_nothing(void) {
+    begin("a gen1 clone of a file with nothing at 56/57/62/63 deducts them but loses nothing");
+    fake_tag_init(64, 64, 4);
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 56, 57, 0x00);
+    fake_data_fill(&source, 62, 63, 0x00);
+    Iso15693Poller inst;
+    run_clone(&inst, true);
+
+    CHECK_EQ(inst.clone_blocks_total, 60);
+    CHECK(inst.clone_gen1_blocks_skipped);
+    CHECK(!inst.clone_gen1_data_lost);
     end();
 }
 
@@ -415,6 +439,7 @@ int main(void) {
     test_card_lifted_mid_clone();
     test_gen1_skips_the_backdoor_blocks();
     test_gen1_small_source_deducts_nothing();
+    test_gen1_reaching_empty_backdoor_blocks_loses_nothing();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();
