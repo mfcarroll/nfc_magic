@@ -53,21 +53,9 @@ note now says so, because the tempting fix is to make all twelve agree and break
 
 ## A correction back to you
 
-`5c97e16f` is right in its gates, its derivation and its disjunct framing, and I have built on it
-rather than replaced it. Two things are missing, both in the under-warning direction.
-
-There is a **third gate**: the run has to survive the re-probe that follows the trip. Your own text
-says `wipe_note_present` zeroes the run from the read path and the re-probe as well as a landed
-write — so the mechanism is already there, but "A the first block that answers nothing" cannot hold
-beside it. A is the first block of the **final unbroken run**, and the third gate is what makes it
-terminal.
-
-It bites on a card that recovers. One **advertising 56** that reads 0-4, goes silent at 5, reads 6-59
-and is silent from 60 reaches 56 and 57 — while `A = 5` with `claim = 56` makes both disjuncts false.
-The claim has to be named there or the example proves nothing, since at any higher claim the claim
-term carries it anyway.
-
-The 256 ceiling is in the form now too. It binds the A term alone.
+One, on the reach rule, and it is in the thread where you raised it rather than repeated here:
+`5c97e16f` needs a third gate, and `A` is the first block of the final unbroken run rather than the
+first silence anywhere. Both omissions under-warn.
 
 ## Ours, and something to raise
 
