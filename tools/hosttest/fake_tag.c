@@ -290,6 +290,48 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
     return Iso15693_3ErrorNone;
 }
 
+// WRITE DSFID / WRITE AFI, addressed. The send's return says nothing about whether the field took --
+// the SDK has no response parser for these and neither does the app, so an in-band refusal is
+// indistinguishable from success at this layer. Only the GET SYSTEM INFO read-back tells them apart,
+// and that is what write_identity is built around. The one thing the RESPONSE carries is the 0x03
+// complaint about the OPTION flag, so that is the one thing modelled here.
+static Iso15693_3Error fake_addressed_identity(const BitBuffer* tx, BitBuffer* rx) {
+    if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
+        return Iso15693_3ErrorTimeout;
+    }
+    for(size_t i = 0; i < ISO15693_3_UID_SIZE; i++) {
+        if(tx->data[2 + i] != fake_tag.uid[ISO15693_3_UID_SIZE - 1 - i]) {
+            return Iso15693_3ErrorTimeout; // a wrong address gets silence here too
+        }
+    }
+    bit_buffer_reset(rx);
+    if(fake_tag.requires_option && (tx->data[0] & ISO15693_3_REQ_FLAG_T4_OPTION) == 0) {
+        bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_ERROR);
+        bit_buffer_append_byte(rx, ISO15693_3_RESP_ERROR_OPTION);
+        return Iso15693_3ErrorNone;
+    }
+
+    const bool is_dsfid = (tx->data[1] == 0x29);
+    const uint8_t value = tx->data[2 + ISO15693_3_UID_SIZE];
+    fake_tag.identity_writes_seen++;
+    const bool transient_refusal = fake_tag.identity_writes_seen <=
+                                   fake_tag.identity_writes_refused;
+    const bool refused = transient_refusal ||
+                         (is_dsfid ? fake_tag.refuses_dsfid : fake_tag.refuses_afi);
+    if(!refused) {
+        if(is_dsfid) {
+            fake_tag.dsfid = value;
+            fake_tag.advertises_dsfid = true;
+        } else {
+            fake_tag.afi = value;
+            fake_tag.advertises_afi = true;
+        }
+    }
+    if(fake_tag.writes_are_unacknowledged) return Iso15693_3ErrorTimeout;
+    bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_NONE);
+    return Iso15693_3ErrorNone;
+}
+
 Iso15693_3Error iso15693_3_poller_send_frame(
     Iso15693_3Poller* instance,
     const BitBuffer* tx,
@@ -310,30 +352,13 @@ Iso15693_3Error iso15693_3_poller_send_frame(
         return fake_addressed_write(buf, rx);
     }
 
-    if(buf->data[0] != 0x02) return Iso15693_3ErrorNone;
-
-    // WRITE DSFID: 02 29 <value>.  WRITE AFI: 02 27 <value>.
-    // Both return None whatever happens, which is the point: the SDK has no response parser for these,
-    // so an in-band refusal is indistinguishable from success at this layer. Only the read-back tells
-    // them apart, and that is what write_identity is built around.
-    if((buf->data[1] == 0x29 || buf->data[1] == 0x27) && buf->size >= 3) {
-        const bool is_dsfid = (buf->data[1] == 0x29);
-        fake_tag.identity_writes_seen++;
-        const bool transient_refusal = fake_tag.identity_writes_seen <=
-                                       fake_tag.identity_writes_refused;
-        const bool refused = transient_refusal ||
-                             (is_dsfid ? fake_tag.refuses_dsfid : fake_tag.refuses_afi);
-        if(!refused) {
-            if(is_dsfid) {
-                fake_tag.dsfid = buf->data[2];
-                fake_tag.advertises_dsfid = true;
-            } else {
-                fake_tag.afi = buf->data[2];
-                fake_tag.advertises_afi = true;
-            }
-        }
-        return Iso15693_3ErrorNone;
+    // Addressed WRITE DSFID / WRITE AFI: 22 29|27 <uid, LSB first> <value>, or 62 with OPTION.
+    if((buf->data[0] & ~ISO15693_3_REQ_FLAG_T4_OPTION) == 0x22 &&
+       (buf->data[1] == 0x29 || buf->data[1] == 0x27) && buf->size >= 11) {
+        return fake_addressed_identity(buf, rx);
     }
+
+    if(buf->data[0] != 0x02) return Iso15693_3ErrorNone;
 
     // gen1: 02 21 <block> d0 d1 d2 d3
     if(buf->data[1] == 0x21 && buf->size >= 7) {

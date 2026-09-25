@@ -81,9 +81,21 @@ static void source_with_identity(bool want_dsfid, uint8_t dsfid, bool want_afi, 
     }
 }
 
+// The poller owns its frame buffers for its whole life and addresses every write to the card it found
+// at activation. This driver calls write_identity directly, below write_step, so it stands in for both.
+static BitBuffer* driver_tx;
+static BitBuffer* driver_rx;
+
 static Iso15693Poller run_identity(void) {
+    if(driver_tx == NULL) {
+        driver_tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+        driver_rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+    }
     Iso15693Poller inst;
     memset(&inst, 0, sizeof(inst));
+    inst.frame_tx = driver_tx;
+    inst.frame_rx = driver_rx;
+    memcpy(inst.address_uid, fake_tag.uid, ISO15693_3_UID_SIZE);
     inst.clone_source = &source;
     iso15693_poller_write_identity(&inst, NULL);
     return inst;
@@ -105,6 +117,72 @@ static void test_source_with_no_identity_sends_nothing(void) {
     CHECK_EQ(fake_tag.identity_writes_seen, 0);
     CHECK(!inst.clone_dsfid_failed);
     CHECK(!inst.clone_afi_failed);
+    end();
+}
+
+// WRITE AFI and WRITE DSFID are STANDARD commands, so an unaddressed one lands on a bystander of any
+// size -- and a changed AFI can drop that tag out of a selective inventory, which is a card that then
+// looks absent to the reader that uses it. That gave these the strongest claim to an address of
+// anything left unaddressed. Pinned as bytes because the wrong UID order does not fail loudly: it
+// addresses a card that is not there, so the field simply never takes.
+static void test_the_identity_frame_is_addressed(void) {
+    begin("an identity write is addressed and carries the UID least significant byte first");
+    fake_tag_init(8, 8, 4);
+    Iso15693Poller inst = run_identity(); // for the buffers and the address it sets up
+    iso15693_poller_send_identity_frame(&inst, NULL, ISO15693_MAGIC_CMD_WRITE_AFI, 0x27);
+
+    const uint8_t expected[] = {
+        0x22, // SUBCARRIER_1 | DATA_RATE_HI | T4_ADDRESSED
+        0x27, // WRITE AFI
+        0xE7, 0xE6, 0xE5, 0xE4, 0xE3, 0xE2, 0xE1, 0xE0, // fake_tag_init's UID, reversed
+        0x27}; // the value
+    CHECK_EQ(bit_buffer_get_size_bytes(inst.frame_tx), sizeof(expected));
+    for(size_t i = 0; i < sizeof(expected) && i < bit_buffer_get_size_bytes(inst.frame_tx); i++) {
+        CHECK_EQ(bit_buffer_get_byte(inst.frame_tx, i), expected[i]);
+    }
+    end();
+}
+
+// The control for that: prove the tag FILTERS on the address, so a field that lands is evidence the
+// address was right rather than evidence nobody was checking.
+static void test_a_wrongly_addressed_identity_write_lands_nowhere(void) {
+    begin("an identity write addressed to the wrong card sets nothing");
+    fake_tag_init(8, 8, 4);
+    source_with_identity(true, 0x5A, true, 0xC3);
+
+    Iso15693Poller inst;
+    memset(&inst, 0, sizeof(inst));
+    inst.frame_tx = driver_tx;
+    inst.frame_rx = driver_rx;
+    memcpy(inst.address_uid, fake_tag.uid, ISO15693_3_UID_SIZE);
+    inst.address_uid[0] ^= 0x01; // one byte wrong
+    inst.clone_source = &source;
+    iso15693_poller_write_identity(&inst, NULL);
+
+    CHECK(inst.clone_dsfid_failed);
+    CHECK(inst.clone_afi_failed);
+    CHECK_EQ(fake_tag.dsfid, 0);
+    CHECK_EQ(fake_tag.afi, 0);
+    end();
+}
+
+// The OPTION flag is a property of the card, not of the command, so a card that objects to a data
+// block objects to these too. It is learned here rather than inherited, because write_identity runs
+// BEFORE the first data block -- so on a TI clone this pass is where the 0x03 first arrives.
+static void test_a_card_that_wants_the_option_flag_gets_it_here_too(void) {
+    begin("a card wanting the OPTION flag gets it on the identity writes, learned from its own answer");
+    fake_tag_init(8, 8, 4);
+    fake_tag.requires_option = true;
+    fake_tag.writes_are_unacknowledged = true; // the other half of the same card
+    source_with_identity(true, 0x5A, true, 0xC3);
+
+    Iso15693Poller inst = run_identity();
+
+    CHECK(inst.write_option); // set by the card's own 0x03, with no data block written yet
+    CHECK(!inst.clone_dsfid_failed);
+    CHECK(!inst.clone_afi_failed);
+    CHECK_EQ(fake_tag.dsfid, 0x5A);
+    CHECK_EQ(fake_tag.afi, 0xC3);
     end();
 }
 
@@ -272,6 +350,9 @@ int main(void) {
     test_only_the_requested_field_is_attempted();
     test_one_field_failing_does_not_taint_the_other();
     test_loop_stops_once_both_verify();
+    test_the_identity_frame_is_addressed();
+    test_a_wrongly_addressed_identity_write_lands_nowhere();
+    test_a_card_that_wants_the_option_flag_gets_it_here_too();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
 }
