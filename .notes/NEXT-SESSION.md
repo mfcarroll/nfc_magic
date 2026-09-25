@@ -1,4 +1,45 @@
-# Next session — THE MAINTAINER PUSHED TWELVE COMMITS. Round 14 is built, unpushed, undrafted-to-him.
+# Next session — ROUND 14 IS PUSHED AND POSTED. The blocker is the addressing work, not him.
+
+**Pushed `749f10e6..dbc11980`, a fast-forward of 7, all signed.** PR head confirmed via the API
+before posting. **Posted:** the main reply as
+[issuecomment-5824709850](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5824709850),
+and all seven thread replies, each verified by `in_reply_to` AND by the root's file.
+
+**He took the branch himself this round** -- `a27d187d..749f10e6`, twelve commits, four behavioural.
+All twelve adopted into dev; three of our round-13 commits were moot because he reached the same
+conclusions independently. We added seven on top.
+
+**THE BENCH IS DONE.** His `0c5a7d69`, `62b60e2b` and `4d20f06e` all pass on hardware; `749f10e6` was
+settled against the firmware source. Our own `dbc11980` consent fix is confirmed end to end by the
+two-card Retry.
+
+**⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
+Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
+
+## WHAT IS ACTUALLY BLOCKING NOW
+
+**Addressed writes, and the gen1 caveat gate with them.** The reply no longer offers him a scoping
+choice: shipping ISO15693 support that cannot write a TI Tag-it is not a later problem, so this
+belongs in this PR. Both are recorded in
+[pr-round-10/unaddressed-write-finding.md](pr-round-10/unaddressed-write-finding.md).
+
+Raised with him and awaiting his call: the protocol menus keeping their cursor across a fresh scan.
+App-wide, one dispatch point in `magic_info.c`, six lines. We offered to implement it.
+
+## ⚠️ READ .notes/WRITING-RULES.md BEFORE WRITING ANYTHING OUTWARD
+
+Built this round because the rules existed and we broke them anyway -- they were 264 lines of prose
+in this file, ordered by when we learned them. They are now ordered by WHICH ARTIFACT you are
+writing, with a gate (`tools/check-writing.py`, wired into `replay-to-fork.sh`, which refuses to
+replay on a finding) and, more importantly, **eight read-through questions the gate cannot replace**.
+
+Every defect this round was caught by a human read, not a checker: comparisons against work he cannot
+see, a section he could not act on, a conclusion that did not follow, a question that was no longer
+open, restating a lesson he taught us, a whole reply section duplicating its own thread, and -- after
+fixing that -- narration about where we had moved it. A fourth stale heading got through a checker
+written to catch stale headings.
+
+## Where things stood before
 
 **mishamyte pushed `a27d187d..749f10e6` to the PR branch himself** — five prose fixes answering
 round 11, a six-commit sweep of the whole PR, and an rx-buffer fix. **Four are behavioural**, which
