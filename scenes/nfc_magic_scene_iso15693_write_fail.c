@@ -294,7 +294,14 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             // nothing and is reported as an over-capacity success, not here.)
             furi_string_cat_str(text, "\nCard too small");
         } else if(instance->iso15693_result.used_gen1) {
-            furi_string_cat_str(text, "\ngen1: 56/57/62/63 differ");
+            // Two claims, and only one of them is about the source. "differ" says the file HAS data at
+            // those addresses and the card does not -- true only when the source reached them, which
+            // gen1_blocks_skipped is the record of. Below block 57 the file has no such blocks, the
+            // count above deducted nothing, and the honest line is that the UID lives there.
+            furi_string_cat_str(
+                text,
+                instance->iso15693_result.gen1_blocks_skipped ? "\ngen1: 56/57/62/63 differ" :
+                                                                "\ngen1: UID in 56/57/62/63");
         } else if(instance->iso15693_result.identity_failed) {
             // All data blocks took, but the card rejected the AFI/DSFID write.
             furi_string_cat_str(text, "\nAFI/DSFID not set");

@@ -107,6 +107,11 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   refusal. **TI Tag-it HF-I Plus** needs both halves. Without them no data block could be written to
   that chip at all, and with only the first a wipe zeroed the whole card and then reported that
   nothing had been cleared.
+- **A gen1 clone that lost nothing now reports plain success.** gen1 writes the UID into blocks
+  56/57/62/63, so a source containing those blocks loses them and the clone is still Partial — but a
+  source below block 57 has none of them, nothing is missing, and every such clone was reported as
+  Partial with a note saying four blocks "differ" from a file that has no blocks that high. Those runs
+  are now a clean success, and where the note does apply it says what was actually skipped.
 ### Validation
 
 - **gen1** was validated on hardware across three chips: ST LRi2K (56 blocks), NXP SLIX (28) and NXP

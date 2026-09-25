@@ -244,6 +244,7 @@ static void test_gen1_skips_the_backdoor_blocks(void) {
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 60); // 64 less 56, 57, 62, 63
+    CHECK(inst.clone_gen1_blocks_skipped); // and the result screens may say so
     CHECK_EQ(inst.clone_failed_count, 0);
     // The four were never written, so the target still holds its OWN byte, not the source's.
     CHECK_EQ(fake_tag.content[56][0], FAKE_MARKER);
@@ -270,6 +271,9 @@ static void test_gen1_small_source_deducts_nothing(void) {
 
     CHECK(present);
     CHECK_EQ(inst.clone_blocks_total, 32); // all 32, no phantom deduction
+    // ...and nothing was skipped, so no screen may tell the user those blocks are missing from the
+    // card. The deduction and the caveat come off the same count for exactly this reason.
+    CHECK(!inst.clone_gen1_blocks_skipped);
     CHECK_EQ(inst.clone_failed_count, 0);
     CHECK_EQ(inst.clone_over_capacity, 0);
     end();

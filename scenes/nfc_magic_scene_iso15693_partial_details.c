@@ -149,9 +149,16 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
                         "whether the wipe changed the card's UID is unknown.");
     }
     if(instance->iso15693_result.used_gen1) {
-        // Unconditional: those four blocks differ from the source whatever the write results above say.
+        // Both are true of the card, and they differ in whether anything from the FILE was lost --
+        // which is what gen1_blocks_skipped records. A source below block 57 has no blocks that high,
+        // so the stronger wording would name data the file never carried.
         if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
-        furi_string_cat_str(message, "gen1: 56/57/62/63 hold UID + unlock/commit, not file data.");
+        furi_string_cat_str(
+            message,
+            instance->iso15693_result.gen1_blocks_skipped ?
+                "gen1: 56/57/62/63 hold UID + unlock/commit, not file data." :
+                "gen1: the UID was set through 56/57/62/63. The file has no blocks that high, so "
+                "nothing in it was skipped.");
     }
     if(instance->iso15693_result.identity_failed) {
         // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not

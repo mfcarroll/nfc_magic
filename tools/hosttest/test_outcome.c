@@ -128,13 +128,27 @@ static void test_over_capacity_alone_is_still_success(void) {
     end();
 }
 
-// gen1 stores the UID and commit words in data blocks 56/57/62/63, so a clone that fell back to gen1
-// cannot be byte-identical to its source there.
-static void test_gen1_clone_is_partial(void) {
-    begin("a clone that fell back to gen1 is Partial");
+// gen1 stores the UID and commit words at 56/57/62/63, so a clone whose SOURCE reached those blocks
+// cannot be byte-identical to it there.
+static void test_gen1_clone_that_skipped_blocks_is_partial(void) {
+    begin("a gen1 clone whose source reached 56/57/62/63 is Partial");
     Iso15693Poller inst = clean_clone();
     inst.clone_used_gen1 = true;
+    inst.clone_gen1_blocks_skipped = true;
     CHECK_OUTCOME(&inst, Iso15693PollerEventPartial);
+    end();
+}
+
+// ...and a source below block 57 has none of them, so nothing of it is missing and the run is clean.
+// Nor can the CARD have lost anything: on all three gen1 chips measured those four addresses answer no
+// read at any point, so there was never anything there to displace. The user opted into gen1 and gen1
+// worked; the registers are not their problem, and they see the plain Success popup.
+static void test_gen1_clone_that_skipped_nothing_is_success(void) {
+    begin("a gen1 clone whose source stops below 57 is a clean Success");
+    Iso15693Poller inst = clean_clone();
+    inst.clone_used_gen1 = true;
+    inst.clone_gen1_blocks_skipped = false;
+    CHECK_OUTCOME(&inst, Iso15693PollerEventSuccess);
     end();
 }
 
@@ -147,6 +161,11 @@ static void test_gen1_write_uid_is_success(void) {
     memset(&inst, 0, sizeof(inst));
     inst.mode = Iso15693PollerModeWriteUid;
     inst.clone_used_gen1 = true;
+    // Deliberately an UNREACHABLE combination: only write_source_blocks sets this, and a Write-UID
+    // never runs it. Set here because the `clone &&` guard is what this case exists to pin, and
+    // leaving the field false lets the guard be deleted with every test still green -- the mode
+    // would then be carried only by a field that happens not to be set.
+    inst.clone_gen1_blocks_skipped = true;
     inst.uid_verified = true;
     CHECK_OUTCOME(&inst, Iso15693PollerEventSuccess);
     end();
@@ -295,7 +314,8 @@ int main(void) {
     test_clean_wipe_is_success();
     test_any_failed_block_is_partial();
     test_over_capacity_alone_is_still_success();
-    test_gen1_clone_is_partial();
+    test_gen1_clone_that_skipped_blocks_is_partial();
+    test_gen1_clone_that_skipped_nothing_is_success();
     test_gen1_write_uid_is_success();
     test_identity_failure_is_partial_for_a_clone_only();
     test_uid_changed_is_partial();

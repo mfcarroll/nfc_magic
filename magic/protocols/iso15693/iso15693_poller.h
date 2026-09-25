@@ -206,6 +206,12 @@ typedef struct {
     uint8_t failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE];
     // The gen1 fallback set the UID. Implies gen1_attempted; the difference is that here it read back.
     bool used_gen1;
+    // ...and the source actually HAD data at one or more of 56/57/62/63, so the clone left it behind.
+    // A narrower question than used_gen1 and the one the result screens need: on a source below 57
+    // those addresses are not in the file at all, so nothing of it is missing and a screen saying
+    // they "differ from the source" is describing blocks that do not exist. Set from the same
+    // expression that deducts them from blocks_total, so the count and the caveat cannot disagree.
+    bool gen1_blocks_skipped;
     // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is
     // genuinely larger than the card's physical capacity. False for a scattered or anomalous failure,
     // which is reported generically with no capacity claim -- and false for ANY cut run, however

@@ -299,6 +299,62 @@ static void test_wipe_card_lost_with_a_verified_uid_offers_exit(void) {
     end();
 }
 
+// The gen1 caveat makes a claim about the SOURCE, and for four rounds it made that claim on a source
+// that could not support it. A 28-block file has no blocks 56/57/62/63, so nothing of it is missing
+// and "differ" describes blocks that do not exist -- while the count on the line above, derived from
+// the same fact in the poller, correctly deducted nothing. gen1_blocks_skipped is the one record of
+// it, and these pin both sides of it on both screens.
+static void test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_blocks(void) {
+    begin("the gen1 caveat says data is missing only when the source had blocks that high");
+    Iso15693PollerResult small = {0};
+    small.blocks_total = 28;
+    small.used_gen1 = true;
+    small.gen1_blocks_skipped = false;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &small);
+    CHECK(fake_scene_text_contains("UID in 56/57/62/63"));
+    CHECK(!fake_scene_text_contains("differ"));
+
+    Iso15693PollerResult big = {0};
+    big.blocks_total = 60;
+    big.used_gen1 = true;
+    big.gen1_blocks_skipped = true;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &big);
+    CHECK(fake_scene_text_contains("56/57/62/63 differ"));
+    end();
+}
+
+static void test_the_gen1_details_note_matches_the_source(void) {
+    begin("the gen1 Details note does not claim missing file data that the file never had");
+    Iso15693PollerResult small = {0};
+    small.blocks_total = 28;
+    small.used_gen1 = true;
+    small.gen1_blocks_skipped = false;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &small);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "nothing in it was skipped") != NULL);
+        CHECK(strstr(scroll, "not file data") == NULL);
+    }
+
+    Iso15693PollerResult big = {0};
+    big.blocks_total = 60;
+    big.used_gen1 = true;
+    big.gen1_blocks_skipped = true;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &big);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+    scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "not file data") != NULL);
+        CHECK(strstr(scroll, "nothing in it was skipped") == NULL);
+    }
+    end();
+}
+
 // The sentence itself, and its wording. A card-lost wipe never reached the field reset, so the note must
 // not blame one -- "did not answer after the field reset" names a step that never happened here.
 static void test_wipe_card_lost_details_says_the_check_never_finished(void) {
@@ -641,6 +697,8 @@ int main(void) {
     test_wipe_card_lost_offers_details_for_the_uid_note();
     test_wipe_card_lost_with_a_verified_uid_offers_exit();
     test_wipe_card_lost_details_says_the_check_never_finished();
+    test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_blocks();
+    test_the_gen1_details_note_matches_the_source();
     test_wipe_card_lost_details_lists_no_blocks();
     test_wipe_stopped_says_it_timed_out();
     test_wipe_stopped_prints_the_cut_not_the_total();
