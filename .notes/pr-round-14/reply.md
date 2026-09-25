@@ -61,10 +61,11 @@ under-warn.
 
 **A consent defect, found while explaining a bench observation that turned out to be innocent.** A
 second write of the same file gave no gen1 consent — correctly, because the first write had already
-moved the card's UID to the source's, so gen2 found it matching. Tracing why exposed something real
-underneath: `iso15693_force_gen1` was set at the opt-in and cleared only at the ISO15693 menu, and
-Retry is `scene_manager_previous_scene` straight back into the write scene. So any route back in that
-bypassed the menu repeated the destructive gen1 write without asking.
+moved the card's UID to the source's, so the gen2 path found it matching, making the gen1 fallback
+unnecessary. Tracing why exposed something real underneath: `iso15693_force_gen1` was set at the
+opt-in and cleared only at the ISO15693 menu, and Retry is `scene_manager_previous_scene` straight
+back into the write scene. So any route back in that bypassed the menu repeated the destructive gen1
+write without asking.
 
 It matters because Retry does not re-identify the card, and the case Retry exists for is CardLost.
 Benched end to end: consent on card A, remove it, put card B on the coil, hit Retry — before, B took
@@ -79,11 +80,11 @@ UID, and a Retry landing on a different card.
 This is the first behavioural change from my side rather than prose, so: bench-confirmed symptom,
 bench-confirmed fix, four harness tests, mutation-checked.
 
-**And one for you rather than for this PR.** The protocol menus keep their cursor across a whole new
-card scan, not just within one — write UID, success, Check Magic Tag, More, and the cursor is still
-on Write UID. It is app-wide: all six set scene state on event, read it on enter and never clear it,
-and `magic_info.c` is the single place a fresh scan dispatches, so it would be about six lines for
-all six or none.
+**And one for you to decide.** The protocol menus keep their cursor across a whole new card scan, not
+just within one — write UID, success, Check Magic Tag, More, and the cursor is still on Write UID. It
+is app-wide: all six set scene state on event, read it on enter and never clear it, and
+`magic_info.c` is the single place a fresh scan dispatches, so it would be about six lines for all
+six or none.
 
 The argument for changing it is consistency with the app's own behaviour rather than taste. The
 scene state is only ever written by the user's own menu selection, so on first load it is 0 and the
@@ -97,7 +98,7 @@ adds no exposure — it makes scans two onwards behave like scan one. And it doe
 `62b60e2b`, which is about returning from Info within one flow; that is a different axis.
 
 Leaving it to you because it is shared app code in a PR about ISO15693, not because I think it should
-stay.
+stay. Happy to implement the change if you'd like.
 
 ## Where this stands
 
