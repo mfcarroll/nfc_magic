@@ -16,6 +16,36 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## IN FLIGHT: addressed writes — measured, not yet implemented
+
+**All five chips accept addressed WRITE BLOCK.** Measured 2026-09-24, full transcripts and frames in
+[pr-round-15/addressed-writes-measured.md](pr-round-15/addressed-writes-measured.md). That file is
+the input to the implementation; read it before writing code.
+
+The design is settled by measurement rather than by argument:
+
+- always-addressed is safe -- `gen-2-card` was the one that could have blocked it and does not
+- the WIPE must re-inventory and re-address after a write to 56 or 57 lands, because the UID moves
+  immediately and the stale address gets silence. Confirmed on NXP SLIX and ST LRi2K, the latter
+  being the chip the armed-gen1 hazard was reproduced on
+- the gen1 backdoor sequence stays UNADDRESSED -- measured to work that way on all five
+- the SDK cannot do it: `iso15693_3_poller_write_block` hardcodes the flags and
+  `iso15693_3_write_block_response_parse` is internal, so we need our own builder and response check
+
+**One frame outstanding**, and it is a gap in my test design rather than a card behaviour:
+`SL2S5302` was never sent a mis-addressed write, so "it enforces the address" is untested there.
+
+    hf 15 raw -ackw -d 2221F8350003500204E10855667788    expect no answer
+
+**Two controls also passed** before this, in
+[pr-round-15/controls-2026-09-24.md](pr-round-15/controls-2026-09-24.md): EM-Marin still wipes 64/64,
+and gen1 clears 28/28 ordinary data blocks unaddressed. Both were recorded as unmeasured prerequisites
+in the round-10 finding.
+
+**#251 is three defects and this closes one.** The 1-slot inventory and the missing STAY QUIET are
+untouched, and the issue's worst consequence -- the post-wipe UID check answered by a bystander --
+cannot be fixed by addressing at all. Do not report this as closing #251.
+
 ## WHAT IS ACTUALLY BLOCKING NOW
 
 **Addressed writes, and the gen1 caveat gate with them.** The reply no longer offers him a scoping

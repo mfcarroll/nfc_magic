@@ -89,12 +89,83 @@ fix for TI would have broken the card that already worked. It does not.
 
 Block 8 of the clone is now `11223344`. Nothing depends on it.
 
+## ST LRi2K — accepts, enforces, and stale-address confirmed on a second chip
+
+```
+hf 15 raw -ackw -d 222003830050242202E008           addressed READ  blk 8 -> 00 00 00 00 00 77 CF
+hf 15 raw -ackw -d 222103830050242202E00811223344   addressed WRITE blk 8 -> 00 78 F0
+hf 15 raw -ackw -d 02213800000000                   unaddressed zero blk 56 -> 00 78 F0
+hf 15 raw -ck   -d 260100                           -> 00 00 00 00 00 00 24 22 02 E0
+hf 15 raw -ckw  -d 222103830050242202E00999AABBCC   addressed, OLD UID    -> no answer
+hf 15 raw -ackw -d 02213803830050                   restore blk 56        -> 00 78 F0
+hf 15 reader                                        -> E0 02 22 24 50 00 83 03
+```
+
+Block 56 holds `uid[7..4]`, which LSB-first is the leading `03 83 00 50`. Zeroing it moves the UID to
+`E0 02 22 24 00 00 00 00`, exactly as the SLIX did with its own high half. The pre-write address then
+goes unanswered.
+
+**This chip gets enforcement for free from that step** -- the old UID is a wrong UID -- so it needs no
+separate mis-addressed control. And it is the chip the armed-gen1 wipe hazard was reproduced on, so
+the re-address logic is now measured on the silicon where it will actually fire.
+
+## NXP SLIX-S 0x02 — accepts; enforcement NOT tested
+
+```
+hf 15 raw -ackw -d 2220F8350003500204E008           addressed READ  blk 8 -> 00 00 00 00 00 77 CF
+hf 15 raw -ackw -d 2221F8350003500204E00811223344   addressed WRITE blk 8 -> 00 78 F0
+```
+
+**Gap, and it is mine rather than the card's**: `gen-2-card` was given a wrong-UID control and this
+one was not. Accepting a correctly-addressed write does not show the address is being MATCHED -- a
+tag that ignored the addressed flag entirely would answer identically. One frame closes it:
+
+```
+hf 15 raw -ackw -d 2221F8350003500204E10855667788   last byte E0 -> E1, expect no answer
+```
+
 ## Running total
 
-| chip | addressed WRITE | how |
-|---|---|---|
-| TI Tag-it HF-I Plus | **accepts** | the control in the original unaddressed finding |
-| NXP ICODE SLIX 0x01 | **accepts, enforces** | `slix-1k-50mm`, above |
-| gen-2-card's silicon | **accepts, enforces** | above |
-| ST LRi2K | not run | `lri2k-keychain` -- also wants the session-B stale-address repeat, since this is the chip the armed wipe hazard was reproduced on |
-| NXP ICODE SLIX-S 0x02 | not run | `SL2S5302` |
+| chip | card | accepts addressed | enforces address | stale-address after UID move |
+|---|---|---|---|---|
+| TI Tag-it HF-I Plus | `white-coin` | yes | not tested | n/a -- not gen1 |
+| NXP ICODE SLIX 0x01 | `slix-1k-50mm` | yes | yes | **yes** |
+| gen-2-card's silicon | `gen-2-card` | yes | yes | n/a -- not gen1 |
+| ST LRi2K | `lri2k-keychain` | yes | yes | **yes** |
+| NXP ICODE SLIX-S 0x02 | `SL2S5302` | yes | **not tested** | not run |
+
+**Every chip this app can write accepts addressed WRITE BLOCK.** That is the premise of the whole
+approach and it now holds across all five, rather than the one it started from.
+
+TI's enforcement is untested and does not need testing: it REFUSES unaddressed writes, so it is
+already discriminating on the flag. The open item is SLIX-S, one frame.
+
+## What this settles for the implementation
+
+1. **Always-addressed is safe.** No card refuses it; the card that could have blocked it does not.
+2. **The wipe must re-address.** Measured on two chips now, not inferred from the spec: after a write
+   to 56 or 57 lands, the UID has moved and the old address gets silence. Re-inventory and re-address
+   from the result. At most twice per sweep. 62/63 carry no UID and need nothing.
+3. **The gen1 backdoor sequence stays unaddressed.** It is the magic sequence, measured to work
+   unaddressed on all five cards, and addressing it would be a change with no evidence behind it.
+4. **The SDK cannot do any of this.** `iso15693_3_poller_write_block` hardcodes
+   `SUBCARRIER_1 | DATA_RATE_HI` with no flags parameter and no UID, and
+   `iso15693_3_write_block_response_parse` is internal to `lib/nfc`. We need our own frame builder and
+   our own response check. The app already builds raw frames for the backdoor, so the pattern exists.
+5. **An SDK fix is a separate, later PR** -- different repo, needs upstream acceptance, and would need
+   a fallback keyed on API version since this app must keep working on today's SDK regardless.
+
+## What addressing does NOT close in #251
+
+Issue #251 has three parts. Addressing the writes closes one.
+
+- **writes** -- closed by this work.
+- **the 1-slot `INVENTORY_T5`** -- still returns whichever tag wins the slot rather than detecting a
+  collision. Untouched.
+- **no STAY QUIET** -- nothing suppresses a bystander. Untouched.
+
+The issue's worst consequence is the post-wipe UID check being answered by the bystander, printing a
+UID belonging to a different card. **That cannot be fixed by addressing**, by construction: the check
+exists to discover whether the UID changed, so it cannot be directed at a UID already suspected
+stale. It needs the inventory widened or STAY QUIET. Say so when reporting this work, or "addressed
+writes" will read as closing #251.
