@@ -56,7 +56,14 @@ belongs in this PR. Both are recorded in
 Raised with him and awaiting his call: the protocol menus keeping their cursor across a fresh scan.
 App-wide, one dispatch point in `magic_info.c`, six lines. We offered to implement it.
 
-## ⚠️ READ .notes/WRITING-RULES.md BEFORE WRITING ANYTHING OUTWARD
+## ⚠️ TWO RULE FILES, READ THE RELEVANT ONE FIRST
+
+[WRITING-RULES.md](WRITING-RULES.md) before anything goes outward.
+[BENCH-RULES.md](BENCH-RULES.md) before anything is measured -- extracted 2026-09-24 after shipping a
+five-card addressed-write measurement in which one card never received its control, so for that chip
+"it enforces the address" and "it ignores the flag entirely" were indistinguishable.
+
+### WRITING-RULES.md
 
 Built this round because the rules existed and we broke them anyway -- they were 264 lines of prose
 in this file, ordered by when we learned them. They are now ordered by WHICH ARTIFACT you are
