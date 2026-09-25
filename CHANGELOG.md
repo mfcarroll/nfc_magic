@@ -95,6 +95,10 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **Write UID refuses to "verify" a UID the card already has** — a read-back against the card's own UID
   is passed by any tag at all, magic or not, so it would report Success having proved nothing.
 
+- **Data-block writes are addressed to the card's UID**, so a second tag in the field is not written by
+  them. Confirmed on five cards — **TI Tag-it HF-I Plus**, **NXP ICODE SLIX** and **SLIX-S**, **ST
+  LRi2K**, and one gen2 card of unrecorded type: every one accepts an addressed **WRITE BLOCK**, and
+  a UID one byte wrong is answered by nothing.
 ### Validation
 
 - **gen1** was validated on hardware across three chips: ST LRi2K (56 blocks), NXP SLIX (28) and NXP
@@ -111,13 +115,12 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   zeroing those on an un-finalized card **bricks it permanently**: the cost is the card, not just its
   identity. Stated on their authority rather than ours: no gen3 card exists on either side of this PR,
   so nothing here has been observed. Tracked as #255.
-- **Every ISO15693 write reaches every tag in the field, not just the selected one** — any generation,
-  magic or not, on a wipe and a clone alike. No frame this app builds carries an address, so a second
-  tag in range takes all of it with nothing on screen saying it was there: a wipe zeros its data
-  blocks; **WRITE AFI** and **WRITE DSFID** are *standard* commands, so they land on a tag of any size
-  and a changed AFI can drop it out of a selective inventory; the gen1 backdoor writes four blocks of
-  ordinary user data. With two tags present the post-wipe UID re-read can even print the bystander's
-  UID as the card's. Keep one tag in the field at a time — a badge holder or a wallet is enough to
+- **Some writes still reach every tag in the field** — the gen1 and gen2 backdoor sequences, and
+  **WRITE AFI** / **WRITE DSFID** from a clone. The last two are *standard* commands, so they land on a
+  tag of any size, and a changed AFI can drop it out of a selective inventory. With two tags present
+  the post-wipe UID re-read can also answer with the bystander's UID rather than the card's, which
+  addressing cannot fix: that read exists to find out whether the UID changed, so it cannot be aimed at
+  a UID already in doubt. Keep one tag in the field at a time — a badge holder or a wallet is enough to
   break this. Tracked as #251.
 
 ## 2.2

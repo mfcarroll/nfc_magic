@@ -65,9 +65,26 @@ static uint16_t bitmap_count(const Iso15693Poller* inst) {
     return n;
 }
 
+// The poller allocates these once for its whole life and addresses every write to the card it found
+// at activation. These drivers call the pass functions directly, below write_step, so they stand in
+// for both: one buffer pair for the run, and the address Iso15693WriteStateStart would have taken.
+static BitBuffer* driver_tx;
+static BitBuffer* driver_rx;
+
+static void driver_init(Iso15693Poller* inst) {
+    if(driver_tx == NULL) {
+        driver_tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+        driver_rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+    }
+    memset(inst, 0, sizeof(*inst));
+    inst->frame_tx = driver_tx;
+    inst->frame_rx = driver_rx;
+    memcpy(inst->address_uid, fake_tag.uid, ISO15693_3_UID_SIZE);
+}
+
 // Run the sweep against whatever the fake tag currently is.
 static uint16_t run_sweep(Iso15693Poller* inst, bool* card_lost) {
-    memset(inst, 0, sizeof(*inst));
+    driver_init(inst);
     *card_lost = false;
     return iso15693_poller_wipe_blocks(inst, NULL, card_lost);
 }

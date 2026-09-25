@@ -161,29 +161,6 @@ Iso15693_3Error iso15693_3_poller_read_block(
     return Iso15693_3ErrorNone;
 }
 
-Iso15693_3Error iso15693_3_poller_write_block(
-    Iso15693_3Poller* instance,
-    const uint8_t* data,
-    uint8_t block_number,
-    uint8_t block_size) {
-    (void)instance;
-    fake_charge_op();
-    fake_tag.writes_attempted++;
-    // A lifted card answers nothing at all -> the radio layer times out.
-    if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
-        return Iso15693_3ErrorTimeout;
-    }
-    // Past-capacity blocks measured on hardware 2026-08-04 REFUSE the write in-band while failing the
-    // read outright, so a write above the card's top returns Internal, not silence. Both are non-None
-    // and the sweep treats them alike, but matching the measurement keeps the model honest.
-    if(fake_tag.kind[block_number] == FakeBlockAbsent) return Iso15693_3ErrorInternal;
-    // A present-but-locked block answers with an in-band error too.
-    if(fake_tag.kind[block_number] == FakeBlockLocked) return Iso15693_3ErrorInternal;
-    memcpy(fake_tag.content[block_number], data, block_size);
-    fake_tag.writes_accepted++;
-    return Iso15693_3ErrorNone;
-}
-
 Iso15693_3Error
     iso15693_3_poller_get_system_info(Iso15693_3Poller* instance, Iso15693_3SystemInfo* data) {
     (void)instance;
@@ -229,18 +206,93 @@ static void fake_stage_uid_half(bool is_7654, const uint8_t* d) {
 
 // Decode what the poller actually put on the wire. A tag that is not magic ignores all of it -- which is
 // the case the gen2-then-gen1 flow exists to detect, so the fake has to be able to be that tag.
+// Apply half a UID immediately, the way gen1 silicon does under the wipe's sweep: block 56 carries
+// uid[7..4] and block 57 uid[3..0], each takes effect on its own, and an inventory in the same field
+// session already returns the changed UID. Measured on NXP ICODE SLIX and ST LRi2K.
+//
+// Deliberately NOT the staging the gen1 BACKDOOR path below uses. That one holds both halves until a
+// power-cycle, which is stricter than the hardware on purpose (see gen1_uid_pending in fake_tag.h);
+// this one is the hazard itself -- the card's identity moving out from under a pass that is still
+// running -- and deferring it would model the opposite of what was measured.
+static void fake_apply_uid_half_now(bool is_7654, const uint8_t* d) {
+    uint8_t uid[ISO15693_3_UID_SIZE];
+    memcpy(uid, fake_tag.uid, sizeof(uid));
+    if(is_7654) {
+        uid[7] = d[0];
+        uid[6] = d[1];
+        uid[5] = d[2];
+        uid[4] = d[3];
+    } else {
+        uid[3] = d[0];
+        uid[2] = d[1];
+        uid[1] = d[2];
+        uid[0] = d[3];
+    }
+    fake_tag_set_uid_now(uid);
+}
+
+// Addressed WRITE BLOCK: 22 21 <uid, LSB first> <block> <data...>. Every data-block write the app
+// sends is this frame -- the clone's payload and the wipe's zeros alike.
+static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) {
+    fake_tag.writes_attempted++;
+    // A lifted card answers nothing at all -> the radio layer times out.
+    if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
+        return Iso15693_3ErrorTimeout;
+    }
+
+    // The UID travels least-significant byte first, so the frame's first address byte is uid[7].
+    for(size_t i = 0; i < ISO15693_3_UID_SIZE; i++) {
+        if(tx->data[2 + i] != fake_tag.uid[ISO15693_3_UID_SIZE - 1 - i]) {
+            // SILENCE, not an error frame. Measured on four of the five chips: a UID one byte wrong
+            // gets no answer at all. It is what makes an addressed write worth sending, and it is
+            // also exactly how a pass that failed to re-address after moving the UID looks.
+            return Iso15693_3ErrorTimeout;
+        }
+    }
+
+    const uint8_t block = tx->data[2 + ISO15693_3_UID_SIZE];
+    const uint8_t* data = tx->data + 3 + ISO15693_3_UID_SIZE;
+    bit_buffer_reset(rx);
+
+    if(!fake_block_answers(block) || fake_tag.kind[block] == FakeBlockLocked) {
+        // An IN-BAND refusal: a well-formed, CRC-valid error frame, which the radio layer reports as
+        // a successful exchange. Only the response parse tells it from a write that took. Absent
+        // blocks answer this way on hardware (measured 2026-08-04) rather than staying silent.
+        bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_ERROR);
+        bit_buffer_append_byte(
+            rx,
+            fake_tag.kind[block] == FakeBlockLocked ? ISO15693_3_RESP_ERROR_BLOCK_LOCKED :
+                                                      ISO15693_3_RESP_ERROR_BLOCK_UNAVAILABLE);
+        return Iso15693_3ErrorNone;
+    }
+
+    memcpy(fake_tag.content[block], data, fake_tag.block_size);
+    fake_tag.writes_accepted++;
+    if(fake_tag.is_gen1_magic && (block == 0x38 || block == 0x39)) {
+        fake_apply_uid_half_now(block == 0x38, data);
+    }
+    bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_NONE);
+    return Iso15693_3ErrorNone;
+}
+
 Iso15693_3Error iso15693_3_poller_send_frame(
     Iso15693_3Poller* instance,
     const BitBuffer* tx,
     BitBuffer* rx,
     uint32_t fwt) {
     (void)instance;
-    (void)rx;
     (void)fwt;
     fake_charge_op();
 
     const BitBuffer* buf = tx;
-    if(buf == NULL || buf->size < 3 || buf->data[0] != 0x02) return Iso15693_3ErrorNone;
+    if(buf == NULL || buf->size < 3) return Iso15693_3ErrorNone;
+
+    // Addressed WRITE BLOCK: flags, command, 8 address bytes, block, and at least one data byte.
+    if(buf->data[0] == 0x22 && buf->data[1] == 0x21 && buf->size >= 12) {
+        return fake_addressed_write(buf, rx);
+    }
+
+    if(buf->data[0] != 0x02) return Iso15693_3ErrorNone;
 
     // WRITE DSFID: 02 29 <value>.  WRITE AFI: 02 27 <value>.
     // Both return None whatever happens, which is the point: the SDK has no response parser for these,
@@ -383,4 +435,16 @@ void bit_buffer_reset(BitBuffer* buf) {
 void bit_buffer_append_byte(BitBuffer* buf, uint8_t byte) {
     furi_check(buf->size < FAKE_FRAME_CAP);
     buf->data[buf->size++] = byte;
+}
+void bit_buffer_append_bytes(BitBuffer* buf, const uint8_t* data, size_t size_bytes) {
+    furi_check(buf->size + size_bytes <= FAKE_FRAME_CAP);
+    memcpy(buf->data + buf->size, data, size_bytes);
+    buf->size += size_bytes;
+}
+size_t bit_buffer_get_size_bytes(const BitBuffer* buf) {
+    return buf->size;
+}
+uint8_t bit_buffer_get_byte(const BitBuffer* buf, size_t index) {
+    furi_check(index < buf->size);
+    return buf->data[index];
 }

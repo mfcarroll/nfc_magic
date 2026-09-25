@@ -14,12 +14,13 @@
 #define FAKE_MAX_BLOCK_SIZE (32U)
 
 // Mirrors lib/nfc/protocols/iso15693_3/iso15693_3.h member-for-member and in order, so the values match
-// the SDK's as well as the names. The poller only ever compares against None, but matching exactly costs
-// nothing and removes a reason to doubt the model.
+// the SDK's as well as the names. The callers only ever compare against None, but the poller's own
+// response parse PRODUCES these, so here the values have to be right rather than merely distinct.
 //
-// Iso15693_3ErrorInternal is what a refused write actually produces: iso15693_3_error_response_parse
-// maps BLOCK_UNAVAILABLE / BLOCK_LOCKED / BLOCK_ALREADY_LOCKED / BLOCK_WRITE / BLOCK_LOCK to it
-// (iso15693_3_i.c:42-48). It is a well-formed error RESPONSE, not silence.
+// Iso15693_3ErrorInternal is what a refused write actually produces: BLOCK_UNAVAILABLE / BLOCK_LOCKED /
+// BLOCK_ALREADY_LOCKED / BLOCK_WRITE / BLOCK_LOCK all map to it, in iso15693_3_error_response_parse
+// (iso15693_3_i.c:42-48) and in the app's iso15693_poller_parse_write_response alike. It is a
+// well-formed error RESPONSE, not silence.
 typedef enum {
     Iso15693_3ErrorNone,
     Iso15693_3ErrorNotPresent,
@@ -38,6 +39,31 @@ typedef enum {
     Iso15693_3ErrorCustom,
     Iso15693_3ErrorUnknown,
 } Iso15693_3Error;
+
+// Copied value-for-value from the SDK's public iso15693_3.h, and identical there across Momentum,
+// Unleashed, RogueMaster, Xero and official. The poller builds its own addressed WRITE BLOCK frame out
+// of these and parses the response with them, so a drift here would be a test passing against a frame
+// no card would answer.
+#define ISO15693_3_REQ_FLAG_SUBCARRIER_1 (0U << 0)
+#define ISO15693_3_REQ_FLAG_DATA_RATE_HI (1U << 1)
+#define ISO15693_3_REQ_FLAG_T4_ADDRESSED (1U << 5)
+
+#define ISO15693_3_RESP_FLAG_NONE  (0U)
+#define ISO15693_3_RESP_FLAG_ERROR (1U << 0)
+
+#define ISO15693_3_RESP_ERROR_NOT_SUPPORTED        (0x01U)
+#define ISO15693_3_RESP_ERROR_FORMAT               (0x02U)
+#define ISO15693_3_RESP_ERROR_OPTION               (0x03U)
+#define ISO15693_3_RESP_ERROR_UNKNOWN              (0x0FU)
+#define ISO15693_3_RESP_ERROR_BLOCK_UNAVAILABLE    (0x10U)
+#define ISO15693_3_RESP_ERROR_BLOCK_ALREADY_LOCKED (0x11U)
+#define ISO15693_3_RESP_ERROR_BLOCK_LOCKED         (0x12U)
+#define ISO15693_3_RESP_ERROR_BLOCK_WRITE          (0x13U)
+#define ISO15693_3_RESP_ERROR_BLOCK_LOCK           (0x14U)
+#define ISO15693_3_RESP_ERROR_CUSTOM_START         (0xA0U)
+#define ISO15693_3_RESP_ERROR_CUSTOM_END           (0xDFU)
+
+#define ISO15693_3_CMD_WRITE_BLOCK (0x21U)
 
 #define ISO15693_3_SYSINFO_FLAG_DSFID  (1U << 0)
 #define ISO15693_3_SYSINFO_FLAG_AFI    (1U << 1)
