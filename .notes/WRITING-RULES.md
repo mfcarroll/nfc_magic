@@ -79,6 +79,18 @@ run them as questions against each paragraph before anything is posted.
    paragraphs; they are just harder to check.
 7. **Is this paragraph carrying a disposition, a correction, or a finding?** If none of the three, it
    is reaching for something to say. Cut it.
+8. **Does this duplicate something stated elsewhere, and if so, which artifact is its home?** "Say it
+   once" is already the rule for comments; it applies across artifacts too, and he reads them
+   together. A whole reply section restated a thread reply near-verbatim before anyone noticed. Pick
+   the home, then point at it from the others:
+   - a finding HE raised in a thread -> the **thread** is the home, because that is where he will
+     look for the answer. The reply names it in a sentence and points.
+   - something spanning the whole round -> the **reply**.
+   - a constraint about the code -> the **comment**. Both the message and the reply point at it
+     rather than restating, because a restatement is what drifts.
+
+   A pointer still has to name what it points at, so a shared phrase is fine; a shared argument is
+   not.
 
 The tell for most of them: the passage is about US -- what we tried, what we learned, how we feel
 about it -- rather than about the code or the decision in front of him.
