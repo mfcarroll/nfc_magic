@@ -91,7 +91,8 @@ static void test_frame_layout(void) {
         0x11, 0x22, 0x33, 0x44};
 
     BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
-    iso15693_poller_build_write_frame(tx, uid, 0x08, data, sizeof(data));
+    iso15693_poller_build_write_frame(
+        tx, ISO15693_POLLER_WRITE_FLAGS, uid, 0x08, data, sizeof(data));
 
     CHECK_EQ(bit_buffer_get_size_bytes(tx), sizeof(expected));
     for(size_t i = 0; i < sizeof(expected) && i < bit_buffer_get_size_bytes(tx); i++) {
@@ -227,6 +228,201 @@ static void test_only_the_uid_registers_cost_an_inventory(void) {
     end();
 }
 
+// ---- the OPTION flag ------------------------------------------------------------------------------
+
+// TI Tag-it HF-I Plus answers an addressed write with the OPTION bit clear as error 0x03 -- the tag
+// naming the bit -- and accepts the identical frame with it set. The app cannot know that in advance
+// and deliberately does not guess from the UID, so the first write of the run is the question and the
+// refusal is the answer.
+//
+// Counted as a DIFFERENCE against the same card without the requirement. A sweep of a 64-block card
+// already spends three refused attempts on each of the eight phantom blocks above its top, and pinning
+// that total here would make this test fail whenever the sweep's tail handling changes.
+//
+// Three runs, because two would not be enough. The plain card is the baseline. The card that wants the
+// flag must cost exactly ONE more refusal than it -- recovering from block 1 onward would leave block 0
+// unwiped and still report a clean sweep. And the same card with the flag already set must cost the
+// baseline again, which is what shows the fake is enforcing the flag rather than ignoring it.
+static uint32_t failed_write_attempts(void) {
+    return fake_tag.writes_attempted - fake_tag.writes_accepted;
+}
+
+static void test_a_card_that_wants_the_option_flag_is_written_anyway(void) {
+    begin("a card that refuses without the OPTION flag costs one refusal and is written");
+    Iso15693Poller inst;
+    bool card_lost = false;
+
+    fake_tag_init(64, 64, 4);
+    driver_init(&inst);
+    CHECK_EQ(iso15693_poller_wipe_blocks(&inst, NULL, &card_lost), 64);
+    const uint32_t baseline = failed_write_attempts();
+
+    fake_tag_init(64, 64, 4);
+    fake_tag.requires_option = true;
+    driver_init(&inst);
+    CHECK_EQ(iso15693_poller_wipe_blocks(&inst, NULL, &card_lost), 64);
+    CHECK(inst.write_option); // the tag's own answer turned it on
+    CHECK_EQ(failed_write_attempts(), baseline + 1);
+    CHECK_EQ(inst.clone_failed_count, 0);
+
+    // The retry that recovers that block was going to happen anyway, so the flag costs no frames the
+    // write budget had not already allowed for.
+    fake_tag_init(64, 64, 4);
+    fake_tag.requires_option = true;
+    driver_init(&inst);
+    inst.write_option = true;
+    CHECK_EQ(iso15693_poller_wipe_blocks(&inst, NULL, &card_lost), 64);
+    CHECK_EQ(failed_write_attempts(), baseline);
+    end();
+}
+
+// A card that does NOT want the flag must never be given it. The four chips this was measured against
+// were measured at 0x22, and sending them a frame they were not measured with would be a change with
+// no evidence behind it.
+static void test_a_card_that_never_complains_never_gets_the_flag(void) {
+    begin("a card that takes the plain frame is never sent the OPTION flag");
+    fake_tag_init(64, 64, 4);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK(!inst.write_option);
+    end();
+}
+
+// The refusal that sets the flag is a specific one. A block that is merely unavailable or locked says
+// so with its own code, and reading either as "wants the option" would turn the flag on for a card
+// that never asked -- on the strength of a block that does not exist.
+static void test_only_the_option_refusal_sets_the_flag(void) {
+    begin("only error 0x03 turns the flag on, not any other refusal");
+    const uint8_t wants_option[] = {0x01, ISO15693_3_RESP_ERROR_OPTION};
+    const uint8_t unavailable[] = {0x01, ISO15693_3_RESP_ERROR_BLOCK_UNAVAILABLE};
+    const uint8_t locked[] = {0x01, ISO15693_3_RESP_ERROR_BLOCK_LOCKED};
+    const uint8_t took[] = {0x00};
+
+    BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+    struct {
+        const uint8_t* bytes;
+        size_t len;
+        bool expected;
+    } cases[] = {
+        {wants_option, sizeof(wants_option), true},
+        {unavailable, sizeof(unavailable), false},
+        {locked, sizeof(locked), false},
+        {took, sizeof(took), false},
+    };
+    for(size_t c = 0; c < COUNT_OF(cases); c++) {
+        bit_buffer_reset(rx);
+        for(size_t i = 0; i < cases[c].len; i++) {
+            bit_buffer_append_byte(rx, cases[c].bytes[i]);
+        }
+        CHECK_EQ(iso15693_poller_response_wants_option(rx), cases[c].expected);
+    }
+    bit_buffer_free(rx);
+    end();
+}
+
+// ---- a card that never acknowledges a write ---------------------------------------------------
+
+// The whole TI Tag-it failure, end to end. With OPTION set the card owes its answer only after a
+// standalone EOF, which this SDK cannot send, so the block is programmed and nothing is said. Before
+// the rescue this reported "Wipe failed / No blocks could be cleared" over a card that had in fact
+// been entirely zeroed -- measured on `white-coin`, whose block 8 went from AA BB CC DD to zeros
+// across a wipe the app called a total failure.
+//
+// Asserted on the CARD as well as on the count, because the count alone cannot tell "cleared and
+// reported" from "reported without clearing", and this bug was the second of those in reverse.
+static void test_a_card_that_never_acknowledges_is_still_wiped(void) {
+    begin("a card that writes without acknowledging is wiped, and says so");
+    fake_tag_init(64, 64, 4);
+    fake_tag.requires_option = true;
+    fake_tag.writes_are_unacknowledged = true;
+    fake_tag_fill(0, 63, FAKE_MARKER);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    const uint16_t wiped = iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK_EQ(wiped, 64);
+    CHECK_EQ(inst.clone_failed_count, 0);
+    CHECK(!card_lost);
+    for(uint16_t b = 0; b < 64; b++) {
+        CHECK(iso15693_poller_block_is_empty(fake_tag.content[b], 4));
+    }
+    end();
+}
+
+// The rescue is scoped to cards that ASKED for the OPTION flag, and this is that scoping. A card that
+// simply stops answering looks identical at the radio layer, and reading its memory back would let a
+// removed card's leftover contents pass as writes that landed. The retries are the right answer
+// there, and a failure is the right verdict.
+static void test_silence_alone_is_still_a_failure(void) {
+    begin("silence from a card that never asked for the flag is still a failure");
+    fake_tag_init(64, 64, 4);
+    fake_tag.writes_are_unacknowledged = true; // but NOT requires_option
+    fake_tag_fill(0, 63, FAKE_MARKER);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    const uint16_t wiped = iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK(!inst.write_option);
+    CHECK_EQ(wiped, 0);
+    end();
+}
+
+// An in-band refusal is never second-guessed, whatever else is set. The dangerous shape is a refused
+// block that ALREADY HOLDS what is being written: a locked block that is already empty, under a wipe.
+// Read it back and it matches, so a rescue keyed on the content alone would call the refusal a
+// success -- and a card that is write-protected and already blank would report "Wiped 64/64" instead
+// of the truth, which is that it accepted nothing and cannot be wiped. The card answered; its answer
+// stands, and the read is never asked.
+static void test_an_answered_refusal_is_not_overruled_by_a_read(void) {
+    begin("an in-band refusal stands even when the block already holds what was written");
+    fake_tag_init(64, 64, 4);
+    fake_tag.requires_option = true;
+    fake_tag.writes_are_unacknowledged = true;
+    fake_tag_fill(0, 63, FAKE_MARKER);
+    fake_tag_set_range(30, 30, FakeBlockLocked); // answers a read, refuses the write in band
+    fake_tag_fill(30, 30, 0x00); // ...and already holds exactly what the wipe is about to write
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    const uint16_t wiped = iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK_EQ(wiped, 63); // the refusal is not counted as a clear, however empty the block looks
+    CHECK_EQ(inst.clone_failed_count, 0); // nor as a failure -- it is empty, so nothing is uncleared
+    end();
+}
+
+// And the read-back is COMPARED, not merely performed. A block that answers reads, discards writes and
+// says nothing about it is indistinguishable from one that took the write -- until someone looks at
+// what it holds. Without the comparison every such block would be reported as written, which on a
+// wipe means telling the user a card is clear while it still carries the previous card's data.
+static void test_the_read_back_is_compared_not_just_attempted(void) {
+    begin("a block that silently discards its write is not rescued by the read-back");
+    fake_tag_init(64, 64, 4);
+    fake_tag.requires_option = true;
+    fake_tag.writes_are_unacknowledged = true;
+    fake_tag_fill(0, 63, FAKE_MARKER);
+    fake_tag_set_range(30, 30, FakeBlockSilentlyRefuses);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    const uint16_t wiped = iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK_EQ(wiped, 63);
+    CHECK_EQ(inst.clone_failed_count, 1); // it answers a read and still holds data -> a real failure
+    CHECK(!iso15693_poller_block_is_empty(fake_tag.content[30], 4));
+    end();
+}
+
 int main(void) {
     printf("iso15693 addressed write\n");
     test_frame_layout();
@@ -234,6 +430,13 @@ int main(void) {
     test_wrong_address_is_answered_by_nothing();
     test_the_sweep_readdresses_when_the_uid_moves_under_it();
     test_only_the_uid_registers_cost_an_inventory();
+    test_a_card_that_wants_the_option_flag_is_written_anyway();
+    test_a_card_that_never_complains_never_gets_the_flag();
+    test_only_the_option_refusal_sets_the_flag();
+    test_a_card_that_never_acknowledges_is_still_wiped();
+    test_silence_alone_is_still_a_failure();
+    test_an_answered_refusal_is_not_overruled_by_a_read();
+    test_the_read_back_is_compared_not_just_attempted();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
 }

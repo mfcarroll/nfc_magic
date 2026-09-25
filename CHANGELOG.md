@@ -99,6 +99,14 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   them. Confirmed on five cards — **TI Tag-it HF-I Plus**, **NXP ICODE SLIX** and **SLIX-S**, **ST
   LRi2K**, and one gen2 card of unrecorded type: every one accepts an addressed **WRITE BLOCK**, and
   a UID one byte wrong is answered by nothing.
+- **A card that needs the OPTION flag on writes now gets it**, and is no longer reported as having
+  refused them. Some silicon refuses a write whose OPTION bit is clear and says so with its own error
+  code; the app reads that answer and sets the bit for the rest of the operation. A card in that mode
+  then owes its acknowledgement only after a signal the Flipper's radio cannot send, so the write
+  lands and nothing comes back — and the block is now read back to settle it rather than counted as a
+  refusal. **TI Tag-it HF-I Plus** needs both halves. Without them no data block could be written to
+  that chip at all, and with only the first a wipe zeroed the whole card and then reported that
+  nothing had been cleared.
 ### Validation
 
 - **gen1** was validated on hardware across three chips: ST LRi2K (56 blocks), NXP SLIX (28) and NXP

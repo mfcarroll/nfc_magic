@@ -138,8 +138,11 @@ is indistinguishable from absence.
 **Every chip this app can write accepts addressed WRITE BLOCK.** That is the premise of the whole
 approach and it now holds across all five, rather than the one it started from.
 
-TI's enforcement is untested and does not need testing: it REFUSES unaddressed writes, so it is
-already discriminating on the flag. **Nothing is outstanding. The measurement is complete.**
+TI's enforcement of the ADDRESS is untested, and the reason given here for not testing it -- "it
+refuses unaddressed writes, so it is already discriminating on the flag" -- was withdrawn 2026-09-24.
+It does not refuse them; it refuses writes without the OPTION flag, whether addressed or not. See the
+correction at the head of [../pr-round-10/unaddressed-write-finding.md](../pr-round-10/unaddressed-write-finding.md).
+So four of the five chips are shown to filter on the address and TI is not one of them.
 
 ## What this settles for the implementation
 
