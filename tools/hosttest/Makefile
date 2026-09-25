@@ -13,7 +13,8 @@ BUILD := build
 
 # Three groups. The poller tests drive a fake TAG; the scene tests drive fake GUI recorders and never
 # touch the radio at all, so they link a different fake.
-POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity
+POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity \
+                test_addressed_write
 SCENE_TESTS  := test_write_fail_scene test_write_scene
 # The third group drives a pure string function -- no radio and no GUI. It still links fake_scene.o,
 # which is where the real FuriString implementation lives; that is the only thing it wants from there.

@@ -45,6 +45,8 @@ Unleashed 88.2**, so one model covers both API versions.
 | `get_block_count` / `get_block_size` are the advertised values | `iso15693_3.c:356-366` — returned straight from `system_info` | confirmed; fake matches |
 | `get_block_data` range-checks its index | `iso15693_3.c:368-374` — `furi_check(block_count > block_index)` | confirmed; fake `furi_check`s identically, so `block_held_data`'s comment about relying on it holds |
 | the full `Iso15693_3Error` enum | `iso15693_3.h:85-102` | fake mirrors all 16 members in order, so values match too |
+| the WRITE BLOCK response decode | `iso15693_3_i.c:179-196` and `:3-55` — the app reimplements this, because it is internal to `lib/nfc` | `test_addressed_write.c` pins every shape against the SDK's mapping |
+| the request and response flag values | `iso15693_3.h:23-56` — identical in Momentum, Unleashed, RogueMaster, Xero and official | copied value-for-value into the fake header |
 
 One semantic comes from the bench rather than from source: blocks past physical capacity **refuse writes
 in-band while failing reads outright** (measured 2026-08-04). The fake models that. The sweep treats every
@@ -53,9 +55,10 @@ passing when the fake's error codes were corrected to match.
 
 ## What is covered
 
-99 tests across seven files.
+`make` runs every file and prints a per-file count; the totals are not repeated here, because six of
+the seven carried a stale one for months.
 
-**`test_write_step.c` — 15 cases over the write state machine.** These do not call one function: they
+**`test_write_step.c` — the write state machine.** These do not call one function: they
 drive the real `iso15693_poller_nfc_callback` the way the SDK does — build an `NfcGenericEvent`, call the
 callback, honour the returned `NfcCommand`, power-cycle the fake tag on `NfcCommandReset`, stop on
 `NfcCommandStop`. So the field resets, the two activation-error budgets and the gen2-then-gen1 sequencing
@@ -69,7 +72,7 @@ the same field session, so that a UID verify skipping its reset fails here inste
 reset still getting its wipe reported (`uid_verified` false), and that a clone writes no data at all onto
 a tag that refuses the gen2 UID.
 
-**`test_outcome.c` — 15 cases over `iso15693_poller_success_or_partial`**, the single place where "what
+**`test_outcome.c` — `iso15693_poller_success_or_partial`**, the single place where "what
 happened" becomes "what the user is told". A pure function of the result fields, so the tests read as the
 contract: which conditions qualify a result, which do not, and which of those are clone-only. Includes the
 two that look like oversights and are not — `uid_verified` being absent from the Partial list (making it
@@ -77,14 +80,14 @@ Partial would flag every wipe where the user lifts the card as it completes) and
 guard sparing a wipe (whose failed and accepted sets are disjoint). Both would be "fixed" by a reader who
 had not read the reasoning, and both now fail loudly if they are.
 
-**`test_clone_blocks.c` — 14 cases over `iso15693_poller_write_source_blocks`**, concentrating on what may
+**`test_clone_blocks.c` — `iso15693_poller_write_source_blocks`**, concentrating on what may
 set `clone_capacity_confirmed`, since that renders "Card too small". This is the file that found the
 clock-cut capacity bug. Also pins the gen1 backdoor-block arithmetic at both boundaries: a source below
 block 56 must lose nothing from its total, and a source reaching 56/57 but not 62/63 must lose exactly
 two. The first is a real geometry — magic SLIX cards ship with 32 blocks, where those addresses are
 outside the data space entirely.
 
-**`test_wipe_sweep.c` — 15 cases over `iso15693_poller_wipe_blocks`**, including the geometries re-derived
+**`test_wipe_sweep.c` — `iso15693_poller_wipe_blocks`**, including the geometries re-derived
 by hand each review round:
 
 - clean 64/64
@@ -105,7 +108,7 @@ by hand each review round:
   exist because a screen printed `blocks_total` as if it were where the sweep stopped, and the two
   figures are independent in either direction.
 
-**`test_write_fail_scene.c` — 15 cases over the two ISO15693 result screens.** A second set of fakes, no
+**`test_write_fail_scene.c` — the two ISO15693 result screens.** A second set of fakes, no
 radio involved: the GUI calls become recorders, so what a screen SAYS, which buttons it offers, and where
 each button navigates are all data a test can assert on. The scenes are compiled verbatim, same technique
 as the poller.
@@ -123,20 +126,29 @@ blocking bug — reintroducing it fails that test and names the reason index and
 All three of those defects were mutation-tested after the fact: reverting each fix in the shipped source
 fails the corresponding test. A test suite that has never been seen to fail is not evidence of anything.
 
-**`test_write_identity.c` — 10 cases over `iso15693_poller_write_identity`**, the AFI / DSFID
+**`test_write_identity.c` — `iso15693_poller_write_identity`**, the AFI / DSFID
 write-then-read-back-and-verify retry loop. The outcome was already covered in `test_outcome.c`; these
 cover the mechanics, which is where the load-bearing claim lives.
 
 `iso15693_3_poller_send_frame` returns `Iso15693_3ErrorNone` whether or not the tag applied the write. A
 tag refusing in band answers with a well-formed, CRC-valid error frame, and the SDK has no response
-parser for these two commands the way `write_block` has one. So the send tells you nothing in either
+parser for these two commands, and neither does this app -- unlike WRITE BLOCK, where the app carries
+its own (`iso15693_poller_parse_write_response`). So the send tells you nothing in either
 direction and GET SYSTEM INFO is the only thing that can. The fake therefore models a refusal as
 "swallow the write and still answer None" — a fake that reported refusals as errors could not test any of
 this. Also pinned: that holding the right value is not enough (the target must ADVERTISE the field, or
 the copy no longer reports the identity the source did), that an unreachable verify fails closed, and
 that a transient is ridden out by the retries rather than reported.
 
-**`test_write_scene.c` — 15 cases over the write scene's ROUTING.** Which screen each worker event sends
+**`test_addressed_write.c` — the addressed WRITE BLOCK path.** The app builds this frame and decodes
+its response itself, because the SDK hardcodes unaddressed flags and keeps its parser internal, so both
+are the app's to get right and neither shows up in the counters the other poller tests assert on: a
+frame addressed to the wrong card and a card that refuses everything look the same from there. The frame
+is pinned byte for byte against one a real card accepted, the decode against the SDK's own mapping, and
+the sweep's re-address against the measured hazard -- zeroing blocks 56/57 on an armed gen1 card moves
+its UID mid-pass, so an address taken once goes stale and everything above 56 would go unanswered.
+
+**`test_write_scene.c` — the write scene's ROUTING.** Which screen each worker event sends
 the user to, and which of the five magic protocols swallows Back. A routing table expressed as nested
 branches, which is the shape that goes wrong quietly.
 

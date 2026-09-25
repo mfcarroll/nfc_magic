@@ -67,8 +67,25 @@ static uint16_t bitmap_count(const Iso15693Poller* inst) {
     return n;
 }
 
-static bool run_clone(Iso15693Poller* inst, bool skip_backdoor) {
+// The poller allocates these once for its whole life and addresses every write to the card it found
+// at activation. These drivers call the pass functions directly, below write_step, so they stand in
+// for both: one buffer pair for the run, and the address Iso15693WriteStateStart would have taken.
+static BitBuffer* driver_tx;
+static BitBuffer* driver_rx;
+
+static void driver_init(Iso15693Poller* inst) {
+    if(driver_tx == NULL) {
+        driver_tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+        driver_rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+    }
     memset(inst, 0, sizeof(*inst));
+    inst->frame_tx = driver_tx;
+    inst->frame_rx = driver_rx;
+    memcpy(inst->address_uid, fake_tag.uid, ISO15693_3_UID_SIZE);
+}
+
+static bool run_clone(Iso15693Poller* inst, bool skip_backdoor) {
+    driver_init(inst);
     inst->clone_source = &source;
     return iso15693_poller_write_source_blocks(inst, NULL, skip_backdoor);
 }

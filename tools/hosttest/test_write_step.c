@@ -129,9 +129,20 @@ static void run_poller(Iso15693Poller* inst, uint32_t activation_failures_per_ac
 }
 
 // A poller instance set up the way start_internal leaves one, for `mode`.
+static BitBuffer* step_tx;
+static BitBuffer* step_rx;
+
+// Only the buffers iso15693_poller_alloc owns. NOT address_uid: setting that here would hide a
+// write_step that never takes the card's address, which is the thing these tests are for.
 static Iso15693Poller make_poller(Iso15693PollerMode mode, bool gen1) {
+    if(step_tx == NULL) {
+        step_tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+        step_rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
+    }
     Iso15693Poller inst;
     memset(&inst, 0, sizeof(inst));
+    inst.frame_tx = step_tx;
+    inst.frame_rx = step_rx;
     inst.mode = mode;
     inst.write_state = Iso15693WriteStateStart;
     inst.attempt_gen1 = gen1;
