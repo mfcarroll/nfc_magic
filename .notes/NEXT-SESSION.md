@@ -303,6 +303,28 @@ after 56 lands, then 57.
 
 Needs bench time on gen1 silicon before it ships — three armed cards are available.
 
+## KNOWN REMAINING WORK — 67 lines of intra-push churn, ~40 of it avoidable
+
+Measured on the fork after the release-notes move (110 at the start, 91 after the first pass, 67
+now). Two clusters are worth removing and one is not:
+
+- **28 lines, 02 -> 04.** Sync point 02 writes `response_wants_option` plus an inline flags ternary
+  and an inline option-noting block inside `write_block_addressed`; 04 extracts
+  `iso15693_poller_write_flags` and `iso15693_poller_note_option_wanted` so the identity pass can
+  share them. **Fix: define both helpers at 02**, and 04 only adds its own caller. Attempted
+  2026-09-26 and ABORTED -- the rebase surfaced the committed conflict markers, which mattered more,
+  and starting another rebase right after one had just caused a defect was the wrong trade.
+  `wip-pre-helper-move` is the tip from before that attempt.
+- **13 lines, 03 -> 06.** The gen1 caveat strings written at 03 and reworded by 06's wording pass.
+  **Fix: put 06's final strings in 03.**
+- **~17 lines, legitimate.** 01's `readdress` gaining its prediction check at 05, and
+  `send_backdoor_uid_gen1`'s signature changing at 07. Both are a later commit genuinely needing
+  something the earlier one could not have had, and the README records them.
+
+**The invariant for any attempt** is the one all three rewrites used: the shipped tree must be
+byte-identical afterwards. And check every sync point for conflict markers before trusting a
+scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how this is caught cheaply.
+
 ## WHAT IS LEFT, in the order to take it
 
 1. ~~**BENCH `b312653`**~~ **DONE 2026-09-26 and it PASSES** --

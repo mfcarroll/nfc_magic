@@ -77,6 +77,23 @@ Each one shipped into a draft this round.
 10. **SYNC-POINT COVERAGE.** A shipped commit above the last anchor reaches nobody.
     `replay-to-fork.sh` refuses up front now, but check it rather than assuming.
 
+11. **A CHECK THAT ONLY LOOKS AT THE END STATE.** Bit this round twice, and it is the one that
+    survives every other check because every other check agrees with it.
+    - Two sync points shipped a file containing a committed `<<<<<<<` conflict marker. The TIP was
+      clean, because a later commit removed those lines. 168 tests passed, clang-format passed, the
+      FAP built, and the replay's own verification compares the FORK TREE AGAINST DEV HEAD -- which
+      cannot see a broken intermediate commit by construction.
+    - Shipped commits landed above the last sync point three separate times; the end-state diff
+      caught it, but only after eight commits had been built and signed.
+
+    **He checks out individual commits. Every sync point has to be a tree someone can build.** Both
+    are pre-flight refusals in `replay-to-fork.sh` now, but the CLASS is wider than those two: when
+    you verify something, ask what it compares, and whether an intermediate state could be wrong
+    while the comparison still passes.
+
+    Corollary, learned the same way: **resolving a run of rebase conflicts by script is how the
+    marker got committed.** If a resolution is worth automating, its result is worth reading.
+
 ## Pass 3 — the read-through, which no checker replaces
 
 The eight questions in `.notes/WRITING-RULES.md`, against every paragraph of the reply. The ones that
