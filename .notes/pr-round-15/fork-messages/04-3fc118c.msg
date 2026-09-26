@@ -30,14 +30,22 @@ that then looks absent to the reader that uses it.
 That closes the write half of #251. The backdoor sequences stay unaddressed, and
 the post-wipe UID re-read remains unfixable by addressing.
 
-The file's own list of what remains unaddressed is corrected with them: it had
+The file's own list of what remains unaddressed is corrected with them. It had
 counted these two among the unaddressed frames and called them the strongest
-case for addressing with nothing behind it, which this commit is. The gen1
-backdoor's entry now carries why it is NOT addressed, which is not squeamishness
-about magic sequences -- the sequence is unlock, commit, 56, 57, and the write to
-56 moves the card's UID at once, so an addressed form would have to re-address
-between its third and fourth frames, inside a sequence that deliberately ignores
-per-frame results.
+case for addressing with nothing behind it -- which this commit is. It also said
+the identity pass stays unaddressed, twenty lines from the code that addresses
+it.
+
+The gen1 backdoor's entry is now an OPEN QUESTION rather than a decision, and
+says why the obvious defence of it does not hold. Addressed WRITE BLOCKs to
+56/57/62/63 are already measured to work: the wipe's sweep zeroes exactly those
+addresses through the addressed path, re-addressing when the UID moves under it,
+and the clone's conversion path writes 56/57 addressed and watches the UID
+follow. So "it is the magic sequence" is not on its own a reason to leave it
+open to a bystander. What is genuinely unmeasured is narrower -- unlock and
+commit ACCEPTED addressed, which no run has shown because an armed card refuses
+them either way, and the fact that this sequence is fire-and-forget while
+addressing it would need an inventory between frames.
 
 Nothing was needed here for the missing acknowledgement. write_identity never
 trusted the send's return, because the SDK has no response parser for these two
