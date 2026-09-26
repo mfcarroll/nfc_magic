@@ -385,6 +385,8 @@ struct Iso15693Poller {
     bool clone_holds_more;
     bool clone_memory_differs;
     bool clone_ic_ref_differs;
+    uint16_t clone_file_blocks;
+    uint8_t clone_file_ic_ref;
     // A write to 56/57 moved the UID to exactly what that write implies, so those addresses are
     // registers and this is gen1 silicon -- whichever path the run took to get here.
     bool uid_moved_by_write;
@@ -1049,6 +1051,8 @@ static void iso15693_poller_compare_reported_geometry(
     // Both can differ at once, and then both are named.
     instance->clone_memory_differs = memory_differs;
     instance->clone_ic_ref_differs = ic_ref_differs;
+    instance->clone_file_blocks = src->block_count;
+    instance->clone_file_ic_ref = src->ic_ref;
 }
 
 // The card turned out to be gen1 after the pass had already fed the file into its UID registers. Put
@@ -2210,6 +2214,8 @@ static void iso15693_poller_start_internal(
     instance->clone_holds_more = false;
     instance->clone_memory_differs = false;
     instance->clone_ic_ref_differs = false;
+    instance->clone_file_blocks = 0;
+    instance->clone_file_ic_ref = 0;
     instance->uid_moved_by_write = false;
     instance->clone_card_blocks = 0;
     instance->clone_card_blocks_known = false;
@@ -2321,6 +2327,8 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
     result->survey_top = instance->clone_survey_top;
     result->memory_differs = instance->clone_memory_differs;
     result->ic_ref_differs = instance->clone_ic_ref_differs;
+    result->file_blocks = instance->clone_file_blocks;
+    result->file_ic_ref = instance->clone_file_ic_ref;
     result->card_blocks = instance->clone_card_blocks;
     result->card_ic_ref = instance->clone_card_ic_ref;
     result->capacity_confirmed = instance->clone_capacity_confirmed;

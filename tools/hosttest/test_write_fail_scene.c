@@ -313,8 +313,9 @@ static void test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_
     small.gen1_blocks_skipped = false;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &small);
-    CHECK(fake_scene_text_contains("UID in 56/57/62/63"));
-    CHECK(!fake_scene_text_contains("differ"));
+    // Nothing at all: the registers holding the UID is what was asked for, so there is no caveat to
+    // raise, and saying one anyway describes the route rather than the card.
+    CHECK(!fake_scene_text_contains("56/57/62/63"));
 
     Iso15693PollerResult big = {0};
     big.blocks_total = 60;
@@ -337,8 +338,7 @@ static void test_the_gen1_details_note_matches_the_source(void) {
     const char* scroll = fake_scene_scroll_text();
     CHECK(scroll != NULL);
     if(scroll) {
-        CHECK(strstr(scroll, "nothing in it was skipped") != NULL);
-        CHECK(strstr(scroll, "not file data") == NULL);
+        CHECK(strstr(scroll, "56/57/62/63") == NULL); // nothing was skipped, so nothing is claimed
     }
 
     Iso15693PollerResult big = {0};
@@ -444,7 +444,7 @@ static void test_details_carries_every_survey_finding(void) {
     const char* scroll = fake_scene_scroll_text();
     CHECK(scroll != NULL);
     if(scroll) {
-        CHECK(strstr(scroll, "still hold what was on the card before") != NULL);
+        CHECK(strstr(scroll, "still hold non-zero data") != NULL);
         CHECK(strstr(scroll, "larger than it") != NULL);
         CHECK(strstr(scroll, "no configuration register") != NULL);
         // both halves moved, so both are named rather than one standing for the pair

@@ -242,6 +242,10 @@ typedef struct {
     bool ic_ref_differs;
     uint16_t card_blocks;
     uint8_t card_ic_ref;
+    // ...and what the FILE said, so the note can show both sides rather than leaving the
+    // reader to remember what they asked for.
+    uint16_t file_blocks;
+    uint8_t file_ic_ref;
     // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is
     // genuinely larger than the card's physical capacity. False for a scattered or anomalous failure,
     // which is reported generically with no capacity claim -- and false for ANY cut run, however
