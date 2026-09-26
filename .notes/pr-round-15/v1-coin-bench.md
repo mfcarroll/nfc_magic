@@ -1,0 +1,114 @@
+# The V1 coin — predictions, written before the first frame
+
+18mm green PCB coin. Out of the bag it arrived in, and nothing in this project has ever read or
+written it before the capture below. **But it was a favour from another developer, not a purchase,
+so its arrival state is his, not the factory's.** That single fact decides how this test has to be
+read, and it is worth getting straight before any frame goes out.
+
+## Baseline as read
+
+    UID....... E0 11 22 33 44 55 66 91
+    SYSINFO... 00 0F 91 66 55 44 33 22 11 E0 00 00 1B 03 01
+    DSFID 00   AFI 00   IC ref 0x01   28 blocks x 4
+    hf 15 dump 0..27 -- every block 00 00 00 00, every lck 0
+
+**The UID is a placeholder.** Bytes 1 through 6 read `11 22 33 44 55 66`, a counting sequence that no
+real UID is. So `Emosyn-EM Microelectronics USA`, decoded from `uid[1] = 0x11`, says nothing about
+this silicon.
+
+**Whose placeholder is not known.** It could be how the card ships, or it could be what the sender
+left on it. The same goes for the blocks being uniformly zero and for the lock flags being clear:
+that is consistent with a factory state and equally consistent with a developer who wiped it before
+posting it. Nothing here can tell those apart.
+
+## The problem this creates, and it is the whole problem
+
+The card is here to answer **whether a locked V1 needs unlock and commit before a UID write**. It can
+only answer that if it arrives locked. If the sender already armed it, it is not locked any more.
+
+That makes the two outcomes worth very different amounts:
+
+- **A refused write to block 56 is informative.** Nothing in this project has ever directly shown a
+  card refusing a UID-register write, and an already-armed card would not refuse it.
+- **An accepted write to block 56 is AMBIGUOUS.** It reads as "V1 cards need no unlock" and it is
+  equally consistent with "this card was unlocked before it was posted". Taken at face value it is
+  exactly the over-scoped conclusion this project keeps paying for.
+
+**So the cheapest measurement is not a frame at all: ask him.** One message — did you write to it,
+and did you run an unlock or commit — settles what no single-shot test on this card can. Worth doing
+before spending the irreversible step.
+
+## What is actually spendable, and it is not the UID
+
+Writing block 56 is **reversible**: write the original half back. The irreversible act is **unlock +
+commit**, because arming cannot be undone and a card that arrived locked can only be seen that way
+once. The ordering below follows from that and nothing else.
+
+## Before any write — sweep it
+
+`hf 15 dump` covers the ADVERTISED 28 blocks. The test writes **block 56**. Nothing at or above 28
+has been read here, and `slix2-gold-30mm` established this morning that an advertised count is not a
+physical top — it takes writes at block 100 against a claim of 79.
+
+    tools/sweep-read-all.sh /dev/cu.usbmodemiceman1 ~/v1coin-sweep.txt
+
+It answers a second question for free: on every gen1 chip measured here, 56/57/62/63 answer no read
+at any point. A card that reads them is not behaving like the others.
+
+## The write to the UID register — reversible, and it goes first
+
+Unaddressed, matching the app's own backdoor and the form measured on the other five cards.
+**Deliberately not the addressed variant the earlier plan named**: addressing the backdoor has never
+been measured anywhere, so an addressed frame changes two variables at once and a refusal would not
+say which one did it. That is what the TI OPTION misreading cost. Addressing is a separate question
+and this step repeats, so it can be asked afterwards.
+
+    hf 15 reader                         positive control BEFORE
+    hf 15 raw -ackw -d 0221380000ABCD    write block 56 (0x38), unaddressed
+    hf 15 reader                         positive control AFTER -- did the UID move?
+
+**PREDICTED: refused, UID unchanged.** That is the project's standing expectation and the reason the
+card was kept. It can come out the other way, which is what makes it a test.
+
+- **Refused, with the card answering `hf 15 reader` either side** → it really is locked, which
+  nothing here has ever directly shown. The card is worth its irreversible step; go on.
+- **Accepted** → do NOT conclude "no unlock needed". Go to the arming probe below first.
+- **Silent AND `hf 15 reader` fails after** → the card left the field. Not a result. Reseat, rerun.
+
+## If that write was accepted — probe whether it was already armed
+
+An armed card refuses unlock and commit while still taking 56/57; that is measured, in band as error
+`0x10` on the LRi2K. So a refusal here is the signature of a card that was armed before it arrived.
+
+    hf 15 raw -ackw -d 02213E00000000    unlock (0x3E) -- expect REFUSED if already armed
+    hf 15 reader
+
+- **Refused** → the sender armed it. The locked-card question is unanswered and this card can no
+  longer answer it. Record that and stop; it costs nothing more.
+- **Accepted** → it was not armed, yet took a UID write anyway. That would be new, and it would mean
+  unlock is not a precondition on this silicon.
+
+## Unlock and commit — IRREVERSIBLE, only if the UID write was refused
+
+    hf 15 reader
+    hf 15 raw -ackw -d 02213E00000000    unlock  (block 62 / 0x3E)
+    hf 15 raw -ackw -d 02213F00000000    commit  (block 63 / 0x3F)
+    hf 15 reader
+    hf 15 raw -ackw -d 0221380000ABCD    retry block 56
+    hf 15 reader
+
+**PREDICTED: both accepted, and 56 then takes.** Watch the responses, not just the outcome: `00 78 F0`
+from either would be **the first time unlock or commit has been seen ACCEPTED on any card here**.
+Every previous observation is of an already-armed card refusing them.
+
+## Addressed, only if the backdoor refuses unaddressed
+
+Unaddressed first is the point; if the backdoor refuses it here, the addressed form becomes worth
+trying. A refusal is ASSUMED to leave the state alone — an assumption, not a measurement, and if it
+is wrong the unlock has already cost this.
+
+## Restore
+
+Block 56 back to its arrival value, `E0 11 22 33 44 55 66 91`. Record what the runs leave behind and
+**whether the card ends armed**, because that is a permanent change to the only specimen of its kind
+here — and, if the sender did not arm it, the end of the one chance to observe a locked card.
