@@ -37,10 +37,17 @@ The premise the whole change rests on, isolated from the app (BENCH-RULE 6). Per
     hf 15 raw -ackw -d 2221<U' reversed>38<orig>   restore, addressed to the MOVED uid
     hf 15 reader                                   back to U
 
-`<U reversed>` is the eight UID bytes least significant first: `hf 15 reader` prints `E0 02 22 24 50
-00 83 03`, so the frame carries `03 83 00 50 24 22 02 E0`. Getting it backwards addresses a card that
-is not there and the write meets silence — which is a real failure mode, not a typo that shows up as
-an error.
+**Do not build these by hand.** `tools/gen1-addressed-frames.py <uid as hf 15 reader prints it>`
+emits all four lines with the predictions beside them, and asserts its byte order against a frame a
+card actually accepted before it prints anything.
+
+Two reversals are involved and they are not the same reversal. The ADDRESS is the eight UID bytes
+least significant first, so `E0 02 22 24 50 00 83 03` travels as `03 83 00 50 24 22 02 E0`. Block
+56's DATA is uid[7],uid[6],uid[5],uid[4] — so restoring `...50 00 83 03` takes `03 83 00 50`, which
+is the printed tail reversed, not the printed tail. The script had that backwards on its first run.
+
+Neither mistake fails loudly. A reversed address names a card that is not in the field, so the write
+meets silence and reads exactly like the refusal this bench is looking for.
 
 **PREDICTION: accepted, `00 78 F0`, and the UID's LAST FOUR printed bytes become `AA BB CC DD`.**
 Block 56 carries uid[7..4], and `hf 15 reader` prints uid[0] first, so the tail is what moves. On the
