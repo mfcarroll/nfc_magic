@@ -223,8 +223,24 @@ It builds its own addressed WRITE BLOCK frame, reimplements the response decode,
 requirement from the card's own 0x03 refusal, and -- because the acknowledgement is then unreachable --
 **reads the block back and compares it** rather than treating silence as a refusal.
 
-That workaround is not removable by an upstream fix. The app has to keep working on today's firmware,
-so a fixed SDK would become a fast path with this as the fallback, keyed on API version.
+That workaround is not removable by an upstream fix while the app must run on today's firmware.
+
+**And it cannot be a fast path with a fallback "keyed on API version", which is what this note said
+until 2026-09-26.** That is not achievable in one binary. A FAP's API imports are resolved when it is
+LOADED, and a reference to a symbol the firmware lacks fails the whole load --
+`FlipperApplicationLoadStatusMissingImports`, `elf_file.c`. There is no graceful degradation and no
+runtime lookup: merely mentioning `nfc_iso15693_poller_trx_eof` makes the app unloadable everywhere
+the symbol is absent. So the choice cannot be made at runtime at all.
+
+Nor is there a compile-time escape worth using. No SDK-provided macro carries the API version to an
+app -- `elf_api_version` is a const in the firmware's own table -- so a `#if` would have to be a hand
+-flipped define, decided by whoever packages the FAP. Get it wrong and the app does not start. That
+is a far worse failure than the read-back's actual cost, which is one extra read per refused write on
+one chip.
+
+**What IS available is a clean switch, later.** Once the EOF call exists in the minimum firmware the
+app supports, use it unconditionally and delete the read-back. That is a deliberate decision at that
+point rather than plumbing carried speculatively now.
 
 ## Separate project — a proxmark3 client bug found the same way
 
