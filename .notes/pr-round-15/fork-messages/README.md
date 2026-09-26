@@ -42,18 +42,19 @@ then-fix pairing he has flagged twice, wearing a different hat.
 gen1 loss claim is made only where there was a loss — applied at three sites. Split, the first
 invites "why was the outcome not fixed in the same breath?"
 
-## Why 06 carries two decisions
+## Why the survey, the repair and the size note ship as one sync point
 
 It syncs the tree at the last of seven dev commits: the clone survey, the gen1-card-on-the-gen2-path
 repair, the register-as-capacity fix, the notes-page wording, the comment recording why the repair
 reacts to the registers rather than predicting them -- which documents code the same sync point
 introduces, so it cannot be split off without describing something absent from its own diff -- and
-the bench's two corrections to the size note's wording. That last one is why the sync point moved rather
-than a seventh being added: appending to the tail of an already-collapsed range costs no churn,
-while a commit after it would show him the superseded wording and then its fix. Published one per sync point, he
-would see the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01,
-not the file's" — which leads with a number that matched — and then see it corrected twice. **16 of
-the 30 lines the survey adds to the details scene are rewritten by the last of the four.**
+the bench's two corrections to the size note's wording. That last one is why the sync point MOVED to
+the tail rather than a new one being appended after it: extending an already-collapsed range costs no
+churn, while a sync point after it would show him the superseded wording and then its fix. Published
+one per sync point, he would see the survey introduce a geometry note reading "The card reports 28
+blocks and IC ref 01, not the file's" — which leads with a number that matched — and then see it
+corrected twice. **16 of the 30 lines the survey adds to the details scene are rewritten by the last
+of the seven.**
 
 Splitting the repair out from the survey was tried and is not available: it does not apply without
 the survey in the tree, and a tree-based sync cannot take half a commit. So the choice was two

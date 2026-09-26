@@ -44,8 +44,9 @@ validated. No card here has ever accepted either frame, in any form, including
 one this app had never written -- so there is no acceptance to observe and no
 way to show the addressed form fares differently. They are addressed on the
 safety argument alone. What the same evidence does settle is that they are not
-required: five cards take a bare write to block 56 with no unlock in front of
-it, and 0x10 means "block not available" rather than "refused", which reads as
+required: five cards take the write to block 56 without an unlock ever having
+been accepted -- two with no unlock frame sent at all, three with one sent and
+refused -- and 0x10 means "block not available" rather than "refused", as
 those two addresses not existing on this silicon. They stay regardless --
 proxmark sends them, and the cards that would need them are ones nobody here
 has -- but the comment at their definition no longer claims a locked state

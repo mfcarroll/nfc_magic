@@ -263,12 +263,13 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
    `[👤]` marks mfcarroll's own paragraphs and is POSTED as-is -- checked against round 10's
    comment 5652071967, which carries one.
 
-4. ~~**The fork messages**~~ -- **DONE 2026-09-26.** Six sync points for nine shipped commits;
+4. ~~**The fork messages**~~ -- **DONE 2026-09-26.** Seven sync points for thirteen shipped commits;
    [pr-round-15/fork-messages/](pr-round-15/fork-messages/) has all six and the README's table.
-   Gate clean. **06 deliberately collapses four dev commits** -- the survey, the repair, the
-   register-as-capacity fix and the wording -- because published separately he would see a geometry
-   note leading with a number that matched and then see it corrected twice; 16 of the 30 lines the
-   survey adds to the details scene are rewritten later. Splitting the repair out was tried and is
+   Gate clean. **06 deliberately collapses seven dev commits** -- the survey, the repair,
+   the register-as-capacity fix, the notes-page wording, the comment explaining the repair, and the
+   two size-note corrections -- because published separately he would see a geometry note leading
+   with a number that matched and then see it corrected twice; 16 of the 30 lines the survey adds to
+   the details scene are rewritten later. Splitting the repair out was tried and is
    blocked: it does not apply without the survey. The README records the reasoning and the one
    residual staleness (the Partial release-notes line, stale at 03 and 04, fixed at 05, and not
    closable by reordering).
@@ -308,14 +309,15 @@ The design is settled by measurement rather than by argument:
 - the WIPE must re-inventory and re-address after a write to 56 or 57 lands, because the UID moves
   immediately and the stale address gets silence. Confirmed on NXP SLIX and ST LRi2K, the latter
   being the chip the armed-gen1 hazard was reproduced on
-- the gen1 backdoor sequence stays UNADDRESSED -- measured to work that way on all five
+- ~~the gen1 backdoor sequence stays UNADDRESSED~~ -- **reversed 2026-09-26, see `b312653`**
 - the SDK cannot do it: `iso15693_3_poller_write_block` hardcodes the flags and
   `iso15693_3_write_block_response_parse` is internal, so we need our own builder and response check
 
-**One frame outstanding**, and it is a gap in my test design rather than a card behaviour:
-`SL2S5302` was never sent a mis-addressed write, so "it enforces the address" is untested there.
-
-    hf 15 raw -ackw -d 2221F8350003500204E10855667788    expect no answer
+**Nothing is outstanding on that measurement.** `SL2S5302`'s mis-addressed control was run
+2026-09-24 -- silence, bracketed by a reader either side -- so four of the five chips have
+enforcement directly tested. The fifth is TI Tag-it, and its enforcement is untested: the reason once
+given for skipping it ("it refuses unaddressed writes, so it already discriminates") was withdrawn
+the same day, because what it refuses is a write without the OPTION flag. Untested, not covered.
 
 **Two controls also passed** before this, in
 [pr-round-15/controls-2026-09-24.md](pr-round-15/controls-2026-09-24.md): EM-Marin still wipes 64/64,

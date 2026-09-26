@@ -62,6 +62,27 @@ readers see door cards and not stock labels. Change a bystander's AFI and it sto
 inventory its own system runs — the card still reads fine to anything generic, but to the system
 that owns it the card has simply gone.
 
+**And so is the gen1 backdoor sequence**, which was the worst of the lot to leave open. Those four
+frames are plain WRITE BLOCKs at blocks 56/57/62/63, and on any tag large enough to have them that is
+user data — sent behind an opt-in whose warning is about the card in the user's hand.
+
+Addressing them turns out to be what makes the card **answer**, which I did not expect. At block 62,
+NXP ICODE SLIX and SLIX-S are silent to an unaddressed write and return a refusal you can read —
+error `0x0F` — to the identical addressed one, with a UID one byte wrong silent again. ST LRi2K
+answers either form, with the specific `0x10`, "block not available". Three chips, five cards, each
+bracketed by a reader either side so a silence is a refusal rather than an absence.
+
+The cost is one extra inventory. Block 56 moves the UID at once, so the sequence has to re-take its
+address before block 57 — without that the second half goes to a card that has stopped listening and
+the run ends with half a UID written. It uses the same prediction check as the wipe: the only UID
+accepted as the new address is the one that write implies.
+
+Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
+form of either: no card here has ever accepted one, in any form, including a card this app had never
+written. The same evidence says they are not needed — five cards take the write to 56 without an
+unlock ever having been accepted, two of them with no unlock frame sent at all. They stay anyway:
+proxmark sends them, and the cards that would prove them necessary are ones neither of us has.
+
 ## A clone could destroy the identity of the card it was copying onto
 
 The gen2 verify proves the card's UID **matches** the target, not that the card is magic. A card
@@ -171,9 +192,11 @@ on someone's other card is the kind of inadvertent damage this PR has been caref
 **It does not close #251.** The 1-slot INVENTORY_T5 and the missing STAY QUIET are untouched, and the
 issue's worst consequence cannot be fixed this way at all: the post-wipe UID re-read can still be
 answered by a bystander, and that check exists to discover whether the UID changed, so it cannot be
-aimed at a UID already in doubt. The backdoor sequences also stay unaddressed — they are the magic
-sequences, measured to work that way on all five cards, and nothing has been measured about
-addressing them.
+aimed at a UID already in doubt.
+
+What does stay unaddressed is the **gen2** backdoor, and usefully so: its command is `0xE0` and
+proprietary, so a tag that is not a gen2 magic card rejects it on the command rather than on the
+address.
 
 ## The bench
 

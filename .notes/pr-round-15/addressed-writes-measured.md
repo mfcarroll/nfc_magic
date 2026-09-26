@@ -150,8 +150,13 @@ So four of the five chips are shown to filter on the address and TI is not one o
 2. **The wipe must re-address.** Measured on two chips now, not inferred from the spec: after a write
    to 56 or 57 lands, the UID has moved and the old address gets silence. Re-inventory and re-address
    from the result. At most twice per sweep. 62/63 carry no UID and need nothing.
-3. **The gen1 backdoor sequence stays unaddressed.** It is the magic sequence, measured to work
-   unaddressed on all five cards, and addressing it would be a change with no evidence behind it.
+3. ~~**The gen1 backdoor sequence stays unaddressed.**~~ **SUPERSEDED 2026-09-26 -- it is addressed,
+   and "a change with no evidence behind it" was wrong when written.** The wipe's sweep was already
+   zeroing 56/57/62/63 through the addressed path, so the evidence was in this round from the start.
+   The de-arm probe then added the part nobody had: at block 62 an addressed frame is received,
+   parsed and address-filtered on all three gen1 chips, and on the NXP parts it is the ONLY form that
+   draws a response. See [dearm-probe-bench.md](dearm-probe-bench.md) and
+   [gen1-backdoor-addressed.md](gen1-backdoor-addressed.md).
 4. **The SDK cannot do any of this.** `iso15693_3_poller_write_block` hardcodes
    `SUBCARRIER_1 | DATA_RATE_HI` with no flags parameter and no UID, and
    `iso15693_3_write_block_response_parse` is internal to `lib/nfc`. We need our own frame builder and

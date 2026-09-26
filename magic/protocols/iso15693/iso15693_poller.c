@@ -110,9 +110,10 @@
 // "unlock" and "arms" are our reading of a sequence that carries no explanation anywhere.
 //
 // NEITHER HAS EVER BEEN OBSERVED ACCEPTED, on any card here, in any form -- including one that had
-// never been written by this app. Five cards take a write to 56 with no unlock or commit in front of
-// it, so neither is necessary on this shelf, and 0x10 is "block not available" rather than "refused",
-// which reads as these two addresses not existing on this silicon at all.
+// never been written by this app. Five cards take the write to 56 with no unlock and no commit in
+// front of it at all, across all three gen1 chips and two of them as a session's first frame -- so
+// neither is necessary on this shelf, and 0x10 is "block not available" rather than "refused", which
+// reads as these two addresses not existing on this silicon at all.
 //
 // They stay regardless, and this is not an argument for dropping them: five cards is a statement
 // about this shelf, the cards that would need these frames are the ones nobody here owns, and

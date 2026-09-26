@@ -54,8 +54,13 @@ any form -- including `v1-coin-green18`, which this app had never written. There
 observe, so the addressed form cannot be shown to fare differently. They are addressed on the safety
 argument alone.
 
-The same evidence settles that they are not NEEDED: five cards take a bare write to 56 with no unlock
-in front of it, and `0x10` is *block not available* rather than *refused*. They stay regardless --
+The same evidence settles that they are not NEEDED: five cards take the write to 56 without an unlock
+ever having been ACCEPTED, and `0x10` is *block not available* rather than *refused*.
+
+Two of the five had no unlock frame sent at all -- `slix-1k-50mm` and `v1-coin-green18`, bare writes
+as the first frames of their sessions. The other three -- `lri2k-keychain`, `slix-1k-50x28`,
+`SL2S5302` -- were sent unlock and commit, had both REFUSED, and took the 56 write anyway. Recorded
+because "with no unlock in front of it" is true of two of them and the claim is true of all five. They stay regardless --
 proxmark sends them, and the cards that would prove them necessary are the ones nobody here owns.
 
 ## What the host tests pin, and what the mutants had to kill
