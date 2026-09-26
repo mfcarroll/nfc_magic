@@ -130,9 +130,18 @@ resolving, so record the raw output rather than the summary line.
     hf 15 wrbl --ua -b 56 -d 11223344     ( ok )   -> UID E0 02 22 24 44 33 22 11
     hf 15 wrbl --ua -b 56 -d 03830050     ( ok )   -> UID E0 02 22 24 50 00 83 03   restored
 
-**No value re-locks it.** Five values across both registers, unaddressed, plus both addressed —
-refused every time, while block 56 still takes a write immediately afterwards. On this chip the card
-stays armed and the de-arm question is answered in the negative.
+**That is NOT "no value re-locks it", and the sheet said so before mfcarroll asked what the values
+were based on. Nothing.** `0x6996` is the only value with a source — it is what proxmark's
+`hf_15_magic.lua` sends. `00000000`, `96690000` and `FFFFFFFF` were invented here: "clear it", "swap
+the bytes", "try non-zero". There is no lock or relock function anywhere in proxmark; the script sets
+a UID and there is no counterpart.
+
+**And the probe could not have tested a value anyway.** On this card the write is refused at the
+BLOCK, before the payload is considered, so five payloads against a block that refuses every write
+distinguish nothing. The result is one fact repeated seven times.
+
+So the de-arm question is not answered in the negative. It is **unasked**: no candidate value exists
+to try, and no write reaches those registers on this card to try one with.
 
 ## But the tool was wrong, and half the probe got nothing
 
@@ -195,3 +204,36 @@ addressing.
 
 **One chip.** ST LRi2K. `slix-1k-50x28` and `SL2S5302` should get the same four frames, substituting
 each card's own UID, before this is written up as anything broader.
+
+
+## A better reading of the whole thing — those registers may simply NOT EXIST
+
+`0x10` is not "refused" and not "locked". The SDK names it
+`ISO15693_3_RESP_ERROR_BLOCK_UNAVAILABLE`, and in ISO15693-3 it means the addressed block **is not
+available — it does not exist**. The card is not declining the write; it is saying there is nothing
+at that address.
+
+Line that up with everything else on the bench and a simpler model appears:
+
+- **unlock and commit have NEVER been observed accepted, on any card, in this project.** Not once.
+- 56/57 accept writes on every gen1 card here **without** unlock or commit having succeeded first.
+- 56/57 answer no read ever, so they are write-only registers; 62/63 answer `0x10`, so they are
+  absent.
+
+**Which would mean there is no "arming" on this silicon at all.** These cards' UID registers are
+simply writable, unlock and commit are no-ops sent into empty address space, and the
+locked-then-armed model is imported from a card type nobody here owns. Every observation fits that,
+and it needs no state change to have ever occurred.
+
+The competing reading is that a locked card reports `0x10` for a register that exists but is
+protected. Implementations do vary. But nothing here has ever seen the other state, so the
+lock model rests on no observation of this project's own.
+
+**This is what the V1 coin actually tests**, and it reframes that bench. Not "is this card still
+locked" but **"does unlock or commit do anything on any card"**. If they are ACCEPTED there, 62/63
+exist and the model is real. If they answer `0x10` there too while 56 still takes a write, the model
+is probably wrong for this whole family, and the app has been sending two frames into nothing.
+
+**Do not act on this in the app yet.** Those two frames are harmless when refused, proxmark sends
+them, and some card somewhere presumably needs them. But it changes what the coin is for, and it is
+worth knowing before the addressing change decides how many frames it has to address.
