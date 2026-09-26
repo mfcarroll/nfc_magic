@@ -262,3 +262,47 @@ description of a card we already had two of.
 | `lri2k-keychain` | accepted | `01 10` in band | yes |
 | `v1-coin-green18` | accepted | silence | supposedly not |
 | `slix-1k-coin18` | ? | ? | yes |
+
+
+## RESULT — `slix-1k-coin18` is silent too, and that is the answer
+
+Identified by the label on the tag itself, not by UID -- it was wearing `E0 04 01 10 A1 A2 A3 A4`,
+`slix_28`'s costume, which `SL2S5302` also wears.
+
+    hf 15 reader                         -> card present
+    hf 15 raw -ackw -d 02213E00000000    -> command failed
+    hf 15 raw -ackw -d 02213F69960000    -> command failed
+    hf 15 reader                         -> card present
+
+| card | committed? | 56 write | 62/63 write |
+|---|---|---|---|
+| `lri2k-keychain` (ST LRi2K) | yes | accepted | `01 10` in band |
+| `slix-1k-coin18` (NXP SLIX) | **yes** | — | **silent** |
+| `v1-coin-green18` (unknown) | **supposedly not** | accepted | **silent** |
+
+**Two cards with different commit histories, identical behaviour.** `coin18` had the gen1 write probe
+run on it, so under the lock model it is committed; the V1 coin arrived untouched by this project.
+Both refuse both registers the same way. **The lock model predicts a difference between those two
+cards and there is none.**
+
+**And the split tracks the CHIP.** Silence is what the NXP SLIX coins do; `01 10` is what the ST
+LRi2K does. That is a difference between silicon, not between states -- which is what mfcarroll's
+"maybe they're different types" was reaching for, landing on the chip rather than the lock.
+
+### Where the lock model now stands
+
+Against it, on this bench:
+
+- **four cards, four for four** on bare UID writes with no unlock or commit in front of them
+- **zero acceptances** of unlock or commit, ever, on any card, in this project or proxmark's docs
+- **no observable difference** between a committed card and an uncommitted one
+- `0x10` means *block unavailable*, and proxmark attaches no semantics to those two frames at all
+
+So "committed" is not a state anything here can detect, and the two frames have no observed effect on
+anything. **The model was ours, and nothing measured supports it.**
+
+### What that still does not license
+
+Removing them from the app. The cards that would prove them necessary are the ones nobody here owns,
+and proxmark sends them. Four cards is a statement about this shelf, not about magic ISO15693 tags.
+The frames stay; what changes is that the comments should stop describing a lock nobody has seen.
