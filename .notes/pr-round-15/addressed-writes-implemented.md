@@ -1,7 +1,7 @@
 # Addressed writes — implemented and benched
 
-Four shipped commits: `db3d8ac` the addressed data-block writes, `4c1844b` the OPTION flag and the
-read-back it costs, `844de55` the gen1 loss claim, `721dd30` the identity writes. 145 host tests, 0
+Four shipped commits: `32f80be` the addressed data-block writes, `3327ad3` the OPTION flag and the
+read-back it costs, `0fd69e8` the gen1 loss claim, `4169416` the identity writes. 145 host tests, 0
 failed. Both firmwares build warning-free, clang-format clean, writing gate clean.
 
 The measurements this was built from are in
@@ -63,7 +63,7 @@ hf 15 rdbl -b 8                                   -> 55 66 77 88   the OPTION wr
 hf 15 reader                                      -> E0 07 80 3D E2 E7 3A 29
 ```
 
-Fixed in `4c1844b`, keyed on the tag's own 0x03 answer rather than on the UID. **Not** on the UID,
+Fixed in `3327ad3`, keyed on the tag's own 0x03 answer rather than on the UID. **Not** on the UID,
 although proxmark does it that way: a clone writes the source's UID onto the card, so a TI card cloned
 from an NXP image stops looking like TI immediately before the data pass that needs the flag. The
 wipe's block 57 and a card carrying someone else's UID are two more routes to the same error. That
@@ -115,7 +115,7 @@ against an already-blank card and could not have failed.
 **2. TI Tag-it clone — PASSES, byte for byte.** `edgedata_64` onto the same card: all 64 blocks match
 the source exactly, including `DE AD BE EF` / `CA FE BA BE` at 62/63, which is what proves the data
 pass reached the top of the range rather than stopping short. `identity_64` likewise, with its zeros
-at 62/63. Both initially reported Partial for AFI/DSFID, which is what led to `721dd30`.
+at 62/63. Both initially reported Partial for AFI/DSFID, which is what led to `4169416`.
 
 **3. Armed gen1 LRi2K wipe — PASSES, unchanged as predicted.** `lri2k-keychain` dirtied at 0/20/55.
 "Wiped 58/58", UID moved to zeros, all 56 blocks clear afterwards. 1030ms. The log carries the
@@ -144,7 +144,7 @@ nothing of the kind. A re-read was clean. **Do not read a pm3 dump past its abor
 **5. gen1 regression and the caveat gate — PASSES.** `slix_28` onto `slix-1k-50x28`, via the gen1
 opt-in. Screen: "Cloned 28/28 blocks / Not written: 0 / **gen1: UID in 56/57/62/63**", and Details:
 "the UID was set through 56/57/62/63. The file has no blocks that high, so nothing in it was skipped."
-Both are the `844de55` wording; the old build claimed those blocks differed from a file that has none.
+Both are the `0fd69e8` wording; the old build claimed those blocks differed from a file that has none.
 UID `E0 04 01 10 A1 A2 A3 A4`, data matching the source. The card reports its own 28 blocks and IC ref
 0x01 afterwards, which is right -- gen1 has no geometry block to program.
 
@@ -153,7 +153,7 @@ claims 28.", Success, **UID unchanged**. Claiming 28, the sweep trips out around
 reaches its own UID registers -- the contrast with the LRi2K, which claims 56 and does. Two cards now
 bracket that rule from either side.
 
-**7. The outcome change — PASSES.** Re-cloning `slix_28` after `844de55` gives the plain **Success**
+**7. The outcome change — PASSES.** Re-cloning `slix_28` after `0fd69e8` gives the plain **Success**
 popup: no counts, no gen1 line. Source data present.
 
 **8. Restores — both clean, and each confirms something.** `white-coin` back to
@@ -193,14 +193,14 @@ fail. `test_the_read_back_is_compared_not_just_attempted` covers the shape; hard
 Expect Partial, "Cloned 64/70 / Not written: 6 / Card too small"; a Success or a count of 70 is the
 failure.
 
-## SETTLED — a gen1 clone that lost nothing is a clean Success (`844de55`)
+## SETTLED — a gen1 clone that lost nothing is a clean Success (`0fd69e8`)
 
 Raised by mfcarroll on seeing run 5: "Cloned 28/28 / Not written: 0" under a **Partial** banner, with a
 note underneath saying nothing was skipped.
 
 `iso15693_poller.c:1495` puts `gen1_clone` -- `clone && used_gen1` -- unconditionally in the Partial
 list, on the rationale that the four backdoor blocks differ from the source. That is the same claim
-`844de55` just gated, left standing one level up.
+`0fd69e8` just gated, left standing one level up.
 
 And it can never be a claim about the CARD: on all three gen1 chips those four addresses answer no
 read at any point, so they are write-only registers outside the memory map and a gen1 UID write
@@ -226,7 +226,7 @@ and all-zeros respectively, with DSFID 05 / AFI 27 on the TI. Restore before cit
 ## WRITE AFI / WRITE DSFID — measured and done
 
 Was the strongest remaining piece of #251's blast radius, and is now addressed and OPTION-carrying
-like the data blocks (`721dd30`). Three frames settled it on `white-coin`:
+like the data blocks (`4169416`). Three frames settled it on `white-coin`:
 
 | frame | result |
 |---|---|
