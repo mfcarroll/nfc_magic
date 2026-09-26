@@ -1470,6 +1470,25 @@ def git_commit():
 
 
 # =============================================================== main
+def resolve_pm3(explicit):
+    """Find the proxmark client, and do not assume it is on PATH.
+
+    `pm3` is commonly a shell ALIAS, and aliases are not inherited by anything this script runs --
+    which is why it works when typed and fails when called. Defaulting to the bare string "pm3" left
+    that to shutil.which, which reported "not found": true, and unhelpful when the binary is sitting
+    in a sibling checkout the whole time.
+    """
+    if explicit:
+        return explicit
+    if os.environ.get("PM3"):
+        return os.environ["PM3"]
+    sibling = os.path.normpath(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "proxmark3", "pm3"))
+    if os.path.isfile(sibling) and os.access(sibling, os.X_OK):
+        return sibling
+    return "pm3"
+
+
 def main():
     ap = argparse.ArgumentParser(description="ISO15693 magic-card characterization (guided).",
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1500,7 +1519,8 @@ def main():
     ap.add_argument("--flipper-note", action="store_true",
                     help="after the proxmark probes, prompt you to read the card in the Flipper NFC app and "
                          "note what IT reports (captures proxmark-vs-Flipper differences).")
-    ap.add_argument("--pm3", default=os.environ.get("PM3", "pm3"), help="Proxmark client command (default: pm3).")
+    ap.add_argument("--pm3", default=None,
+                    help="Proxmark client command. Default: $PM3, else a sibling proxmark3 checkout, else `pm3` on PATH.")
     ap.add_argument("--pm3-split", action="store_true", help="run pm3 commands one-per-invocation.")
     ap.add_argument("--out-dir", help="campaign output dir (default: tools/campaigns/iso15_<stamp>/).")
     ap.add_argument("--note", default="", help="free-text note recorded in the manifest.")
@@ -1517,6 +1537,7 @@ def main():
                     help="read the tag on the antenna and say which inventory entry it is. Read-only. "
                          "With --card <label>, ASSERTS it is that tag and exits non-zero if not.")
     args = ap.parse_args()
+    args.pm3 = resolve_pm3(args.pm3)
 
     C.enabled = (sys.stdout.isatty() and not args.no_color and os.environ.get("NO_COLOR") is None)
 
@@ -1530,8 +1551,11 @@ def main():
         return
 
     if args.identify:
-        if not shutil.which(shlex.split(args.pm3)[0]):
-            sys.exit(C("err", "ERROR: Proxmark client '%s' not found." % args.pm3))
+        _pm3_bin = shlex.split(args.pm3)[0]
+        if not shutil.which(_pm3_bin) and not os.access(_pm3_bin, os.X_OK):
+            sys.exit(C("err", "ERROR: Proxmark client '%s' not found.\n"
+                              "       It is often a shell ALIAS, which scripts do not inherit.\n"
+                              "       Pass --pm3 /path/to/proxmark3/pm3, or set PM3." % args.pm3))
         reason, _ = pm3_probe(args.pm3, args.pm3_split)
         if reason:
             sys.exit(C("err", "ERROR: Proxmark3 not usable: %s." % reason))
@@ -1568,8 +1592,11 @@ def main():
         print(C("warn", "*** DRY RUN -- nothing sent to the Proxmark ***"))
 
     if not args.dry_run:
-        if not shutil.which(shlex.split(args.pm3)[0]):
-            sys.exit(C("err", "ERROR: Proxmark client '%s' not found." % args.pm3))
+        _pm3_bin = shlex.split(args.pm3)[0]
+        if not shutil.which(_pm3_bin) and not os.access(_pm3_bin, os.X_OK):
+            sys.exit(C("err", "ERROR: Proxmark client '%s' not found.\n"
+                              "       It is often a shell ALIAS, which scripts do not inherit.\n"
+                              "       Pass --pm3 /path/to/proxmark3/pm3, or set PM3." % args.pm3))
         reason, _ = pm3_probe(args.pm3, args.pm3_split)
         if reason:
             sys.exit(C("err", "ERROR: Proxmark3 not usable: %s." % reason) +
