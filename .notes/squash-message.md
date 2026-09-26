@@ -72,7 +72,7 @@ WRITES CARRY THE CARD'S ADDRESS (#251). Every data block, every identity field
 and the gen1 backdoor sequence go out as addressed frames, so a second tag in
 the field is not written by them; on ISO15693 a bystander need only be in a
 wallet, not on the antenna. Measured on five cards over four identified chips:
-all five accept an addressed WRITE BLOCK and four are shown to enforce it. On
+all five accept an addressed WRITE BLOCK and all five enforce it. On
 NXP silicon the addressed form is also the only one the backdoor registers
 answer at all. Writing block 56 moves a gen1 card's UID at once, so anything
 that writes there re-takes the address before continuing, and accepts only the
@@ -106,9 +106,11 @@ KNOWN LIMITS, in the order they matter:
 - gen3 is NOT supported, and a wipe can destroy one. @0x6r1an0y, who wrote
   proxmark's ISO15693 V3 magic support, reports that zeroing blocks 0x14/0x15 on
   an un-finalized V3 card does not merely clear the signature but bricks the
-  card permanently. No gen3 card exists on either side of this PR, so that is
-  attributed, not observed. The wipe confirm screen carries it; a pre-flight
-  probe is #255.
+  card permanently. One tag here carries gen3's UID MECHANISM -- writing block
+  0x10 moves its UID to the value that write implies -- so the hazard's premise
+  is measured. Its configuration area matches neither documented state, so it
+  is not called a gen3 card; the brick stays attributed. The wipe confirm
+  screen carries it; a pre-flight probe is #255.
 - A WIPE CAN MOVE A GEN1 CARD'S UID and cannot prevent it. Blocks 56/57 are the
   UID registers and they take a write with nothing sent in front of them, on all
   five gen1 cards measured, so this needs no prior gen1 write on the card --

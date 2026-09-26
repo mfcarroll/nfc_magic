@@ -70,10 +70,8 @@ firmware that does not have it. A FAP resolves its API imports at load time, so 
 fallback keyed on the API version — naming a symbol the firmware lacks fails the whole load rather
 than degrading. The read-back is what works everywhere, and it is what ships.
 
-**Addressed data-block writes**, which is what #251 asks for. Every card here accepts them, and four
-of the five are shown to enforce the address — a UID one byte wrong gets nothing at all. The fifth is
-the TI Tag-it, which was never sent a mis-addressed frame, so its enforcement is untested rather than
-different. The wipe retakes its address after writing 56 or 57,
+**Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and every
+one enforces the address — a UID one byte wrong gets nothing at all, on all five. The wipe retakes its address after writing 56 or 57,
 because on a gen1 card those two blocks are the UID and it moves immediately — measured on three
 chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
 absent run trips, and it reports a card shorter than the one in the field.
@@ -183,12 +181,26 @@ None of this is a failure and none of it makes the clone Partial. They are notes
 answers a read existing, which holds for every gen1 and gen2 card I have. One tag answers at all 256
 addresses because the top half of its address space aliases the bottom — write block 228 and block
 100 changes with it — so the survey would call a 128-cell card a 256-block one, and would meet the
-clone's own payload again through the alias and report it as data left over from before. That tag is
-neither gen1 nor gen2: its UID sits at 0x10/0x11 in the reversed layout and block 0x14 is one bit
-from the V3 config-mode signature, so it is gen3 territory, which this PR does not support. I have
-left the wording alone rather than hedge it for a card the feature does not claim to handle. If it
-does turn out to be gen3, it is the first such card either of us has had, and #255 stops resting on
-an attributed report.
+clone's own payload again through the alias and report it as data left over from before. I have left
+the wording alone rather than hedge it for a card the feature does not claim to handle.
+
+**That tag carries gen3's UID mechanism, which I can now say rather than infer.** Its UID reads out
+of blocks 0x10/0x11, which on its own means nothing — memory holding a copy of a UID is ordinary. So
+I wrote `AA BB CC DD` into block 0x10 and the UID moved to `E0 48 03 00 DD CC BB AA`: exactly what
+that write implies, byte order and all. Writing the original four bytes back restored it. A register,
+not a copy.
+
+**I am not calling it a gen3 card, because its configuration area does not match.** `hf 15 cfinalize`
+identifies an un-finalized V3 by a signature in 0x14/0x15; this tag is one bit off at 0x14 and
+nowhere near at 0x15, and it matches the finalized values less well still. So proxmark would refuse
+to finalize it, and what I have is a tag with V3's UID mechanism and an unrecognised configuration
+area — which is worth reporting precisely rather than rounding to a generation.
+
+**It does make #255's premise measured rather than assumed.** The hazard there is that a wipe sweeps
+those UID registers because they sit well inside any claim, and they are now confirmed to be
+registers on a card in my hand. The brick is still not observed: whether zeroing 0x14/0x15 destroys
+anything stays on 0x6r1an0y's authority, since confirming it would cost the only tag either of us has
+that behaves this way. The release notes say exactly that now.
 
 **The geometry half is also a correction to the release notes.** The 2.3 entry said a clone writes
 the source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",

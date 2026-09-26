@@ -80,6 +80,52 @@ this PR" — which the squash message says — and this bench having the first o
 attributed report today. It also decides whether the reply's aliasing paragraph should keep calling
 the card gen3 TERRITORY or name it.
 
-## RESULTS
+## What the probes returned
 
-_Neither run yet._
+### TI Tag-it enforces the address, and the table has no blank left
+
+    hf 15 reader        -> E0 07 80 3D E2 E7 3A 29, Texas Instrument; Tag-it HF-I Plus
+    hf 15 rdbl -b 8     -> 00 00 00 00
+    6221...E108AABBCCDD -> command failed          WRONG address: SILENCE
+    hf 15 reader        -> E0 07 80 3D E2 E7 3A 29  card present throughout
+    6221...E008AABBCCDD -> (3) 00 78 F0            RIGHT address: ACCEPTED
+    hf 15 rdbl -b 8     -> AA BB CC DD
+
+The control landed, so the silence above it is the address and not a mangled frame, the wrong card
+or bad coupling. **All five chips are now shown to enforce the address**, where the claim was four of
+five with TI untested.
+
+⚠️ **Block 8 is left holding `AA BB CC DD`** and wants `00 00 00 00` back:
+`hf 15 raw -ackw -d 6221293AE7E23D8007E00800000000`.
+
+### `slix2-gold-30mm` IS GEN3 — block 0x10 is a UID register
+
+    hf 15 reader                       -> E0 48 03 00 01 CD F1 36
+    hf 15 wrbl --ua -b 16 -d AABBCCDD  -> ( ok )
+    hf 15 reader                       -> E0 48 03 00 DD CC BB AA     <-- THE PREDICTED VALUE
+    hf 15 wrbl --ua -b 16 -d 36F1CD01  -> ( ok )
+    hf 15 reader                       -> E0 48 03 00 01 CD F1 36     restored
+
+**Not "gen3 territory", not a candidate. The UID followed the write, to exactly the value the
+mapping implied.** That is the definition this project has used throughout: gen3 keeps its UID at
+0x10/0x11 and a write there moves it. Predicted in this file before the frame went out, and the
+prediction named the byte order as well as the fact.
+
+**What is STILL not established, and must stay that way.** Whether the card is FINALIZED, and
+whether zeroing 0x14/0x15 bricks an un-finalized one. That remains 0x6r1an0y's report and cannot be
+checked without risking the card -- which is now a card worth keeping, being the only gen3 either of
+us has. **The DO-NOT-WIPE on this tag is no longer a precaution about a maybe; it is about a
+confirmed gen3 card.**
+
+**What it changes elsewhere**, and none of it is a code change:
+
+- the squash message said "no gen3 card exists on either side of this PR". False now.
+- the release notes said the brick hazard is "stated on their authority rather than ours: no gen3
+  card exists on either side of this PR, so nothing here has been observed". Half of that is now
+  wrong -- the CARD is observed, the BRICK is not.
+- the reply called it "gen3 territory, which this PR does not support" and hedged on "if it does
+  turn out to be gen3". It did.
+- #255 stops resting entirely on an attributed report: the hazard's premise -- that a gen3 card
+  keeps its UID inside the wipe's range -- is now measured here.
+- it makes the #255 pre-flight probe testable for the first time, which is a reason to build it and
+  not a reason to put it in this PR.

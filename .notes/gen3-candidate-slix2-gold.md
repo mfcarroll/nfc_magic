@@ -1,4 +1,64 @@
-# `slix2-gold-30mm` is a gen3 candidate — measured 2026-09-26
+# `slix2-gold-30mm` — it has gen3's UID register, and an unrecognised configuration area
+
+**SETTLED 2026-09-26 by a write, which is the only thing that could settle it.** The file below was
+written while this was still indicators-on-reads. Read this section first; the rest is how it looked
+before the measurement.
+
+    hf 15 reader                       -> E0 48 03 00 01 CD F1 36
+    hf 15 wrbl --ua -b 16 -d AABBCCDD  -> ( ok )
+    hf 15 reader                       -> E0 48 03 00 DD CC BB AA
+    hf 15 wrbl --ua -b 16 -d 36F1CD01  -> ( ok )
+    hf 15 reader                       -> E0 48 03 00 01 CD F1 36
+
+Block 0x10 is a UID register: the UID followed the write to the value the mapping implies, and the
+restore put it back. Memory holding a copy of a UID cannot do that.
+
+## What proxmark's own source says, which answers most of the rest
+
+`client/src/cmdhf15.c`, the V3 support 0x6r1an0y wrote:
+
+- **It is a two-step process.** `hf 15 csetuid --v3` "writes the UID configuration only and is
+  repeatable"; `hf 15 cfinalize` then "locks the UID permanently". Our two writes above are the
+  repeatable half, twice.
+- **Finalize is irreversible and erases the configuration area**: "After finalize the configuration
+  area is erased and the UID can no longer be changed", and afterwards "the tag behaves like a normal
+  ISO15693 tag".
+- **The UID mapping matches ours exactly.** Their worked example for `E011223344556677` gives block
+  16 = `77 66 55 44` and block 17 = `33 22 11 E0` -- each printed half reversed, the same shape gen1
+  uses at 56/57.
+- **The brick warning is in the source, as a guard rather than a remark**: finalize is gated on the
+  config-mode signature because "writing the finalize values to any other tag may permanently brick
+  it."
+
+## Why this tag is NOT called a gen3 card here
+
+`hf15_magic_v3_is_config_mode()` requires BOTH signature blocks to match. This tag matches neither
+state:
+
+| | `0x14` | `0x15` |
+|---|---|---|
+| `slix2-gold-30mm` | `A5 3B 44 2C` | `21 0F 50 00` |
+| V3 config mode | `A5 2B 44 2C` | `21 AE 93 00` |
+| V3 finalized | `A5 2B 44 2C` | `69 E2 5D 00` |
+
+One bit off at `0x14`; seven bits from config and eleven from finalized at `0x15`. So **proxmark
+would refuse to finalize this tag**, and the honest description is a tag carrying V3's UID mechanism
+with an unrecognised configuration area -- not a V3 card, and not a card in either documented state.
+
+**DO NOT WIPE IT, and the reason is now better rather than weaker.** Not "it might be an
+un-finalized V3": it is a tag whose configuration area we cannot place, it is the only one of its
+kind here, and proxmark's own code treats writing the wrong values to those blocks as capable of
+bricking a tag. A wipe writes zeros to both.
+
+## What is NOT answered, and is not this PR's to answer
+
+Why a generation would put its UID registers on readable data blocks at all, when gen2 already does
+its configuration in a separate register space through `0xE0`/`0x09` and needs no overlay. mfcarroll
+raised it and it is a fair question about the product, not about this app. Recorded so nobody
+mistakes the absence of an answer for an answer.
+
+---
+
 
 Found while looking for a card that could reach one branch of a result-screen string. The card is the
 more interesting object.

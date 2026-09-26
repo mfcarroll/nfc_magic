@@ -129,7 +129,7 @@ is indistinguishable from absence.
 
 | chip | card | accepts addressed | enforces address | stale-address after UID move |
 |---|---|---|---|---|
-| TI Tag-it HF-I Plus | `white-coin` | yes | not tested | n/a -- not gen1 |
+| TI Tag-it HF-I Plus | `white-coin` | yes | **yes** | n/a -- not gen1 |
 | NXP ICODE SLIX 0x01 | `slix-1k-50mm` | yes | yes | **yes** |
 | gen-2-card's silicon | `gen-2-card` | yes | yes | n/a -- not gen1 |
 | ST LRi2K | `lri2k-keychain` | yes | yes | **yes** |
@@ -138,11 +138,19 @@ is indistinguishable from absence.
 **Every chip this app can write accepts addressed WRITE BLOCK.** That is the premise of the whole
 approach and it now holds across all five, rather than the one it started from.
 
-TI's enforcement of the ADDRESS is untested, and the reason given here for not testing it -- "it
-refuses unaddressed writes, so it is already discriminating on the flag" -- was withdrawn 2026-09-24.
-It does not refuse them; it refuses writes without the OPTION flag, whether addressed or not. See the
-correction at the head of [../pr-round-10/unaddressed-write-finding.md](../pr-round-10/unaddressed-write-finding.md).
-So four of the five chips are shown to filter on the address and TI is not one of them.
+**CLOSED 2026-09-26 -- all five chips filter on the address.** TI's was the last blank, left on a
+reason withdrawn the same day it was given ("it refuses unaddressed writes, so it is already
+discriminating on the flag" -- it does not; it refuses writes without the OPTION flag, addressed or
+not). Run with the flag SET in both frames, so the address was the only variable left:
+
+    hf 15 raw -ackw -d 6221293AE7E23D8007E108AABBCCDD   WRONG address -> command failed
+    hf 15 reader                                        card present throughout
+    hf 15 raw -ackw -d 6221293AE7E23D8007E008AABBCCDD   RIGHT address -> (3) 00 78 F0
+    hf 15 rdbl -b 8                                     -> AA BB CC DD
+
+The correctly-addressed write is in the set because every failure mode of this probe looks like
+silence -- wrong card, moved UID, mangled frame, bad coupling -- and without it the refusal above
+proves nothing. Full write-up in [loose-ends-bench.md](loose-ends-bench.md).
 
 ## What this settles for the implementation
 
