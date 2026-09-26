@@ -20,7 +20,7 @@ this buys safety rather than compatibility.
 
 The wipe has to retake its address as it goes. Blocks 56/57 are the gen1 UID
 registers, so the sweep's own zero-write moves the card's identity -- at once,
-with no power-cycle, measured on three chips. An address taken at activation is
+with no power-cycle, measured on two chips. An address taken at activation is
 wrong from block 56 on: every later frame goes unanswered, the absent run
 trips, and the sweep reports a card shorter than the one in the field, on
 exactly the gen1 path the UID check exists for. The re-address runs on
