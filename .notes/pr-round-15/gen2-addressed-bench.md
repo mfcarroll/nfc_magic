@@ -219,7 +219,66 @@ the whole measurement; the models only say what to conclude.
 
 ## RESULTS
 
-*(fill in per card -- transcripts verbatim, BENCH-RULE 8)*
+### `gen-2-card` — 2026-09-26. THE ADDRESSED FORM IS REFUSED. Model (b).
+
+Verbatim (BENCH-RULE 8). Reader after every frame, which is what caught the second finding:
+
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   baseline
+    hf 15 raw -ackw -d 02E0094011223344                 -> (3) 00 78 F0      unaddressed, no OPTION
+    hf 15 reader                                        -> E0 04 01 10 44 33 22 11   MOVED, as predicted
+    hf 15 raw -ackw -d 02E00940A4A3A2A1                 -> (3) 00 78 F0      restore
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   back
+    hf 15 raw -ackw -d 22E0A4A3A2A1100104E0094011223344 -> command failed    ADDRESSED, correct UID
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   UNCHANGED
+    hf 15 raw -ckw  -d 22E0A4A3A2A1100104E1094011223344 -> command failed    ADDRESSED, wrong UID
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   unchanged
+    hf 15 raw -ackw -d 62E0A4A3A2A1100104E0094011223344 -> command failed    ADDRESSED + OPTION
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   unchanged
+    hf 15 raw -ackw -d 42E0094011223344                 -> command failed    unaddressed + OPTION
+    hf 15 reader                                        -> E0 04 01 10 44 33 22 11   *** MOVED ***
+    hf 15 raw -ackw -d 02E00940A4A3A2A1                 -> (3) 00 78 F0      restore
+    hf 15 reader                                        -> E0 04 01 10 A1 A2 A3 A4   restored
+
+**THE ADDRESSED FORM DOES NOT WORK AND DOES NOT WRITE.** Refused in both flag combinations with the
+CORRECT address, and the UID did not move for either. The card took the same write unaddressed twice
+in the same session, either side of the failures, so this is the card refusing the FORM and not a
+card that had drifted off the antenna (BENCH-RULE 2b).
+
+The wrong-address frame is uninformative here, which is worth saying rather than counting it: when
+the correct address is also refused, a refusal of the wrong one discriminates nothing.
+
+### AND THE SECOND FINDING: a refusal that wrote
+
+`42E0094011223344` -- unaddressed, OPTION set -- **reported `command failed` and the write LANDED.**
+The UID moved to `E0 04 01 10 44 33 22 11`.
+
+That is the OPTION acknowledgement cost this round already measured for WRITE BLOCK, appearing on
+the PROPRIETARY 0xE0 backdoor and on a card that is not TI. With OPTION set the card owes its answer
+only after a standalone EOF, so the frame applies and nothing comes back.
+
+**Had this sheet read the response instead of taking a reader after every frame, that line would have
+been recorded as a refusal.** A "command failed" from pm3 is an absence of answer, not evidence that
+nothing happened, and on this command the two come apart. The app is already right here for data
+blocks -- the read-back exists for exactly this -- but the gen2 backdoor discards its send result
+entirely, so nothing in the app depends on it either way.
+
+### What the model now is, and the one frame that would confirm it
+
+Everything fits a front-end that reads the flags byte for OPTION but does NOT honour ADDRESSED for
+this command -- so the whole frame is passed to the magic parser, which reads `A4 A3 ...` as
+subcommand and reference, does not recognise `0xA4`, and rejects.
+
+**One safe frame separates that from "the parser honours ADDRESSED and rejected for another
+reason":** set the ADDRESSED bit but lay the frame out unaddressed, with no UID inserted.
+
+    hf 15 raw -ackw -d 22E0094011223344
+    hf 15 reader
+
+- **UID moves** -> the flag's address bit is ignored for `0xE0` entirely. Model confirmed.
+- **UID does not move** -> the flag byte is being honoured and something else refuses it.
+
+Same register, same probe, same risk as the frames already run.
+
 
 ## Restore, and record the restore
 
