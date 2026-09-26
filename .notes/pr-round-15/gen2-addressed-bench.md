@@ -468,3 +468,42 @@ its first capture happened to wear, which is the reading this round corrected tw
     hf 15 raw -ackw -d 2221E4E3E2E1100104E008AABBCCDD   0x03 => wants OPTION, like white-coin
     hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000   restore to zeros, whatever happened
     hf 15 raw -ackw -d 2220E4E3E2E1100104E008           confirm 00 00 00 00
+
+### RESULT — `0x03`. Identified by what it refuses, and it confirms the round's own retraction.
+
+    hf 15 raw -ackw -d 2221E4E3E2E1100104E008AABBCCDD  -> (4) 01 03 04 24   ADDRESSED, no OPTION
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000  -> (3) 00 78 F0      restore
+    hf 15 raw -ackw -d 2220E4E3E2E1100104E008          -> (7) 00 00 00 00 00 77 CF
+
+`01` is a response with the error bit set and `03` is **"option not supported"** -- the tag naming
+the bit. The same code `white-coin` gives, from a card that then takes the identical write with the
+flag set.
+
+**No read was needed before the restore, and this is the one case where that is certain rather than
+argued.** An in-band error frame is the card DECIDING -- the distinction this round built the
+read-back around, stated at the OPTION scoping in the poller and in fork message 02. Silence is what
+needs a read-back; `01 03` does not, because the card said what it did.
+
+**`black-tag` is now identified BEHAVIOURALLY**, by what it refuses, rather than by the `E0 07` its
+first capture happened to wear. That matters here specifically: reading a type line off a UID is the
+error this round corrected twice, and this sheet made it once already.
+
+**AND IT IS A SECOND CARD UNDER THE ROUND'S CENTRAL RETRACTION.** The reply opens by withdrawing
+"TI Tag-it refuses an unaddressed WRITE BLOCK" in favour of "what it refuses is a write with the
+OPTION bit clear -- addressed or not", and says "on the same card", because it was one. This frame
+is ADDRESSED and was refused `0x03` for the clear OPTION bit, on a different card. The retraction's
+key cell now has two.
+
+## The gen2 population, stated the way BENCH-RULE 3 asks
+
+**Three CARDS. One chip behaviour identified, on two of them; one card whose silicon is unknown.**
+
+| card | identified how |
+|---|---|
+| `white-coin` | refuses OPTION-clear with `0x03`, takes it with the flag -- TI Tag-it HF-I Plus behaviour |
+| `black-tag` | same refusal, same code, 2026-09-26 -- same behaviour |
+| `gen-2-card` | unknown, and the inventory says so: no read of it predates a write |
+
+Not "two chips": `white-coin` and `black-tag` share one behavioural signature, which is one chip
+type over two cards.
