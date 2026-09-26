@@ -98,6 +98,24 @@ search ceiling and goes with it.
 It also settles the question this note raised and could not answer: writing block 100 and reading
 block 100 proved persistence, not uniqueness. Block 100 and block 228 are one cell.
 
+**And it is an ALIAS, not a shadow — confirmed from the write side.** The read sweep could not tell
+those apart: a card that duplicated its contents into a second region would produce identical reads
+at `b` and `b+128` just the same.
+
+    both 100 and 228 read 00 00 00 00
+    wrbl 228 FE ED BE EF   ->  228 reads FE ED BE EF, and so does 100
+    wrbl 228 00 00 00 00   ->  both read zero again
+
+Writing through the HIGH address changed the LOW one. So there is one cell with two names, and the
+high half is not read-only either — a write up there reaches real memory rather than being discarded.
+
+**What that costs the app, on a card like this.** The clone survey reads upward and records the first
+and last non-empty block it finds. Here the four factory blocks at 16-21 appear again at 144-149, so
+the survey would report a residue range spanning both — "blocks 16-149" — describing 134 addresses
+when the distinct data occupies four cells. Nothing here detects a mirror, and nothing reasonably
+could without comparing contents across addresses on purpose. Recorded as a limit, not a defect to
+fix inside this round.
+
 **Still open:** whether all 128 are physical storage. Blocks 80 and 100 take writes and hold them, so
 at least 101 addresses are real; 101-127 read as zero and have never been written.
 
