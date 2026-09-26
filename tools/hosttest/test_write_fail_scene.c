@@ -418,8 +418,11 @@ static void test_a_clean_tail_still_reports_the_size(void) {
     r.card_blocks = 28;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
-    CHECK(fake_scene_text_contains("64"));  // survey_top + 1, what it actually holds
-    CHECK(fake_scene_text_contains("28"));  // ...against what it says
+    // Pinned to which number goes with which WORD, not merely to both being present. The two are a
+    // reported count and a physical one, and printed the wrong way round the screen still contains
+    // both digits while telling the user the opposite of the truth.
+    CHECK(fake_scene_text_contains("reports 28 blocks")); // what the card says
+    CHECK(fake_scene_text_contains("holds 64")); // ...against what it is
     end();
 }
 
@@ -445,7 +448,9 @@ static void test_details_carries_every_survey_finding(void) {
     CHECK(scroll != NULL);
     if(scroll) {
         CHECK(strstr(scroll, "still hold non-zero data") != NULL);
-        CHECK(strstr(scroll, "larger than it") != NULL);
+        // The physical top, which only the size note carries -- the residue note names 28-63 and
+        // the geometry note names 28, so 64 appears nowhere else on this page.
+        CHECK(strstr(scroll, "holds 64") != NULL);
         CHECK(strstr(scroll, "no configuration register") != NULL);
         // both halves moved, so both are named rather than one standing for the pair
         CHECK(strstr(scroll, "28 blocks and IC ref 02") != NULL);

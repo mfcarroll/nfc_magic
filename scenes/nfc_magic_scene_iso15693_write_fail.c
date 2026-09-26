@@ -254,11 +254,20 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
                 instance->iso15693_result.residue_first,
                 instance->iso15693_result.residue_last);
         } else if(instance->iso15693_result.holds_more) {
+            // What the card SAYS first, then what it is. That is the order a reader of the card
+            // meets them in: the reported count is what a tool prints, and the physical top is the
+            // surprise underneath it. Both are COUNTS, deliberately -- naming the reported count
+            // against a top BLOCK number mixes a count with an index and invites an off-by-one.
+            //
+            // Neither says who set that count. The gen2 CFG frame usually did, but it goes out
+            // before the verify and lands only on a magic card: a tag that is not magic and already
+            // wore the file's UID passes the verify with its own geometry untouched, and a gen1
+            // clone never had a geometry frame at all. Both reach this line.
             furi_string_cat_printf(
                 text,
-                "\nCard holds %u blocks,\nreports %u.",
-                (uint16_t)(instance->iso15693_result.survey_top + 1),
-                instance->iso15693_result.card_blocks);
+                "\nCard reports %u blocks,\nbut holds %u.",
+                instance->iso15693_result.card_blocks,
+                (uint16_t)(instance->iso15693_result.survey_top + 1));
         } else {
             // Neither the data nor the size: what is left is how the card describes itself. Name
             // whichever of the two moved -- both fit on the remaining two lines when both did.

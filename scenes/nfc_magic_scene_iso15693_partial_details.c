@@ -175,10 +175,10 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         furi_string_cat_str(message, "- ");
         furi_string_cat_printf(
             message,
-            "The card is larger than it claims. It reports %u blocks but answers reads up to block "
-            "%u. Some readers may detect this.",
+            "The card reports %u blocks but holds %u, and still answers individual reads to those "
+            "higher blocks. Some readers may detect this.",
             instance->iso15693_result.card_blocks,
-            instance->iso15693_result.survey_top);
+            (uint16_t)(instance->iso15693_result.survey_top + 1));
     }
     if(instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
         // Both sides, and only the halves that moved. Showing what the file asked for beside what the
