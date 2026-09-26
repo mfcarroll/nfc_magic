@@ -5,14 +5,14 @@ There is no comment-only commit among them.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `32f80be` | data-block writes carry the card's address |
-| 02 | `3327ad3` | the OPTION flag, and the read-back it costs |
-| 03 | `0fd69e8` | the gen1 loss claim is gated on there being a loss |
-| 04 | `3fc118c` | the identity writes are addressed and take the flag |
-| 05 | `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
-| 06 | `7aa3baa` | a clone that lands in a gen1 card's UID repairs it |
-| 07 | `f11292f` | what a clone leaves behind, and what it says about it |
-| 08 | `de6ab69` | the gen1 registers, addressed and no longer mis-scoped |
+| 01 | `9f3f256` | data-block writes carry the card's address |
+| 02 | `039513c` | the OPTION flag, and the read-back it costs |
+| 03 | `778e7c8` | the gen1 loss claim is gated on there being a loss |
+| 04 | `131a59f` | the identity writes are addressed and take the flag |
+| 05 | `42d961e` | the release notes overstate what a gen1 clone reproduces |
+| 06 | `8a6f651` | a clone that lands in a gen1 card's UID repairs it |
+| 07 | `469d8b2` | what a clone leaves behind, and what it says about it |
+| 08 | `1486f63` | the gen1 registers, addressed and no longer mis-scoped |
 
 **Dev history WAS reordered, once and deliberately**: the repair moved ahead of the survey so it
 could be its own sync point. See below. 07 collapses six dev commits, and that is the one place this
@@ -104,7 +104,7 @@ version is correct for what 01 does, and the check needs `predict_uid`, which ar
 conversion work in 06 that motivated it. Recorded because it is the same SHAPE as the line above and
 a reader comparing 01 against 06 will see it.
 
-The first cannot be closed by reordering: `b2cce0b` does not apply before `3fc118c`, so 05 already
+The first cannot be closed by reordering: `42d961e` does not apply before `131a59f`, so 05 already
 sits at the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
 which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
 the same with its 11 residual lines.
