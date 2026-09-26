@@ -6,13 +6,13 @@ There is no comment-only commit among them.
 | # | sync at | one decision |
 |---|---|---|
 | 01 | `748ba94` | data-block writes carry the card's address |
-| 02 | `0200130` | the OPTION flag, and the read-back it costs |
-| 03 | `def6e89` | the gen1 loss claim is gated on there being a loss |
-| 04 | `c0550c4` | the identity writes are addressed and take the flag |
-| 05 | `94135f0` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `f342d73` | what a clone leaves behind, and what it says about it |
-| 07 | `1933714` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `41e26f5` | the 2.3 release notes for this round |
+| 02 | `c22389e` | the OPTION flag, and the read-back it costs |
+| 03 | `71eb1e6` | the gen1 loss claim is gated on there being a loss |
+| 04 | `018921a` | the identity writes are addressed and take the flag |
+| 05 | `e64c0b2` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `a6a5e9a` | what a clone leaves behind, and what it says about it |
+| 07 | `40896a6` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `881ae53` | the 2.3 release notes for this round |
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to

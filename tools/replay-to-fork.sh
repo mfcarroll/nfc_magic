@@ -76,6 +76,27 @@ if [ -n "$UNCOVERED" ]; then
   echo "  fix: rename $MSGDIR/$(basename "$(ls "$MSGDIR"/[0-9][0-9]-*.msg | tail -1)") to the newest of them"
   exit 1
 fi
+# --- every sync point must be a tree someone can check out ---
+# An auto-resolved rebase can COMMIT a conflict marker: the tip stays clean because a later commit
+# removes it, every test passes, and two intermediate commits ship a file that does not compile.
+# Found exactly that in two sync points, 2026-09-26.
+BADMARK=""
+for msg in "$MSGDIR"/[0-9][0-9]-*.msg; do
+  sha="$(basename "$msg" .msg)"; sha="${sha#*-}"
+  for f in $(git -C "$DEV" ls-tree -r --name-only "$sha" -- magic scenes views helpers \
+             nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md); do
+    if git -C "$DEV" show "$sha:$f" 2>/dev/null | grep -q '^<<<<<<< '; then
+      BADMARK="$BADMARK  $sha $f
+"
+    fi
+  done
+done
+if [ -n "$BADMARK" ]; then
+  echo "refusing to replay -- a sync point's tree carries a conflict marker:"
+  printf '%s' "$BADMARK"
+  exit 1
+fi
+echo "marker check: every sync point's tree is clean"
 echo "anchor check: no shipped commit above $LAST_ANCHOR"
 echo
 
