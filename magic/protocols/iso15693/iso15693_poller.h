@@ -90,7 +90,7 @@ void iso15693_poller_start(
 // the read-back it power-cycles the field, like proxmark's switch_off + getUID. There is no
 // power-up latch on the gen1 chips tested (see ISO15693_MAGIC_BLK_UNLOCK in the .c); it is kept
 // anyway because it re-activates the card for a clean read, and a gen2 UID lives in a register
-// space never tested here.
+// space never tested for a latch.
 // Emits CardDetected, then Success (the read-back inventory returns the requested UID), Fail,
 // CardLost, or NotGen2 -- the last offering the destructive gen1 retry via
 // iso15693_poller_start_write_uid_gen1(). Two distinct Fails, both flagged in the result:
@@ -107,8 +107,9 @@ void iso15693_poller_start_write_uid(
 // Writes the destructive gen1 sequence -- ordinary WRITE BLOCK into blocks 56/57/62/63, the four
 // registers the rest of this header calls the gen1 registers (ISO15693_MAGIC_BLK_* in the .c says which
 // is which). ANY writable tag accepts an ordinary write, so on a non-magic tag this destroys four
-// blocks of user data. ADDRESSED, so the tag that loses them is the one the run activated and not any
-// other in the field -- which is what a caller's consent text can promise and what it cannot. A Write-UID has no payload to follow, so a verified UID is a clean Success.
+// blocks of user data. ADDRESSED: a tag in the field with a different UID ignores these frames, so a
+// caller's consent text need cover only the card in hand. A Write-UID has no payload to follow, so a
+// verified UID is a clean Success.
 // Emits CardDetected, then Success, Fail (the gen1 UID didn't take) or CardLost. The sequence goes out
 // before anything is verified, so a Fail still carries gen1_attempted -- see that field for what the
 // caller then owes the user. Hardware-validated across three chips -- ISO15693_MAGIC_BLK_UNLOCK in
@@ -279,8 +280,8 @@ typedef struct {
     // So does a gen1 sequence that leaves half a UID.
     bool uid_unexpected;
     uint8_t uid_readback[ISO15693_3_UID_SIZE];
-    // This run SENT the destructive gen1 UID sequence, so the gen1 registers have had
-    // UID/unlock/commit bytes written at them whatever the outcome. Whether the tag took them is
+    // This run SENT the destructive gen1 UID sequence, so the gen1 registers have had the
+    // sequence's bytes written at them whatever the outcome. Whether the tag took them is
     // not known -- the frames' return values are discarded, because a refusal does not mean the
     // write did not land. And any writable tag accepts an ordinary WRITE BLOCK, so on a Fail the
     // honest report is that those four blocks may have been overwritten on what is most likely an

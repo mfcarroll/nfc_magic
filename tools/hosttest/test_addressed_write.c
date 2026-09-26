@@ -476,7 +476,8 @@ static void test_the_gen1_backdoor_frame_is_addressed(void) {
     Iso15693Poller inst;
     driver_init(&inst);
     memcpy(inst.address_uid, uid, ISO15693_3_UID_SIZE);
-    iso15693_poller_send_gen1_frame(&inst, NULL, ISO15693_MAGIC_BLK_UNLOCK, unlock);
+    iso15693_poller_write_block_addressed(
+        &inst, NULL, unlock, ISO15693_MAGIC_BLK_UNLOCK, ISO15693_MAGIC_REGISTER_SIZE);
 
     CHECK_EQ(bit_buffer_get_size_bytes(inst.frame_tx), sizeof(expected));
     for(size_t i = 0; i < sizeof(expected) && i < bit_buffer_get_size_bytes(inst.frame_tx); i++) {
