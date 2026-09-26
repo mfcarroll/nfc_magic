@@ -131,8 +131,13 @@ The scroll element has no bullet primitive, so these are literal characters and
 a wrapped line does not hang-indent.
 
 AND THEY SAY WHAT TO DO. The residue note names non-zero data and tells the user
-to Wipe and write again. The size note leads with the conclusion rather than the
-evidence. The configuration note shows BOTH sides -- what the file asked for and
+to Wipe and write again. The size note names what the card REPORTS before what it
+holds, since the reported count is the one a reader of the card meets first, and
+gives both as counts -- naming a count against a top block index differs by one
+for a reason the sentence never gives. Neither screen says who set that count:
+the gen2 CFG frame usually did, but it goes out before the verify and lands only
+on a magic card, so a tag that is not magic and already wore the file's UID, and
+a gen1 clone, both arrive here with a count nothing in this app wrote. The configuration note shows BOTH sides -- what the file asked for and
 what the card reports -- and ends with the two ways to get a closer copy. It no
 longer asserts gen1 either: it fires whenever the two disagree, and gen1 is the
 usual cause but not the only one, since a card that is not magic at all, whose
