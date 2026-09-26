@@ -25,8 +25,11 @@ SELFTEST_UID = bytes.fromhex("E002222450008303")          # lri2k-keychain, as `
 SELFTEST_ADDR = "03830050242202E0"                        # from `222103830050242202E00811223344`
 SELFTEST_RESTORE_DATA = "03830050"                        # from `02213803830050`
 SELFTEST_BLK57_DATA = "242202E0"                          # from `hf 15 wrbl --ua -b 57 -d 242202E0`
+SELFTEST_TI_UID = bytes.fromhex("E007803DE2E73A29")       # white-coin, TI Tag-it HF-I Plus
+SELFTEST_TI_ADDR = "293AE7E23D8007E0"                     # from `6221293AE7E23D8007E00855667788`
 
 BLK_UID_3210 = 0x39  # carries uid[3..0] -- the FIRST four bytes `hf 15 reader` prints
+OPTION_ADDRESSED = 0x62  # SUBCARRIER_1 | DATA_RATE_HI | T4_ADDRESSED | T4_OPTION
 
 
 def wire(uid):
@@ -43,11 +46,48 @@ def selftest():
     blk57 = bytes(reversed(SELFTEST_UID[0:4])).hex().upper()
     if blk57 != SELFTEST_BLK57_DATA:
         bad.append("block 57 data: %s != %s" % (blk57, SELFTEST_BLK57_DATA))
+    if wire(SELFTEST_TI_UID) != SELFTEST_TI_ADDR:
+        bad.append("TI address: %s != %s" % (wire(SELFTEST_TI_UID), SELFTEST_TI_ADDR))
     if bad:
         print("SELFTEST FAILED against the measured transcript; refusing to emit frames:")
         for b in bad:
             print("   " + b)
     return not bad
+
+
+def option_probe(uid, block=8):
+    """Does a card that REQUIRES the OPTION flag also enforce the ADDRESS?
+
+    The one gap left in the addressed-write table. It was skipped for a reason that was withdrawn
+    the same day -- "TI refuses unaddressed writes, so it already discriminates" -- and never re-run.
+
+    PM3 GETS AN ANSWER HERE EVEN THOUGH THE APP CANNOT. With OPTION set the card owes its reply only
+    after a standalone EOF; the Flipper SDK has no call for one, which is why the app reads the block
+    back instead. proxmark sends it (SendDataTagEOF), and the measured frame below proves it --
+    6221...55667788 returned 00 78 F0 on this card. So on pm3 the RESPONSE discriminates, and the
+    read-back is corroboration rather than the measurement.
+
+    The correctly-addressed write has to be in the set, not assumed: without it a silence at step 1
+    could equally be a malformed frame, which is a control that cannot fail (BENCH-RULE 2).
+    """
+    bad = bytearray(uid)
+    bad[0] ^= 0x01
+    data = "AABBCCDD"
+    print("  hf 15 reader                       expect " + " ".join("%02X" % b for b in uid))
+    print("  hf 15 rdbl -b %d                    RECORD what it holds -- the restore needs it" % block)
+    print()
+    print("  # 1. WRONG address, OPTION set")
+    print("  hf 15 raw -ackw -d %02X21%s%02X%s" % (OPTION_ADDRESSED, wire(bytes(bad)), block, data))
+    print("      PREDICTION: silence / command failed, if the address is enforced")
+    print("  hf 15 reader                       brackets the silence: the card is still there")
+    print()
+    print("  # 2. RIGHT address, OPTION set -- the control, and it must be able to fail")
+    print("  hf 15 raw -ackw -d %02X21%s%02X%s" % (OPTION_ADDRESSED, wire(uid), block, data))
+    print("      PREDICTION: 00 78 F0, as the same frame shape measured on this card")
+    print("  hf 15 rdbl -b %d                    corroboration: now AA BB CC DD" % block)
+    print()
+    print("  # 3. restore what step 0's read showed")
+    print("  hf 15 raw -ackw -d %02X21%s%02X<original>" % (OPTION_ADDRESSED, wire(uid), block))
 
 
 def restore(uid):
@@ -71,7 +111,7 @@ def main(argv):
     if not selftest():
         return 2
     mode = "probe"
-    if argv and argv[0] in ("--restore", "--probe"):
+    if argv and argv[0] in ("--restore", "--probe", "--option-probe"):
         mode, argv = argv[0][2:], argv[1:]
     raw = "".join(argv).replace(":", "").replace("-", "")
     try:
@@ -82,6 +122,11 @@ def main(argv):
     if len(uid) != 8:
         print("error: a UID is 8 bytes, got %d" % len(uid))
         return 2
+
+    if mode == "option-probe":
+        print("card          :  " + " ".join("%02X" % b for b in uid))
+        option_probe(uid)
+        return 0
 
     if mode == "restore":
         print("restore to    :  " + " ".join("%02X" % b for b in uid))

@@ -78,6 +78,11 @@ refused with 0x03; no frame has carried one bit without the other. One frame wou
 Accepted means the OPTION flag alone was the barrier and addressing is purely the #251 safety fix on
 that chip. Refused means TI wants both. It changes nothing in the code and only what may be said.
 
+**RUN, AND ACCEPTED** -- the four-combination table in
+[../pr-round-10/unaddressed-write-finding.md](../pr-round-10/unaddressed-write-finding.md) has it.
+The OPTION flag is necessary and sufficient on this chip; the addressing is orthogonal. This section
+is kept for the question, not as an open item.
+
 ## Addressing STAYS in this PR — settled 2026-09-24, do not re-open
 
 The correction above removes the argument we had been making for it (that TI could not be written
