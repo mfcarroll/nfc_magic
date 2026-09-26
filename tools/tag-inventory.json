@@ -662,6 +662,14 @@
       "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "v1-coin-green18": {
+      "address_space": {
+        "answering_blocks": "0-27 only, every one 00 00 00 00",
+        "artifact": "tools/baselines/v1-coin-green18_2026-09-26_full-sweep-0-255.txt",
+        "backdoor_blocks_do_not_read": "56, 57, 62 and 63 all refuse reads. That is the write-only register pattern every other gen1 card here shows, and it means a write to 56 destroys no content: there is nothing at that address to lose.",
+        "measured": "2026-09-26",
+        "no_aliasing": "Nothing above the advertised count answers at all, so there is no mirror and no phantom tail -- unlike slix2-gold-30mm, which answers at every address in the 8-bit space with its top half mirroring its bottom.",
+        "silent_blocks": "28-255, all 228 of them"
+      },
       "classification": {
         "verdict": "unclassified (no write probe run)"
       },
@@ -673,7 +681,7 @@
         "source": "gift from another developer -- NOT a purchase, so there is no listing to check against"
       },
       "form_factor": "18mm round coin, green PCB",
-      "note": "\u26a0\ufe0f READ BEFORE SPENDING THIS CARD, 2026-09-26. It is here to answer whether unlock+commit do anything on a card that has never had them run. NOTE the 'locked' framing is unsourced -- it came from this project's own notes, not from the sender, who said nothing on record about the card's state. It was a gift from another developer, not a purchase, so its arrival state is his. A REFUSED write to block 56 is informative; an ACCEPTED one is AMBIGUOUS, reading equally as 'V1 needs no unlock' and as 'he unlocked it before posting it', and taking the first at face value is the over-scoping this project keeps paying for. The cheapest measurement is not a frame: ask him whether he wrote to it or ran an unlock. Unlock+commit is IRREVERSIBLE and can only be spent once. Plan and predictions in .notes/pr-round-15/v1-coin-bench.md. || The UID is a placeholder: bytes 1-6 read 11 22 33 44 55 66, a counting sequence no real UID is, so the 'Emosyn-EM Microelectronics USA' type line decodes uid[1]=0x11 and says nothing about this silicon. || NOT SWEPT ABOVE BLOCK 27. hf 15 dump stops at the advertised count and the test writes block 56; run tools/sweep-read-all.sh before the first write.",
+      "note": "\u26a0\ufe0f READ BEFORE SPENDING THIS CARD, 2026-09-26. It is here to answer whether unlock+commit do anything on a card that has never had them run. NOTE the 'locked' framing is unsourced -- it came from this project's own notes, not from the sender, who said nothing on record about the card's state. It was a gift from another developer, not a purchase, so its arrival state is his. A REFUSED write to block 56 is informative; an ACCEPTED one is AMBIGUOUS, reading equally as 'V1 needs no unlock' and as 'he unlocked it before posting it', and taking the first at face value is the over-scoping this project keeps paying for. The cheapest measurement is not a frame: ask him whether he wrote to it or ran an unlock. Unlock+commit is IRREVERSIBLE and can only be spent once. Plan and predictions in .notes/pr-round-15/v1-coin-bench.md. || The UID is a placeholder: bytes 1-6 read 11 22 33 44 55 66, a counting sequence no real UID is, so the 'Emosyn-EM Microelectronics USA' type line decodes uid[1]=0x11 and says nothing about this silicon. || SWEPT 0-255 before any write: blocks 0-27 answer and are all zero, 28-255 answer nothing, and 56/57/62/63 refuse reads like every other gen1 card here. So a write to 56 destroys nothing.",
       "original": {
         "advertised_blocks": 28,
         "afi": 0,
