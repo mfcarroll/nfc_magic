@@ -1,0 +1,355 @@
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260926142117.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 rdbl -b 0;hf 15 rdbl -b 1;hf 15 rdbl -b 2;hf 15 rdbl -b 3;hf 15 rdbl -b 4;hf 15 rdbl -b 5;hf 15 rdbl -b 6;hf 15 rdbl -b 7;hf 15 rdbl -b 8;hf 15 rdbl -b 9;hf 15 rdbl -b 10;hf 15 rdbl -b 11;hf 15 rdbl -b 12;hf 15 rdbl -b 13;hf 15 rdbl -b 14;hf 15 rdbl -b 15;hf 15 rdbl -b 16;hf 15 rdbl -b 17;hf 15 rdbl -b 18;hf 15 rdbl -b 19;hf 15 rdbl -b 20;hf 15 rdbl -b 21;hf 15 rdbl -b 22;hf 15 rdbl -b 23;hf 15 rdbl -b 24;hf 15 rdbl -b 25;hf 15 rdbl -b 26;hf 15 rdbl -b 27;hf 15 rdbl -b 28;hf 15 rdbl -b 29;hf 15 rdbl -b 30;hf 15 rdbl -b 31;hf 15 rdbl -b 32;hf 15 rdbl -b 33;hf 15 rdbl -b 34;hf 15 rdbl -b 35;hf 15 rdbl -b 36;hf 15 rdbl -b 37;hf 15 rdbl -b 38;hf 15 rdbl -b 39;
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 rdbl -b 0
+[=] Using scan mode
+
+[=] #  0        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 1
+[=] Using scan mode
+
+[=] #  1        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 2
+[=] Using scan mode
+
+[=] #  2        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 3
+[=] Using scan mode
+
+[=] #  3        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 4
+[=] Using scan mode
+
+[=] #  4        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 5
+[=] Using scan mode
+
+[=] #  5        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 6
+[=] Using scan mode
+
+[=] #  6        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 7
+[=] Using scan mode
+
+[=] #  7        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 9
+[=] Using scan mode
+
+[=] #  9        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 10
+[=] Using scan mode
+
+[=] # 10        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 11
+[=] Using scan mode
+
+[=] # 11        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 12
+[=] Using scan mode
+
+[=] # 12        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 13
+[=] Using scan mode
+
+[=] # 13        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 14
+[=] Using scan mode
+
+[=] # 14        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 15
+[=] Using scan mode
+
+[=] # 15        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 16
+[=] Using scan mode
+
+[=] # 16        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 17
+[=] Using scan mode
+
+[=] # 17        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 18
+[=] Using scan mode
+
+[=] # 18        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 19
+[=] Using scan mode
+
+[=] # 19        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 20
+[=] Using scan mode
+
+[=] # 20        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 21
+[=] Using scan mode
+
+[=] # 21        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 22
+[=] Using scan mode
+
+[=] # 22        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 23
+[=] Using scan mode
+
+[=] # 23        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 24
+[=] Using scan mode
+
+[=] # 24        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 25
+[=] Using scan mode
+
+[=] # 25        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 26
+[=] Using scan mode
+
+[=] # 26        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 27
+[=] Using scan mode
+
+[=] # 27        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb|script] pm3 --> hf 15 rdbl -b 28
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 29
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 30
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 31
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 32
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 33
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 34
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 35
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 36
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 37
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 38
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 39
+[=] Using scan mode
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260926142141.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 rdbl -b 40;hf 15 rdbl -b 41;hf 15 rdbl -b 42;hf 15 rdbl -b 43;hf 15 rdbl -b 44;hf 15 rdbl -b 45;hf 15 rdbl -b 46;hf 15 rdbl -b 47;hf 15 rdbl -b 48;hf 15 rdbl -b 49;hf 15 rdbl -b 50;hf 15 rdbl -b 51;hf 15 rdbl -b 52;hf 15 rdbl -b 53;hf 15 rdbl -b 54;hf 15 rdbl -b 55;hf 15 rdbl -b 56;hf 15 rdbl -b 57;hf 15 rdbl -b 58;hf 15 rdbl -b 59;hf 15 rdbl -b 60;hf 15 rdbl -b 61;hf 15 rdbl -b 62;hf 15 rdbl -b 63;hf 15 rdbl -b 64;hf 15 rdbl -b 65;hf 15 rdbl -b 66;hf 15 rdbl -b 67;hf 15 rdbl -b 68;hf 15 rdbl -b 69;hf 15 rdbl -b 70;hf 15 rdbl -b 71;hf 15 rdbl -b 72;hf 15 rdbl -b 73;hf 15 rdbl -b 74;hf 15 rdbl -b 75;hf 15 rdbl -b 76;hf 15 rdbl -b 77;hf 15 rdbl -b 78;hf 15 rdbl -b 79;
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 rdbl -b 40
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 41
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 42
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 43
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 44
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 45
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 46
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 47
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 48
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 49
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 50
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 51
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 52
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 53
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 54
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 55
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 56
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 57
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 58
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 59
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 60
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 61
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 62
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 63
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 64
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 65
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 66
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 67
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 68
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 69
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 70
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 71
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 72
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 73
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 74
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 75
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 76
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 77
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 78
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 79
+[=] Using scan mode
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260926142204.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 rdbl -b 80;hf 15 rdbl -b 81;hf 15 rdbl -b 82;hf 15 rdbl -b 83;hf 15 rdbl -b 84;hf 15 rdbl -b 85;hf 15 rdbl -b 86;hf 15 rdbl -b 87;hf 15 rdbl -b 88;hf 15 rdbl -b 89;hf 15 rdbl -b 90;hf 15 rdbl -b 91;hf 15 rdbl -b 92;hf 15 rdbl -b 93;hf 15 rdbl -b 94;hf 15 rdbl -b 95;hf 15 rdbl -b 96;hf 15 rdbl -b 97;hf 15 rdbl -b 98;hf 15 rdbl -b 99;hf 15 rdbl -b 100;hf 15 rdbl -b 101;hf 15 rdbl -b 102;hf 15 rdbl -b 103;hf 15 rdbl -b 104;hf 15 rdbl -b 105;hf 15 rdbl -b 106;hf 15 rdbl -b 107;hf 15 rdbl -b 108;hf 15 rdbl -b 109;hf 15 rdbl -b 110;hf 15 rdbl -b 111;hf 15 rdbl -b 112;hf 15 rdbl -b 113;hf 15 rdbl -b 114;hf 15 rdbl -b 115;hf 15 rdbl -b 116;hf 15 rdbl -b 117;hf 15 rdbl -b 118;hf 15 rdbl -b 119;
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 rdbl -b 80
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 81
+[=] Using scan mode
+[usb|script] pm3 --> hf 15 rdbl -b 82
+[=] Using scan mode
