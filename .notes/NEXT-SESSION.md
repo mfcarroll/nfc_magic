@@ -108,6 +108,24 @@ card exists on either side of this PR" either -- that needs the write test. What
 is three unscoped shipped comments claiming a past-capacity block refuses reads, which this card
 contradicts whatever it turns out to be.
 
+## ⚠️ THE FLIPPER IS CARRYING AN EXPERIMENT, NOT THIS BRANCH
+
+Branch **`experiment-eof-frame` = `74bfe45`**, off the round-15 tip. The FAP installed on the device is
+built from THAT, not from `iso15693-dev`. Rebuilding from this branch replaces it and the probe is
+gone — which is fine, but know which one is on the device before reading a log.
+
+It answers the empty-frame question in [firmware-gaps.md](firmware-gaps.md): can `nfc_poller_trx`
+with an empty buffer put SOF + EOF on the air and satisfy the standalone EOF an OPTION write waits
+for? Purely additive — it logs `EOF-TEST blk N: trx=… rx=… bytes` and then falls through to the
+read-back, so behaviour is identical either way. 165 host tests pass on the branch.
+
+**Run it before the locked V1 coin**: cheap, reversible, and it could delete the read-back, where the
+coin is spendable once. Wipe or clone a TI Tag-it and read the log.
+
+- `trx=0` with `rx` non-empty, logged `<== ANSWERED` → the EOF works. The read-back dies on that
+  path, a write costs one frame instead of two, and the firmware gap stops being a dependency.
+- every line `trx=` non-zero with `rx=0 bytes` → it does not. Drop the branch; nothing changes.
+
 ## WHAT IS LEFT, in the order to take it
 
 1. **The locked V1 coin.** An 18mm green PCB coin, never written to, possibly still LOCKED -- the only
