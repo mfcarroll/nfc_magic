@@ -429,31 +429,42 @@ and nothing in this app can stop it.** Narrower than the gen1 hazard, not zero.
 the gen2 sequence sends flags `0x02` and discards its send results anyway -- but it is the same
 mechanism the data-block read-back exists for, now shown on the proprietary command.
 
-## Two cheap things still open, neither blocking
+## What the OPTION result does NOT mean, and why the app is already right
 
-- **The wrong-address control was restored before it was read.** `6221...E1...55667788` was silent,
-  and the block was overwritten with zeros before anyone looked. Silence is good evidence here --
-  the same card answers `6221...E0...` -- but `42E0...` proved on this very bench that no answer and
-  no write are different things. Two frames close it, and block 8 is zeros now so there is nothing
-  to lose: send the wrong-address write, then read block 8 and expect zeros still.
+"The write lands" means **the UID moves** -- register `0x40` holds uid[7..4], so `42E0094011223344`
+put the card on `...44 33 22 11` exactly as the unaddressed no-OPTION form does. Same destination,
+same effect.
 
-        hf 15 raw -ckw  -d 6221E4E3E2E1100104E10855667788
-        hf 15 raw -ackw -d 2220E4E3E2E1100104E008          expect 00 00 00 00
+**There is no benefit to it. It is strictly worse:** the same write, minus the acknowledgement. An
+app sending it would lose the only signal that anything happened.
 
-- **`black-tag`'s chip is still only plausible.** It took `6221` (addressed + OPTION) but was never
-  sent `2221` (addressed, no OPTION). A refusal with error `0x03` would identify it behaviourally
-  the way `white-coin` was identified, rather than by the `E0 07` its baseline capture wore.
+**And the app cannot send it by accident.** `ISO15693_MAGIC_FLAGS` (0x02) appears exactly once in the
+poller -- line 449, inside `iso15693_poller_build_gen2_frame`. The sticky OPTION flag lives in
+`iso15693_poller_write_flags()`, used by the data-block, identity and gen1 paths and by nothing else.
+So a TI card that turns the flag on mid-run cannot drag the gen2 backdoor along with it. The
+sequence also runs BEFORE the data pass, so the flag would not be set yet either way -- two
+independent reasons, and the first is structural.
 
-        hf 15 raw -ackw -d 2221E4E3E2E1100104E008AABBCCDD   0x03 => wants OPTION, like white-coin
-        hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000   restore whatever happens
+The finding's value is not a change. It confirms the hardcoded `0x02` is correct rather than
+accidental, and it extends the OPTION-costs-the-acknowledgement result from standard WRITE BLOCK to
+the proprietary command.
 
+## ONE cheap thing still open, and it is on `black-tag`
 
-## Restore, and record the restore
+**Correction to an earlier draft of this sheet**, which called the restored-before-read wrong-address
+control a gap. It is not, and the reason matters: the right-address and wrong-address frames carry
+IDENTICAL flags, so the only variable is the address, and the right-address frame ANSWERED. A card
+that had processed the wrong-address write would have answered it the same way. The `42E0...`
+precedent does not apply -- there the FLAGS differed between the answering and silent cases, which
+is exactly what made silence ambiguous. `white-coin`'s equivalent control went further still and
+read the block back (`hf 15 rdbl -b 8 -> AA BB CC DD`), so reading block 8 on `black-tag` would only
+match the strongest control on the shelf, not close a hole.
 
-Every card back to its inventoried UID, confirmed by a final `hf 15 reader` (BENCH-RULE 9).
+**What IS still open: `black-tag`'s chip is identified by a baseline UID, not by behaviour.** It took
+`6221` (addressed + OPTION) and was never sent `2221` (addressed, no OPTION). An error `0x03` would
+identify it the way `white-coin` was identified -- by what it refuses -- rather than by the `E0 07`
+its first capture happened to wear, which is the reading this round corrected twice.
 
-**Also while `white-coin` is on the reader** -- its block 8 was left holding probe data by the
-addressed-write bench and the restore was written down but never confirmed run:
-
-    hf 15 raw -ackw -d 6221293AE7E23D8007E00800000000     zero block 8, addressed + OPTION
-    hf 15 raw -ackw -d 2220293AE7E23D8007E008             read it back
+    hf 15 raw -ackw -d 2221E4E3E2E1100104E008AABBCCDD   0x03 => wants OPTION, like white-coin
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000   restore to zeros, whatever happened
+    hf 15 raw -ackw -d 2220E4E3E2E1100104E008           confirm 00 00 00 00
