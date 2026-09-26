@@ -85,6 +85,11 @@ typedef struct {
 
     // Get System Info fails outright, so the verify never reaches an answer at all.
     bool sysinfo_fails;
+    // Get System Info ANSWERS, but without the MEMORY flag -- so the card states no block count at
+    // all. Distinct from sysinfo_fails, and the distinction is the point: a survey that treats an
+    // unstated count as zero would call every readable block above the source an over-claim, and
+    // that is reachable on a card that answers perfectly well. Inverted so the default advertises.
+    bool hides_memory;
 
     // A SECOND tag answers the inventory. The SDK's inventory is 1-slot and unaddressed (#251), so
     // with two cards in the field it returns whichever wins the slot -- which may not be the one our
