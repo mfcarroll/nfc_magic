@@ -111,15 +111,32 @@ or budget stopped at, on a card whose real capacity is unknown.
 Nothing here changes a result the round has already benched. The clone survey and the guard behave as
 measured; this is about what the app would say and do on a class of card it has never met.
 
-## The capture says less than it looks like it does
+## The capture was complete — the gap was our parser
 
-At the 2026-09-08 baseline, blocks **16, 17 and 20 were UNREADABLE** and 21 was non-zero. Three of
-the four blocks this note is about could not be read at all then.
+Raised by mfcarroll: was a dump not taken at inventory? It was, and chasing it reversed the caveat
+that stood here.
 
-The benign reading, and the likely one: the early probe did single-attempt reads and the project has
-already recorded flakiness of exactly this shape on another card. Nothing in this project has ever
-written to this tag.
+The baseline records blocks 16, 17 and 20 as UNREADABLE. They were not. The raw capture in
+`tools/campaigns/iso15_20260908_012746/raw/` says so in as many words:
 
-What it costs is that only **block 21's content is confirmed pre-existing** -- it read non-zero
-before anything touched the card. For 16, 17 and 20 the first read of any kind is 2026-09-26. That
-does not suggest anyone wrote them; it means the factory-state claim rests on one block, not four.
+    slix2-gold-30mm_baseline_b016  'utf-8' codec can't decode byte 0xf1 in position 475
+    slix2-gold-30mm_baseline_b017  'utf-8' codec can't decode byte 0xe0 in position 477
+    slix2-gold-30mm_baseline_b020  'utf-8' codec can't decode byte 0xa5 in position 474
+
+`0xF1`, `0xE0` and `0xA5` are bytes 2, 4 and 1 of exactly what those blocks read today --
+`36 F1 CD 01`, `00 03 48 E0`, `A5 3B 44 2C`. Block 21 parsed cleanly because `21 0F 50 00` is
+entirely below 0x80. **Four blocks, four outcomes, and the split is perfectly predicted by whether
+the content is ASCII-range.** pm3 read all four; our parser threw away three.
+
+This is the same defect as the NDEF block-0 case already recorded in the project's history -- fixed
+with `errors="replace"` -- but this record predates the fix and was never re-derived.
+
+**So all four blocks held data at first contact, before anything wrote to this card**, and the
+factory-state reading rests on four rather than one. That strengthens the indicators. It still does
+not make them a classification: everything is a read, and gen3 is a write behaviour.
+
+Their contents on 2026-09-08 remain unrecorded, because the bytes went with the exception, so the
+inventory cell stays "+3 unread". What is withdrawn is the inference that they were empty or absent.
+
+`gen-2-card` carries a similar `unreadable_blocks` list and it is NOT this: its campaign contains no
+decode errors, so the RF-flakiness attribution in its note stands.

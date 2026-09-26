@@ -486,7 +486,8 @@
           16,
           17,
           20
-        ]
+        ],
+        "unreadable_blocks_cause": "NOT the card. Blocks 16/17/20 were read successfully by pm3 and lost in OUR parser: the raw capture records \"'utf-8' codec can't decode byte 0xf1/0xe0/0xa5\" for exactly those three, and 0xF1, 0xE0 and 0xA5 are bytes 2, 4 and 1 of what they read today (36 F1 CD 01 / 00 03 48 E0 / A5 3B 44 2C). Block 21 parsed because 21 0F 50 00 is entirely below 0x80. Same defect as the NDEF block-0 case; fixed with errors=\"replace\", but this record predates the fix and was never re-derived. Their CONTENTS at capture are still unrecorded -- the bytes were discarded with the exception -- so the cell stays '+3 unread'. What changed is the inference: this is not evidence the blocks were empty or absent on 2026-09-08."
       },
       "physical": {
         "campaign": "20260908_012746",
