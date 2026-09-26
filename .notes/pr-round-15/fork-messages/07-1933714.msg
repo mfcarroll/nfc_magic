@@ -110,10 +110,4 @@ One more release-notes line goes with it, and it is older than this work:
 compares exactly that on a card whose acknowledgement it cannot collect. The
 rule still holds and now carries its exception.
 
-The release notes carry one bullet for the three addressed frame sets
-rather than three, because to someone holding a card they are one fact:
-every write this app sends now names the card it is for. Which frames
-those are, and what each answers to a mis-addressed one, is in these
-commit messages and not in a release note.
-
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

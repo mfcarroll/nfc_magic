@@ -1,20 +1,26 @@
-# Round 15 — eight sync points, all behavioural but one
+# Round 15 — seven behavioural sync points, then the release notes
 
 The addressing round. Every one of these changes behaviour except 05, which is the release notes.
 There is no comment-only commit among them.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `9f3f256` | data-block writes carry the card's address |
-| 02 | `039513c` | the OPTION flag, and the read-back it costs |
-| 03 | `778e7c8` | the gen1 loss claim is gated on there being a loss |
-| 04 | `131a59f` | the identity writes are addressed and take the flag |
-| 05 | `42d961e` | the release notes overstate what a gen1 clone reproduces |
-| 06 | `8a6f651` | a clone that lands in a gen1 card's UID repairs it |
-| 07 | `469d8b2` | what a clone leaves behind, and what it says about it |
-| 08 | `c5f64e2` | the gen1 registers, addressed and no longer mis-scoped |
+| 01 | `748ba94` | data-block writes carry the card's address |
+| 02 | `0200130` | the OPTION flag, and the read-back it costs |
+| 03 | `def6e89` | the gen1 loss claim is gated on there being a loss |
+| 04 | `c0550c4` | the identity writes are addressed and take the flag |
+| 05 | `94135f0` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `f342d73` | what a clone leaves behind, and what it says about it |
+| 07 | `1933714` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `41e26f5` | the 2.3 release notes for this round |
 
-**Dev history WAS reordered, once and deliberately**: the repair moved ahead of the survey so it
+**ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
+commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
+a user and then merged, a bullet reworded twice as the bench widened. A release note is a release
+artifact, not a running log, and he reads the delta between rounds. The old CHANGELOG-only sync point
+folded into 08 with the rest.
+
+**Dev history WAS reordered, twice and deliberately**: the repair moved ahead of the survey so it
 could be its own sync point. See below. 07 collapses six dev commits, and that is the one place this
 round does not get one decision per commit; the reason is churn.
 
