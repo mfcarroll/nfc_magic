@@ -61,3 +61,59 @@ failing).
   that is telling the truth is the price of not resting on that.
 - **Existing is not residue.** Blocks above the source that read as ZEROS are space, not data, and
   must not raise a warning. Only non-zero content counts, and the message should name the range.
+
+# 3. A gen1 card reached down the gen2 path — measured 2026-09-25
+
+The gen2 verify passes whenever the card already WEARS the target UID, because then it proves only
+that the UID matches. A re-clone is exactly how a card comes to wear it.
+
+`slix-1k-50x28`, gen1, cloned twice from `wipeseed_64`:
+
+```
+first clone    gen1 opt-in shown, registers skipped    Cloned 28/60    CORRECT
+second clone   no opt-in, gen2 path, registers in scope
+               -> UID becomes 39 A5 39 5A 38 A5 38 5A
+```
+
+That is the file's blocks 56 (`5A 38 A5 38`) and 57 (`5A 39 A5 39`) through the UID mapping. The
+screen said "Cloned 30/64, Not written: 34" and nothing about the identity.
+
+**And the re-address is what completed it.** Block 56 landed and moved the UID; the re-address picked
+up the new identity; block 57 went out addressed to THAT and landed too. Without it the UID would
+have been half-replaced. The mechanism built to stop addressing breaking the armed-gen1 wipe is what
+let the clone finish destroying the identity cleanly -- it has no opinion about whether it should.
+
+## The fix, and the one that was rejected
+
+**Rejected** (mine): skip the backdoor blocks whenever the UID already matched. mfcarroll's objection
+is decisive -- it breaks a real gen2 card re-cloned from a DIFFERENT image sharing its UID. Those four
+are ordinary memory there, the skip deducts them from the total, and the run reports a clean
+"Cloned 60/60" over four blocks of the file it chose not to write. A silent data loss traded for a
+rare identity loss.
+
+**Taken** (mfcarroll's): watch and react. A write to 56/57 that moves the UID to exactly what that
+write implies can only mean those addresses are registers. The write that does the damage is the same
+event that identifies the card, so the run converts to a gen1 clone from there, keeps going above the
+registers, and puts the target UID back afterwards. The end state is one already tested and already
+reported correctly.
+
+## The re-address now checks its answer
+
+Also mfcarroll's: can we predict the new UID rather than trust an inventory? Not replace it -- the
+prediction only holds IF the card is gen1, which is the thing being tested -- but it makes the answer
+checkable. Two honest replies: unchanged, or what the write implies. A third is a bystander answering
+the 1-slot inventory (#251) and is refused. Covers the wipe too, since it is one mechanism.
+
+Not airtight, and unfixably so: a bystander holding the predicted UID passes, because magic cards
+make UIDs non-unique and a 1-slot inventory cannot tell two cards apart.
+
+## Bench: PASSES
+
+Same two clones after the fix. Second run: no opt-in, converts, and the UID reads back
+`E0 04 01 10 5E ED 00 01` -- intact. Reported as "Cloned 28/60 / gen1: 56/57/62/63 differ", identical
+to the first run, which is the point.
+
+**A Details paragraph saying the identity had been disturbed and restored was written and then cut**,
+on mfcarroll's objection: it narrates what the app did rather than what the card is, and the gen1
+caveat already says the only part that matters. Same fault this project keeps removing from its prose,
+found in the UI.
