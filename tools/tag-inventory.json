@@ -353,6 +353,11 @@
       "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix-1k-coin18": {
+      "backdoor_register_probe_2026_09_26": {
+        "frames": "02213E00000000 and 02213F69960000, unaddressed, bracketed by hf 15 reader either side",
+        "result": "SILENT to both. The card answered the reader calls on both sides, so that is its answer.",
+        "why_it_matters": "This card HAS been written -- the gen1 write probe ran on it -- so under the lock model it is committed, while v1-coin-green18 supposedly is not. Both are silent at both addresses. Commitment makes no observable difference, and the lock model predicts one."
+      },
       "bag_label": "SL2S2002_SL2S2102 ICODE SLIX 1K UID 0-27B",
       "classification": {
         "campaign": "20260912_171618",
