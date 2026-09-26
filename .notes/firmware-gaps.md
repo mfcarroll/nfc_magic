@@ -120,6 +120,44 @@ The run also re-confirmed the read-back: blocks 0-63 each needed ONE attempt (wr
 times out, read-back succeeds, break) while 64-71 burned all three, and the wipe reported 64 cleared
 of 72 attempted. Correct on both counts.
 
+### THE STANDALONE EOF WORKS — measured 2026-09-26, firmware branch `iso15693-poller-tx-eof`
+
+The change was written, the firmware flashed, and a TI Tag-it wiped. **Every EOF collected the
+response the poller could not previously get at all**, and the bytes say what they should:
+
+    blocks 0-63   trx=0  rx=3  [ 00 78 F0 ]        flags 00, no error, then CRC
+    blocks 64-71  trx=0  rx=4  [ 01 10 1E 06 ]     error flag, code 0x10, then CRC
+
+**Both corroborate against records made weeks earlier and independently.** `00 78 F0` is byte for
+byte the successful WRITE BLOCK response proxmark printed in
+[pr-round-15/addressed-writes-measured.md](pr-round-15/addressed-writes-measured.md), three separate
+times. `0x10` is "block not available", already in this file's own poller comments from the LRi2K
+work — and it arrives on exactly the eight blocks past this card's 64-block capacity and on no
+others. A byte count could not have shown either.
+
+So the acknowledgement is real, it is correct, and it distinguishes a landed write from a refused one
+without touching the card's memory. **That is Gap 2 closed at the source rather than worked around.**
+
+### It is not 100% per attempt, and that matters for any implementation
+
+**9 of 96 probes timed out** (blocks 7, 16, 17, 18, 30, 32, 34, 36, 38). All but one answered on the
+retry the loop already performs; block 7's was settled by the read-back instead. Roughly a tenth,
+which is ordinary coupling flakiness rather than anything structural — the same marginality that
+shows up everywhere else on this bench.
+
+Worth writing down because it decides the shape of a real implementation: **an EOF can be lost like
+any other frame, so it needs the same retry discipline as the write**, and a first version that
+treats a single EOF timeout as "the write failed" would be wrong about one block in ten.
+
+### What it does NOT establish
+
+**One card, one chip.** TI Tag-it HF-I Plus. Whether other silicon answers a bare EOF the same way is
+untested, and this project has twice shipped a claim scoped to a family from a single card. Do not
+write "cards answer a standalone EOF" anywhere.
+
+**And it cannot be used by this PR.** It needs API 87.2, and the PR targets stock firmware. The
+read-back stays in round 15 regardless; this makes it removable later, upstream willing.
+
 ### And a real EOF is a SIX-LINE change, which the run also established
 
 `iso15693_3_poller_encode_frame` in `targets/f7/furi_hal/furi_hal_nfc_iso15693.c` writes the SOF and
