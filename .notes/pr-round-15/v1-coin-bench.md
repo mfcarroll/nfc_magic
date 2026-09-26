@@ -345,5 +345,17 @@ needed" described a card there were already two of.
 - `0x10` is *block unavailable*, `0x0F` is *unknown error*, and proxmark attaches no semantics to
   either frame
 
-Nothing measured supports it. The frames stay in the app -- the cards that would prove them necessary
-are the ones nobody owns -- but the comments should stop describing a lock nobody has ever seen.
+Nothing measured supports it. **But it is not disproved, and cannot be by these cards** -- mfcarroll's
+point, and the sharpest thing said about this whole line of work.
+
+**The experiment was asymmetric all along.** An ACCEPTANCE would have proved the lock model outright.
+A refusal proves nothing, because "this card behaves like the committed ones" is exactly what a card
+that was committed before it arrived would do. The coin came from another developer; nothing rules
+that out, and nothing can. One direction was provable and the other never was.
+
+So the honest position is **unsupported and unfalsifiable here**, not refuted. Which is also why the
+cheap avenue was always the one nobody took: ask him whether he ran an unlock on it. A message
+settles what five cards cannot.
+
+The frames stay in the app -- the cards that would prove them necessary are the ones nobody owns --
+and the comments should stop asserting a lock nobody has seen without asserting its absence either.
