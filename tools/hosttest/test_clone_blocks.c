@@ -497,7 +497,7 @@ static void test_a_card_the_size_of_its_source_is_quiet(void) {
 
     CHECK(!inst.clone_residue_found);
     CHECK(!inst.clone_holds_more);
-    CHECK(!inst.clone_geometry_differs);
+    CHECK(!inst.clone_memory_differs);
     end();
 }
 
@@ -549,8 +549,9 @@ static void test_a_card_that_keeps_reporting_its_own_size_says_so(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_geometry_differs);
+    CHECK(inst.clone_memory_differs);
     CHECK_EQ(inst.clone_card_blocks, 40);
+    CHECK(inst.clone_memory_differs);
     end();
 }
 
@@ -817,6 +818,95 @@ static void test_only_a_pass_that_wrote_the_uid_blocks_asks_for_a_recheck(void) 
     end();
 }
 
+// A write taken by a UID register says nothing about how much MEMORY the card has, so it must not
+// suppress the capacity finding. On a card smaller than its source the failures run to the top and
+// then block 56 answers -- because it is a register -- and counting that as "a block wrote above the
+// failures" costs the report the one thing it could still say: the card is too small.
+//
+// The two runs must agree. A gen1 clone and a clone that CONVERTED to one are the same result, and a
+// reader should not be able to tell which path produced it.
+static void test_a_register_write_is_not_evidence_about_capacity(void) {
+    begin("a converted clone reaches the same capacity verdict as the gen1 path");
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+
+    // The gen1 path: registers skipped from the start, failures run to the card's top.
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag_set_range(56, 57, FakeBlockWritable); // the registers answer, as gen1 silicon does
+    fake_data_init(&source, 64, 4);
+    Iso15693Poller gen1;
+    driver_init(&gen1);
+    gen1.clone_source = &source;
+    memcpy(gen1.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&gen1, NULL, true);
+
+    // The same card reached down the gen2 path, which converts at block 56.
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_data_init(&source, 64, 4);
+    Iso15693Poller converted;
+    driver_init(&converted);
+    converted.clone_source = &source;
+    memcpy(converted.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&converted, NULL, false);
+
+    CHECK(converted.uid_moved_by_write); // it really did take the other route
+    CHECK_EQ(converted.clone_capacity_confirmed, gen1.clone_capacity_confirmed);
+    CHECK(gen1.clone_capacity_confirmed); // ...and the verdict they agree on is the right one
+    CHECK_EQ(converted.clone_blocks_total, gen1.clone_blocks_total);
+    end();
+}
+
+// A card lifted during the survey fails every read from where it left, which is also the shape of the
+// card's top. What it answered before that stands; a claim about where the card ENDS does not.
+static void test_a_card_lifted_during_the_survey_claims_no_size(void) {
+    begin("a card lifted mid-survey keeps the data it showed but claims no size");
+    fake_tag_init(28, 64, 4); // claims 28, holds 64, all filled
+    fake_data_init(&source, 8, 4);
+    // Eight writes and the geometry read, then the survey is past block 28 by its thirtieth read.
+    fake_tag.ops_until_lifted = 40;
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_residue_found); // blocks above the file answered with data before the lift
+    CHECK(!inst.clone_holds_more); // but a card that has left says nothing about its size
+    end();
+}
+
+// The two halves of the geometry comparison move independently, and the screen names only the one
+// that moved. A 28-block file onto a 28-block card whose IC reference differs is a real mismatch --
+// but saying "the card reports 28 blocks, not the file's" about it describes a number that matches.
+static void test_geometry_names_the_half_that_actually_differs(void) {
+    begin("a size that agrees is not reported as a mismatch");
+    // Same size, different chip: the IC reference is the only thing wrong.
+    fake_tag_init(28, 28, 4);
+    fake_tag.advertises_ic_ref = true;
+    fake_tag.ic_ref = 0x01;
+    fake_data_init(&source, 28, 4);
+    source.system_info.flags |= ISO15693_3_SYSINFO_FLAG_IC_REF;
+    source.system_info.ic_ref = 0x03;
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_ic_ref_differs);
+    CHECK(!inst.clone_memory_differs); // 28 == 28, so the screen must not name the size
+
+    // And a size that really does differ is reported as one.
+    fake_tag_init(40, 40, 4);
+    fake_tag.advertises_ic_ref = true;
+    fake_tag.ic_ref = 0x03;
+    fake_data_init(&source, 28, 4);
+    source.system_info.flags |= ISO15693_3_SYSINFO_FLAG_IC_REF;
+    source.system_info.ic_ref = 0x03; // identical chip, so only the size is left
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_memory_differs);
+    CHECK(!inst.clone_ic_ref_differs); // identical chip, so only the size is named
+    end();
+}
+
 // The block count, not the block size: the notes print counts, so a size that alone disagrees would
 // read as two equal numbers. Neither card measured gets here -- each refused the file's 8-byte
 // writes, so the clone failed first -- but this fake takes them, which is what lets the rule be
@@ -829,7 +919,7 @@ static void test_a_block_size_alone_is_not_a_geometry_finding(void) {
     run_clone(&inst, false);
 
     CHECK_EQ(inst.clone_card_blocks, 28);
-    CHECK(!inst.clone_geometry_differs);
+    CHECK(!inst.clone_memory_differs);
     end();
 }
 
@@ -862,6 +952,9 @@ int main(void) {
     test_a_converted_clone_counts_the_blocks_its_total_does();
     test_a_conversion_at_57_never_sends_the_figure_backwards();
     test_a_failure_the_conversion_takes_back_leaves_the_capacity_edge();
+    test_a_register_write_is_not_evidence_about_capacity();
+    test_a_card_lifted_during_the_survey_claims_no_size();
+    test_geometry_names_the_half_that_actually_differs();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();
