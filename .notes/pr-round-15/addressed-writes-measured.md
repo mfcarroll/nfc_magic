@@ -156,8 +156,11 @@ So four of the five chips are shown to filter on the address and TI is not one o
    `SUBCARRIER_1 | DATA_RATE_HI` with no flags parameter and no UID, and
    `iso15693_3_write_block_response_parse` is internal to `lib/nfc`. We need our own frame builder and
    our own response check. The app already builds raw frames for the backdoor, so the pattern exists.
-5. **An SDK fix is a separate, later PR** -- different repo, needs upstream acceptance, and would need
-   a fallback keyed on API version since this app must keep working on today's SDK regardless.
+5. **An SDK fix is a separate, later PR** -- different repo, needs upstream acceptance. It cannot be
+   adopted as a fallback "keyed on API version": a FAP resolves its API imports at LOAD time, so
+   naming a symbol the firmware lacks fails the whole load rather than degrading. One binary cannot
+   do both. When the call exists in the minimum firmware supported, switch to it and delete the
+   workaround.
 
 ## What addressing does NOT close in #251
 
