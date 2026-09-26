@@ -29,14 +29,14 @@ TI's — so the frame that "worked addressed" differed in two bits, not one.
 **Nothing here requires an addressed write.** Five cards covering four identified chips are each
 measured taking an unaddressed one.
 
-**A second correction, smaller but user-facing.** The release notes scoped the wipe's identity hazard
-to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier. Five
-cards here take a write to block 56 without an unlock ever having been accepted — two of them with
-nothing sent in front of it at all, one of those a card this app had never written. On all three gen1
-chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim lets the
-sweep reach them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
-history and nothing can detect it. The notes and the screens say so now, and I will put the same
-correction on #255, which still carries the older wording.
+**A second correction, smaller but user-facing.** The release notes scoped the wipe's identity
+hazard to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier.
+Five cards here take a write to block 56 without an unlock ever having been accepted — two of them
+with nothing sent in front of it at all, one of those a card this app had never written. On all
+three gen1 chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim
+lets the sweep reach them: the reach rule, not the card's history. Which matters, because a user
+cannot know a card's history and nothing can detect it. The notes and the screens say so now, and I
+will put the same correction on #255, which still carries the older wording.
 
 ## What went in
 
@@ -72,8 +72,9 @@ outright.
 **Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and every
 one enforces the address — a UID one byte wrong gets nothing at all, on all five. The wipe retakes
 its address after writing 56 or 57, because on a gen1 card those two blocks are the UID and it moves
-immediately — measured on three chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
-absent run trips, and it reports a card shorter than the one in the field.
+immediately — measured on three chips. Without that, every later frame carries an address the card
+no longer answers to, the sweep's absent run trips, and it reports a card shorter than the one in
+the field.
 
 **The clone's identity writes are addressed too.** WRITE AFI and WRITE DSFID are standard commands,
 so an unaddressed one lands on a tag of any size. The AFI is the worse of the two: a reader can
