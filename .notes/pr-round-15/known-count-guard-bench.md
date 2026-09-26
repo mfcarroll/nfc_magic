@@ -176,3 +176,48 @@ cloning any 64-block source onto it.
 `SL2S5302`: wearing `E0 04 01 10 A1 A2 A3 A4` with its own 40-block geometry and IC ref 02 intact.
 **Both now wear the same UID**, which is the state that sends a later re-clone of that file down the
 conversion path -- deliberate on neither card, so move one before testing anything else with it.
+
+---
+
+# Test C — the reworded size note. Predicted before the run
+
+FAP installed from `923ca1a`. Covers both wording commits in one run.
+
+`gen-2-card` is already in the state this needs, left by test A: claims 28, holds 64, tail clean, and
+wearing `E0 04 01 10 A1 A2 A3 A4`. **No wipe this time** -- blocks 28-63 were zeroed by test A's wipe
+and nothing has written them since, so the tail is still clean and the size note keeps the summary
+line rather than being outranked by residue.
+
+**Clone `iso15693_slix_28` onto it again.** The card wears the file's UID already, so the gen2 verify
+passes on the first look; it is gen2 magic, so the CFG frame lands as before. The source stops at
+block 28, so nothing is written near 56/57 and the run does not convert.
+
+**PREDICTED summary** -- the two numbers in the other order from the last run, both as counts:
+
+    Clone finished
+    All data written.
+    Card reports 28 blocks,
+    but holds 64.
+
+**PREDICTED Details**, one bullet, now naming the file:
+
+    - The card reports 28 blocks, the same as the file, but holds 64, and still answers
+      individual reads to those higher blocks. Some readers may detect this.
+
+**It can fail three ways, and they are distinguishable.** The numbers the wrong way round -- "reports
+64 blocks, but holds 28" -- is the printf-argument slip. A summary reading "holds 64 blocks, reports
+28" is a stale FAP rather than a defect. And Details missing "the same as the file" means the clause
+is gated on something other than the two counts, since here they are both 28.
+
+## The other branch of that clause is not reachable here
+
+Details drops "the same as the file" where the card's reported count and the file's differ. Producing
+that needs a card that answers above its own claim AND whose claim is not the file's count -- and the
+gen2 CFG frame sets the claim to the file's count every time, so no gen2 clone can reach it. gen1
+cards keep their own claim, but every gen1 card here stops exactly at it.
+
+`slix2-gold-30mm` is the one card on the shelf that answers past its claim (79 advertised, 82
+physical). It is also unclassified -- no write probe has ever been run on it -- so reaching the survey
+means offering it the gen1 opt-in, which writes four real data blocks on a tag that may not be magic.
+**Not worth it for a display string**: the branch is pinned by a test that asserts the clause's
+absence, and a mutant that always emits it dies.
