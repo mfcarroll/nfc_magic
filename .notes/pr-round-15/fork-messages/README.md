@@ -10,9 +10,9 @@ There is no comment-only commit among them.
 | 03 | `0fd69e8` | the gen1 loss claim is gated on there being a loss |
 | 04 | `4169416` | the identity writes are addressed and take the flag |
 | 05 | `d06abf4` | the release notes overstate what a gen1 clone reproduces |
-| 06 | `209f614` | what a clone leaves behind, and a gen1 card it lands in |
+| 06 | `923ca1a` | what a clone leaves behind, and a gen1 card it lands in |
 
-Dev order matches fork order, so no reorder. **06 collapses six dev commits** — see below, because
+Dev order matches fork order, so no reorder. **06 collapses seven dev commits** — see below, because
 that is the one place this round does not get one decision per commit, and the reason is churn.
 
 The twelve notes commits are dev-only and are not sync points.
@@ -34,11 +34,11 @@ invites "why was the outcome not fixed in the same breath?"
 
 ## Why 06 carries two decisions
 
-It syncs the tree at the last of six dev commits: the clone survey, the gen1-card-on-the-gen2-path
+It syncs the tree at the last of seven dev commits: the clone survey, the gen1-card-on-the-gen2-path
 repair, the register-as-capacity fix, the notes-page wording, the comment recording why the repair
 reacts to the registers rather than predicting them -- which documents code the same sync point
 introduces, so it cannot be split off without describing something absent from its own diff -- and
-the bench's correction to the size note's wording. That last one is why the sync point moved rather
+the bench's two corrections to the size note's wording. That last one is why the sync point moved rather
 than a seventh being added: appending to the tail of an already-collapsed range costs no churn,
 while a commit after it would show him the superseded wording and then its fix. Published one per sync point, he
 would see the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01,
