@@ -334,7 +334,35 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
    **AND A TO-POST ITEM:** #255 needs the arm-model correction. **mfcarroll filed #255** -- it is
    ours to comment on, and the reply says the correction will go there.
 
-   The original checklist, for pass 2: Round 15 has grown far past what it
+   **PASS 3 RAN 2026-09-26 on the final state**, at higher effort, after the reorder and the
+   loose-end bench had moved things. What it found, and what it adds to the checklist:
+
+   - **AN OPEN ITEM NOBODY OPENED.** The reply told mishamyte #255 was "still yours to call as its
+     own PR". He has never been asked, and has never commented on that issue. **This is worse than a
+     stale claim**: a stale one was true once, so re-deriving it against the tree catches it. This
+     one was never true and survives every mechanical check. Only reading the posted history finds
+     it. **Check outward claims about what HE owes against what was actually posted.**
+   - **A FORK MESSAGE MUST MATCH ITS OWN TREE.** Sweeping "two chips" to "three" across every
+     artifact put a claim in message 01 that its own anchor contradicts. A sweep is exactly the edit
+     that forgets a message is prose about a TREE, not about the round.
+   - **A NUMBER TRUE OF MOST CASES.** "A target differing in seven of its eight bytes" is six for one
+     of the three cards. State the PROPERTY the test relies on -- both halves differ -- which cannot
+     drift with the next card.
+   - **NARRATION FIXED AT ONE SITE AND LEFT AT ITS TWINS.** Cut from the reply, left in the CHANGELOG
+     and fork message 08. The twin-site defect, committed while reviewing for twin-site defects.
+   - **SYNC-POINT COVERAGE.** Shipped commits landing above the last anchor reach nobody. Count
+     shipped commits against sync points; do not trust the table.
+
+   Also added as gates rather than notes: process narration and the attribution verb "told", both in
+   `check-drafts.py`, and `[👤]` paragraphs are exempt from both -- they are mfcarroll's own words
+   and he is the first-hand source for them.
+
+   **WHAT MOVED, so the next pass does not chase the old shapes:** every SHA from `bbf3b77` onward is
+   new after the repair reorder; there are EIGHT sync points; address enforcement is five of five
+   chips, not four; the UID-moves-immediately result is three chips, not two; and "16 of the 30
+   lines" is 19.
+
+   The original checklist, which still holds: Round 15 has grown far past what it
    was, and every defect found tonight was found by a human read rather than a checker. Run the
    gates, then the eight read-through questions in [WRITING-RULES.md](WRITING-RULES.md), then the
    checklist that actually catches things here:
