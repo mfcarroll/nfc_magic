@@ -70,9 +70,16 @@ verdict `unclassified (no write probe run)` has been carrying the first reading.
 A read of all 256 addresses, 2026-09-26, archived at
 `tools/baselines/slix2-gold-30mm_2026-09-26_full-sweep-0-255.txt`.
 
-**128 of 128 pairs `(b, b+128)` hold identical data.** Moduli 64, 79 and 100 each disagree on 18-19
-pairs, so 128 is not one candidate among several. Seven of the agreeing pairs carry distinctive
-values rather than zeros -- the four factory blocks and three markers written that day:
+**Of all 128 candidate periods, exactly one explains every address: 128.** Each period `p` was
+tested by asking whether block `b` holds what block `b+p` holds, for every `b`. Every `p` from 1 to
+127 gets at least one pair wrong; `p = 128` gets none of its 128 pairs wrong.
+
+A period of 100, say, would require block 16 to match block 116 -- `36 F1 CD 01` against
+`00 00 00 00`. (The period is the SPACING between two addresses, not a block number: 100 and 228 are
+one cell because they are 128 apart, which is why a period of 100 has nothing to do with them.)
+
+Seven of the agreeing pairs carry distinctive values rather than zeros -- the four factory blocks and
+three markers written that day -- so the result does not rest on matching zeros against zeros:
 
     16  36 F1 CD 01  ==  144        77  AA BB CC DD  ==  205
     17  00 03 48 E0  ==  145        80  DE AD BE EF  ==  208
