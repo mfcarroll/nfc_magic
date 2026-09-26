@@ -21,16 +21,35 @@ by two harness tests and four killed mutants, and that is where it stays.
 **What the bench IS for: proving the guard did not break the two paths that do run.** It sits
 directly in the line that decides the size note, so both directions need a card behind them.
 
-## Before anything, read the state
+## State at the start of the session — read on the proxmark, not assumed
 
-Card state moved since the last session and must not be assumed. On the proxmark:
+`gen-2-card`: **advertises 64, and 64 is its real physical top** (inventory; `hf 15 info` reports
+only the claim, so the capacity figure is the inventory's read-derived one, not this transcript's).
 
-    hf 15 info          -- UID, advertised count, IC ref
-    hf 15 rdbl -b 39    -- and a block above the claim, to see what answers
+    UID....... E0 04 01 10 5E ED 00 01
+    SYSINFO... 00 0F 01 00 ED 5E 10 01 04 E0 00 00 3F 03 0F
+    IC ref.... 0x0F        4 bytes/block x 64 blocks
 
-Two things decide whether the tests below are valid:
-- **`gen-2-card`'s current claim and physical top.** Test A needs a card that physically holds more
-  than it will be made to claim.
+Claim and capacity agree, so the card has nothing to say about its own size right now -- which is
+what Test A needs, because the clone is what creates the disagreement.
+
+Note what the predicted screen then means: by the time the note is printed the card ADVERTISES 28,
+so the 64 in "Card holds 64 blocks" cannot have been read off it. It is the survey's own figure,
+arrived at by reading upward until blocks stop answering. Test A therefore also checks that figure
+against a physical top known independently.
+
+## The wipe is a prerequisite control, not just a setup step
+
+Test A's first step is a wipe, and it is worth predicting rather than skipping past: it should report
+**"Wipe complete / Cleared 64 blocks. Card claims 64."** That is control 1's recorded result for this
+card, unchanged. If it reports anything else the card is not in the state Test A assumes and the
+clone should not be run yet.
+
+## Before anything else, check the other card
+
+Card state moved since the last session and must not be assumed.
+
+`gen-2-card` is read above and is ready. The one still to check:
 - **`SL2S5302`'s UID.** If it already wears `E0 04 01 10 A1 A2 A3 A4` -- `iso15693_slix_28`'s UID --
   then a re-clone takes the gen2 path and converts, which is a different test and muddies B. Clone
   something else onto it first, or wipe it, to move the UID off.
