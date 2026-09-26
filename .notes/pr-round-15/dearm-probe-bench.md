@@ -280,3 +280,46 @@ Never noted before, and evidently it does not matter for the five cards that wor
 variable this project has never controlled, and **if the V1 coin refuses the sequence, try 1-of-256
 before concluding it is locked** -- that is the coding the sequence was discovered with, and a
 refusal under a coding proxmark never used would prove much less than it appears to.
+
+
+## The V3 precedent — which argues AGAINST the "no arming" reading above
+
+Asked by mfcarroll whether chip schematics could supply the missing value. They cannot, and the
+reason matters: **these are not NXP or ST parts.** A genuine SLIX has no writable UID registers at
+56/57 -- that is what makes a magic card magic -- so the silicon is an unbranded clone emulating
+SLIX, and NXP's and ST's datasheets describe a part that by definition lacks the backdoor. There is
+no schematic because there is no acknowledged chip.
+
+But the question turned up something better in proxmark's V3 support, which IS documented:
+
+    "This operation is irreversible." After finalize the configuration...
+    arg_lit0("y", "yes", "Confirm the irreversible finalize operation")
+    "run `hf 15 cfinalize` afterwards to lock the UID permanently."
+
+**V3 implements an explicit one-way config lock, and the community treats it as one.** The mechanism
+is the same shape as what V1 shows: after the commit-equivalent, the config registers stop accepting
+writes. For V3 that is by design -- the point of finalizing is to make the card permanently
+indistinguishable from a genuine tag.
+
+**So the "62/63 probably never existed" reading recorded above is under-informed, and this is the
+correction.** Both models remain live:
+
+- **(a) no arming** -- 62/63 never existed, unlock and commit are no-ops, these cards always accepted
+  UID writes. Supported by `0x10` meaning "block unavailable" and by neither frame ever being seen
+  accepted.
+- **(b) armed** -- 62/63 existed, commit locked them permanently, exactly as V3's finalize does.
+  Supported by a sibling magic family in the same command space doing precisely this, on purpose.
+
+`0x10` does not discriminate: a card that locked a register away could report it unavailable with the
+same code. **The V3 precedent tilts toward (b)**, which is the opposite of where the previous section
+leaned, and neither section should be quoted without the other.
+
+**The V1 coin is the discriminator**, and this is what makes it worth spending: on a card that has
+never been committed, model (b) predicts unlock and commit ACCEPTED, and model (a) predicts `0x10`
+from both while 56 still takes a write.
+
+### Cheaper than any of this
+
+**Ask the developer who sent the coin.** He chose to send a V1 specimen and described it as locked,
+so he may know the command set outright, or know that it is undocumented. One message settles more
+than a blind search over 256 blocks times a 32-bit payload times a command byte.
