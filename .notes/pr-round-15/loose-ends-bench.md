@@ -13,7 +13,23 @@ rather than different — and the reply has to say so unless this closes it.
 writes, so it is already discriminating on the flag." It does not. What it refuses is a write without
 the OPTION flag, addressed or not.
 
+**THE CARD IS `white-coin`, the coin.** Two cards here carry TI's manufacturer byte `0x07` --
+`white-coin` and `black-tag` -- while the two LABELLED `ti-2k-silver-1/2` carry `0x53`, which is not
+a registered manufacturer byte at all; that "ti" is the seller's word, not the silicon's. `white-coin`
+is where every OPTION measurement was made, so it is also the continuity choice. `hf 15 reader`
+should print Texas Instruments and `E0 07 80 3D E2 E7 3A 29`.
+
+**Read it before sending anything, and regenerate if it differs**, because the frames below have that
+UID baked in.
+
     tools/gen1-addressed-frames.py --option-probe E007803DE2E73A29
+
+**THE TRAP, and it is why step 2 is not optional.** Every failure mode of this test looks like
+SILENCE: the wrong card on the antenna, a UID that moved since it was recorded, a mangled frame, a
+card off the coupling. All of them are indistinguishable from the result the test is looking for.
+The correctly-addressed write is what separates them -- if step 2 is ALSO silent, the answer is not
+"TI enforces the address", it is "something else is wrong", and step 1 proved nothing. `black-tag`
+is the likeliest way to get there, since it is TI too and its UID starts the same three bytes.
 
 **PREDICTION: silence to the wrong address, `00 78 F0` to the right one.** Same result as the other
 four chips, and it would make the table complete rather than four-of-five.
