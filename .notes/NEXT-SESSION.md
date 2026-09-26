@@ -551,8 +551,13 @@ passes. It reframes #251 from a bystander hazard into a compatibility limit.
 3. **Addressed writes**, and the gen1 caveat gate with them — both recorded in
    [pr-round-10/unaddressed-write-finding.md](pr-round-10/unaddressed-write-finding.md).
 4. **Re-test on device**, including the TI cards.
-5. **The squash message** at merge — draft in [squash-message.md](squash-message.md), condense to
-   60-100 lines first.
+5. ~~**The squash message**~~ — **REWRITTEN TO THE FINAL STATE 2026-09-26**, 96 lines at 80 columns.
+   The old draft was badly stale and the round-15 reply now OFFERS it, so it had to be true: it still
+   said a gen1 card "latches a written UID only on the next power-up" (no latch on any of three
+   chips), that gen1 was validated on a single card (five, over three chips), that the backdoor
+   registers "accept writes WITHOUT acknowledging" (a parse, not a measurement -- they answer 0x10
+   or 0x0F), and that writes are unaddressed (they are addressed). None of this round's feature work
+   was in it. Post it as its own comment at merge, not with the round.
 
 mfcarroll leans toward keeping the addressing work inside this PR and said so in the reply; the
 scoping decision is with mishamyte.
@@ -771,15 +776,22 @@ reach a titled screen. Every numeric figure outside two off-by-ones matched.
 
 ### Still OPEN from round 10 — deliberately not done
 
-These were in the review but NOT in the five items that were actioned. Decide before the reply:
+These were in the review but NOT in the five items that were actioned. **None of them has ever been
+put to mishamyte** -- checked across the round 10-14 replies 2026-09-26 -- so "decide before the
+reply" has now been deferred five times. They are ours to propose or drop, not his to wait for, and
+round 15 deliberately does not raise them: a reply that says the work is ready should not also open
+six new items. Decide them as their own pass:
 
 - **Y1** `mark_failed`/`unmark_failed` write the bitmap with no bound; the invariant is held by four
   call sites. A `furi_check` would make it structural.
 - **Y2** the reason enum has three silent `default:` absorbers and `NotMagic == 0`, which is also
   the scene manager's default state. `…Unset = 0` plus dropping two defaults gets `-Wswitch`.
 - **Y3** `Iso15693PollerResult` has no `mode` field though six of sixteen fields are mode-scoped.
-- **Y4** `ISO15693_MAGIC_BLK_*` (gen1 blocks) and `ISO15693_MAGIC_V2_BLK_*` (gen2 registers) are
-  both `uint8_t` and both spelled `BLK`; a gen2 ref into `build_gen1_frame` destroys four blocks.
+- ~~**Y4**~~ **MOOT since 2026-09-26.** It named the hazard as "a gen2 ref into
+  `build_gen1_frame`", and `build_gen1_frame` no longer exists -- the gen1 addressing routed those
+  frames through `iso15693_poller_build_write_frame` like every other write. The two define families
+  are still both `uint8_t` and still both spelled `BLK`, so a milder version could be restated, but
+  the specific defect is gone.
 - **X1** two implicit `uint16_t -> uint8_t` narrowings, the only two in the file that lack a cast.
 - **P1-P3** three simplifications worth doing (the duplicated pass-cut is the real one: two write
   points for `pass_truncated`/`pass_cut_block`, each holding half the rationale).

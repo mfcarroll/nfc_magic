@@ -58,8 +58,22 @@ waiting for something we cannot send, the card that answers has decided.
 around, and much better to work around it than expand the scope of this to requiring a firmware
 upgrade, even if that means we aren't able to get the write acknowledgments back directly.
 
-**Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and four
-answer nothing at all to a UID one byte wrong. The wipe retakes its address after writing 56 or 57,
+We did build the missing call, to find out what it would cost. It is about six lines: the poller's
+encoder already writes SOF and EOF as literal bytes of the 1-of-4 stream, and the transmit path sends
+what it is handed with parity off, so a standalone EOF is a one-byte frame through the path the
+poller already uses — no transparent mode, no bit-banging. On a firmware branch carrying it, the TI
+card answers its writes: `00 78 F0` for a block that took, and `01 10 1E 06` for one past its
+capacity. One chip, and not proposed here.
+
+So the gap is real and the fix is small, but it is a firmware change and this app has to run on
+firmware that does not have it. A FAP resolves its API imports at load time, so it cannot carry a
+fallback keyed on the API version — naming a symbol the firmware lacks fails the whole load rather
+than degrading. The read-back is what works everywhere, and it is what ships.
+
+**Addressed data-block writes**, which is what #251 asks for. Every card here accepts them, and four
+of the five are shown to enforce the address — a UID one byte wrong gets nothing at all. The fifth is
+the TI Tag-it, which was never sent a mis-addressed frame, so its enforcement is untested rather than
+different. The wipe retakes its address after writing 56 or 57,
 because on a gen1 card those two blocks are the UID and it moves immediately — measured on three
 chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
 absent run trips, and it reports a card shorter than the one in the field.
@@ -73,12 +87,13 @@ that owns it the card has simply gone.
 
 **And so is the gen1 backdoor sequence**, which was the worst of the lot to leave open. Those four
 frames are plain WRITE BLOCKs at blocks 56/57/62/63, and on any tag large enough to have them that is
-user data — sent behind an opt-in whose warning is about the card in the user's hand.
+user data — sent behind an opt-in whose warning is about the card in the user's hand, but risks
+accidentally modifying any other card in the vicinity.
 
 Measured on five cards across all three gen1 chips — ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S —
-every frame bracketed by a reader either side, so a silence is a refusal and not an absence. Block 56 takes an
-addressed write and the UID moves to exactly the value that write implies; a UID one byte wrong gets
-nothing, on the same card in the same session. And at block 62, which every card refuses,
+every frame bracketed by a reader either side, so a silence is a refusal and not an absence. Block 56
+takes an addressed write and the UID moves to exactly the value that write implies; a UID one byte
+wrong gets nothing, on the same card in the same session. And at block 62, which every card refuses,
 **addressing is what makes them answer at all**: the NXP parts are silent unaddressed and return a
 readable `0x0F` addressed, while the LRi2K answers either form with the specific `0x10`, "block not
 available". I did not expect that, and it means the sequence had been going out in the one form four
@@ -93,8 +108,9 @@ the seam.
 Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
 form of either: no card here has ever accepted one, in any form, including a card this app had never
 written. The same evidence says they are not needed — five cards take the write to 56 without an
-unlock ever having been accepted, two of them with no unlock frame sent at all. They stay anyway:
-proxmark sends them, and the cards that would prove them necessary are ones neither of us has.
+unlock ever having been observed changing the behaviour of a card, two of them with no unlock frame
+sent at all. They stay anyway: proxmark sends them, and the cards that would prove them necessary
+are ones neither of us has.
 
 ## A clone could destroy the identity of the card it was copying onto
 
@@ -103,9 +119,10 @@ already wearing the source's UID satisfies it without anything having happened �
 same file is exactly how a card comes to wear it.
 
 So the second clone of a 64-block file onto a gen1 SLIX took the gen2 path with blocks 56 and 57 in
-scope, wrote the file's data straight into the UID registers, and left the card answering to
-`39 A5 39 5A 38 A5 38 5A` — the file's own bytes fed through the UID mapping — under a screen that
-said "Cloned 30/64, Not written: 34" and nothing else.
+scope and wrote the file's data straight into the UID registers. The card came away answering to a
+UID assembled out of those two blocks of the file — not the source's UID, not its own, and not
+anything a user could look up — under a screen that said "Cloned 30/64, Not written: 34" and nothing
+else.
 
 What identifies the card is the same write that does the damage. A write to 56 or 57 that moves the
 UID to precisely the value that write implies can only mean those addresses are registers, so the
@@ -114,19 +131,26 @@ feeding the file into the registers, carries on with everything above them, and 
 target UID back through the gen1 sequence. The end state is the one an ordinary gen1 clone produces
 — a shape already tested and already reported correctly — rather than a new one.
 
-**The re-address checks its answer**, which the same work made possible. It takes its new address
-from an inventory, and that inventory is the SDK's 1-slot unaddressed one, so a second tag in the
-field can answer it (#251) and re-addressing to a stranger would point every later frame at the wrong
-card. Because we know what we wrote — 56 carries uid[7..4], 57 carries uid[3..0] — there are exactly
-two honest replies: unchanged, or what the write implies. A third is refused and the address held.
-Not airtight, and unfixably so: a bystander holding the predicted UID would pass, because magic cards
-make UIDs non-unique and a 1-slot inventory cannot tell two cards apart.
+**The re-address checks its answer now**, which the same work made possible. After a write to 56 or
+57 the run has to discover what the card answers to, and the only tool for that is an inventory. The
+SDK's is 1-slot and unaddressed, so with a second tag in the field it can come back with the
+bystander's UID instead (#251) — and taking that at face value would aim every later frame at the
+wrong card, at the exact moment this one's identity is in doubt.
 
-**Not by skipping those blocks whenever the UID already matches**, which is the shorter fix and is
-wrong: on a real gen2 card re-cloned from a *different* image that happens to share its UID,
-56/57/62/63 are ordinary memory. The skip deducts them from the total, and the run reports a clean
-"Cloned 60/60" over four blocks of the file it chose not to write — trading a silent data loss for a
-rare identity one.
+What makes the answer checkable is that we know what we just wrote. Block 56 carries uid[7..4] and
+block 57 carries uid[3..0], so there are only two replies this card can honestly give: the UID
+unchanged, or the UID that write implies. Anything else did not come from us, so the run logs it and
+keeps the address it already had.
+
+Not airtight, and it cannot be: a bystander that happens to hold the predicted UID would pass.
+Magic cards make UIDs non-unique by construction and a 1-slot inventory cannot tell two cards apart.
+
+**The obvious shortcut would have been to skip those four blocks whenever the card already wears the
+UID being written — and it is the wrong fix**, which is why the app reacts to what the card does
+instead. On a real gen2 card re-cloned from a *different* image that happens to share its UID,
+56/57/62/63 are ordinary memory holding the file's data. Skipping them there would also deduct them
+from the total, so the run would report a clean "Cloned 60/60" while four blocks of the file went
+unwritten — a silent data loss, in exchange for avoiding a much rarer identity one.
 
 ## What a clone leaves behind, and what it reports
 
@@ -236,6 +260,21 @@ it rather than the chip underneath. The runs that decide it:
 
 ## Where this stands
 
-I think it is ready. The capability gap that was blocking it is closed, and what remains on #251 is
-the inventory, which is a different change.
+That closes the list I gave you in the comment-cut round. The cut, the simplification pass, the
+release-notes trim, the addressed writes and the re-test on hardware are all in — which was the
+condition I put on the sixth item, the squash message, since it has to describe the final state.
+
+**That one is ready when you are.** This branch squashes, and the default body is every
+commit message concatenated; this round alone is eight. I have one drafted and will post it as its
+own comment when you are ready to merge, rather than putting it in front of you now.
+
+Three things are deliberately not in this PR, so they are not waiting on me:
+
+- **#251 is not closed.** The 1-slot inventory and the missing STAY QUIET are a different change, and
+  the post-wipe UID re-read cannot be fixed by addressing at all.
+- **#255**, the gen3 pre-flight probe, is still yours to call as its own PR. Either way I will put
+  the wipe-hazard correction above onto that issue, since its wording has the same problem.
+- **The host-test harness** stays out, as its own PR, for the size reason I gave before.
+
+I think it is ready.
 ~~~~
