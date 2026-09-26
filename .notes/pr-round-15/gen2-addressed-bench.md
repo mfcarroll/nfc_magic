@@ -495,15 +495,35 @@ OPTION bit clear -- addressed or not", and says "on the same card", because it w
 is ADDRESSED and was refused `0x03` for the clear OPTION bit, on a different card. The retraction's
 key cell now has two.
 
-## The gen2 population, stated the way BENCH-RULE 3 asks
+## The gen2 population — three cards, AT LEAST TWO distinct chips
 
-**Three CARDS. One chip behaviour identified, on two of them; one card whose silicon is unknown.**
+An earlier line here said "not two chips", meaning `white-coin` and `black-tag` are one chip type
+over two cards. **That was wrong about the population**, and the error is worth naming because it is
+the mirror of the one this round already corrected: there, `gen-2-card` was wrongly COUNTED as an
+identified chip; here it was wrongly counted as no chip at all. **Unidentified is not absent.**
 
-| card | identified how |
-|---|---|
-| `white-coin` | refuses OPTION-clear with `0x03`, takes it with the flag -- TI Tag-it HF-I Plus behaviour |
-| `black-tag` | same refusal, same code, 2026-09-26 -- same behaviour |
-| `gen-2-card` | unknown, and the inventory says so: no read of it predates a write |
+`gen-2-card` is demonstrably DIFFERENT silicon, and one frame form shows it -- addressed WRITE
+BLOCK with OPTION clear, the same construction on all three:
 
-Not "two chips": `white-coin` and `black-tag` share one behavioural signature, which is one chip
-type over two cards.
+| card | `2221 <uid> 08 <data>` | reading |
+|---|---|---|
+| `gen-2-card` | `00 78 F0` **accepted** | does not want the OPTION flag |
+| `black-tag` | `01 03` **refused** | wants it -- 2026-09-26 |
+| `white-coin` | `01 03` **refused** | wants it |
+
+The inventory had already reached this from geometry and said so in `black-tag`'s note: *"Different
+silicon from the original EM-Marin test card, which advertises 66 against 64."* Two independent
+routes to the same split.
+
+So:
+
+- **one chip identified by behaviour** -- TI Tag-it HF-I Plus, on `white-coin` and `black-tag`
+- **one chip unidentified but distinct** -- `gen-2-card`, which no read predates a write of, so its
+  silicon was never captured and cannot be named
+
+**AT LEAST two, not exactly two**: sharing a behavioural signature does not make `white-coin` and
+`black-tag` the same silicon, it only means nothing here separates them.
+
+The project's counting convention stays what it was -- name the chips that are identified, and say
+the unidentified card separately, as "five cards over four identified chips plus one whose silicon
+was never captured" does. What that convention must never do is imply the extra card is not a chip.
