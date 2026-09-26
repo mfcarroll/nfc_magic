@@ -16,22 +16,84 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
-## IN FLIGHT: addressed writes — BUILT AND BENCHED, nothing pushed
+## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Four shipped commits, `db3d8ac..721dd30`.** What went in, the mutation results, the nine hardware
-runs with their predictions, and what the round retracts are in
-[pr-round-15/addressed-writes-implemented.md](pr-round-15/addressed-writes-implemented.md). The
-acceptance test was a clone and a wipe on a TI Tag-it -- that card could not be written at all before
--- and it passes.
+**Nine shipped commits on `iso15693-dev`.** 161 host tests, both firmwares warning-free, clang-format
+and the writing gate clean. The FAP on the Flipper is current.
 
-**The reply is drafted and NOT posted**, in [pr-round-15/reply.md](pr-round-15/reply.md). It owes him
-a retraction: we told him TI refuses an unaddressed WRITE BLOCK and that addressing was therefore a
-compatibility requirement. It refuses writes without the OPTION flag, addressed or not, and no chip
-here requires addressing.
+| | |
+|---|---|
+| `db3d8ac` | data-block writes carry the card's address |
+| `4c1844b` | the OPTION flag, and the acknowledgement it costs |
+| `844de55` | the gen1 loss claim is made only where there was a loss |
+| `721dd30` | the clone's identity writes are addressed, and take the OPTION flag |
+| `857fe72` | a clone reports what it left on the card |
+| `9e49250` | a clone that lands in a gen1 card's UID repairs it |
+| `55d0762` | name the halves that differ, and do not read a register as capacity |
+| `45be57a` | the notes page says what the user can act on |
 
-**Still to do before anything goes out:** the fork messages and the sync-point selection.
+Measurements in [pr-round-15/](pr-round-15/): `addressed-writes-measured.md`,
+`addressed-writes-implemented.md`, `residue-and-geometry.md`, `controls-2026-09-24.md`.
+**Everything measured passed on hardware** across five cards and five chips -- TI Tag-it (x2), NXP
+SLIX, NXP SLIX-S, ST LRi2K, EM-Marin.
 
-Everything below is the measurement the implementation was built from.
+## WHAT IS LEFT, in the order to take it
+
+1. **The locked V1 coin.** An 18mm green PCB coin, never written to, possibly still LOCKED -- the only
+   card that can answer whether unlock/commit are needed at all, and spendable ONCE.
+   **Baseline it first** (`tools/iso15693_magic_probe.py --identify`, `hf 15 info`, a clean full
+   dump): a tag written to before its first instrumented read loses its factory identity for good,
+   which is why `gen-2-card`'s silicon has never been known. Then, in this order, each step
+   conditional on the one before:
+   - addressed write to block 56 alone, no unlock/commit. UID moves -> they are not needed here. It
+     does not -> the card really is locked, which nothing has ever directly shown.
+   - then unlock + commit ADDRESSED, watching their responses. `00 78 F0` would be the first time
+     either has been seen ACCEPTED on any card. Retry 56; if the UID moves, the addressed backdoor is
+     proven end to end on the one card that could prove it.
+   - only if those are refused addressed, try them unaddressed. A refusal should leave the state
+     alone -- an assumption, not a measurement, and if it is wrong step 2 costs step 3.
+   Record the predictions first: step 1 fails, step 2 succeeds.
+
+2. **The empty-frame test** -- cheapest, and it could delete a workaround. See
+   [firmware-gaps.md](firmware-gaps.md): `nfc_poller_trx` called DIRECTLY with an empty buffer emits
+   SOF + EOF and no CRC, which may satisfy the EOF an OPTION write waits for. One run on a TI Tag-it
+   answers it. If it works, the read-back is dead on that path and Gap 2 stops being a firmware
+   dependency.
+
+3. **The reply** -- [pr-round-15/reply.md](pr-round-15/reply.md), drafted and NOT posted, now
+   UNDER-DESCRIBING the round by five commits and still carrying a "five cards across four chips"
+   caveat the SLIX-S run retired. It owes him a retraction: we told him TI refuses an unaddressed
+   WRITE BLOCK and that addressing was therefore a compatibility requirement. It refuses writes
+   without the OPTION flag, addressed or not, and no chip here requires addressing.
+   `[👤]` marks mfcarroll's own paragraphs and is POSTED as-is -- checked against round 10's
+   comment 5652071967, which carries one.
+
+4. **The fork messages** -- [pr-round-15/fork-messages/](pr-round-15/fork-messages/) has four, for the
+   first four commits only. Five more are needed, and the README's sync-point table with them.
+   Written fresh: no dev SHAs, no tests (tools/ does not sync), no round narrative.
+
+5. **Then the replay**, `tools/replay-to-fork.sh .notes/pr-round-15/fork-messages`. It resets to
+   `origin/<branch>` first, runs the writing gate, refuses on a finding, and does not push. Unlock
+   1Password first so the commits come out signed.
+
+**`origin/iso15693-dev` is BEHIND and needs a force-push with lease** -- it holds this session's
+pre-rebuild history. Verified to delete no files. That is the dev repo; nothing has gone near the PR.
+
+## ⚠️ Seven safety branches were deleted, and are NOT recoverable
+
+`backup-pre-maintainer-merge`, `backup-pre-reorder`, `backup-pre-round13-reorder`,
+`backup-r13-normalised`, `backup-r13-reorder`, `wip-round10-full`, `wip-round15`. A `gc` has since
+pruned them, so the tips are gone and no branch can be restored.
+
+**Their content was verified spent BEFORE deletion and that verification still stands:** five were
+patch-equivalent to dev by `git cherry`, `wip-round15` was tree-identical, and `wip-round10-full` was
+the superseded FIRST build of the gen1 B-round, whose findings were recovered into
+[gen1-hardware-findings.md](gen1-hardware-findings.md) at the time. So nothing of value is missing --
+only the ability to go back and look.
+
+The tips WERE recorded here, in a write that was never committed before a `git reset --hard` for an
+unrelated rebuild discarded it. That is the trap this file already warns about two ways. **Commit a
+notes change before any reset, including one you are about to make for a different reason.**
 
 ## The measurements behind it
 
