@@ -3,7 +3,8 @@
 Found while looking for a card that could reach one branch of a result-screen string. The card is the
 more interesting object.
 
-**The PR's release notes say "No gen3 card exists on either side of this PR." That may now be false.**
+**The PR's release notes say "No gen3 card exists on either side of this PR."** That is worth
+re-examining, but nothing here has established it is false.
 
 ## ⚠️ DO NOT WIPE THIS CARD
 
@@ -18,6 +19,13 @@ There is no point at which it stops early.
 
 Whether "un-finalized" applies is exactly what is not yet known. Do not resolve it by wiping.
 
+## What this is and is not
+
+**gen3 is defined by a WRITE behaviour: writing 0x10/0x11 changes the card's UID.** Nothing below
+tests that. Every observation here is a READ of memory contents, and reads cannot distinguish a
+register from ordinary memory that happens to hold the same bytes. Treat this as one card's
+indicators pointing somewhere, not as a classification.
+
 ## What was measured
 
     hf 15 info      UID E0 48 03 00 01 CD F1 36, 79 blocks x 4, IC ref 0x01, no tag-info available
@@ -29,7 +37,10 @@ Whether "un-finalized" applies is exactly what is not yet known. Do not resolve 
     blk 20 (0x14)  A5 3B 44 2C
     blk 21 (0x15)  21 0F 50 00
 
-**Blocks 16/17 are the UID, in the reversed layout.** uid[7..4] at 0x10 and uid[3..0] at 0x11 -- byte
+**Blocks 16/17 hold the UID, in the reversed layout.** Read, not written -- which is the limit of
+what this shows. A copy of the UID in readable memory is not by itself unusual; plenty of products
+put one there, and a chip may mirror it read-only. What makes it worth a second look is the ADDRESS
+and the BYTE ORDER, not the presence of the value. uid[7..4] at 0x10 and uid[3..0] at 0x11 -- byte
 for byte, the same mapping gen1 uses at 56/57, at the addresses this project has documented for gen3
 since the capability matrix was written: *"Magic V3 path -- csetuid --v3 (write_block to 0x10/0x11,
 reversed) + cfinalize (0x14/0x15)"*.
@@ -39,7 +50,14 @@ reversed) + cfinalize (0x14/0x15)"*.
     0x14   expected A5 2B 44 2C    read A5 3B 44 2C    one byte, and one BIT, apart
     0x15   expected 21 AE 93 00    read 21 0F 50 00    first and last byte identical
 
-Five of eight bytes match and they match POSITIONALLY. That is not how two unrelated values look.
+**"Five of eight bytes" flatters it and should not be quoted that way.** The weight is almost all on
+0x14, where three of four bytes are exact and the fourth differs by a single bit. 0x15 matches on
+`21` and on `00` -- and `00` is the most common byte on this card by a wide margin, so it carries
+close to nothing. One block is suggestive; two are not corroborating each other here.
+
+**And the constants have no recorded provenance.** `V3_SIG_A`/`V3_SIG_B` sit in the probe under a
+bare comment with no citation. Whether a near-miss means "a variant" or "not this at all" depends on
+whether that value is spec-defined or was observed from one card, and nothing here says which.
 
 **Why the probe said no.** `probe_magictype` sets `v3_config_mode` from `da == V3_SIG_A and db ==
 V3_SIG_B` -- exact equality against two constants. A variant or a finalized card fails that test and
@@ -79,8 +97,11 @@ or budget stopped at, on a card whose real capacity is unknown.
 
 ## What to do with it — not now, deliberately
 
-1. **Characterise it non-destructively.** Alias test above; read 0x10/0x11 after a UID write to a
-   scratch value ONLY if we accept the risk, which we should not yet.
+1. **Settle it, which needs one write.** Change one byte of block 0x10 and re-inventory. The UID
+   moves -> gen3, and that is the only thing that would prove it. It does not move -> those are four
+   bytes of ordinary memory holding a UID copy, and the whole reading collapses. Reversible either
+   way: the original bytes are in the dump, and the irreversible half of V3 is finalize at
+   0x14/0x15, which this never touches. Run the alias test first, since it needs no write at all.
 2. **Fix the probe's V3 test** to report the two blocks' contents and their structural match rather
    than a boolean from an equality against one constant.
 3. **Re-scope the three shipped comments** to the chips they were measured on.
@@ -89,3 +110,16 @@ or budget stopped at, on a card whose real capacity is unknown.
 
 Nothing here changes a result the round has already benched. The clone survey and the guard behave as
 measured; this is about what the app would say and do on a class of card it has never met.
+
+## The capture says less than it looks like it does
+
+At the 2026-09-08 baseline, blocks **16, 17 and 20 were UNREADABLE** and 21 was non-zero. Three of
+the four blocks this note is about could not be read at all then.
+
+The benign reading, and the likely one: the early probe did single-attempt reads and the project has
+already recorded flakiness of exactly this shape on another card. Nothing in this project has ever
+written to this tag.
+
+What it costs is that only **block 21's content is confirmed pre-existing** -- it read non-zero
+before anything touched the card. For 16, 17 and 20 the first read of any kind is 2026-09-26. That
+does not suggest anyone wrote them; it means the factory-state claim rests on one block, not four.
