@@ -477,7 +477,7 @@ static void test_a_card_the_size_of_its_source_is_quiet(void) {
 
     CHECK(!inst.clone_residue_found);
     CHECK(!inst.clone_holds_more);
-    CHECK(!inst.clone_geometry_differs);
+    CHECK(!inst.clone_memory_differs);
     end();
 }
 
@@ -529,8 +529,9 @@ static void test_a_card_that_keeps_reporting_its_own_size_says_so(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_geometry_differs);
+    CHECK(inst.clone_memory_differs);
     CHECK_EQ(inst.clone_card_blocks, 40);
+    CHECK(inst.clone_memory_differs);
     end();
 }
 
@@ -639,6 +640,79 @@ static void test_a_gen2_card_writes_those_blocks_like_any_other(void) {
     end();
 }
 
+// A write taken by a UID register says nothing about how much MEMORY the card has, so it must not
+// suppress the capacity finding. On a card smaller than its source the failures run to the top and
+// then block 56 answers -- because it is a register -- and counting that as "a block wrote above the
+// failures" costs the report the one thing it could still say: the card is too small.
+//
+// The two runs must agree. A gen1 clone and a clone that CONVERTED to one are the same result, and a
+// reader should not be able to tell which path produced it.
+static void test_a_register_write_is_not_evidence_about_capacity(void) {
+    begin("a converted clone reaches the same capacity verdict as the gen1 path");
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+
+    // The gen1 path: registers skipped from the start, failures run to the card's top.
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag_set_range(56, 57, FakeBlockWritable); // the registers answer, as gen1 silicon does
+    fake_data_init(&source, 64, 4);
+    Iso15693Poller gen1;
+    driver_init(&gen1);
+    gen1.clone_source = &source;
+    memcpy(gen1.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&gen1, NULL, true);
+
+    // The same card reached down the gen2 path, which converts at block 56.
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag_set_range(56, 57, FakeBlockWritable);
+    fake_data_init(&source, 64, 4);
+    Iso15693Poller converted;
+    driver_init(&converted);
+    converted.clone_source = &source;
+    memcpy(converted.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&converted, NULL, false);
+
+    CHECK(converted.uid_moved_by_write); // it really did take the other route
+    CHECK_EQ(converted.clone_capacity_confirmed, gen1.clone_capacity_confirmed);
+    CHECK(gen1.clone_capacity_confirmed); // ...and the verdict they agree on is the right one
+    CHECK_EQ(converted.clone_blocks_total, gen1.clone_blocks_total);
+    end();
+}
+
+// The two halves of the geometry comparison move independently, and the screen names only the one
+// that moved. A 28-block file onto a 28-block card whose IC reference differs is a real mismatch --
+// but saying "the card reports 28 blocks, not the file's" about it describes a number that matches.
+static void test_geometry_names_the_half_that_actually_differs(void) {
+    begin("a size that agrees is not reported as a mismatch");
+    // Same size, different chip: the IC reference is the only thing wrong.
+    fake_tag_init(28, 28, 4);
+    fake_tag.advertises_ic_ref = true;
+    fake_tag.ic_ref = 0x01;
+    fake_data_init(&source, 28, 4);
+    source.system_info.flags |= ISO15693_3_SYSINFO_FLAG_IC_REF;
+    source.system_info.ic_ref = 0x03;
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_ic_ref_differs);
+    CHECK(!inst.clone_memory_differs); // 28 == 28, so the screen must not name the size
+
+    // And a size that really does differ is reported as one.
+    fake_tag_init(40, 40, 4);
+    fake_tag.advertises_ic_ref = true;
+    fake_tag.ic_ref = 0x03;
+    fake_data_init(&source, 28, 4);
+    source.system_info.flags |= ISO15693_3_SYSINFO_FLAG_IC_REF;
+    source.system_info.ic_ref = 0x03; // identical chip, so only the size is left
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_memory_differs);
+    CHECK(!inst.clone_ic_ref_differs); // identical chip, so only the size is named
+    end();
+}
+
 int main(void) {
     printf("iso15693 clone loop\n");
     test_clean_clone_fits();
@@ -661,6 +735,8 @@ int main(void) {
     test_a_gen1_card_on_the_gen2_path_converts_and_repairs();
     test_the_ordinary_gen1_path_does_not_convert();
     test_a_gen2_card_writes_those_blocks_like_any_other();
+    test_a_register_write_is_not_evidence_about_capacity();
+    test_geometry_names_the_half_that_actually_differs();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();

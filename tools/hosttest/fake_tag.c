@@ -177,8 +177,10 @@ Iso15693_3Error
     // both, so a fake that coupled them could never exercise the half that matters.
     if(fake_tag.advertises_dsfid) data->flags |= ISO15693_3_SYSINFO_FLAG_DSFID;
     if(fake_tag.advertises_afi) data->flags |= ISO15693_3_SYSINFO_FLAG_AFI;
+    if(fake_tag.advertises_ic_ref) data->flags |= ISO15693_3_SYSINFO_FLAG_IC_REF;
     data->dsfid = fake_tag.dsfid;
     data->afi = fake_tag.afi;
+    data->ic_ref = fake_tag.ic_ref;
     data->block_count = fake_tag.advertised;
     data->block_size = fake_tag.block_size;
     return Iso15693_3ErrorNone;

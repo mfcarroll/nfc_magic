@@ -260,8 +260,20 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
                 (uint16_t)(instance->iso15693_result.survey_top + 1),
                 instance->iso15693_result.card_blocks);
         } else {
-            furi_string_cat_printf(
-                text, "\nCard still reports\n%u blocks.", instance->iso15693_result.card_blocks);
+            // Neither the data nor the size: what is left is how the card describes itself. Name
+            // whichever of the two moved -- both fit on the remaining two lines when both did.
+            furi_string_cat_str(text, "\nCard still reports\n");
+            if(instance->iso15693_result.memory_differs) {
+                furi_string_cat_printf(text, "%u blocks", instance->iso15693_result.card_blocks);
+            }
+            if(instance->iso15693_result.memory_differs &&
+               instance->iso15693_result.ic_ref_differs) {
+                furi_string_cat_str(text, ", ");
+            }
+            if(instance->iso15693_result.ic_ref_differs) {
+                furi_string_cat_printf(text, "IC ref %02X", instance->iso15693_result.card_ic_ref);
+            }
+            furi_string_cat_str(text, ".");
         }
         widget_add_string_multiline_element(
             widget, 4, 20, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));

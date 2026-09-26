@@ -234,8 +234,12 @@ typedef struct {
     // programs those through its CFG register so they agree by construction; gen1 has no such
     // register, so a gen1 clone carries the source's UID and data on a card that still announces its
     // own size. Both sides are CLAIMS, deliberately -- the question is what a reader will see.
-    // card_blocks / card_ic_ref are what the CARD says and are 0 while geometry_differs is false.
-    bool geometry_differs;
+    // card_blocks / card_ic_ref are what the CARD says, and are 0 while neither flag is set.
+    // ...recorded as two, because they move independently: a file and a card can agree on block
+    // count and disagree on IC reference, and a screen naming both would then describe a mismatch
+    // that is not there. Either, neither or both.
+    bool memory_differs;
+    bool ic_ref_differs;
     uint16_t card_blocks;
     uint8_t card_ic_ref;
     // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is

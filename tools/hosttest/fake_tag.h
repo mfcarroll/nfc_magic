@@ -69,6 +69,11 @@ typedef struct {
     // that distinction is the only thing standing between the verify and a false pass.
     uint8_t afi;
     uint8_t dsfid;
+    // What the card says its chip is. Reported through GET SYSTEM INFO like the rest, and modelled
+    // because a file and a card can agree on block count while disagreeing here -- which is the case
+    // a screen naming both numbers gets wrong.
+    uint8_t ic_ref;
+    bool advertises_ic_ref;
     bool advertises_afi;
     bool advertises_dsfid;
 

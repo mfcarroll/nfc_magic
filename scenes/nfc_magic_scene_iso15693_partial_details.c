@@ -180,15 +180,27 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
             instance->iso15693_result.survey_top,
             instance->iso15693_result.card_blocks);
     }
-    if(instance->iso15693_result.geometry_differs) {
+    if(instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
+        // Name whichever moved, and both when both did. Printing the pair unconditionally makes the
+        // reader hunt for which one is wrong, or take a matching number for the problem.
         if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
-        furi_string_cat_printf(
+        furi_string_cat_str(message, "The card still reports ");
+        if(instance->iso15693_result.memory_differs) {
+            furi_string_cat_printf(message, "%u blocks", instance->iso15693_result.card_blocks);
+        }
+        if(instance->iso15693_result.memory_differs && instance->iso15693_result.ic_ref_differs) {
+            furi_string_cat_str(message, " and ");
+        }
+        if(instance->iso15693_result.ic_ref_differs) {
+            furi_string_cat_printf(message, "IC ref %02X", instance->iso15693_result.card_ic_ref);
+        }
+        // "configuration register", not "geometry": the gen2 backdoor programs the block count, the
+        // block size AND the IC reference through one register, which is why gen1 can reproduce none
+        // of them.
+        furi_string_cat_str(
             message,
-            "The card reports %u blocks and IC ref %02X, not the file's. gen1 has no geometry "
-            "register, so a gen1 clone copies the UID and the data but not how the card describes "
-            "itself.",
-            instance->iso15693_result.card_blocks,
-            instance->iso15693_result.card_ic_ref);
+            ", not the file's. gen1 has no configuration register, so a gen1 clone copies the UID "
+            "and the data but not how the card describes itself.");
     }
     if(instance->iso15693_result.identity_failed) {
         // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not

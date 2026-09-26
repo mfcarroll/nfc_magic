@@ -410,7 +410,8 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             const bool clone_notes = iso15693 && !iso15693_wipe &&
                                      (instance->iso15693_result.residue_found ||
                                       instance->iso15693_result.holds_more ||
-                                      instance->iso15693_result.geometry_differs);
+                                      instance->iso15693_result.memory_differs ||
+                                      instance->iso15693_result.ic_ref_differs);
             if(iso15693_wipe || (iso15693 && instance->iso15693_result.over_capacity > 0) ||
                clone_notes) {
                 scene_manager_set_scene_state(

@@ -383,7 +383,8 @@ struct Iso15693Poller {
     uint16_t clone_residue_last;
     uint16_t clone_survey_top;
     bool clone_holds_more;
-    bool clone_geometry_differs;
+    bool clone_memory_differs;
+    bool clone_ic_ref_differs;
     // A write to 56/57 moved the UID to exactly what that write implies, so those addresses are
     // registers and this is gen1 silicon -- whichever path the run took to get here.
     bool uid_moved_by_write;
@@ -1042,7 +1043,12 @@ static void iso15693_poller_compare_reported_geometry(
     instance->clone_card_blocks = card.block_count;
     instance->clone_card_blocks_known = (card.flags & ISO15693_3_SYSINFO_FLAG_MEMORY) != 0;
     instance->clone_card_ic_ref = card.ic_ref;
-    instance->clone_geometry_differs = memory_differs || ic_ref_differs;
+    // Recorded separately, because they move independently and a screen must name only what moved.
+    // A 28-block file onto a 28-block card reporting a different IC reference is a real mismatch, and
+    // saying "the card reports 28 blocks, not the file's" about it describes a number that matches.
+    // Both can differ at once, and then both are named.
+    instance->clone_memory_differs = memory_differs;
+    instance->clone_ic_ref_differs = ic_ref_differs;
 }
 
 // The card turned out to be gen1 after the pass had already fed the file into its UID registers. Put
@@ -1199,13 +1205,21 @@ static bool iso15693_poller_write_source_blocks(
         const Iso15693_3Error error = iso15693_poller_write_block_retried(
             instance, iso_poller, block_data, (uint8_t)block, block_size);
         if(error == Iso15693_3ErrorNone) {
+            // This write is the one that revealed the registers: it landed, and the UID moved to the
+            // value it implies. See the conversion below.
+            const bool landed_in_a_register = !skipping && instance->uid_moved_by_write;
+
             // A success ABOVE an earlier failure means the failures are not a run at the top, so
-            // they cannot be the card's capacity edge.
-            if(instance->clone_failed_count + instance->clone_over_capacity > 0) {
+            // they cannot be the card's capacity edge -- unless the success was not MEMORY. A write
+            // taken by a UID register says nothing about how much memory the card has, and letting it
+            // suppress the capacity finding costs the report the one thing it could still say: a
+            // 28-block card fed a 64-block source is too small whether or not 56 happens to answer.
+            if(!landed_in_a_register &&
+               instance->clone_failed_count + instance->clone_over_capacity > 0) {
                 wrote_above_failure = true;
             }
             wrote_any = true;
-            if(!skipping && instance->uid_moved_by_write) {
+            if(landed_in_a_register) {
                 FURI_LOG_W(TAG, "clone: 56/57 are UID registers here; continuing as a gen1 clone");
                 skipping = true;
                 converted = true;
@@ -2194,7 +2208,8 @@ static void iso15693_poller_start_internal(
     instance->clone_residue_last = 0;
     instance->clone_survey_top = 0;
     instance->clone_holds_more = false;
-    instance->clone_geometry_differs = false;
+    instance->clone_memory_differs = false;
+    instance->clone_ic_ref_differs = false;
     instance->uid_moved_by_write = false;
     instance->clone_card_blocks = 0;
     instance->clone_card_blocks_known = false;
@@ -2304,7 +2319,8 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
     result->residue_last = instance->clone_residue_last;
     result->holds_more = instance->clone_holds_more;
     result->survey_top = instance->clone_survey_top;
-    result->geometry_differs = instance->clone_geometry_differs;
+    result->memory_differs = instance->clone_memory_differs;
+    result->ic_ref_differs = instance->clone_ic_ref_differs;
     result->card_blocks = instance->clone_card_blocks;
     result->card_ic_ref = instance->clone_card_ic_ref;
     result->capacity_confirmed = instance->clone_capacity_confirmed;

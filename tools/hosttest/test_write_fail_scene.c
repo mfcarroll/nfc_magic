@@ -365,7 +365,7 @@ static void test_a_clean_clone_with_notes_says_the_most_important_one(void) {
     both.residue_found = true;
     both.residue_first = 28;
     both.residue_last = 63;
-    both.geometry_differs = true;
+    both.memory_differs = true;
     both.card_blocks = 40;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &both);
@@ -373,11 +373,37 @@ static void test_a_clean_clone_with_notes_says_the_most_important_one(void) {
     CHECK(!fake_scene_text_contains("still reports"));
 
     Iso15693PollerResult geom = {0};
-    geom.geometry_differs = true;
+    geom.memory_differs = true;
     geom.card_blocks = 40;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &geom);
-    CHECK(fake_scene_text_contains("still reports"));
+    CHECK(fake_scene_text_contains("40 blocks"));
+    end();
+}
+
+// The two halves of that note move independently, and a matching number must never be named. This is
+// the case that reached the bench: a 28-block file onto a 28-block card whose IC reference differed,
+// reported as "the card reports 28 blocks, not the file's" -- about a count that agreed.
+static void test_the_summary_names_only_the_half_that_moved(void) {
+    begin("the summary names the IC ref alone when the size agrees, and both when both moved");
+    Iso15693PollerResult ic = {0};
+    ic.ic_ref_differs = true;
+    ic.card_ic_ref = 0x01;
+    ic.card_blocks = 28;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &ic);
+    CHECK(fake_scene_text_contains("IC ref 01"));
+    CHECK(!fake_scene_text_contains("28 blocks")); // the size agreed; naming it is the defect
+
+    Iso15693PollerResult both = {0};
+    both.memory_differs = true;
+    both.ic_ref_differs = true;
+    both.card_blocks = 28;
+    both.card_ic_ref = 0x01;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &both);
+    CHECK(fake_scene_text_contains("28 blocks"));
+    CHECK(fake_scene_text_contains("IC ref 01")); // neither half stands in for the pair
     end();
 }
 
@@ -407,7 +433,8 @@ static void test_details_carries_every_survey_finding(void) {
     r.residue_last = 63;
     r.holds_more = true;
     r.survey_top = 63;
-    r.geometry_differs = true;
+    r.memory_differs = true;
+    r.ic_ref_differs = true;
     r.card_blocks = 28;
     r.card_ic_ref = 0x02;
     render_write_fail_with(
@@ -419,7 +446,9 @@ static void test_details_carries_every_survey_finding(void) {
     if(scroll) {
         CHECK(strstr(scroll, "still hold what was on the card before") != NULL);
         CHECK(strstr(scroll, "larger than it") != NULL);
-        CHECK(strstr(scroll, "no geometry") != NULL);
+        CHECK(strstr(scroll, "no configuration register") != NULL);
+        // both halves moved, so both are named rather than one standing for the pair
+        CHECK(strstr(scroll, "28 blocks and IC ref 02") != NULL);
     }
     end();
 }
@@ -767,6 +796,7 @@ int main(void) {
     test_wipe_card_lost_with_a_verified_uid_offers_exit();
     test_wipe_card_lost_details_says_the_check_never_finished();
     test_a_clean_clone_with_notes_says_the_most_important_one();
+    test_the_summary_names_only_the_half_that_moved();
     test_a_clean_tail_still_reports_the_size();
     test_details_carries_every_survey_finding();
     test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_blocks();
