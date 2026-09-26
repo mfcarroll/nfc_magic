@@ -218,6 +218,50 @@ which is the same six frames the other three cards ran.
 **Read block 8 after the wrong-address frame, before restoring.** On `black-tag` that read was
 skipped and the argument had to be made instead of measured; here it costs one frame.
 
+### PHASE 1 RESULT — it does NOT want the OPTION flag, and it takes an addressed write
+
+    hf 15 raw -ackw -d 222199665544332211E008A1B2C3D4   -> (3) 00 78 F0
+
+**Addressed, OPTION CLEAR, accepted.** Two things at once:
+
+- **A sixth card accepting an addressed WRITE BLOCK.** The #251 premise now holds on six cards.
+- **It does not want the flag**, like `gen-2-card` and unlike `black-tag` and `white-coin`.
+
+Block 8 now holds `A1 B2 C3 D4` and is restored below.
+
+### THE OPTION REQUIREMENT SPLITS THE GEN2 SHELF 2-2
+
+| card | `2221 <uid> 08 <data>` | |
+|---|---|---|
+| `black-tag` | `01 03` refused | wants the flag |
+| `white-coin` | `01 03` refused | wants the flag |
+| `gen-2-card` | `00 78 F0` accepted | does not |
+| **`v2-sticker-50x28`** | **`00 78 F0` accepted** | **does not** |
+
+**But that is not two chips against two.** Refusing with `0x03` is a POSITIVE signature -- the tag
+naming a bit it needs -- and it groups `black-tag` with `white-coin` for a reason. Accepting is what
+almost every ISO15693 part does; it is the absence of a requirement, and an absence groups nothing.
+So `gen-2-card` and this sticker are not shown to share silicon by both taking the write, and
+nothing here says they do.
+
+**What it does establish is that the round's OPTION handling is exercised by half this shelf**, not
+by one outlier. The sticky flag learned from a `0x03` is the path two of four gen2 cards take.
+
+### STILL TO RUN ON THIS CARD
+
+Enforcement, with **different data** so the read can tell whether a wrong address wrote -- reusing
+`A1B2C3D4` would make a landed write and a refused one look identical:
+
+    hf 15 raw -ckw  -d 222199665544332211E10855667788   WRONG address, DIFFERENT data
+    hf 15 raw -ackw -d 222099665544332211E008           read block 8 BEFORE restoring
+      00 A1 B2 C3 D4 ..    the wrong address wrote nothing -- enforcement holds
+      00 55 66 77 88 ..    IT WROTE. Stop: this is the result that breaks the round's safety claim
+    hf 15 raw -ackw -d 222199665544332211E00800000000   restore to zeros
+    hf 15 raw -ackw -d 222099665544332211E008           confirm 00 00 00 00
+
+Then the six backdoor frames already generated, and the four phase-0 OPTION reads at
+`0x10`/`0x11`/`0x14`/`0x15`.
+
 ### STILL OWED IN PHASE 0
 
     hf 15 raw -ackw -d 422010     READ 0x10, OPTION set
