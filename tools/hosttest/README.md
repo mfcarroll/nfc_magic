@@ -165,6 +165,12 @@ is reachable only from `on_enter`/`on_exit`, never from the routing, which reads
 poller did to get there — and if the routing ever starts depending on a poller, the compile breaks there
 and forces the question.
 
+**`test_file_select_scene.c` — file select's source check on an ISO15693 clone.** A plain ISO15693-3
+dump and a SLIX save from the stock NFC app both go straight to the write; a MIFARE Classic dump is
+still the wrong card. It stubs the loaded device itself, since the device's protocol is what each case
+varies, so it links the GUI recorders but not `fake_write.c`, and it completes the few MIFARE types the
+scene reads, which the shared fakes leave opaque.
+
 ## A build trap that made this suite lie
 
 `-MMD -MP -MF` was in place from the start, with a comment saying it exists to make an edit to the code

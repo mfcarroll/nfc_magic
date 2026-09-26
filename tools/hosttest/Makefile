@@ -16,10 +16,13 @@ BUILD := build
 POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity \
                 test_addressed_write
 SCENE_TESTS  := test_write_fail_scene test_write_scene
+# File select stubs the loaded device itself -- its protocol is what each case varies -- so it links
+# the GUI recorders but not fake_write.o, which answers every device query with an ISO15693-3 dump.
+SELECT_TESTS := test_file_select_scene
 # The third group drives a pure string function -- no radio and no GUI. It still links fake_scene.o,
 # which is where the real FuriString implementation lives; that is the only thing it wants from there.
 PLAIN_TESTS  := test_uid_format
-TESTS := $(POLLER_TESTS) $(SCENE_TESTS) $(PLAIN_TESTS)
+TESTS := $(POLLER_TESTS) $(SCENE_TESTS) $(SELECT_TESTS) $(PLAIN_TESTS)
 
 .PHONY: all run clean
 all: run
@@ -55,6 +58,9 @@ $(BUILD)/iso15693_info.o: ../../magic/protocols/iso15693/iso15693_info.c | $(BUI
 	$(CC) $(CFLAGS) -MMD -MP -MF $(BUILD)/iso15693_info.d $(INCLUDES) -c -o $@ $<
 
 $(addprefix $(BUILD)/,$(SCENE_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o $(BUILD)/fake_write.o $(BUILD)/iso15693_info.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(addprefix $(BUILD)/,$(SELECT_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(addprefix $(BUILD)/,$(PLAIN_TESTS)): $(BUILD)/%: $(BUILD)/%.o $(BUILD)/fake_scene.o

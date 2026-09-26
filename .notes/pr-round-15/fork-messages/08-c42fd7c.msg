@@ -17,7 +17,7 @@ hand, not a second one in the field. #251 asks for exactly this, and the rest
 of the round already does it everywhere else; shipping the safety fix with
 this frame set exempt would have been the first thing a reviewer asked about.
 
-ADDRESSING THEM ALSO TURNS OUT TO BE WHAT MAKES THE CARD ANSWER. At block 62,
+ADDRESSING THEM IS ALSO WHAT MAKES THE CARD ANSWER. At block 62,
 an unaddressed write gets silence from NXP ICODE SLIX and SLIX-S, while the
 identical addressed write gets a refusal that parses -- error 0x0F -- and a
 UID one byte wrong gets silence again, bracketed by a reader either side to

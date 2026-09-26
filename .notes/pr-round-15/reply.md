@@ -198,7 +198,8 @@ notes now say so.
 Both sides of that comparison are claims, deliberately: the question is what a reader will see, not
 what the silicon is. Three gen1 cards — ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — all read as
 **Emosyn-EM Microelectronics USA** while carrying one written UID, and as three correct manufacturers
-once each was back on its own. Same cards, same reader, minutes apart; only eight bytes changed.
+once each was back on its own. Same cards, same reader, minutes apart, and nothing changed but the
+UID.
 
 ## The gen1 caveat, and a register read as capacity
 
@@ -249,9 +250,9 @@ it rather than the chip underneath. The runs that decide it:
   run now converts, the UID reads back intact, and it reports identically to the first
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, which is
   the residue case, and a **40-block SLIX-S** for the geometry one
-- **a gen1 Write UID on each of the three gen1 chips**, to a target differing in seven of its eight
-  bytes so that half a UID could not pass as a whole one: plain Success on all three, and the frames
-  alone run separately on the SLIX-S
+- **a gen1 Write UID on each of the three gen1 chips**, to a target differing from each card's own
+  UID in BOTH halves, so half a UID could not pass as a whole one: plain Success on all three, and
+  the frames alone run separately on the SLIX-S
 - unaddressed-write controls, to show nothing regressed: a full 64/64 wipe on the gen2 card and 28/28
   on a gen1 NXP SLIX
 
@@ -266,8 +267,7 @@ changes still, then post it as its own comment.
 
 Three things are deliberately not in this PR, so they are not waiting on me:
 
-- **#251 is not closed.** The 1-slot inventory and the missing STAY QUIET are a different change, and
-  the post-wipe UID re-read cannot be fixed by addressing at all.
+- **#251 is not closed**, for the reasons above — the inventory is a different change.
 - **#255 stays open.** The gen3 pre-flight probe it asks for is not in this PR and is not part of
   this work. I will put the wipe-hazard correction above onto that issue, since its wording has the
   same problem the release notes did.
