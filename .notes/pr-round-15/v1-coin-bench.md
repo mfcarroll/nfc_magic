@@ -142,3 +142,43 @@ block 56 ANSWERING a read, restore what it actually held instead — that value 
 register, and the UID mapping does not apply. Record what the runs leave behind and
 **whether the card ends armed**, because that is a permanent change to the only specimen of its kind
 here — and, if the sender did not arm it, the end of the one chance to observe a locked card.
+
+
+---
+
+# RESULT — the bare UID write is ACCEPTED, as predicted
+
+    hf 15 reader                          -> E0 11 22 33 44 55 66 91
+    hf 15 wrbl --ua -b 56 -d AABBCCDD     ( ok )
+    hf 15 reader                          -> E0 11 22 33 DD CC BB AA
+
+`AA BB CC DD` into block 56 lands as `uid[7..4]`, exactly the mapping measured on the other cards.
+
+**So four cards have now taken a UID-register write with no unlock and no commit in front of it** --
+and this one had never been written by anyone in this project and arrived wearing a factory
+placeholder UID. That is as close to a definitive negative as the cards here can produce.
+
+**It is four CARDS, not four chips.** This coin's type line decodes `uid[1] = 0x11` from the
+placeholder, so its silicon is unknown. The three named ones are ST LRi2K, NXP SLIX and NXP SLIX-S.
+
+**And it still does not license dropping the two frames from the app.** The cards that would prove
+them necessary are the ones nobody here owns; four for four is a statement about this shelf.
+
+## What this card can STILL answer, and nothing else can
+
+The sweep showed 62/63 refusing READS -- which proves nothing about writes. **56/57 refuse reads too
+and accept writes.** Reads and writes are separate questions at these addresses, and only the write
+side has ever mattered.
+
+This coin is, as far as anything known, **the only card here that has never been committed**. So a
+write to 62 is the discriminator between the two models, and no other card can run it:
+
+    hf 15 raw -ackw -d 02213E00000000      unlock, and WATCH THE RESPONSE
+
+- **`01 10 ...`** -> block unavailable. Model (a): the registers do not exist, unlock and commit are
+  frames sent into empty space, and "never needed on four cards" has a mechanism behind it.
+- **`00 78 F0`** -> accepted. **The first time unlock has been seen taken on any card in this
+  project.** Model (b): they exist, this card was genuinely un-committed, and the lock model is real.
+
+Decisive either way, which is what the card was kept for. The cost is low now: if accepted the card
+becomes armed, but it already behaves exactly as an armed card does, so nothing observable is lost.
