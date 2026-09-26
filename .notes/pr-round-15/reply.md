@@ -32,9 +32,9 @@ measured taking an unaddressed one.
 **A second correction, smaller but user-facing.** The release notes scoped the wipe's identity hazard
 to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier. Five
 cards here take a write to block 56 without an unlock ever having been accepted — two of them with
-nothing sent in front of it at all, one of those a card this app had never written. Blocks 56/57 are
-simply writable on gen1 silicon, so the hazard is any gen1 card whose claim lets the sweep reach
-them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
+nothing sent in front of it at all, one of those a card this app had never written. On all three gen1
+chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim lets the
+sweep reach them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
 history and nothing can detect it. The notes and the screens say so now, and #255 still carries the
 older wording — tell me if you would rather update it there or leave it.
 
