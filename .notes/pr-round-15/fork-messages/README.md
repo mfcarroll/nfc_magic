@@ -12,7 +12,7 @@ There is no comment-only commit among them.
 | 05 | `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
 | 06 | `7aa3baa` | a clone that lands in a gen1 card's UID repairs it |
 | 07 | `f11292f` | what a clone leaves behind, and what it says about it |
-| 08 | `c42fd7c` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `a180bca` | the gen1 registers, addressed and no longer mis-scoped |
 
 **Dev history WAS reordered, once and deliberately**: the repair moved ahead of the survey so it
 could be its own sync point. See below. 07 collapses six dev commits, and that is the one place this
