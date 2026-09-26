@@ -41,7 +41,10 @@ stayed silent on `SL2S5302`, which reports 40 and holds 40. The branch the guard
 reachable with any card here and was not claimed: every tag advertises the MEMORY flag, and the
 timeout path cannot be told from a quiet pass by hand. Harness and mutants cover it.
 
-The FAP on the Flipper is current as of `19e6660`.
+**THE FAP ON THE FLIPPER IS BUILT FROM `73e9d76`**, installed 2026-09-26 09:23 from
+`Momentum-Firmware` on `t5577-deep-read`, API 87.47. So it CARRIES the gen1 addressing (`b312653`).
+Recorded because a stale belief about what the device is running has cost a bench session here
+before, and because the `experiment-eof-frame` build was on it earlier the same day.
 
 | | |
 |---|---|
@@ -132,9 +135,8 @@ contradicts whatever it turns out to be.
 
 ## The EOF experiment is ANSWERED — SOF+EOF is refused, a bare EOF is untried
 
-Branch **`experiment-eof-frame` = `74bfe45`**, off the round-15 tip. The FAP installed on the device is
-built from THAT, not from `iso15693-dev`. Rebuilding from this branch replaces it and the probe is
-gone — which is fine, but know which one is on the device before reading a log.
+Branch **`experiment-eof-frame` = `74bfe45`**, off the round-15 tip. It is NOT what is on the device
+— see the head of this file for what is. Know which build is installed before reading a log.
 
 It answers the empty-frame question in [firmware-gaps.md](firmware-gaps.md): can `nfc_poller_trx`
 with an empty buffer put SOF + EOF on the air and satisfy the standalone EOF an OPTION write waits
