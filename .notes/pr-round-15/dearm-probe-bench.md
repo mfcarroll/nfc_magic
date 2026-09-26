@@ -323,3 +323,48 @@ from both while 56 still takes a write.
 **Ask the developer who sent the coin.** He chose to send a V1 specimen and described it as locked,
 so he may know the command set outright, or know that it is undocumented. One message settles more
 than a blind search over 256 blocks times a 32-bit payload times a command byte.
+
+
+## The question that should have come first — is unlock needed for a bare UID write?
+
+Asked by mfcarroll, and the answer was already sitting in the records: **yes it works, and it always
+has.**
+
+    slix-1k-50mm   02213800000000                      -> 00 78 F0, UID moved     (2026-09-24)
+    lri2k-keychain 02213800000000 then 02213803830050   -> 00 78 F0 both           (2026-09-24)
+    lri2k-keychain three bare writes to 56              -> ( ok ) every time       (2026-09-26)
+
+Two chips, separate sessions, **no 62 or 63 sent in front of any of them** — in the 2026-09-24
+session those were the first frames of the session.
+
+### What that leaves unlock and commit standing on
+
+Nothing observed, anywhere:
+
+- **Never seen accepted.** Not on any card, in this project or in proxmark's documentation.
+- **Never seen to be necessary.** Every card that takes a UID write takes it without them.
+- **Answered `0x10`, block unavailable**, by the one chip that replies in band at all.
+
+The whole case for sending them is that proxmark's lua script does, and that script carries no
+explanation of why. Two frames per gen1 write, on a sequence about to be addressed, with no evidence
+that either does anything.
+
+### What it does to the coin
+
+**Lowers its value, honestly.** The single most informative frame is a bare write to 56, first thing
+— which is what the sheet already does. But if it succeeds, that is a fourth card behaving like the
+other three, and the "locked" state remains something no card has ever exhibited.
+
+So the coin is a ticket on an outcome nobody has seen: interesting only if it REFUSES, which would be
+the first observation of a locked card in this project's history. Cheap — one reversible frame — and
+worth spending for that reason, not because success would teach anything new.
+
+### What it does NOT justify yet
+
+**Do not drop unlock and commit from the app on this.** They are harmless when refused, proxmark
+sends them, and the argument for keeping them is the one that cannot be checked from here: some card
+somewhere may need them, and the cards that would prove it are the ones nobody owns.
+
+It does matter for the addressing change, though. If those two frames stay, they have to be addressed
+too — and their addressed behaviour is the half that cannot be tested, because every card refuses
+them in any form.
