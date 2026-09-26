@@ -237,3 +237,46 @@ is probably wrong for this whole family, and the app has been sending two frames
 **Do not act on this in the app yet.** Those two frames are harmless when refused, proxmark sends
 them, and some card somewhere presumably needs them. But it changes what the coin is for, and it is
 worth knowing before the addressing change decides how many frames it has to address.
+
+
+## Where the sequence comes from, and what proxmark says about it — NOTHING
+
+Traced 2026-09-26 after mfcarroll asked what the de-arm values were based on. The whole of the
+external source is `proxmark3/client/luascripts/hf_15_magic.lua`:
+
+    hf 15 raw -2 -c -d 02213E00000000        WRITE BLOCK 0x3E (62) = 00 00 00 00
+    hf 15 raw -2 -c -d 02213F69960000        WRITE BLOCK 0x3F (63) = 69 96 00 00
+    hf 15 raw -2 -c -d 022138<uid[7..4]>     WRITE BLOCK 0x38 (56)
+    hf 15 raw -2 -c -d 022139<uid[3..0]>     WRITE BLOCK 0x39 (57)
+
+`0x02` is high data rate and unaddressed; `0x21` is WRITE BLOCK, a STANDARD ISO15693 command rather
+than anything proprietary; `-c` appends the CRC.
+
+**The surrounding commentary, in its entirety:** `--- Set UID on magic command enabled on a ICEMAN
+based REPO` and a `print('Using backdoor Magic tag function')`. Copyright 2018, Christian Herrmann,
+v1.0.6, described as "This script tries to set UID on a IS15693 SLIX magic card".
+
+**Nothing anywhere mentions unlock, commit, arming, locking, what `0x6996` means, or why 62 and 63.**
+There is no C implementation either -- `6996` appears nowhere else in the client except unrelated ATR
+and APDU tables.
+
+So **"unlock" and "commit" are this project's names**, which the defines already admit with
+`inferred:`. The locked-then-armed model is ours on top of four undocumented writes labelled "set
+UID". That is worth knowing before spending a card to test a state that may only exist in our
+vocabulary.
+
+Compare proxmark's V3 support in `client/src/cmdhf15.c`, which is properly worked: named block
+constants, a config-mode signature (`A5 2B 44 2C` / `21 AE 93 00`) distinct from finalize values
+(`A5 2B 44 2C` / `69 E2 5D 00`), and comments carrying the raw frames. The V1 magic got none of that
+treatment.
+
+### One real divergence, and it is a live variable for the coin
+
+**proxmark sends all four frames in 1-out-of-256 reader coding** -- that is what `-2` selects. This
+app uses the SDK's encoder, which is **1-out-of-4** (`bit_patterns_1_out_of_4` in
+`furi_hal_nfc_iso15693.c`).
+
+Never noted before, and evidently it does not matter for the five cards that work. But it is a
+variable this project has never controlled, and **if the V1 coin refuses the sequence, try 1-of-256
+before concluding it is locked** -- that is the coding the sequence was discovered with, and a
+refusal under a coding proxmark never used would prove much less than it appears to.

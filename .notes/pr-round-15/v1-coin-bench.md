@@ -107,6 +107,17 @@ Unaddressed first is the point; if the backdoor refuses it here, the addressed f
 trying. A refusal is ASSUMED to leave the state alone — an assumption, not a measurement, and if it
 is wrong the unlock has already cost this.
 
+## If the coin refuses everything, change the CODING before concluding anything
+
+proxmark sends the magic sequence in **1-out-of-256** reader coding (`hf 15 raw -2`). This app uses
+1-out-of-4. That difference has never been controlled for, and it does not matter on the five cards
+that work -- but a refusal under a coding proxmark never used would prove far less than it looks
+like. Re-send with `-2` before calling the card locked.
+
+See the provenance section in [dearm-probe-bench.md](dearm-probe-bench.md): the sequence has no
+documented semantics at all, so "locked" and "armed" are this project's vocabulary rather than
+anything the source supports.
+
 ## Restore
 
 Block 56 back to its arrival value, `E0 11 22 33 44 55 66 91`. Record what the runs leave behind and
