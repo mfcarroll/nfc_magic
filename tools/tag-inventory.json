@@ -676,13 +676,18 @@
         "silent_blocks": "28-255, all 228 of them",
         "verified_complete": "The archived capture is the COMPLETE run of all 256 addresses. An earlier version of this record was written from a capture that was still being appended to -- it had reached block 27 and was read as though the remaining 228 were silent. It happened to be right, because on this card everything above 27 IS silent, but that was luck: a card holding data high up, as slix2-gold-30mm does at block 100, would have been missed and the write cleared anyway."
       },
+      "backdoor_register_probe_2026_09_26": {
+        "conclusion": "This card has never been committed by anyone here and behaves exactly like three that have. Asked in the form the chip answers, a committed card and an uncommitted one are indistinguishable.",
+        "identical_to": "slix-1k-coin18, slix-1k-50x28 and SL2S5302 -- the same signature on all four. The ST LRi2K differs, answering both forms with the specific 0x10.",
+        "result": "Unaddressed write to 62: silence. ADDRESSED with the correct UID: 01 0F 68 EE. Addressed with one UID byte wrong: silence. Bracketed by reader calls throughout."
+      },
       "classification": {
         "verdict": "unclassified (no write probe run)"
       },
       "count_owned": 1,
       "expected": {
         "magic": true,
-        "note": "Sent as a V1/gen1 specimen. NOTHING IS RECORDED ABOUT WHAT THE SENDER SAID: the 'possibly still locked' framing this card was kept for originated in this project's own notes, unsourced, and was later hardened into a claim attributed to him. He did not say it. The only evidence the card is in an unconfigured state is its placeholder UID -- consistent with shipping that way, and not an indication of a lock.",
+        "note": "Sent as a V1/gen1 specimen. NOTHING IS RECORDED ABOUT WHAT THE SENDER SAID: the 'possibly still locked' framing this card was kept for originated in this project's own notes, unsourced, and was later hardened into a claim attributed to him. He did not say it. The only evidence the card was in an unconfigured state was its placeholder UID. It is now measured indistinguishable from slix-1k-coin18 -- same form factor, same 28 blocks and IC ref 0x01, same bare UID write accepted, same backdoor signature -- so it is very likely the same product, and was never a special specimen.",
         "recorded": "2026-09-26",
         "source": "gift from another developer -- NOT a purchase, so there is no listing to check against"
       },
