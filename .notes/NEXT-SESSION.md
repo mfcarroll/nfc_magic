@@ -27,7 +27,7 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Eleven shipped commits on `iso15693-dev`.** 163 host tests, the writing gate clean.
+**Twelve shipped commits on `iso15693-dev`.** 165 host tests, the writing gate clean.
 
 **THE KNOWN-COUNT GUARD IS BENCHED AND PASSES, both directions** --
 [known-count-guard-bench.md](pr-round-15/known-count-guard-bench.md) has the predictions, committed
@@ -36,8 +36,7 @@ stayed silent on `SL2S5302`, which reports 40 and holds 40. The branch the guard
 reachable with any card here and was not claimed: every tag advertises the MEMORY flag, and the
 timeout path cannot be told from a quiet pass by hand. Harness and mutants cover it.
 
-⚠️ **The FAP on the Flipper predates `209f614`**, the wording change the bench produced. Rebuild
-before showing those screens to anyone.
+The FAP on the Flipper is current as of `923ca1a`.
 
 | | |
 |---|---|
@@ -52,6 +51,7 @@ before showing those screens to anyone.
 | `c9a9cbe` | the notes page says what the user can act on |
 | `1cb7501` | why the clone reacts to the registers instead of predicting them |
 | `209f614` | the size note says what the card reports before what it is |
+| `923ca1a` | the size note names the file where the two counts agree |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
