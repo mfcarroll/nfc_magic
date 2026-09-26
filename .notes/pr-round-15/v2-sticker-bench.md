@@ -168,6 +168,56 @@ card that answers all 256 addresses because its space ALIASES. So:
 
 Nothing is written for either outcome yet. The alias check is phase 1b if the sweep asks for it.
 
+### SWEEP RESULT, 2026-09-26 — the claim is HONEST. All 256 addresses visited.
+
+`v2-sticker-sweep-0-255.txt`, parsed rather than eyeballed:
+
+| blocks | |
+|---|---|
+| **0-63** | answer, every one `00 00 00 00` |
+| **64-255** | refuse, every one |
+
+256 of 256 addresses accounted for, no gaps in the record.
+
+**The advertised count and the physical top agree exactly**, which makes this the first gen2 card on
+this shelf where they do: `gen-2-card` has over-claimed and under-claimed at different times, and
+`black-tag` currently claims 70 against 64. The CFG is still a programmable setting -- it simply
+happens to be set to the truth on this card as received.
+
+**AND THERE IS NO ALIASING.** A hard edge at 64 with 192 consecutive refusals is the opposite of
+`slix2-gold-30mm`, which answers all 256 because its space wraps. So **phase 1b is not needed** --
+there is no phantom tail to tell apart from an alias, because there is no tail.
+
+**This card SUPPORTS the clone-residue survey's premise.** The survey reads upward from the source
+count and stops on an absent run, resting on "past physical capacity a block refuses reads outright".
+The gold tag is the known counter-example; this is a fourth gen2 on which the premise holds cleanly.
+Worth having, because the survey's design argument is in the reply.
+
+## PHASE 1 FRAMES — from the live UID `E0 11 22 33 44 55 66 99`
+
+`uid[7]` is `0x99`, clear of the `0x09` hazard. Wire address `99665544332211E0`, block `0x40` holds
+`99665544`. Probe `A1B2C3D4`, distinct from the other three cards' (`11223344`, `55667788`).
+**Every data block is zero, so every restore is zeros and there is no baseline to lose.**
+
+    1  OPTION discriminator -- addressed, OPTION CLEAR, standard write
+       hf 15 raw -ackw -d 222199665544332211E008A1B2C3D4
+         01 03    wants the flag, like black-tag and white-coin
+         00 78 F0 does not, like gen-2-card
+    2  addressed, OPTION SET -- should be accepted either way
+       hf 15 raw -ackw -d 622199665544332211E008A1B2C3D4
+    3  ENFORCEMENT: same flags as whichever of 1/2 was accepted, address one byte wrong
+       hf 15 raw -ckw  -d 622199665544332211E108A1B2C3D4      (or 2221... if 1 was accepted)
+       hf 15 raw -ackw -d 222099665544332211E008                read block 8 -- did the wrong one write?
+    4  restore block 8 to zeros, and confirm
+       hf 15 raw -ackw -d 622199665544332211E00800000000
+       hf 15 raw -ackw -d 222099665544332211E008
+
+Then the backdoor set from `tools/gen2-addressed-frames.py E0 11 22 33 44 55 66 99 --probe A1B2C3D4`,
+which is the same six frames the other three cards ran.
+
+**Read block 8 after the wrong-address frame, before restoring.** On `black-tag` that read was
+skipped and the argument had to be made instead of measured; here it costs one frame.
+
 ### STILL OWED IN PHASE 0
 
     hf 15 raw -ackw -d 422010     READ 0x10, OPTION set
