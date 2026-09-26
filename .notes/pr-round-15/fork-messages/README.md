@@ -56,7 +56,7 @@ The message is split under three headings so the two decisions are still separab
 **stale in the fork tree at 03 and 04**. That is the twin-site defect from round 12, at two commits'
 width.
 
-It cannot be closed by reordering: `d751b13` does not apply before `721dd30`, so 05 already sits at
+It cannot be closed by reordering: `d06abf4` does not apply before `4169416`, so 05 already sits at
 the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
 which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
 the same with its 11 residual lines.
