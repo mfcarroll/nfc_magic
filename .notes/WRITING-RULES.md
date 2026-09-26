@@ -55,6 +55,27 @@ Written fresh. Dev messages are NOT copyable — round 10's were, and he quoted 
 - **Verify every SHA against the branch**, by subject, not existence.
 - ⚖ **Correct what we told him that was wrong**, in one sentence, without the archaeology.
 
+## ⚠️ Never attribute a statement to a person without a record of them making it
+
+Twice on 2026-09-26, which is why this is a rule and not a note.
+
+- The round-15 reply told mishamyte that #255 would be "less hypothetical than when **you** filed
+  it". mfcarroll filed it. Nothing said who had; it was inferred from a nearby fact -- that he had
+  been ASKED whether he wanted the gen3 probe as its own PR -- and went straight into a sentence in
+  the second person.
+- The V1 coin was described as one the sender "called locked". He never said anything about its
+  state. "Possibly still LOCKED" was this project's own hedge, written here, unsourced -- and months
+  later it had hardened into an attributed claim and was load-bearing for a one-shot bench plan.
+
+The shape is identical both times: **an inference about a person, written as a report of what they
+said.** A hedge with no source drifts into a claim, and a claim about a state drifts into a claim
+about a person.
+
+**The check is mechanical.** Before writing that someone said, filed, asked for or believes
+something, find where it is recorded. If it is not recorded, either say what is actually known --
+"filed as #255", "described as a V1 specimen" -- or go and ask them. A person's words are the one
+class of fact that cannot be reconstructed from context.
+
 ## The read-through — what to actually look for
 
 The gate catches phrasings. It cannot catch a paragraph that is well-written, true, and has no

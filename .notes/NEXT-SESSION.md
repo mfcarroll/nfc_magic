@@ -174,7 +174,7 @@ contact with what this round already does.
 
 **Genuinely unmeasured, and narrower than it looked:**
 - unlock (62) and commit (63) ACCEPTED addressed. No run has shown one taken, because an armed card
-  refuses them either way. **The V1 coin can answer this** if it turns out to be locked — add an
+  refuses them either way. **The V1 coin can answer this** if it has never been committed — add an
   addressed variant to that bench.
 - the sequence is fire-and-forget (`send_backdoor_uid_gen1` ignores per-frame results), so addressing
   it needs an inventory between frames. The wipe already does exactly that, so the machinery exists.
@@ -194,7 +194,7 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
 
 ## WHAT IS LEFT, in the order to take it
 
-1. **The locked V1 coin.** An 18mm green PCB coin, never written to, possibly still LOCKED -- the only
+1. **The V1 coin.** An 18mm green PCB coin, never written to by this project -- the only
    card that can answer whether unlock/commit are needed at all, and spendable ONCE.
    **Baseline it first** (`tools/iso15693_magic_probe.py --identify`, `hf 15 info`, a clean full
    dump): a tag written to before its first instrumented read loses its factory identity for good,

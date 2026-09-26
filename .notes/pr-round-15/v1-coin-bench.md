@@ -23,8 +23,14 @@ posting it. Nothing here can tell those apart.
 
 ## The problem this creates, and it is the whole problem
 
-The card is here to answer **whether a locked V1 needs unlock and commit before a UID write**. It can
-only answer that if it arrives locked. If the sender already armed it, it is not locked any more.
+The card is here to answer **whether unlock and commit do anything at all on a card that has never
+had them run**. It can only answer that if nobody has run them. If the sender already did, it cannot.
+
+**And "locked" is unsourced.** That framing originated in this project's own notes as a hedge --
+"possibly still LOCKED" -- with nothing behind it, and was later hardened into a claim attributed to
+the sender. He said nothing on record about the card's state. The one piece of real evidence that it
+is unconfigured is its placeholder UID, which is consistent with shipping that way and says nothing
+about a lock.
 
 That makes the two outcomes worth very different amounts:
 
