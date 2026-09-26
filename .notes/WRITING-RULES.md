@@ -6,9 +6,17 @@ They are here instead, organised by **which artifact you are about to write**, a
 subset is a script rather than a paragraph.
 
     tools/check-writing.py comments <paths>    shipped source
-    tools/check-writing.py forkmsg <dir>       fork messages
+    tools/check-writing.py forkmsg <dir>       fork messages, incl. attributed statements
     tools/check-writing.py headings <files>    replies and threads
-    tools/check-drafts.py <files>              replies and threads: refs, SHAs, line numbers
+    tools/check-drafts.py <files>              replies and threads: refs, SHAs, lines, attribution
+
+Both pattern files carry a SELFTEST of phrasings that actually shipped, asserted on every run and
+refusing to scan if it fails. `gen1-staleness.py` reported a clean sweep while missing eight of
+eight, because its patterns were written by reading the sites already fixed. A pattern list needs
+cases it MUST match and cases it MUST NOT.
+
+`comments` reads every shipped `.c`/`.h` -- the same path list `sync-to-fork.sh` overlays from.
+It once read a narrower set and reported clean for fourteen files it never opened.
 
 `replay-to-fork.sh` runs the first two and refuses to replay on a finding. Judgement rules cannot be
 mechanised and are marked ⚖.
@@ -57,7 +65,10 @@ Written fresh. Dev messages are NOT copyable — round 10's were, and he quoted 
 
 ## ⚠️ Never attribute a statement to a person without a record of them making it
 
-Twice on 2026-09-26, which is why this is a rule and not a note.
+**Three times on 2026-09-26, twice about the same issue, and the rule was already written down when
+the third happened. It is now CHECKED** -- `check-drafts.py` flags it in a reply payload and
+`check-writing.py forkmsg` in a fork message, each with a selftest of the phrasings that actually
+shipped. A hit is not a verdict; it is a demand for the record.
 
 - The round-15 reply told mishamyte that #255 would be "less hypothetical than when **you** filed
   it". mfcarroll filed it. Nothing said who had; it was inferred from a nearby fact -- that he had
@@ -67,7 +78,13 @@ Twice on 2026-09-26, which is why this is a rule and not a note.
   state. "Possibly still LOCKED" was this project's own hedge, written here, unsourced -- and months
   later it had hardened into an attributed claim and was load-bearing for a one-shot bench plan.
 
-The shape is identical both times: **an inference about a person, written as a report of what they
+- The THIRD: a session note said #255 "is not ours to edit without saying so", and the reply built on
+  it by asking mishamyte whether to update the issue. **mfcarroll filed #255** -- recorded in this
+  very file, two bullets up, and in NEXT-SESSION beside the issue's own date. The bullet above was
+  written to stop exactly this and did not, because nothing made anyone read it at the moment of
+  writing. That is the argument for the gate, made twice over.
+
+The shape is identical every time: **an inference about a person, written as a report of what they
 said.** A hedge with no source drifts into a claim, and a claim about a state drifts into a claim
 about a person.
 

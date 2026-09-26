@@ -35,8 +35,18 @@ if ! python3 "$DEV/tools/check-writing.py" forkmsg "$MSGDIR"; then
   echo "  refusing to replay -- fix the fork messages, or say why and re-run with SKIP_WRITING_GATE=1"
   [ "${SKIP_WRITING_GATE:-0}" = "1" ] || exit 1
 fi
-if ! python3 "$DEV/tools/check-writing.py" comments \
-     $(git -C "$DEV" ls-files 'magic/**/*.c' 'magic/**/*.h' 'scenes/*.c' 'views/*.c' | sed "s|^|$DEV/|"); then
+# The SAME path list sync-to-fork.sh overlays from, filtered to source files -- anything that ships
+# is gated. The earlier globs were 'magic/**/*.c', 'scenes/*.c' and 'views/*.c', which missed
+# fourteen shipped files including nfc_magic_app_i.h and magic/nfc_magic_scanner.c. A gate whose
+# file set is narrower than the thing it gates reports clean for the files it never opened.
+# An ARRAY rather than an unquoted $(...): word-splitting an unquoted expansion is a bash default
+# that zsh does not share, so the old form handed the whole list to python as ONE filename under a
+# zsh invocation and died with "File name too long" instead of scanning anything.
+SHIPPED_SRC=()
+while IFS= read -r f; do SHIPPED_SRC+=("$DEV/$f"); done < <(
+  git -C "$DEV" ls-files -- magic scenes views helpers \
+      nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h | grep -E '\.[ch]$')
+if ! python3 "$DEV/tools/check-writing.py" comments "${SHIPPED_SRC[@]}"; then
   echo "  refusing to replay -- fix the comments, or say why and re-run with SKIP_WRITING_GATE=1"
   [ "${SKIP_WRITING_GATE:-0}" = "1" ] || exit 1
 fi

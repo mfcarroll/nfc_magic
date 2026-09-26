@@ -35,8 +35,8 @@ cards here take a write to block 56 without an unlock ever having been accepted 
 nothing sent in front of it at all, one of those a card this app had never written. On all three gen1
 chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim lets the
 sweep reach them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
-history and nothing can detect it. The notes and the screens say so now, and #255 still carries the
-older wording — tell me if you would rather update it there or leave it.
+history and nothing can detect it. The notes and the screens say so now, and I will put the same
+correction on #255, which still carries the older wording.
 
 ## What went in
 
@@ -162,8 +162,8 @@ left the wording alone rather than hedge it for a card the feature does not clai
 does turn out to be gen3, it is the first such card either of us has had, and #255 stops resting on
 an attributed report.
 
-**The geometry half is also a correction to the release notes.** They said a clone writes the
-source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
+**The geometry half is also a correction to the release notes.** The 2.3 entry said a clone writes
+the source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
 without qualification. That is the gen2 path: the gen2 backdoor has a CFG register that programs what
 the card reports and gen1 has none. A 40-block SLIX-S cloned from a 28-block SLIX source with gen1
 answers to the source's UID and carries its data while still reporting 40 blocks and IC ref 0x02 —

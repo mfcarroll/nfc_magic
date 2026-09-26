@@ -36,6 +36,34 @@ import re, sys, os, json, glob, subprocess
 FW_TREES = [p for p in glob.glob(os.path.expanduser("~/../Shared/code/personal/rfid/*"))
             + glob.glob("../*") if os.path.isdir(os.path.join(p, ".git"))]
 
+# AN INFERENCE ABOUT A PERSON, WRITTEN AS A REPORT OF WHAT THEY SAID -- the one class of fact that
+# cannot be reconstructed from context, and the only rule in WRITING-RULES that has now been broken
+# three times. Twice about #255 alone: a reply told mishamyte it would be "less hypothetical than
+# when YOU filed it", and a later note said the issue "is not ours to edit", both when mfcarroll
+# filed it and WRITING-RULES said so in as many words.
+#
+# No checker can know who said what. This one refuses to let the sentence through unexamined, which
+# is the entire fix: answer each hit with where it is recorded, or rewrite it to say what is
+# actually known -- "filed as #255", "described as a V1 specimen". First person is not matched; we
+# are our own source for what we told him.
+ATTRIBUTION = re.compile(
+    r"\b(you|he|she|they|mishamyte|mfcarroll"
+    r"|the (?:sender|author|reporter|reviewer|maintainer|filer|owner|seller|submitter))"
+    r"\s+(?:had\s+|have\s+|has\s+|first\s+|never\s+)?"
+    r"(filed|raised|asked|said|called|reported|opened|wrote|flagged|requested|suggested"
+    r"|described|named|claimed|believes?|wants?|thinks?|felt|meant)\b", re.I)
+
+ATTRIBUTION_SELFTEST = [
+    (True, "less hypothetical than when you filed it"),
+    (True, "a coin the sender called locked"),
+    (True, "He never called it locked"),
+    (True, "he wants the gen3 probe as its own PR"),
+    (False, "I told you TI Tag-it refuses an unaddressed WRITE BLOCK"),
+    (False, "the card asked for the OPTION flag"),
+    (False, "filed as #255"),
+]
+
+
 def sh(*a):
     return subprocess.run(a, capture_output=True, text=True).stdout
 
@@ -107,6 +135,13 @@ def main():
         for p in sorted(anch):
             print("  %-46s %s" % (p, " ".join(str(x) for x in sorted(anch[p]))))
         return 0
+    fails = [t for want, t in ATTRIBUTION_SELFTEST if bool(ATTRIBUTION.search(t)) != want]
+    if fails:
+        print("SELFTEST FAILED -- the attribution pattern does not do what it claims:")
+        for t in fails:
+            print("   " + t)
+        return 2
+
     bad = 0
     for path in args:
         txt = open(path, encoding="utf-8").read()
@@ -160,6 +195,11 @@ def main():
                     pass    # a FIRMWARE sha: legitimate, and he can look it up in that repo
                 else:
                     flag("SHA?", sha, "resolves in no repo we know of; if meant as a hash it is dead")
+
+            m = ATTRIBUTION.search(l) if i not in in_code else None
+            if m:
+                flag("attributed", m.group()[:30],
+                     "a claim about what a PERSON said -- find the record or say what is known")
 
             for m in re.finditer(r'`([A-Za-z0-9_]+\.[ch])[:.](\d+)`', l):
                 f, n = m.group(1), int(m.group(2))

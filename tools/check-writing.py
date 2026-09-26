@@ -9,6 +9,8 @@ Prose rules nobody runs are documentation, not a gate. This runs the greppable s
     check-writing.py forkmsg <dir>          fork messages: dev SHAs, tools/ paths, test claims
     check-writing.py headings <file>...     a heading whose own section contradicts it
 
+The pattern lists carry a SELFTEST of phrasings that actually shipped, asserted on every run.
+
 Exit 1 on any finding. Judgement rules -- "is this a constraint or an argument" -- are NOT here and
 cannot be; see the checklist.
 """
@@ -22,11 +24,31 @@ from pathlib import Path
 # Deliberately narrow. An over-reporting check gets ignored, which is its own recorded lesson: these
 # are phrases that can ONLY be about the edit history, never about the card or the code's behaviour.
 # "no longer inventories" and "every block was written" are present-tense and must not match.
+# The lookbehinds on "used to" are load-bearing: "storage IS used to look up the key cache" is
+# present-tense passive and was reported as history for a line nobody here wrote. A checker that
+# cries wolf on the neighbours' code is one people stop reading, which is the same lesson as the
+# staleness scanner.
 HISTORY = re.compile(
-    r"(\bused to\b|\bwas previously\b|\bpreviously (?:set|called|named|spelled|lived|sat|disagreed|read)\b"
+    r"((?<!\bis )(?<!\bare )(?<!\bwas )(?<!\bwere )(?<!\bbeen )(?<!\bbeing )\bused to\b"
+    r"|\bwas previously\b|\bpreviously (?:set|called|named|spelled|lived|sat|disagreed|read)\b"
     r"|\bearlier (?:version|draft|commit)\b"
     r"|\bwe (?:cut|removed|added|broke|restored|had)\b|\bthis (?:used|had) to\b"
     r"|\bbefore (?:the|this) (?:cut|trim|round|change)\b)", re.I)
+
+# AN INFERENCE ABOUT A PERSON, WRITTEN AS A REPORT OF WHAT THEY SAID. Three times now, twice about
+# the same issue: the round-15 reply told mishamyte #255 would be "less hypothetical than when YOU
+# filed it" when mfcarroll filed it, and then a session note said #255 "is not ours to edit" for the
+# same reason. WRITING-RULES has carried "mfcarroll filed it" in as many words throughout.
+#
+# A machine cannot check who said what. It CAN refuse to let the sentence through unexamined, which
+# is the whole of the fix: every hit has to be answered with where it is recorded, or rewritten to
+# say what is actually known ("filed as #255"). First person is not matched -- we are our own source.
+ATTRIBUTION = re.compile(
+    r"\b(you|he|she|they|mishamyte|mfcarroll"
+    r"|the (?:sender|author|reporter|reviewer|maintainer|filer|owner|seller|submitter))"
+    r"\s+(?:had\s+|have\s+|has\s+|first\s+|never\s+)?"
+    r"(filed|raised|asked|said|called|reported|opened|wrote|flagged|requested|suggested"
+    r"|described|named|claimed|believes?|wants?|thinks?|felt|meant)\b", re.I)
 DEV_SHA = re.compile(r"\b[0-9a-f]{7,9}\b")
 BLOCK_WARN = 20  # a comment run longer than this wants a reason
 
@@ -63,6 +85,9 @@ def forkmsg(d):
                 bad.append((f.name, i, "unsyncable", line.strip()[:70]))
             for m in DEV_SHA.finditer(line):
                 bad.append((f.name, i, "dev-sha?", m.group()))
+            m = ATTRIBUTION.search(line)
+            if m:
+                bad.append((f.name, i, "attributed", m.group() + " -- where is that recorded?"))
     return bad
 
 
@@ -93,7 +118,40 @@ def headings(paths):
     return bad
 
 
+# Asserted on EVERY invocation, and the gate refuses to run if any of it fails. The precedent is
+# tools/gen1-staleness.py, whose pattern list was written by reading the sites already fixed and was
+# therefore blind to all eight that survived -- and reported the job done. A pattern list needs
+# cases it MUST match and cases it MUST NOT, or its silence means nothing. Every line here is a
+# phrasing that actually shipped or was actually reported.
+SELFTEST = [
+    (HISTORY, False, "// storage is used to look up the NFC app's per-UID MIFARE Classic key"),
+    (HISTORY, False, "// the two buffers are used to hold the frame and its answer"),
+    (HISTORY, True, "// it used to take whatever the inventory returned"),
+    (HISTORY, True, "// we cut the cost footnote"),
+    (ATTRIBUTION, True, "less hypothetical than when you filed it"),
+    (ATTRIBUTION, True, "a coin the sender called locked"),
+    (ATTRIBUTION, True, "He never called it locked"),
+    (ATTRIBUTION, True, "the seller said those are the proxmark-writable ones"),
+    (ATTRIBUTION, True, "he wants the gen3 probe as its own PR"),
+    (ATTRIBUTION, False, "I told you TI Tag-it refuses an unaddressed WRITE BLOCK"),
+    (ATTRIBUTION, False, "the card asked for the OPTION flag"),
+    (ATTRIBUTION, False, "filed as #255"),
+    (ATTRIBUTION, False, "described as a V1 specimen"),
+]
+
+
+def selftest():
+    bad = [t for pat, want, t in SELFTEST if bool(pat.search(t)) != want]
+    if bad:
+        print("SELFTEST FAILED -- the patterns do not do what they claim; refusing to scan:")
+        for t in bad:
+            print("   " + t)
+    return not bad
+
+
 def main():
+    if not selftest():
+        return 2
     if len(sys.argv) < 3:
         print(__doc__)
         return 2

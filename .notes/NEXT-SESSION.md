@@ -242,10 +242,14 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
    read of the CHANGELOG's whole 2.3 section end to end, and the remaining numbers re-derived --
    "58/58", "16 of the 30 lines", the block counts in the bench list.
 
-   **ALSO FOUND, NOT ACTED ON:** `check-writing.py comments` reads only `magic/**`, `scenes/*.c` and
-   `views/*.c`, so fourteen shipped files are never gated -- `nfc_magic_app_i.h` among them, which
-   held one of the arm sites. And its history rule false-positives on "is used to", in a line of
-   mishamyte's. Neither is worth changing mid-round; both are worth knowing.
+   **THE GATE WAS WIDENED INSTEAD OF RECORDING ITS GAPS**, on mfcarroll's call: `replay-to-fork.sh`
+   now gates all 95 shipped `.c`/`.h` from the same path list `sync-to-fork.sh` overlays from (it
+   read 81 and reported clean for the other fourteen, `nfc_magic_app_i.h` among them, which held one
+   of the arm sites); the history rule no longer fires on "is used to"; and ATTRIBUTION is checked
+   in both the reply payload and the fork messages, each behind a selftest.
+
+   **AND A TO-POST ITEM:** #255 needs the arm-model correction. **mfcarroll filed #255** -- it is
+   ours to comment on, and the reply says the correction will go there.
 
    The original checklist, for pass 2: Round 15 has grown far past what it
    was, and every defect found tonight was found by a human read rather than a checker. Run the
@@ -264,7 +268,7 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
      it is every gen1 card whose advertised count lets the sweep reach 56/57. The reach rule is what
      bounds it, not a card's history. `b312653` corrected the definition site
      (`ISO15693_MAGIC_BLK_UNLOCK`) and the one direct twin it created; the rest is a deliberate
-     separate decision, because it touches user-facing release notes and #255's vocabulary:
+     separate decision, because it touches user-facing release notes and #255's wording:
      `iso15693_poller.c` at the wipe's OPEN QUESTION and at `VerifyWipe`, `iso15693_poller.h:290`,
      `nfc_magic_scene_iso15693_write_fail.c:396`, `nfc_magic_app_i.h:138`, `CHANGELOG.md` 71/74/150.
      **Decide it deliberately, and if it changes, the reply needs a line.**
