@@ -86,6 +86,21 @@ The label was in `controls-2026-09-24.md` and in the reply draft and is correcte
 the same error this round corrected in the release notes, reading a UID-decoded type line as
 silicon. Do not reinstate it.
 
+## WHAT TONIGHT SETTLED, so it is not re-opened
+
+- **The standalone EOF works** and closes Gap 2 at the source. Firmware branch
+  `iso15693-poller-tx-eof` (API 87.2), unpushed, one chip. The app CANNOT use it: a FAP resolves API
+  imports at LOAD time, so naming a symbol the firmware lacks fails the whole load. There is no
+  fallback "keyed on API version" — see [firmware-gaps.md](firmware-gaps.md).
+- **The empty-frame test is spent** — SOF+EOF is refused, 88 of 88. That is what led to the real fix.
+- **`slix2-gold-30mm` has 128 cells mirrored across the 8-bit space**, proved from the write side. Its
+  UID sits at 0x10/0x11 and 0x14 is one bit from the V3 config signature. **DO NOT WIPE IT.**
+- **The lock model is unsupported AND unfalsifiable with these cards.** Five cards take a bare UID
+  write with no unlock; zero acceptances of unlock or commit have ever been observed. But an
+  acceptance would have PROVED it and a refusal proves nothing, since a card committed before it
+  arrived behaves exactly like one that was never locked. The frames stay in the app.
+- **The V1 coin was never a special specimen** — measured identical to `slix-1k-coin18`.
+
 ## ⚠️ POSSIBLE GEN3 ON THE SHELF — indicators only, not established
 
 `slix2-gold-30mm` — **DO NOT WIPE IT**. Full write-up in
@@ -194,26 +209,42 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
 
 ## WHAT IS LEFT, in the order to take it
 
-1. **The V1 coin.** An 18mm green PCB coin, never written to by this project -- the only
-   card that can answer whether unlock/commit are needed at all, and spendable ONCE.
-   **Baseline it first** (`tools/iso15693_magic_probe.py --identify`, `hf 15 info`, a clean full
-   dump): a tag written to before its first instrumented read loses its factory identity for good,
-   which is why `gen-2-card`'s silicon has never been known. Then, in this order, each step
-   conditional on the one before:
-   - addressed write to block 56 alone, no unlock/commit. UID moves -> they are not needed here. It
-     does not -> the card really is locked, which nothing has ever directly shown.
-   - then unlock + commit ADDRESSED, watching their responses. `00 78 F0` would be the first time
-     either has been seen ACCEPTED on any card. Retry 56; if the UID moves, the addressed backdoor is
-     proven end to end on the one card that could prove it.
-   - only if those are refused addressed, try them unaddressed. A refusal should leave the state
-     alone -- an assumption, not a measurement, and if it is wrong step 2 costs step 3.
-   Record the predictions first: step 1 fails, step 2 succeeds.
+1. **THE GEN1 BACKDOOR ADDRESSING — the only code left in this round.** mfcarroll's call, and the
+   evidence is now wider than the change needs. See the open-question section above and
+   [pr-round-15/dearm-probe-bench.md](pr-round-15/dearm-probe-bench.md) for the measurements.
 
-2. **The empty-frame test** -- cheapest, and it could delete a workaround. See
-   [firmware-gaps.md](firmware-gaps.md): `nfc_poller_trx` called DIRECTLY with an empty buffer emits
-   SOF + EOF and no CRC, which may satisfy the EOF an OPTION write waits for. One run on a TI Tag-it
-   answers it. If it works, the read-back is dead on that path and Gap 2 stops being a firmware
-   dependency.
+   `iso15693_poller_build_gen1_frame` takes `ISO15693_MAGIC_FLAGS` (0x02, unaddressed) and no UID.
+   The sequence is unlock, commit, 56, 57, sent fire-and-forget from
+   `iso15693_poller_send_backdoor_uid_gen1`, which ignores every per-frame result deliberately.
+
+   **The machinery already exists.** `iso15693_poller_predict_uid` computes exactly what the UID
+   becomes after a write to 56, and `iso15693_poller_readdress` takes the new address using that
+   prediction as its check. So: address unlock, commit and 56 to the current UID; re-address once 56
+   lands; then 57.
+
+   **Bench it on the three armed gen1 cards afterwards.** The risk is that addressing breaks a
+   sequence that works, and the cards to catch that are `lri2k-keychain`, `slix-1k-50x28` and
+   `SL2S5302`.
+
+   Two things the fork message must carry, because a reviewer will ask both: that unlock and commit
+   are addressed too although their addressed behaviour cannot be validated (every card refuses them
+   in any form), and that addressing is what makes NXP silicon ANSWER at those registers at all.
+
+2. **THE SELF-REVIEW, before the replay and after the code.** Round 15 has grown far past what it
+   was, and every defect found tonight was found by a human read rather than a checker. Run the
+   gates, then the eight read-through questions in [WRITING-RULES.md](WRITING-RULES.md), then the
+   checklist that actually catches things here:
+   - **a claim corrected in one place and left in its twin** — three separate instances this round,
+     all in `iso15693_poller.c`, all from the same commit failing to update a comment twenty lines
+     away
+   - **an inference about a person written as a report of what they said** — twice tonight, now its
+     own rule in WRITING-RULES
+   - **a hedge hardened into a claim** — "possibly still LOCKED" became "he called it locked"
+   - **scope**: name the chip, never the family; say how many CARDS and how many CHIPS
+   - **every SHA and number re-derived against the tree at the moment of publishing**, not against
+     the round it was drafted for
+   - **comment-only proven**, not assumed (`tools/comment-only.py`)
+   - **mutation-test from a COMMITTED baseline**, `make clean` in the loop
 
 3. ~~**The reply**~~ -- **REWRITTEN 2026-09-26, still NOT posted and still unread by mfcarroll.**
    [pr-round-15/reply.md](pr-round-15/reply.md) now covers all nine commits (it under-described the
