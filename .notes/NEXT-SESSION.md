@@ -52,14 +52,20 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Nineteen shipped commits on `iso15693-dev`**, seven fork sync points. 168 host tests, the writing
+**19 shipped commits on `iso15693-dev`**, EIGHT fork sync points. 168 host tests, the writing
 gate clean, both firmwares warning-free, clang-format clean.
 
-⚠️ **07 ANCHORS AT THE ROUND TIP**, so it carries the addressing AND the arm-model correction AND the
+⚠️ **DEV HISTORY WAS REORDERED 2026-09-26**, so every SHA from `bbf3b77` onward is new; safety branch
+`wip-pre-repair-reorder`. The repair moved ahead of the survey so it could be sync point 06 on its
+own -- it is the round's most consequential fix and it had no visible existence inside a commit about
+what a clone leaves behind. Verified content-preserving: `git diff` between the old tip and the new
+is EMPTY across every shipped path AND across `tools/` and `.notes/`, so the hardware bench stands.
+
+⚠️ **08 ANCHORS AT THE ROUND TIP**, so it carries the addressing AND the arm-model correction AND the
 self-review's text fixes. Anchor it earlier and the round ships a wrong chip count with its fix one
-sync point behind. If any shipped commit is added after `89c5c11`, 07's anchor MOVES -- the seven
-sync points once reached only as far as `b312653` while six shipped commits sat above them, and
-nothing but `replay-to-fork.sh`'s own final diff would have caught it.
+sync point behind. **If any shipped commit is added after 08's anchor, that anchor MOVES** -- the
+sync points once reached only as far as the addressing commit while six shipped commits sat above
+them, and nothing but `replay-to-fork.sh`'s own final diff would have caught it.
 
 **THE KNOWN-COUNT GUARD IS BENCHED AND PASSES, both directions** --
 [known-count-guard-bench.md](pr-round-15/known-count-guard-bench.md) has the predictions, committed
@@ -79,22 +85,21 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 | `3327ad3` | the OPTION flag, and the acknowledgement it costs |
 | `0fd69e8` | the gen1 loss claim is made only where there was a loss |
 | `3fc118c` | the clone's identity writes are addressed, and take the OPTION flag |
-| `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
-| `bbf3b77` | a clone reports what it left on the card |
-| `628eede` | a clone that lands in a gen1 card's UID repairs it |
-| `9d3f9ed` | name the halves that differ, and do not read a register as capacity |
-| `fa85107` | the notes page says what the user can act on |
-| `93435ac` | why the clone reacts to the registers instead of predicting them |
-| `e030945` | the size note says what the card reports before what it is |
-| `19e6660` | the size note names the file where the two counts agree |
-| `b312653` | the gen1 backdoor sequence carries the card's address |
-| `9128500` | the self-review's first pass -- five stale claims |
-| `5884a53` | the wipe hazard is every gen1 card, not one someone armed |
-| `5f9ea90` | two numbers that moved, and four paragraphs that were two |
-| `0bd9987` | a contradiction in the release notes, and three mangled wraps |
-| `76b0377` | rewrap the residue bullet |
-| `d2b85ef` | the wipe's open question points at the evidence |
-| `757fa5a` | dev-only: the fake acts on an unaddressed gen1 write, so the control can fail |
+| `b2cce0b` | gen1 clones do not reproduce geometry, and the Partial claim is conditional |
+| `7aa3baa` | a clone that lands in a gen1 card's UID repairs it |
+| `bf5eea8` | a clone reports what it left on the card |
+| `7e1f2c6` | name the halves that differ, and do not read a register as capacity |
+| `e8de630` | the notes page says what the user can act on |
+| `89f3916` | why the clone reacts to the registers instead of predicting them |
+| `bd97fb7` | the size note says what the card reports before what it is |
+| `f11292f` | the size note names the file where the two counts agree |
+| `b9410ce` | the gen1 backdoor sequence carries the card's address |
+| `428adac` | the self-review's first pass -- five stale claims the addressing left behind |
+| `4f8765e` | the wipe hazard is every gen1 card, not one someone armed |
+| `54391db` | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `8ad18f9` | pass 2 -- a contradiction in the release notes, and three mangled wraps |
+| `2f516e6` | rewrap the residue bullet, which my own fix left at 121 characters |
+| `c5268ea` | the wipe's open question points at the evidence instead of repeating it |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the

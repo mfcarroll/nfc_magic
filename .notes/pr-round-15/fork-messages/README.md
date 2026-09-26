@@ -1,4 +1,4 @@
-# Round 15 — seven sync points, all behavioural but one
+# Round 15 — eight sync points, all behavioural but one
 
 The addressing round. Every one of these changes behaviour except 05, which is the release notes.
 There is no comment-only commit among them.
@@ -10,16 +10,18 @@ There is no comment-only commit among them.
 | 03 | `0fd69e8` | the gen1 loss claim is gated on there being a loss |
 | 04 | `3fc118c` | the identity writes are addressed and take the flag |
 | 05 | `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
-| 06 | `19e6660` | what a clone leaves behind, and a gen1 card it lands in |
-| 07 | `89c5c11` | the gen1 registers, addressed and no longer mis-scoped |
+| 06 | `7aa3baa` | a clone that lands in a gen1 card's UID repairs it |
+| 07 | `f11292f` | what a clone leaves behind, and what it says about it |
+| 08 | `3a6913a` | the gen1 registers, addressed and no longer mis-scoped |
 
-Dev order matches fork order, so no reorder. **06 collapses seven dev commits** — see below, because
-that is the one place this round does not get one decision per commit, and the reason is churn.
+**Dev history WAS reordered, once and deliberately**: the repair moved ahead of the survey so it
+could be its own sync point. See below. 07 collapses six dev commits, and that is the one place this
+round does not get one decision per commit; the reason is churn.
 
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.
 
-## Why 07 comes last, and why it carries two decisions
+## Why 08 comes last, and why it carries two decisions
 
 It is the one frame set 01 left out, and it carries its own measurement: at block 62 the addressed
 form is the only one NXP silicon answers, which is a fact about the frames rather than about the
@@ -30,13 +32,13 @@ inside a commit that already explains a different re-address for a different rea
 **It ANCHORS AT THE ROUND'S TIP, not at the commit that introduced the addressing**, and that is
 what makes it carry the arm-model correction as well. Six shipped dev commits land after the
 addressing: the correction itself, and then this round's own self-review fixing text the round had
-written. Anchored earlier, 07 would ship "measured on two chips" and an 08 would correct it to
+written. Anchored earlier, 08 would ship "measured on two chips" and an 08 would correct it to
 three -- a wrong number and its fix, one sync point apart, which is the churn 02 and 06 were both
 shaped to avoid. Zero churn won again, and the message is split under `==` headings so the two
 decisions stay separable by a reader.
 
 The arm correction is comment and release notes only; nothing about it changes behaviour. **Verify
-before replaying** that no shipped commit sits after 07's anchor -- `replay-to-fork.sh` checks this
+before replaying** that no shipped commit sits after 08's anchor -- `replay-to-fork.sh` checks this
 at the end, by re-syncing from dev HEAD and diffing, and it is the check that would have caught the
 seven sync points reaching only as far as `b312653` while six shipped commits sat above them.
 
@@ -55,29 +57,39 @@ then-fix pairing he has flagged twice, wearing a different hat.
 gen1 loss claim is made only where there was a loss — applied at three sites. Split, the first
 invites "why was the outcome not fixed in the same breath?"
 
-## Why the survey, the repair and the size note ship as one sync point
+## Why the repair was lifted OUT, and why the survey and the screens stay together
 
-It syncs the tree at the last of seven dev commits: the clone survey, the gen1-card-on-the-gen2-path
-repair, the register-as-capacity fix, the notes-page wording, the comment recording why the repair
-reacts to the registers rather than predicting them -- which documents code the same sync point
-introduces, so it cannot be split off without describing something absent from its own diff -- and
-the bench's two corrections to the size note's wording. That last one is why the sync point MOVED to
-the tail rather than a new one being appended after it: extending an already-collapsed range costs no
-churn, while a sync point after it would show him the superseded wording and then its fix. Published
-one per sync point, he would see the survey introduce a geometry note reading "The card reports 28
-blocks and IC ref 01, not the file's" — which leads with a number that matched — and then see it
-corrected twice. **19 of the 30 lines the survey adds to the details scene are gone or rewritten by
-the last of the seven** — re-derived 2026-09-26 by matching every line `bbf3b77` adds to
-`nfc_magic_scene_iso15693_partial_details.c` against that file at `19e6660`. It read 16 when the
+The repair is the round's most consequential behavioural fix -- it stops a clone writing a file's
+bytes into a gen1 card's UID registers -- and it had no visible existence, buried inside a commit
+whose subject is what a clone leaves behind. A reviewer scanning subjects would never have found it.
+
+**It was first tried as a split of the existing order and reported impossible: "it does not apply
+without the survey in the tree."** That was a fact about a PATCH, not about the code. The repair
+references no survey symbol at all -- no `clone_residue_*`, no `clone_survey_top`, no
+`survey_above_source`; it is entirely inside the poller while the survey reaches the whole scene
+chain. They conflict because they edit neighbouring regions of one file and one struct, which is a
+rebase problem. So dev history was reordered instead: repair first, then survey.
+
+The reorder is content-preserving and that was checked rather than assumed -- `git diff` between the
+pre-reorder tip and the rebuilt one is EMPTY across every shipped path, and across `tools/` and
+`.notes/` as well. The code did not change; only its order did, which is what keeps the hardware
+bench standing. The repair also builds and passes the host tests at its own commit, so it is a sync
+point a reviewer can actually stop at.
+
+**07 still collapses six**: the survey, the register-as-capacity fix, the notes-page wording, the
+comment explaining the repair, and the two size-note corrections. Published one per sync point he
+would see the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01,
+not the file's" -- which leads with a number that matched -- and then see it corrected twice. **19 of
+the 30 lines the survey adds to the details scene are gone or rewritten by the last of the six** --
+re-derived 2026-09-26 by matching every line the survey adds to
+`nfc_magic_scene_iso15693_partial_details.c` against that file at 07's anchor. It read 16 when the
 range was five commits; the figure moves whenever the range does, so re-derive it rather than quote
-it.
+it. **Zero churn won**, on the same grounds as 02: a sync point must not show him an error we then
+fix.
 
-Splitting the repair out from the survey was tried and is not available: it does not apply without
-the survey in the tree, and a tree-based sync cannot take half a commit. So the choice was two
-decisions in one diff against three sync points showing him a wrong screen string and its fixes.
-**Zero churn won**, on the same grounds as 02: a sync point must not show him an error we then fix.
-
-The message is split under three headings so the two decisions are still separable by a reader.
+One line of the repair is restructured at 07 -- `if(!skipping && instance->uid_moved_by_write)`
+hoisted into a named variable by the register-as-capacity fix. That is a readability change, not a
+correction, which is the benign kind.
 
 ## Residual churn — one release-notes line, and it cannot be removed
 
