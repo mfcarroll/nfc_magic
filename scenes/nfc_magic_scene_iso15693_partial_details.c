@@ -173,12 +173,31 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     if(instance->iso15693_result.holds_more) {
         if(furi_string_size(message) > 0) furi_string_cat_str(message, "\n\n");
         furi_string_cat_str(message, "- ");
-        furi_string_cat_printf(
-            message,
-            "The card reports %u blocks but holds %u, and still answers individual reads to those "
-            "higher blocks. Some readers may detect this.",
-            instance->iso15693_result.card_blocks,
-            (uint16_t)(instance->iso15693_result.survey_top + 1));
+        // Say where the reported count CAME FROM only where the two numbers actually are equal --
+        // a fact about the values, not a claim about who set them. "The card is configured to
+        // match" is the tempting phrasing and it is wrong twice over. It asserts this app wrote the
+        // count, which the gen2 CFG frame does only on a magic card (it goes out before the verify,
+        // so a non-magic tag already wearing the file's UID passes with its own geometry, and a
+        // gen1 clone has no geometry frame at all). And it is not implied by this note appearing:
+        // the three notes on this page are independent, so the configuration note can sit directly
+        // below this one saying the two do NOT match. Only the SUMMARY makes them exclusive, and
+        // that is priority, not agreement.
+        const uint16_t held = (uint16_t)(instance->iso15693_result.survey_top + 1);
+        if(instance->iso15693_result.card_blocks == instance->iso15693_result.file_blocks) {
+            furi_string_cat_printf(
+                message,
+                "The card reports %u blocks, the same as the file, but holds %u, and still answers "
+                "individual reads to those higher blocks. Some readers may detect this.",
+                instance->iso15693_result.card_blocks,
+                held);
+        } else {
+            furi_string_cat_printf(
+                message,
+                "The card reports %u blocks but holds %u, and still answers individual reads to "
+                "those higher blocks. Some readers may detect this.",
+                instance->iso15693_result.card_blocks,
+                held);
+        }
     }
     if(instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
         // Both sides, and only the halves that moved. Showing what the file asked for beside what the

@@ -426,6 +426,49 @@ static void test_a_clean_tail_still_reports_the_size(void) {
     end();
 }
 
+// Where the card's reported count and the file's are the SAME number, the size note says so -- the
+// reported count is not arbitrary, it is what the file asked for, and a user looking at "reports 28"
+// has no other way to know that. Gated on the values being equal rather than on which path ran,
+// because nothing here knows who wrote the count.
+static void test_the_size_note_says_when_the_count_came_from_the_file(void) {
+    begin("the size note names the file where the card reports the file's own count");
+    Iso15693PollerResult r = {0};
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.card_blocks = 28;
+    r.file_blocks = 28; // the same number, however it got there
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) CHECK(strstr(scroll, "the same as the file") != NULL);
+    end();
+}
+
+// ...and stays quiet about it where they differ, which is the case that makes the clause a claim
+// rather than a reading of two values. The geometry note sits on the same page saying they do NOT
+// match, so a size note asserting agreement would contradict the bullet under it.
+static void test_the_size_note_claims_no_agreement_where_there_is_none(void) {
+    begin("the size note does not mention the file where the two counts differ");
+    Iso15693PollerResult r = {0};
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.card_blocks = 40; // the card's own, untouched -- a gen1 clone
+    r.file_blocks = 28;
+    r.memory_differs = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "the same as the file") == NULL);
+        CHECK(strstr(scroll, "reports 40 blocks but holds 64") != NULL);
+    }
+    end();
+}
+
 // Details carries all three, each independent. Without this the summary's one-note limit would be the
 // only place any of them appeared, and two would be unreachable.
 static void test_details_carries_every_survey_finding(void) {
@@ -803,6 +846,8 @@ int main(void) {
     test_a_clean_clone_with_notes_says_the_most_important_one();
     test_the_summary_names_only_the_half_that_moved();
     test_a_clean_tail_still_reports_the_size();
+    test_the_size_note_says_when_the_count_came_from_the_file();
+    test_the_size_note_claims_no_agreement_where_there_is_none();
     test_details_carries_every_survey_finding();
     test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_blocks();
     test_the_gen1_details_note_matches_the_source();
