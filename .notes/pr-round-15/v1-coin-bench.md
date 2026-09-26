@@ -267,7 +267,8 @@ description of a card we already had two of.
 ## RESULT — `slix-1k-coin18` is silent too, and that is the answer
 
 Identified by the label on the tag itself, not by UID -- it was wearing `E0 04 01 10 A1 A2 A3 A4`,
-`slix_28`'s costume, which `SL2S5302` also wears.
+`slix_28`'s costume, which `SL2S5302` also wore at the time (it was put back on its own UID
+2026-09-26).
 
     hf 15 reader                         -> card present
     hf 15 raw -ackw -d 02213E00000000    -> command failed

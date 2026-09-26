@@ -178,7 +178,10 @@ and the type line a reader prints for it is decoded from that UID rather than fr
 notes now say so.
 
 Both sides of that comparison are claims, deliberately: the question is what a reader will see, not
-what the silicon is.
+what the silicon is. Demonstrated in both directions, on the bench, in one sitting: three gen1 cards
+— ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — all read as **Emosyn-EM Microelectronics USA** while
+carrying one written UID, then as three correct manufacturers once each was put back on its own.
+Same cards, same reader, minutes apart, and nothing about the silicon changed in between.
 
 ## The gen1 caveat, and a register read as capacity
 

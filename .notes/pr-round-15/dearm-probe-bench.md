@@ -49,7 +49,9 @@ bytes; none of these three is TI, so that does not apply here.
 
 Two wear cloned UIDs from earlier work; that is fine here, since the probe needs only a KNOWN
 starting value and a readable UID. **Restore each to the value above, not to its factory UID**, so
-the probe leaves every card where it found it.
+the probe leaves every card where it found it. (SUPERSEDED 2026-09-26: all three were later put back
+to their INVENTORIED ORIGINALS instead -- see
+[gen1-addressed-bench.md](gen1-addressed-bench.md). The instruction above was right for this probe.)
 
 `lri2k-keychain` was the exception and was restored FIRST, to `E0 02 22 24 50 00 83 03`. Not
 tidiness: step B sends addressed frames, and addressing to an all-zero UID is a degenerate case — an
@@ -436,5 +438,6 @@ addressed form, with the generic `0x0F`.
 
 **`coin18` is the gap, and it is mine.** It was only ever sent unaddressed frames, before the
 addressed form was known to matter. Four frames close it, and its addressed frames are the same
-bytes as `SL2S5302`'s because both wear `slix_28`'s costume -- but the two are an 18mm coin and a
+bytes as `SL2S5302`'s because both wore `slix_28`'s costume at the time (`SL2S5302` was put back on
+its own UID 2026-09-26 and no longer does) -- but the two are an 18mm coin and a
 50x28mm label, so nothing can confuse them. `SL2S5302`'s actual look-alike is `slix-1k-50x28`.
