@@ -137,6 +137,29 @@ it is handed with parity off, so a standalone EOF is a one-byte frame through th
 already uses. No transparent mode, no bit-banging. mfcarroll is interested in trying it on a branch
 of his Momentum fork.
 
+## Can an armed card be LOCKED AGAIN? Nobody has tried, and it is cheap to find out
+
+Raised by mfcarroll 2026-09-26: it is odd if arming is one-way. **The belief that it is rests on less
+than it appears to.**
+
+- The register meanings are INFERRED, not known. The defines say so: `written as 0; inferred: unlock`
+  and `written as 0x6996; inferred: arms the UID change`. `0x6996` is the value proxmark sends; what
+  the silicon does with it is a guess.
+- The evidence for irreversibility is that an armed card REFUSES writes to 62/63 — measured in band,
+  error `0x10`, **on the LRi2K and on the LRi2K alone**. On the other two gen1 chips the client could
+  not separate an error frame from silence.
+- **No one has ever attempted a de-arm.** The "do NOT try to de-arm" comment in the wipe is about not
+  reordering that sweep's writes; it is not the result of an experiment.
+
+**The experiment is cheap and should come BEFORE the V1 coin.** Three armed gen1 cards are on the
+bench — `lri2k-keychain`, `slix-1k-50x28`, `SL2S5302` — and a refused write changes nothing, so
+probing costs only time. Worth asking: does the refusal hold on the other two chips; does any value
+other than `0x6996` reach 63; does the addressed form fare differently from the unaddressed one.
+
+**Why the order matters:** if anything re-locks a card, arming stops being one-way and the V1 coin
+stops being one-shot — which is the single constraint shaping that entire test. Spending the coin
+before asking this would be spending it under a restriction that might not exist.
+
 ## OPEN QUESTION — should the gen1 backdoor sequence be addressed too?
 
 **mfcarroll argues yes, on the same safety grounds that settled AFI/DSFID, and the evidence is on his
@@ -156,9 +179,18 @@ contact with what this round already does.
 - the sequence is fire-and-forget (`send_backdoor_uid_gen1` ignores per-frame results), so addressing
   it needs an inventory between frames. The wipe already does exactly that, so the machinery exists.
 
-**Not in this round.** It is a behavioural change to the one path that destroys four blocks on a
-non-magic tag, it needs gen1 bench time, and the round is built and benched. The comment says it is
-open rather than decided, so it is not re-derived as settled.
+**IN THIS ROUND — mfcarroll's call, 2026-09-26, and he is right.** I argued it out on the grounds
+that the round was built and benched. That is not a reason: this is the round that introduced
+addressed writes to this app *at all*, and it has already changed out of recognition since it
+started. Shipping "the writes are addressed, for #251" while the most dangerous frame set in the
+feature stays open to a bystander is incoherent, and it is the first thing a reviewer should ask.
+
+The machinery is already here: `iso15693_poller_predict_uid` computes exactly what the UID becomes
+after a write to 56, and `iso15693_poller_readdress` takes the new address with that prediction as
+its check. So the sequence becomes: address unlock, commit and 56 to the current UID, re-address
+after 56 lands, then 57.
+
+Needs bench time on gen1 silicon before it ships — three armed cards are available.
 
 ## WHAT IS LEFT, in the order to take it
 
