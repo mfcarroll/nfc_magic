@@ -50,7 +50,7 @@ ATTRIBUTION = re.compile(
     r"\b(you|he|she|they|mishamyte|mfcarroll"
     r"|the (?:sender|author|reporter|reviewer|maintainer|filer|owner|seller|submitter))"
     r"\s+(?:had\s+|have\s+|has\s+|first\s+|never\s+)?"
-    r"(filed|raised|asked|said|called|reported|opened|wrote|flagged|requested|suggested"
+    r"(filed|raised|asked|said|told|called|reported|opened|wrote|flagged|requested|suggested"
     r"|described|named|claimed|believes?|wants?|thinks?|felt|meant)\b", re.I)
 
 # NARRATION OF OUR OWN PROCESS, wearing the clothes of a finding. WRITING-RULES has the test -- is
@@ -82,6 +82,7 @@ NARRATION_SELFTEST = [
 
 ATTRIBUTION_SELFTEST = [
     (True, "less hypothetical than when you filed it"),
+    (True, "The seller told me there is no support for it in proxmark"),
     (True, "a coin the sender called locked"),
     (True, "He never called it locked"),
     (True, "he wants the gen3 probe as its own PR"),
@@ -199,6 +200,21 @@ def main():
             elif code:
                 in_code.add(i)
 
+        # [U+1F464] marks a paragraph mfcarroll wrote himself, posted as-is. The attribution and
+        # narration rules exist to stop THIS process asserting what someone said or narrating its own
+        # discovery; in his own paragraph he is the first-hand source and the narrator by right. The
+        # factual checks -- SHAs, line refs, files, identifiers, issues -- still apply, because a dead
+        # reference is dead whoever typed it.
+        his = set()
+        marked = False
+        for i, l in enumerate(lines, 1):
+            if l.lstrip().startswith("[\U0001F464]"):
+                marked = True
+            elif not l.strip():
+                marked = False
+            if marked:
+                his.add(i)
+
         notes_only = 0
         for i, l in enumerate(lines, 1):
             def flag(kind, what, why):
@@ -224,12 +240,12 @@ def main():
                 else:
                     flag("SHA?", sha, "resolves in no repo we know of; if meant as a hash it is dead")
 
-            m = ATTRIBUTION.search(l) if i not in in_code else None
+            m = ATTRIBUTION.search(l) if (i not in in_code and i not in his) else None
             if m:
                 flag("attributed", m.group()[:30],
                      "a claim about what a PERSON said -- find the record or say what is known")
 
-            m = NARRATION.search(l) if i not in in_code else None
+            m = NARRATION.search(l) if (i not in in_code and i not in his) else None
             if m:
                 flag("narration", m.group()[:30],
                      "about US rather than the code -- state the fact, not the discovery")

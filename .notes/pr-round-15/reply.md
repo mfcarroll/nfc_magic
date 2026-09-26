@@ -183,8 +183,9 @@ survey would call a 128-cell card a 256-block one, and would meet the clone's ow
 through the alias and report it as data left over from before. I have left the wording alone rather
 than hedge it for a card the feature does not claim to handle.
 
-That tag also keeps a writable UID register inside the range a wipe sweeps, which is what #255 is
-about. The detail goes there rather than here.
+[👤] That tag appears similar to gen3, but doesn't match the configuration patterns expected by the
+gen3 code in proxmark. The seller told me there is no support for it in proxmark and it requires
+custom writer software, so it may be a proprietary variant. Not worth worrying about for this PR.
 
 **The geometry half is also a correction to the release notes.** The 2.3 entry said a clone writes
 the source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
