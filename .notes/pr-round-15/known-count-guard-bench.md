@@ -221,3 +221,67 @@ physical). It is also unclassified -- no write probe has ever been run on it -- 
 means offering it the gen1 opt-in, which writes four real data blocks on a tag that may not be magic.
 **Not worth it for a display string**: the branch is pinned by a test that asserts the clause's
 absence, and a mutant that always emits it dies.
+
+---
+
+# Test D — the branch I said was unreachable. mfcarroll was right
+
+**Correction.** I said the file clause's other branch could not be reached without offering the gen1
+opt-in. That was wrong, and the poller says so at the branch itself: the gen2 verify proves *the UID
+is now the target*, not *the card is magic*. **A file carrying the card's OWN UID passes it without
+anything having happened** -- so the run goes straight to the data pass and the survey on a tag that
+is not magic, with no backdoor write that lands and no opt-in ever offered.
+
+`tools/test_nfc/iso15693_slix2_selfuid_8.nfc` is that file, pushed and read back byte-identical.
+UID `E0 48 03 00 01 CD F1 36`, 8 blocks, IC ref 01, AFI 00, DSFID 00 -- the card's own values for
+everything except the count, so the identity write is a no-op and the block count is the only thing
+left differing.
+
+## STOP if the UID does not match
+
+`hf 15 info` first. If the card is not wearing `E0 48 03 00 01 CD F1 36`, the gen2 verify FAILS and
+the app offers the gen1 opt-in -- which on this card overwrites four blocks of real memory, because
+56/57/62/63 are in range here rather than above capacity as they are on the 28-block tags. **Decline
+it if it ever appears**: seeing that screen means the file is wrong, not that the test is proceeding.
+
+Take a full `hf 15 dump` baseline as well. This card has never been written to.
+
+## What is actually being learned
+
+Two things, and the second is worth more than the first.
+
+1. The size note must NOT say "the same as the file" here. Card reports 79, file says 8.
+2. **The clone survey has never met a card with no read edge.** This one answers a read at every
+   address in the 8-bit block space, measured 2026-09-08, so the survey's absent-run stop can never
+   trip and only the ceiling or the pass budget ends it. Every survey bench so far has been on a card
+   whose reads stop somewhere.
+
+## PREDICTED
+
+- **No gen1 opt-in.** The verify passes on the first look.
+- "Clone finished", and "All data written." -- 8 blocks onto a card that takes writes.
+- Details carries THREE bullets.
+- The size note reads **"The card reports 79 blocks but holds N"** with **no "the same as the file"**.
+  That clause's absence is the test.
+- The configuration note names the counts only -- file 8 against card 79 -- and not the IC ref, since
+  both are 01.
+- **N is 256 if the survey reaches the ceiling, lower if the ten-second budget cuts it first.** Either
+  is a result and neither is a failure; which one it is, is the new information.
+
+**NOT predicted, deliberately:** the residue range. Nothing here knows what this card returns above
+its real memory -- zeros, a mirror of the low blocks, or something else -- and guessing it would turn
+whatever comes back into a confirmation.
+
+Expect the write to take noticeably longer than the other runs: up to ~248 extra reads.
+
+## Judge the wording on the screen it produces
+
+If N comes back 256, the note will tell the user the card "holds 256 blocks". By this app's own
+evidence that is what the card says -- a block that answers a read exists is the discriminator the
+whole survey rests on -- but this chip is the one that breaks the premise, and "holds" may be a
+stronger word than reads alone can support. Worth reading on the real screen before deciding whether
+it needs changing.
+
+## Restore
+
+Blocks 0-7 only. Block 21's data is below neither and is not touched. Restore from the baseline dump.
