@@ -16,6 +16,15 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ SAFETY BRANCH FOR THE FOLD — `wip-round15-prefold` = `58ff3e4333467bb9fe192bb3c48914d5d6e4f9ad`
+
+Created 2026-09-26 before folding the review findings into the commits that introduced them. If the
+fold goes wrong, `git reset --hard 58ff3e4333467bb9fe192bb3c48914d5d6e4f9ad` restores the round exactly as it was benched.
+
+The tip is written HERE and COMMITTED before the rebuild, because a previous session recorded seven
+branch tips in an uncommitted edit and lost them to a `reset --hard` made for an unrelated reason.
+Delete this section only after the fold is verified and the branch is deliberately dropped.
+
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
 **Nine shipped commits on `iso15693-dev`.** 161 host tests, both firmwares warning-free, clang-format
