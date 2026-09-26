@@ -70,8 +70,14 @@ The message is split under three headings so the two decisions are still separab
 **stale in the fork tree at 03 and 04**. That is the twin-site defect from round 12, at two commits'
 width.
 
-It cannot be closed by reordering: `b2cce0b` does not apply before `3fc118c`, so 05 already sits at
-the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
+A second, milder one: 01 introduces `iso15693_poller_readdress` taking whatever the inventory
+returns, and 06 tightens it to accept only the UID the write implies. Not error-then-fix — 01's
+version is correct for what 01 does, and the check needs `predict_uid`, which arrives with the
+conversion work in 06 that motivated it. Recorded because it is the same SHAPE as the line above and
+a reader comparing 01 against 06 will see it.
+
+The first cannot be closed by reordering: `b2cce0b` does not apply before `3fc118c`, so 05 already
+sits at the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
 which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
 the same with its 11 residual lines.
 

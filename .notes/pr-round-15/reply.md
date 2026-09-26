@@ -29,6 +29,15 @@ TI's — so the frame that "worked addressed" differed in two bits, not one.
 **Nothing here requires an addressed write.** Five cards covering four identified chips are each
 measured taking an unaddressed one.
 
+**A second correction, smaller but user-facing.** The release notes scoped the wipe's identity hazard
+to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier. Five
+cards here take a write to block 56 without an unlock ever having been accepted — two of them with
+nothing sent in front of it at all, one of those a card this app had never written. Blocks 56/57 are
+simply writable on gen1 silicon, so the hazard is any gen1 card whose claim lets the sweep reach
+them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
+history and nothing can detect it. The notes and the screens say so now, and #255 still carries the
+older wording — tell me if you would rather update it there or leave it.
+
 ## What went in
 
 **The OPTION flag, decided by what the card says.** The first write of a run goes out without it; a
@@ -101,9 +110,9 @@ feeding the file into the registers, carries on with everything above them, and 
 target UID back through the gen1 sequence. The end state is the one an ordinary gen1 clone produces
 — a shape already tested and already reported correctly — rather than a new one.
 
-**The re-address checks its answer now**, which the same work made possible. It used to take whatever
-the inventory returned, and that inventory is the SDK's 1-slot unaddressed one, so a second tag in
-the field can answer it (#251) and re-addressing to a stranger points every later frame at the wrong
+**The re-address checks its answer**, which the same work made possible. It takes its new address
+from an inventory, and that inventory is the SDK's 1-slot unaddressed one, so a second tag in the
+field can answer it (#251) and re-addressing to a stranger would point every later frame at the wrong
 card. Because we know what we wrote — 56 carries uid[7..4], 57 carries uid[3..0] — there are exactly
 two honest replies: unchanged, or what the write implies. A third is refused and the address held.
 Not airtight, and unfixably so: a bystander holding the predicted UID would pass, because magic cards
