@@ -144,7 +144,10 @@ Iso15693_3Error iso15693_3_poller_inventory(Iso15693_3Poller* instance, uint8_t*
     if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
         return Iso15693_3ErrorTimeout;
     }
-    memcpy(uid, fake_tag.uid, ISO15693_3_UID_SIZE);
+    memcpy(
+        uid,
+        fake_tag.bystander_answers_inventory ? fake_tag.bystander_uid : fake_tag.uid,
+        ISO15693_3_UID_SIZE);
     return Iso15693_3ErrorNone;
 }
 
@@ -262,6 +265,16 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
         return Iso15693_3ErrorNone;
     }
 
+    // A gen1 UID register frame lost on the way, before anything is applied -- see
+    // uid_register_drop_mask.
+    const bool uid_register = fake_tag.is_gen1_magic && (block == 0x38 || block == 0x39);
+    if(uid_register) {
+        const uint32_t n = ++fake_tag.uid_register_writes_seen;
+        if(n <= 32 && (fake_tag.uid_register_drop_mask & (1u << (n - 1)))) {
+            return Iso15693_3ErrorTimeout;
+        }
+    }
+
     if(!fake_block_answers(block) || fake_tag.kind[block] == FakeBlockLocked) {
         // An IN-BAND refusal: a well-formed, CRC-valid error frame, which the radio layer reports as
         // a successful exchange. Only the response parse tells it from a write that took. Absent
@@ -278,8 +291,9 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
 
     memcpy(fake_tag.content[block], data, fake_tag.block_size);
     fake_tag.writes_accepted++;
-    if(fake_tag.is_gen1_magic && (block == 0x38 || block == 0x39)) {
+    if(uid_register) {
         fake_apply_uid_half_now(block == 0x38, data);
+        if(fake_tag.uid_register_acks_lost) return Iso15693_3ErrorTimeout;
     }
     if(fake_tag.writes_are_unacknowledged) {
         // Written, and nothing said about it. The radio layer reports this exactly as it reports an
@@ -402,6 +416,9 @@ void fake_tag_arm_gen1_uid(const uint8_t* uid) {
 }
 
 void fake_tag_power_cycle(void) {
+    if(++fake_tag.power_cycles == fake_tag.lifted_at_power_cycle) {
+        fake_tag.ops_until_lifted = fake_tag.ops ? fake_tag.ops : 1; // every op from here on fails
+    }
     if(fake_tag.gen1_uid_pending) {
         memcpy(fake_tag.uid, fake_tag.gen1_pending_uid, ISO15693_3_UID_SIZE);
         fake_tag.gen1_uid_pending = false;

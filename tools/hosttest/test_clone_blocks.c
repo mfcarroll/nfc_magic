@@ -428,6 +428,244 @@ static void test_uncut_clone_sets_no_truncation(void) {
     end();
 }
 
+// ---- a gen1 card reached down the gen2 path --------------------------------------------------
+
+// The gen2 verify passes whenever the card already WEARS the target UID, because then it proves only
+// that the UID matches -- not that anything magic happened. On gen1 silicon that sends the data pass
+// straight into 56/57, which are the UID registers, and the card's identity becomes bytes lifted out
+// of the file. Measured: a 64-block source onto a gen1 SLIX already carrying its UID left the card
+// answering to 39 A5 39 5A 38 A5 38 5A -- the file's blocks 56 and 57, fed through the UID mapping.
+//
+// The write that moves the UID is also what proves what the card is, so the run converts itself into
+// a gen1 clone from that point: it stops feeding the file into registers, and afterwards puts the
+// target UID back.
+static void test_a_gen1_card_on_the_gen2_path_converts_and_repairs(void) {
+    begin("a clone that finds 56/57 are registers finishes as a gen1 clone and restores the UID");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 0, 63, 0x5A);
+
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    memcpy(inst.target_uid, target, ISO15693_3_UID_SIZE);
+    // skip_backdoor false: the gen2 arm's choice, made before the card could contradict it.
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(inst.uid_moved_by_write); // the card said what it is
+    CHECK(inst.clone_used_gen1); // ...and the run is reported as the gen1 clone it became
+    CHECK(inst.clone_gen1_blocks_skipped);
+    CHECK(inst.clone_gen1_data_lost); // the file held data at those four, which gen1 cannot store
+    CHECK(inst.clone_uid_recheck); // and the identity is re-read before the run reports
+    CHECK_EQ(inst.clone_blocks_total, 60); // 64 less the four registers
+    CHECK_EQ(inst.clone_failed_count, 0);
+
+    // The fixture holds a gen1 UID write until the next power-cycle, which is stricter than the
+    // hardware on purpose (see gen1_uid_pending). The repair's effect is visible on the far side.
+    fake_tag_power_cycle();
+    CHECK(memcmp(fake_tag.uid, target, ISO15693_3_UID_SIZE) == 0);
+    end();
+}
+
+// The same card WITHOUT a matching UID takes the gen1 path in the first place, skips the registers up
+// front, and never converts. Without this, the conversion is consistent with firing on every gen1 run.
+static void test_the_ordinary_gen1_path_does_not_convert(void) {
+    begin("a clone that skipped the registers from the start never converts or repairs");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&source, 64, 4);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    iso15693_poller_write_source_blocks(&inst, NULL, true); // the gen1 arm's choice
+
+    CHECK(!inst.uid_moved_by_write);
+    end();
+}
+
+// And a gen2 card is untouched by any of it: 56/57 are ordinary memory there, the UID does not move,
+// and the file's data at those addresses is written like any other block. This is the case the
+// alternative fix -- skipping the registers whenever the UID already matched -- would have broken,
+// silently dropping four blocks of the file while reporting a clean success.
+static void test_a_gen2_card_writes_those_blocks_like_any_other(void) {
+    begin("on a gen2 card 56/57 are data, and the file's blocks there are written");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true; // NOT gen1: those addresses are memory
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 0, 63, 0x5A);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(!inst.uid_moved_by_write);
+    CHECK_EQ(inst.clone_blocks_total, 64); // nothing deducted
+    CHECK_EQ(fake_tag.content[56][0], 0x5A); // and the file's data really is in them
+    CHECK_EQ(fake_tag.content[57][0], 0x5A);
+    end();
+}
+
+// The write that moves the UID can lose its acknowledgement like any frame, and then its retries go to
+// the address the card has just left. It still went to a register, not to memory, so the run has to
+// come out as it does when the answer arrives: the same counts and the same capacity verdict.
+static void test_a_lost_acknowledgement_on_the_moving_write_changes_nothing(void) {
+    begin("a moving write whose acknowledgement is lost reports as if it had answered");
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+    Iso15693Poller runs[2];
+    for(int run = 0; run < 2; run++) {
+        fake_tag_init(28, 28, 4);
+        fake_tag.is_gen1_magic = true;
+        fake_tag_set_range(56, 57, FakeBlockWritable); // the registers answer, as above
+        fake_tag.uid_register_acks_lost = (run == 1);
+        fake_data_init(&source, 64, 4);
+        driver_init(&runs[run]);
+        runs[run].clone_source = &source;
+        memcpy(runs[run].target_uid, target, ISO15693_3_UID_SIZE);
+        iso15693_poller_write_source_blocks(&runs[run], NULL, false);
+    }
+    const Iso15693Poller* answered = &runs[0];
+    const Iso15693Poller* silent = &runs[1];
+
+    CHECK(silent->uid_moved_by_write); // the silent run did convert
+    CHECK_EQ(silent->clone_failed_count, answered->clone_failed_count);
+    CHECK_EQ(silent->clone_over_capacity, answered->clone_over_capacity);
+    CHECK_EQ(silent->clone_blocks_total, answered->clone_blocks_total);
+    CHECK_EQ(silent->clone_capacity_confirmed, answered->clone_capacity_confirmed);
+    CHECK(answered->clone_capacity_confirmed); // ...and the verdict they share is "Card too small"
+    end();
+}
+
+// A clone converted at 56 leaves that write out of the popup's figure, as it does out of the total: it
+// went to a register. Kept, the figure reads one past its own denominator -- 61 / 60 on a 64-block file
+// whose pass the clock cut at 62. Converted at 57, the run has counted 56 as memory too, and that comes
+// off as well. Asserted on a cut pass, which is where the popup shows the figure as it stands.
+static void test_a_converted_clone_counts_the_blocks_its_total_does(void) {
+    begin("a converted clone's progress figure leaves out every register it counted");
+    const uint32_t drop[2] = {0x0, 0x7}; // converts at 56; every attempt at 56 lost, so at 57
+    for(int run = 0; run < 2; run++) {
+        fake_tag_init(200, 200, 4);
+        fake_tag.is_gen1_magic = true;
+        fake_tag.tick_cost_per_op = 100; // the clock cuts the pass well above the registers
+        fake_tag.uid_register_drop_mask = drop[run];
+        fake_data_init(&source, 200, 4);
+        fake_data_fill(&source, 0, 199, 0x5A);
+
+        Iso15693Poller inst;
+        driver_init(&inst);
+        inst.clone_source = &source;
+        iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+        CHECK(inst.uid_moved_by_write);
+        CHECK(inst.pass_truncated);
+        CHECK(inst.pass_cut_block > 63);
+        // Every block below the cut but the four registers, and nothing else.
+        CHECK_EQ(inst.clone_blocks_done, inst.pass_cut_block - 4);
+        CHECK(inst.clone_blocks_done <= inst.clone_blocks_total);
+    }
+    end();
+}
+
+// Why 56 comes off after the loop rather than at 57: the figure reported at 57 already counts it, so
+// taking it back there sends the next report backwards, and where a band boundary falls between the two
+// that re-emits a band -- more events than the STEPS + 1 that report_progress is bounded by, and that
+// bound is what keeps a Back press from hanging the app. A 228-block file puts a boundary exactly at 57.
+static uint16_t progress_seen[32];
+static size_t progress_count;
+
+static void record_progress(Iso15693PollerEvent event, void* context) {
+    const Iso15693Poller* inst = context;
+    if(event == Iso15693PollerEventWriteProgress && progress_count < COUNT_OF(progress_seen)) {
+        progress_seen[progress_count++] = inst->clone_blocks_done;
+    }
+}
+
+static void test_a_conversion_at_57_never_sends_the_figure_backwards(void) {
+    begin("a clone converted at 57 reports progress that never goes backwards");
+    fake_tag_init(228, 228, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag.uid_register_drop_mask = 0x7; // every attempt at 56 lost, so it converts at 57
+    fake_data_init(&source, 228, 4);
+    fake_data_fill(&source, 0, 227, 0x5A);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    inst.callback = record_progress;
+    inst.context = &inst;
+    inst.progress_step = UINT8_MAX; // as a run starts
+    progress_count = 0;
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(inst.uid_moved_by_write);
+    CHECK(progress_count <= ISO15693_POLLER_PROGRESS_STEPS + 1);
+    for(size_t i = 1; i < progress_count; i++) {
+        CHECK(progress_seen[i] >= progress_seen[i - 1]);
+    }
+    end();
+}
+
+// A failure recorded at 56 before the UID moved at 57 is taken back by the conversion, since that
+// address was a register all along -- and so is what it implied: that every success above it was
+// memory written above a failure. Left standing, that alone denies a real capacity edge further up, so
+// a 128-block file onto a 64-block gen1 card, empty past 64, would come out Partial instead of an
+// over-capacity success that lost nothing.
+static void test_a_failure_the_conversion_takes_back_leaves_the_capacity_edge(void) {
+    begin("a failure at 56 that the conversion takes back leaves the capacity edge standing");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag_set_range(56, 56, FakeBlockAbsent); // answers no read, as a register does
+    fake_tag.uid_register_drop_mask = 0x7; // every attempt at 56 lost; 57 lands and converts
+    fake_data_init(&source, 128, 4);
+    fake_data_fill(&source, 0, 63, 0x5A);
+    fake_data_fill(&source, 56, 57, 0x00); // nothing of the file's at the registers...
+    fake_data_fill(&source, 62, 127, 0x00); // ...nor past the card's end
+
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    memcpy(inst.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(inst.uid_moved_by_write); // converted, at 57
+    CHECK_EQ(inst.clone_failed_count, 0); // 56's failure taken back...
+    CHECK(inst.clone_capacity_confirmed); // ...and with it what it implied about the blocks above
+    CHECK_EQ(inst.clone_over_capacity, 64); // 64..127, none of them holding anything
+    end();
+}
+
+// Which runs have to re-read the UID before they report: a gen2-path pass that sent a frame to 56/57,
+// and no other. The gen1 path skips those blocks, and a pass that ends below 56 never reaches them.
+static void test_only_a_pass_that_wrote_the_uid_blocks_asks_for_a_recheck(void) {
+    begin("only a gen2-path pass that wrote 56/57 asks for the UID to be re-read");
+    Iso15693Poller inst;
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_data_init(&source, 64, 4);
+    run_clone(&inst, false);
+    CHECK(inst.clone_uid_recheck);
+
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_data_init(&source, 56, 4); // ends just below the first register
+    run_clone(&inst, false);
+    CHECK(!inst.clone_uid_recheck);
+
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&source, 64, 4);
+    run_clone(&inst, true); // the gen1 path
+    CHECK(!inst.clone_uid_recheck);
+    end();
+}
 int main(void) {
     printf("iso15693 clone loop\n");
     test_clean_clone_fits();
@@ -440,6 +678,14 @@ int main(void) {
     test_gen1_skips_the_backdoor_blocks();
     test_gen1_small_source_deducts_nothing();
     test_gen1_reaching_empty_backdoor_blocks_loses_nothing();
+    test_a_gen1_card_on_the_gen2_path_converts_and_repairs();
+    test_the_ordinary_gen1_path_does_not_convert();
+    test_a_gen2_card_writes_those_blocks_like_any_other();
+    test_a_lost_acknowledgement_on_the_moving_write_changes_nothing();
+    test_only_a_pass_that_wrote_the_uid_blocks_asks_for_a_recheck();
+    test_a_converted_clone_counts_the_blocks_its_total_does();
+    test_a_conversion_at_57_never_sends_the_figure_backwards();
+    test_a_failure_the_conversion_takes_back_leaves_the_capacity_edge();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();

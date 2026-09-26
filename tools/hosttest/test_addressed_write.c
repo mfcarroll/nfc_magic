@@ -423,6 +423,35 @@ static void test_the_read_back_is_compared_not_just_attempted(void) {
     end();
 }
 
+// The re-address takes its new address from an inventory, and that inventory is the SDK's 1-slot
+// unaddressed one -- so with a second tag in the field it can answer for the bystander (#251).
+// Re-addressing to a stranger would point every later frame at the wrong card, on a run that is
+// midway through rewriting this one's identity.
+//
+// What makes the answer checkable is that we know what we wrote: block 56 carries uid[7..4] and 57
+// carries uid[3..0], so there are exactly two honest replies -- the UID unchanged, or the UID our own
+// write implies. A third value did not come from us and is refused.
+static void test_a_uid_our_write_does_not_account_for_is_refused(void) {
+    begin("an inventory answer the write does not imply is not taken as the new address");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true; // so zeroing 56 really does move this card's UID
+    uint8_t before[ISO15693_3_UID_SIZE];
+    memcpy(before, fake_tag.uid, sizeof(before));
+
+    // A second card wins the slot, and its UID is neither the old one nor the one our write implies.
+    fake_tag.bystander_answers_inventory = true;
+    memset(fake_tag.bystander_uid, 0x77, sizeof(fake_tag.bystander_uid));
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    bool card_lost = false;
+    iso15693_poller_wipe_blocks(&inst, NULL, &card_lost);
+
+    CHECK(memcmp(inst.address_uid, before, ISO15693_3_UID_SIZE) == 0); // held, not taken
+    CHECK(!inst.uid_moved_by_write); // and nothing downstream is told the card moved
+    end();
+}
+
 int main(void) {
     printf("iso15693 addressed write\n");
     test_frame_layout();
@@ -433,6 +462,7 @@ int main(void) {
     test_a_card_that_wants_the_option_flag_is_written_anyway();
     test_a_card_that_never_complains_never_gets_the_flag();
     test_only_the_option_refusal_sets_the_flag();
+    test_a_uid_our_write_does_not_account_for_is_refused();
     test_a_card_that_never_acknowledges_is_still_wiped();
     test_silence_alone_is_still_a_failure();
     test_an_answered_refusal_is_not_overruled_by_a_read();

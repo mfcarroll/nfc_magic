@@ -61,10 +61,17 @@ typedef struct {
     Iso15693PollerEvent seen[MAX_EVENTS];
     size_t count;
     uint32_t resets; // NfcCommandReset returned -> field power-cycles
+    size_t reset_at[8]; // how many events had been reported when each reset came
     uint32_t activations; // Ready events delivered
 } RunLog;
 
 static RunLog run_log;
+
+static void note_reset(void) {
+    if(run_log.resets < 8) run_log.reset_at[run_log.resets] = run_log.count;
+    run_log.resets++;
+    fake_tag_power_cycle();
+}
 
 static void record_event(Iso15693PollerEvent event, void* context) {
     (void)context;
@@ -109,20 +116,14 @@ static void run_poller(Iso15693Poller* inst, uint32_t activation_failures_per_ac
             ev.event_data = &error;
             const NfcCommand cmd = iso15693_poller_nfc_callback(ev, inst);
             if(cmd == NfcCommandStop) return;
-            if(cmd == NfcCommandReset) {
-                run_log.resets++;
-                fake_tag_power_cycle();
-            }
+            if(cmd == NfcCommandReset) note_reset();
         }
 
         ev.event_data = &ready;
         run_log.activations++;
         const NfcCommand cmd = iso15693_poller_nfc_callback(ev, inst);
         if(cmd == NfcCommandStop) return;
-        if(cmd == NfcCommandReset) {
-            run_log.resets++;
-            fake_tag_power_cycle();
-        }
+        if(cmd == NfcCommandReset) note_reset();
     }
     printf("  (driver guard tripped -- the poller never returned Stop)\n");
     current_failed = true;
@@ -490,6 +491,126 @@ static void test_empty_source_clone_is_refused_before_writing(void) {
     end();
 }
 
+// ---- the re-read after a gen2-path pass that wrote 56/57 ------------------------------------------
+
+// On gen2 silicon 56/57 are memory and the UID cannot move, so the re-read finds the target and the
+// result stands -- one field reset more than a clone that stops below 56, and nothing else.
+static void test_a_clone_that_wrote_56_rereads_the_uid_behind_a_reset(void) {
+    begin("a gen2-path clone that wrote 56/57 re-reads the UID behind a second reset");
+    static Iso15693_3Data src;
+
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_data_init(&src, 64, 4);
+    Iso15693Poller wide = make_poller(Iso15693PollerModeClone, false);
+    wide.clone_source = &src;
+    memcpy(wide.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&wide, 0);
+    CHECK_EQ(terminal_event(), Iso15693PollerEventSuccess);
+    CHECK_EQ(run_log.resets, 2); // before the gen2 verify, and before the re-read
+    // ...and 100% waits for the re-read: the last progress frame comes after the second reset.
+    size_t last_progress = 0;
+    for(size_t i = 0; i < run_log.count; i++) {
+        if(run_log.seen[i] == Iso15693PollerEventWriteProgress) last_progress = i;
+    }
+    CHECK(last_progress >= run_log.reset_at[1]);
+
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_data_init(&src, 28, 4);
+    Iso15693Poller narrow = make_poller(Iso15693PollerModeClone, false);
+    narrow.clone_source = &src;
+    memcpy(narrow.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&narrow, 0);
+    CHECK_EQ(terminal_event(), Iso15693PollerEventSuccess);
+    CHECK_EQ(run_log.resets, 1); // never reached 56, so nothing to re-read
+    end();
+}
+
+// And a card gone by the re-read has confirmed nothing, so there is no result to report.
+static void test_a_card_gone_before_the_reread_is_card_lost(void) {
+    begin("a clone whose card is gone at the re-read reports CardLost");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true;
+    fake_tag.lifted_at_power_cycle = 2; // the reset before the re-read
+    static Iso15693_3Data src;
+    fake_data_init(&src, 64, 4);
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeClone, false);
+    inst.clone_source = &src;
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK_EQ(terminal_event(), Iso15693PollerEventCardLost);
+    // ...but the result says the re-read was due, which is the card-lost screen's cue for its note.
+    Iso15693PollerResult result;
+    iso15693_poller_get_result(&inst, &result);
+    CHECK(result.uid_recheck);
+    end();
+}
+
+// The same question is left open when the card goes mid-pass, once the pass has sent 56/57 a frame:
+// the re-read was due and never ran. That includes a card lost well below 56. The pass goes on sending
+// every block its frame and learns the card has gone only at its end, so it cannot tell which of those
+// frames the card heard. A pass that ends below 56 leaves no question: nothing it sent could have moved
+// the UID.
+static void test_a_clone_lost_mid_pass_reports_an_unread_uid_once_56_was_sent(void) {
+    begin("a clone lost mid-pass reports its UID unread once its pass sent 56/57 a frame");
+    static Iso15693_3Data src;
+    const uint16_t source_blocks[2] = {48, 200}; // ends below 56, and runs past it
+    for(int run = 0; run < 2; run++) {
+        fake_tag_init(200, 200, 4);
+        fake_tag.is_gen2_magic = true;
+        fake_tag.ops_until_lifted = 40; // about block 34 of either pass
+        fake_data_init(&src, source_blocks[run], 4);
+        fake_data_fill(&src, 0, (uint16_t)(source_blocks[run] - 1), 0x5A);
+        Iso15693Poller inst = make_poller(Iso15693PollerModeClone, false);
+        inst.clone_source = &src;
+        memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+        run_poller(&inst, 0);
+
+        CHECK_EQ(terminal_event(), Iso15693PollerEventCardLost);
+        // The lift was inside the pass: its first block landed, and block 40 never did.
+        CHECK_EQ(fake_tag.content[0][0], 0x5A);
+        CHECK_EQ(fake_tag.content[40][0], FAKE_MARKER);
+        Iso15693PollerResult result;
+        iso15693_poller_get_result(&inst, &result);
+        CHECK_EQ(result.uid_recheck, run == 1);
+    }
+    end();
+}
+
+// The popup's last frame is the one that says the work is done, so it waits for the work: here that is
+// the re-read behind the second reset. A clone that converted reads its own total there, and the blocks
+// it attempted come to the same figure, since the write that converted it went to a register the total
+// leaves out.
+static void test_the_last_progress_frame_waits_for_the_reread(void) {
+    begin("a clone's last progress frame follows the re-read, and reads its total");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag.is_gen2_magic = false;
+    fake_tag_set_uid_now(TARGET_UID); // gen1 silicon wearing the file's UID: the pass converts
+    static Iso15693_3Data src;
+    fake_data_init(&src, 64, 4);
+    fake_data_fill(&src, 0, 63, 0x5A);
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeClone, false);
+    inst.clone_source = &src;
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK_EQ(terminal_event(), Iso15693PollerEventPartial); // its file held data at 56/57/62/63
+    CHECK_EQ(run_log.resets, 2);
+    size_t last_progress = 0;
+    for(size_t i = 0; i < run_log.count; i++) {
+        if(run_log.seen[i] == Iso15693PollerEventWriteProgress) last_progress = i;
+    }
+    CHECK(last_progress >= run_log.reset_at[1]);
+    CHECK_EQ(inst.clone_blocks_total, 60);
+    CHECK_EQ(inst.clone_blocks_done, inst.clone_blocks_total);
+    end();
+}
+
 int main(void) {
     printf("iso15693 write state machine\n");
     test_write_uid_gen2_success();
@@ -508,6 +629,10 @@ int main(void) {
     test_the_two_verify_arms_disagree_about_the_backdoor_blocks();
     test_clone_on_non_magic_writes_nothing();
     test_empty_source_clone_is_refused_before_writing();
+    test_a_clone_that_wrote_56_rereads_the_uid_behind_a_reset();
+    test_a_card_gone_before_the_reread_is_card_lost();
+    test_a_clone_lost_mid_pass_reports_an_unread_uid_once_56_was_sent();
+    test_the_last_progress_frame_waits_for_the_reread();
 
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed == 0 ? 0 : 1;

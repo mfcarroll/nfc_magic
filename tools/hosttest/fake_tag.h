@@ -86,6 +86,13 @@ typedef struct {
     // Get System Info fails outright, so the verify never reaches an answer at all.
     bool sysinfo_fails;
 
+    // A SECOND tag answers the inventory. The SDK's inventory is 1-slot and unaddressed (#251), so
+    // with two cards in the field it returns whichever wins the slot -- which may not be the one our
+    // addressed writes are reaching. Set to make every inventory answer for the bystander while the
+    // tag itself goes on behaving normally; that is the shape a stray UID has to be rejected in.
+    bool bystander_answers_inventory;
+    uint8_t bystander_uid[ISO15693_3_UID_SIZE];
+
     // Refuse any WRITE BLOCK whose OPTION flag is clear, with error 0x03 -- the tag naming the bit
     // rather than failing generically. Measured on TI Tag-it HF-I Plus (`white-coin`): flags 0x22 is
     // answered `01 03`, and the identical frame at 0x62 is taken.
@@ -97,6 +104,20 @@ typedef struct {
     // although one card has both, so a test can put the two failures on their own -- the production
     // rescue is scoped to cards that asked for the flag, and that scoping needs a case of its own.
     bool writes_are_unacknowledged;
+
+    // A gen1 UID register write (56/57) that lands and moves the UID, but whose acknowledgement never
+    // arrives -- the one frame whose retries then go to an address the card has just left.
+    bool uid_register_acks_lost;
+    // Gen1 UID register writes lost outright: bit N-1 set drops the Nth such frame the tag receives
+    // addressed to itself, which then changes nothing and gets no answer. How a repair, or the gen1
+    // sequence, is left having written half a UID.
+    uint32_t uid_register_drop_mask;
+    uint32_t uid_register_writes_seen;
+
+    // The card leaves the field at the Nth field power-cycle (1-based), so the verify on the far side of
+    // that reset finds nothing. 0 means it never does. Counts every fake_tag_power_cycle call.
+    uint32_t lifted_at_power_cycle;
+    uint32_t power_cycles;
 
     // Counters, for assertions and for ops_until_lifted.
     uint32_t ops;

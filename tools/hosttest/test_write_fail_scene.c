@@ -254,8 +254,8 @@ static void test_wipe_stopped_offers_retry_and_details(void) {
     end();
 }
 
-// A card lifted mid-write has nothing behind Details, so the same rule yields Exit there. This is the
-// direction the fix could have over-applied in.
+// A clone lifted before its pass reached 56/57 has nothing behind Details, so the same rule yields Exit
+// there. This is the direction the fix could have over-applied in.
 static void test_card_lost_offers_retry_and_exit(void) {
     begin("card lost offers Retry + Exit, since it has no details");
     render_write_fail(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeClone);
@@ -296,6 +296,96 @@ static void test_wipe_card_lost_with_a_verified_uid_offers_exit(void) {
     render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeWipe, &r);
 
     CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Exit");
+    end();
+}
+
+// A clone's counterpart. Once its pass has sent 56/57 a frame the run re-reads the UID before it
+// reports, and a card lost first -- mid-pass or at the re-read -- leaves that re-read unanswered. On a
+// gen1 card those two blocks are the UID, so Details is where the screen says it was never read back.
+// The list stays off, as on a wipe: a lifted card's counters are the caller's to discard.
+static void test_clone_card_lost_after_56_offers_details_for_the_uid_note(void) {
+    begin("a clone lost after its pass sent 56/57 a frame offers Details, for the UID note");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 64;
+    r.uid_recheck = true;
+    r.failed_bitmap[30 / 8] |= (uint8_t)(1u << (30 % 8)); // what the lift left behind
+    r.failed_count = 1;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeClone, &r);
+
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Retry");
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Details");
+    CHECK(route_of(GuiButtonTypeRight).scene_id == NfcMagicSceneIso15693PartialDetails);
+
+    render_details(NfcMagicIso15693WriteFailReasonCardLost, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "UID not re-checked") != NULL);
+        CHECK(strstr(scroll, "56/57") != NULL);
+    }
+    CHECK(strstr(fake_scene_all_text(), "Blocks not written") == NULL);
+    end();
+}
+
+// ...and only there. uid_recheck stays set on the Success, Partial and Fail that an answer produces, so
+// a Partial clone whose pass reached 56/57 must not claim its UID went unread.
+static void test_a_clone_whose_reread_answered_has_no_uid_note(void) {
+    begin("a clone whose re-read answered says nothing about an unread UID");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 64;
+    r.uid_recheck = true;
+    r.failed_bitmap[10 / 8] |= (uint8_t)(1u << (10 % 8));
+    r.failed_count = 1;
+    render_write_fail_with(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonPartial, NfcMagicIso15693ModeClone);
+
+    CHECK(strstr(fake_scene_all_text(), "Blocks not written") != NULL); // the page did render
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) CHECK(strstr(scroll, "UID not re-checked") == NULL);
+    end();
+}
+
+// A lifted card makes every block after it time out, so on a long enough file the clock cuts the pass
+// before the card is found gone, and a card lifted before the identity read-back fails that too. So a
+// card-lost page carries neither the time-limit note nor the AFI/DSFID one, wipe or clone. Each is
+// first shown on the same result reported without the lift, so an absence cannot pass because the
+// wording moved.
+static void test_a_card_lost_page_says_nothing_the_lift_caused(void) {
+    begin("a lost card's Details has no time-limit or AFI/DSFID note, wipe or clone");
+    for(int wipe = 0; wipe < 2; wipe++) {
+        const NfcMagicIso15693Mode mode = wipe ? NfcMagicIso15693ModeWipe :
+                                                 NfcMagicIso15693ModeClone;
+        const NfcMagicIso15693WriteFailReason cut = wipe ?
+                                                        NfcMagicIso15693WriteFailReasonWipeStopped :
+                                                        NfcMagicIso15693WriteFailReasonPartial;
+        Iso15693PollerResult r = {0};
+        r.blocks_total = 200;
+        r.blocks_advertised = wipe ? 256 : 0;
+        r.pass_truncated = true; // the clock caught the lift first
+        r.cut_block = 113;
+        r.uid_recheck = !wipe; // what gives a lost clone its page; a wipe's is uid_verified false
+        r.identity_failed = !wipe; // a clone's field
+
+        render_write_fail_with(cut, mode, &r);
+        render_details(cut, mode);
+        const char* scroll = fake_scene_scroll_text();
+        CHECK(scroll != NULL);
+        if(scroll) {
+            CHECK(strstr(scroll, "time limit") != NULL);
+            CHECK((strstr(scroll, "AFI/DSFID") != NULL) == !wipe);
+        }
+
+        render_write_fail_with(NfcMagicIso15693WriteFailReasonCardLost, mode, &r);
+        render_details(NfcMagicIso15693WriteFailReasonCardLost, mode);
+        scroll = fake_scene_scroll_text();
+        CHECK(scroll != NULL);
+        if(scroll) {
+            CHECK(strstr(scroll, "UID not re-checked") != NULL);
+            CHECK(strstr(scroll, "time limit") == NULL);
+            CHECK(strstr(scroll, "AFI/DSFID") == NULL);
+        }
+    }
     end();
 }
 
@@ -722,6 +812,9 @@ int main(void) {
     test_card_lost_offers_retry_and_exit();
     test_wipe_card_lost_offers_details_for_the_uid_note();
     test_wipe_card_lost_with_a_verified_uid_offers_exit();
+    test_clone_card_lost_after_56_offers_details_for_the_uid_note();
+    test_a_clone_whose_reread_answered_has_no_uid_note();
+    test_a_card_lost_page_says_nothing_the_lift_caused();
     test_wipe_card_lost_details_says_the_check_never_finished();
     test_the_gen1_caveat_only_claims_loss_when_the_source_held_data_there();
     test_the_details_button_follows_the_gen1_caveat();
