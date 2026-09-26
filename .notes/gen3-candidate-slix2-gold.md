@@ -65,19 +65,34 @@ is recorded as `gen3_signature: false`, which is then read as "not gen3". The te
 "not a V3 card" from "a V3 card whose signature is not the one constant we know", and the inventory
 verdict `unclassified (no write probe run)` has been carrying the first reading.
 
-## And it takes writes past its advertised count
+## Its address space is half what it answers to, and the top half is a mirror
 
-    hf 15 wrbl -b 77  -d AABBCCDD   ok, reads back AA BB CC DD     within the advertised 79
-    hf 15 wrbl -b 80  -d DEADBEEF   ok, reads back DE AD BE EF     ABOVE it
-    hf 15 wrbl -b 100 -d 11223344   ok, reads back 11 22 33 44     well above it
+A read of all 256 addresses, 2026-09-26, archived at
+`tools/baselines/slix2-gold-30mm_2026-09-26_full-sweep-0-255.txt`.
 
-Combined with the earlier finding that it answers a read at every address in the 8-bit block space,
-this card has no discoverable edge by either probe.
+**128 of 128 pairs `(b, b+128)` hold identical data.** Moduli 64, 79 and 100 each disagree on 18-19
+pairs, so 128 is not one candidate among several. Seven of the agreeing pairs carry distinctive
+values rather than zeros -- the four factory blocks and three markers written that day:
 
-**Not yet established: whether those are distinct cells or aliases.** Writing block 100 and re-reading
-block 100 proves persistence, not uniqueness -- a mirror at some modulus answers identically. The test
-is to write a marker high and read the block it would alias to. Worth doing before any claim that the
-card "holds" more than it advertises.
+    16  36 F1 CD 01  ==  144        77  AA BB CC DD  ==  205
+    17  00 03 48 E0  ==  145        80  DE AD BE EF  ==  208
+    20  A5 3B 44 2C  ==  148       100  11 22 33 44  ==  228
+    21  21 0F 50 00  ==  149
+
+The card advertises 79, addresses 128, and aliases `addr & 0x7F`.
+
+**This withdraws the 2026-09-08 conclusion**, which said it "answers a read at EVERY address in the
+8-bit block space, all 256, so no read-based probe can find its edge". True as stated and
+misleading. The top half is a reflection, not memory; the edge is at 128 and IS findable -- but only
+by comparing CONTENTS across addresses, which is not what either probe does. Both ask whether a
+block answers, and a mirror answers perfectly. The earlier "82 phys" figure was the probe's own
+search ceiling and goes with it.
+
+It also settles the question this note raised and could not answer: writing block 100 and reading
+block 100 proved persistence, not uniqueness. Block 100 and block 228 are one cell.
+
+**Still open:** whether all 128 are physical storage. Blocks 80 and 100 take writes and hold them, so
+at least 101 addresses are real; 101-127 read as zero and have never been written.
 
 ## What this falsifies in shipped code
 

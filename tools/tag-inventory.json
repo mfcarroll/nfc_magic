@@ -446,6 +446,16 @@
       "source_url": "https://www.aliexpress.com/store/1112214"
     },
     "slix2-gold-30mm": {
+      "address_space": {
+        "addressable_blocks": 128,
+        "advertised_blocks": 79,
+        "aliasing": "addr & 0x7F -- blocks 128-255 are the SAME CELLS as 0-127",
+        "artifact": "tools/baselines/slix2-gold-30mm_2026-09-26_full-sweep-0-255.txt",
+        "evidence": "A read of all 256 addresses. 128 of 128 pairs (b, b+128) hold identical data, while moduli 64, 79 and 100 each disagree on 18-19 pairs. Seven of those pairs carry distinctive values rather than zeros -- the four factory blocks at 16/17/20/21 and the three markers written at 77/80/100 -- and each appears again at +128.",
+        "measured": "2026-09-26",
+        "still_open": "Whether all 128 are physical storage or only the advertised 79 plus some of the region above. Blocks 80 and 100 take writes and hold them, so at least 101 addresses are real cells; 101-127 read as zero and have never been written.",
+        "withdraws": "'it answers a read at EVERY address in the 8-bit block space, all 256, so no read-based probe can find its edge' (2026-09-08). True as stated and misleading: the top half is a mirror, not memory. The edge IS findable -- it is at 128 -- but only by comparing contents across addresses, which no probe here did. The earlier '82 phys' figure was the probe's own search ceiling and is also withdrawn."
+      },
       "bag_label": "SL2S2602 ICODE SLIX2 UID",
       "classification": {
         "campaign": "20260908_012746",
@@ -457,23 +467,26 @@
         {
           "block": 77,
           "date": "2026-09-26",
+          "mirror": 205,
           "now": "AA BB CC DD",
           "was": "00 00 00 00",
-          "why": "does this card take a write inside its advertised 79"
+          "why": "a write inside the advertised 79"
         },
         {
           "block": 80,
           "date": "2026-09-26",
+          "mirror": 208,
           "now": "DE AD BE EF",
           "was": "00 00 00 00",
-          "why": "...and ABOVE the advertised count"
+          "why": "a write ABOVE the advertised count"
         },
         {
           "block": 100,
           "date": "2026-09-26",
+          "mirror": 228,
           "now": "11 22 33 44",
           "was": "00 00 00 00",
-          "why": "...and well above it"
+          "why": "a write well above it"
         }
       ],
       "expected": {
@@ -486,7 +499,7 @@
         "source": "seller listing / bag label"
       },
       "form_factor": "30mm round sticker with a flat edge, gold",
-      "note": "RESTORABLE FOR BLOCKS 0-78 as of 2026-09-26: see pre_write_baseline. NOT restorable above that except blocks 79/80/100, which were read as zero first -- `hf 15 dump` stops at the advertised count and this card takes writes far beyond it, so a full read pass is still owed. Three blocks were written deliberately that day (77, 80, 100) and every one was zero before; writing zeros back returns the card exactly to its pre-write state. || \u26a0\ufe0f DO NOT WIPE -- POSSIBLE GEN3, NOT ESTABLISHED, 2026-09-26. Blocks 0x10/0x11 READ as this card's UID in the reversed gen3 layout, and 0x14 reads A5 3B 44 2C against the V3 config-mode constant A5 2B 44 2C -- three bytes exact, the fourth one bit away. 0x15 matches only on 21 and 00 and carries little. ALL OF THAT IS READS: gen3 is defined by writing 0x10/0x11 CHANGING THE UID, which has not been tested, and memory holding a UID copy is not unusual. The probe's gen3_signature:false came from an exact == against two constants of unrecorded provenance, so it does not settle it either way. The hazard does NOT depend on the classification: zeroing 0x14/0x15 is reported to brick an un-finalized V3 card permanently, those are blocks 20 and 21, any wipe reaches them at once, and this card never refuses a write so the sweep has no early stop. It also takes writes above its advertised 79 (80 and 100 written, read back), though that shows persistence and not that they are distinct cells. See .notes/gen3-candidate-slix2-gold.md. || NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. BLOCK COUNT UNKNOWN AND UNCLAIMED -- the label states no range, and nothing here can supply one: neither proxmark nor this app hardcodes SLIX2 geometry, both read GET SYSTEM INFO, and proxmark's SLIX2-specific GET NXP SYSTEM INFO path carries no size table either. So capacity has to measure it. A guess that it is a large part was recorded here on 2026-09-08 and withdrawn the same day as unsourced -- on the labels alone the largest claimed geometry in this batch is the TI pair at 0-63B, not this tag. Which way it lands decides whether a gen1 attempt is destructive, so measure before writing. || MEASURED 2026-09-08: THE INTERESTING ONE. Advertises 79 blocks x 4 -- so the withdrawn guess that it was the largest tag in the batch was numerically right, and withdrawing it was still correct: there was no source for it and now there is a measurement. uid[1]=0x48, not NXP's 0x04, and 'no tag-info available'. AND IT ANSWERS READS PAST ITS ADVERTISED COUNT: every block from 0 to 81 returned data. The capacity figure of 82 is the probe's own search ceiling (advertised + 2, then +1), NOT the card -- real capacity is >= 82 and unmeasured. Re-run with --capacity-max 255. This is the answers-reads-everywhere archetype that ISO15693_POLLER_PASS_MAX_MS exists for, on an off-the-shelf tag rather than a deliberately programmed one. gen1 IS destructive here. || 2026-09-08 RE-RUN with --capacity-max 255: it answers a read at EVERY address in the 8-bit block space, all 256. So no read-based probe can find its edge, and the earlier '82' was purely the default ceiling. This is the answers-reads-everywhere card in its pure form, off the shelf.",
+      "note": "RESTORABLE IN FULL as of 2026-09-26: the whole addressable space is recorded, see pre_write_baseline and address_space. 128 addressable blocks, NOT 256 -- 128-255 mirror 0-127. Three blocks were written that day (77, 80, 100), each zero beforehand; writing zeros back restores the card exactly. || \u26a0\ufe0f DO NOT WIPE -- POSSIBLE GEN3, NOT ESTABLISHED, 2026-09-26. Blocks 0x10/0x11 READ as this card's UID in the reversed gen3 layout, and 0x14 reads A5 3B 44 2C against the V3 config-mode constant A5 2B 44 2C -- three bytes exact, the fourth one bit away. 0x15 matches only on 21 and 00 and carries little. ALL OF THAT IS READS: gen3 is defined by writing 0x10/0x11 CHANGING THE UID, which has not been tested, and memory holding a UID copy is not unusual. The probe's gen3_signature:false came from an exact == against two constants of unrecorded provenance, so it does not settle it either way. The hazard does NOT depend on the classification: zeroing 0x14/0x15 is reported to brick an un-finalized V3 card permanently, those are blocks 20 and 21, any wipe reaches them at once, and this card never refuses a write so the sweep has no early stop. It also takes writes above its advertised 79 (80 and 100 written, read back), though that shows persistence and not that they are distinct cells. See .notes/gen3-candidate-slix2-gold.md. || NOT marked `pm3`. The seller said the unmarked ones are writable only with a custom application he did not supply, so expect gen1/gen2/gen3 to all refuse. That is not evidence the tag is plain -- proxmark implements three magic methods and this may not be one of them. DESTRUCTIVE-PROBE WARNING: this tag has real memory at blocks 56/57/62/63, so a gen1 attempt OVERWRITES four blocks of it. The out-of-range safety that makes the 28-block tags harmless does NOT apply here. Take a baseline first and check --identify before writing. BLOCK COUNT UNKNOWN AND UNCLAIMED -- the label states no range, and nothing here can supply one: neither proxmark nor this app hardcodes SLIX2 geometry, both read GET SYSTEM INFO, and proxmark's SLIX2-specific GET NXP SYSTEM INFO path carries no size table either. So capacity has to measure it. A guess that it is a large part was recorded here on 2026-09-08 and withdrawn the same day as unsourced -- on the labels alone the largest claimed geometry in this batch is the TI pair at 0-63B, not this tag. Which way it lands decides whether a gen1 attempt is destructive, so measure before writing. || MEASURED 2026-09-08: THE INTERESTING ONE. Advertises 79 blocks x 4 -- so the withdrawn guess that it was the largest tag in the batch was numerically right, and withdrawing it was still correct: there was no source for it and now there is a measurement. uid[1]=0x48, not NXP's 0x04, and 'no tag-info available'. AND IT ANSWERS READS PAST ITS ADVERTISED COUNT: every block from 0 to 81 returned data. The capacity figure of 82 is the probe's own search ceiling (advertised + 2, then +1), NOT the card -- real capacity is >= 82 and unmeasured. Re-run with --capacity-max 255. This is the answers-reads-everywhere archetype that ISO15693_POLLER_PASS_MAX_MS exists for, on an off-the-shelf tag rather than a deliberately programmed one. gen1 IS destructive here. || 2026-09-08 RE-RUN with --capacity-max 255: it answers a read at EVERY address in the 8-bit block space, all 256. So no read-based probe can find its edge, and the earlier '82' was purely the default ceiling. This is the answers-reads-everywhere card in its pure form, off the shelf.",
       "original": {
         "advertised_blocks": 79,
         "afi": 0,
@@ -523,20 +536,21 @@
         "search_ceiling": 81
       },
       "pre_write_baseline": {
-        "all_other_blocks": "00 00 00 00, including 79, 80 and 100 before they were written",
+        "artifacts": [
+          "tools/baselines/slix2-gold-30mm_2026-09-26_pre-write.json",
+          "tools/baselines/slix2-gold-30mm_2026-09-26_full-sweep-0-255.txt"
+        ],
         "captured": "2026-09-26",
-        "covers": "blocks 0-78 ONLY, plus single reads of 79, 80 and 100",
-        "does_not_cover": "ANYTHING ELSE ABOVE BLOCK 78. `hf 15 dump` sweeps the ADVERTISED count and stops, and on this card 79 is a programmable setting rather than a measured capacity -- it takes writes well above it. So the addresses from 81 to 255, minus block 100, have never been read at all and this is NOT a complete record of the card. Two of the three blocks written on 2026-09-26 are in that region and were read as zero first, so they are restorable; nothing else up there is.",
-        "does_not_replace_original": "The `original` section stays as captured. It is write-once by design and its unreadable_blocks list is a true record of what that campaign produced -- the cause is recorded beside it.",
-        "file": "tools/baselines/slix2-gold-30mm_2026-09-26_pre-write.json",
+        "covers": "the WHOLE addressable space, 0-127, since 128-255 alias onto it",
         "nonzero": {
           "16": "36 F1 CD 01",
           "17": "00 03 48 E0",
           "20": "A5 3B 44 2C",
           "21": "21 0F 50 00"
         },
-        "to_complete_it": "A deliberate read pass over the whole 8-bit block space, which needs no writes. Do it BEFORE anything else writes to this card, because until then the high addresses have no baseline to restore from.",
-        "why_this_is_still_a_pre_write_state": "Nothing has ever written to this card through this project, and the dump was taken BEFORE the three deliberate writes below. It is 18 days later than the 2026-09-08 baseline and agrees with it where that one has data (block 21). So it is a valid record of the untouched card and it RECOVERS the three blocks the 2026-09-08 parse threw away to the utf-8 defect."
+        "restore": "Write 00 00 00 00 to blocks 77, 80 and 100. Every one was read as zero before it was written, and that returns the card to the state above. Nothing else has been written.",
+        "state": "every block 00 00 00 00 except 16, 17, 20, 21",
+        "why_this_is_a_pre_write_state": "Nothing has ever written to this card through this project. The three 2026-09-26 writes are the only ones, each was preceded by a read showing zero, and the full sweep confirms no other address holds anything unaccounted for."
       },
       "source_url": "https://www.aliexpress.com/store/1112214"
     },
