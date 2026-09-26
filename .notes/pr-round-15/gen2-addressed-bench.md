@@ -313,7 +313,58 @@ fire on the addressed path. The third row is the one that settles it: the addres
 command was still rejected, so nothing about the address was the problem.
 
 That is a stronger and more useful statement than either the guess this sheet started with or the
-claim in the shipped comment. It is one card so far; `white-coin` and `black-tag` remain.
+claim in the shipped comment.
+
+### `black-tag` — 2026-09-26. IDENTICAL, on every frame.
+
+Run with probe `11223344` rather than the sheet's `99AABBCC`. The two transcripts stay separable
+anyway: this card restores to `E4E3E2E1` against `gen-2-card`'s `A4A3A2A1`, and carries DSFID `02`
+against `00`.
+
+    hf 15 reader                                        -> E0 04 01 10 E1 E2 E3 E4  DSFID 02
+    hf 15 raw -ackw -d 02E0094011223344                 -> (3) 00 78 F0     unaddressed
+    hf 15 reader                                        -> E0 04 01 10 44 33 22 11  MOVED
+    hf 15 raw -ackw -d 02E00940E4E3E2E1                 -> (3) 00 78 F0     restore
+    hf 15 reader                                        -> E0 04 01 10 E1 E2 E3 E4  back
+    hf 15 raw -ackw -d 22E0E4E3E2E1100104E0094011223344 -> command failed   ADDRESSED, correct UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ckw  -d 22E0E4E3E2E1100104E1094011223344 -> command failed   ADDRESSED, wrong UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 62E0E4E3E2E1100104E0094011223344 -> command failed   ADDRESSED + OPTION
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 42E0094011223344                 -> command failed   unaddressed + OPTION
+    hf 15 reader                                        -> E0 04 01 10 44 33 22 11  *** MOVED ***
+    hf 15 raw -ackw -d 02E00940E4E3E2E1                 -> (3) 00 78 F0     restore
+    hf 15 reader                                        -> E0 04 01 10 E1 E2 E3 E4  restored
+    hf 15 raw -ackw -d 22E0094011223344                 -> command failed   addressed bit, no UID
+    hf 15 reader                                        -> unchanged
+
+**Two cards, both findings.** The addressed backdoor is refused with the correct address and moves
+nothing; the unaddressed form is taken twice either side of the failures; and `42E0...` reports
+failure while the write LANDS, which was a single-card observation before this run and is now two.
+
+**DSFID stayed `02` throughout**, an incidental control nobody planned: a write that scribbled
+outside the UID register is where that would show. It did not. Geometry was never at risk -- the CFG
+registers `0x47` and `0x52` are not touched by any frame here, and this card over-claims 70 blocks,
+which is untouched and unrelated.
+
+### The one gap left on `black-tag`
+
+`gen-2-card` is on record accepting an addressed STANDARD write, which is what licenses saying the
+card can address and the backdoor simply is not on that path. **`black-tag` is not in that five** --
+it was never sent an addressed `0x21`. So for this card two readings still fit: the front-end
+addresses fine and the hook is unreachable addressed, or the hook simply demands `flags == 0x02`.
+
+Two frames close it, and they are the same shape as the control that closed TI's blank. This card
+refuses unaddressed WRITE BLOCK, so send both with OPTION set and the address as the only variable:
+
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E008AABBCCDD    RIGHT address, block 8
+    hf 15 reader
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E10855667788    WRONG address (E0->E1)
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000    restore block 8 to zeros
+    hf 15 raw -ackw -d 2220E4E3E2E1100104E008            read block 8 back
+
+Block 8 currently reads `00 00 00 00`, so the restore is zeros and the read confirms it.
 
 
 ## Restore, and record the restore
