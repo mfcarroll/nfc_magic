@@ -560,7 +560,7 @@ static void test_details_carries_every_survey_finding(void) {
     const char* scroll = fake_scene_scroll_text();
     CHECK(scroll != NULL);
     if(scroll) {
-        CHECK(strstr(scroll, "still hold what was on the card before") != NULL);
+        CHECK(strstr(scroll, "still hold non-zero data") != NULL);
         CHECK(strstr(scroll, "larger than it") != NULL);
         CHECK(strstr(scroll, "no configuration register") != NULL);
         // both halves moved, so both are named rather than one standing for the pair

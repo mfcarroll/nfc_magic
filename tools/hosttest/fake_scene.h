@@ -27,7 +27,10 @@ typedef enum {
 
 typedef struct {
     FakeElementKind kind;
-    char text[512]; // the rendered string, or the button label
+    // The scroll element's real counterpart copies into a FuriString and has no ceiling; this one
+    // is a fixed buffer only so the fake can stay simple. Sized for the notes page, whose
+    // paragraphs stack and which overran 512 once they started naming both sides of a mismatch.
+    char text[2048]; // the rendered string, or the button label
     uint8_t x, y;
     Align horizontal, vertical;
     Font font;

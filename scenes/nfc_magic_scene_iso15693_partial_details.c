@@ -3,16 +3,22 @@
 
 // The per-block "which blocks didn't write/clear" list for an ISO15693 partial clone/wipe, reached
 // via "Details" on the partial summary -- mirrors the Gen2 / USCUID-UL partial-details screens.
+
+// Opens one entry on the page: a blank line first unless it is the first thing there, then its
+// bullet. The block list's label and every note open this way, so the page's format is one rule.
+static void nfc_magic_scene_iso15693_partial_details_begin_note(FuriString* message) {
+    if(furi_string_size(message) > 0) furi_string_cat_str(message, "\n\n");
+    furi_string_cat_str(message, "- ");
+}
+
 void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     NfcMagicApp* instance = context;
     Widget* widget = instance->widget;
 
-    // Reached from the write-fail summary (still on the stack): its reason picks the title. For an
-    // over-capacity success these are the empty blocks the card can't physically hold (not a failure),
-    // so soften the wording; for a partial they're the blocks that wouldn't write / clear.
+    // Reached from the write-fail summary (still on the stack), whose reason says whether the card was
+    // lost. The block list's label is decided from the capacity facts below, not from that reason.
     const uint32_t reason =
         scene_manager_get_scene_state(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
-    const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
     const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
     const bool wipe_mode = (instance->iso15693_mode == NfcMagicIso15693ModeWipe);
     // Bound the list at the cut, for the reason pass_truncated gives: on a clone the bitmap holds two
@@ -50,23 +56,24 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     // "not written" with no softening would overstate the damage on a clone that lost nothing.
     const bool only_empty_tail = (instance->iso15693_result.failed_count == 0) &&
                                  (instance->iso15693_result.over_capacity > 0);
-    const bool empty_blocks = over_capacity || only_empty_tail;
-    const char* title;
-    if(empty_blocks) {
-        title = "Empty top blocks";
-    } else if(has_block_list) {
-        title = wipe_mode ? "Blocks not cleared" : "Blocks not written";
-    } else {
-        title = wipe_mode ? "Wipe notes" : "Clone notes";
-    }
+    // One title for the page, whatever it turns out to hold. Naming it after the block list was right
+    // when the list was all there was; it now sits alongside notes that have nothing to do with the
+    // blocks, and each note carries its own opening words.
+    const char* title = wipe_mode ? "Wipe notes" : "Clone notes";
     widget_add_string_element(widget, 0, 0, AlignLeft, AlignTop, FontPrimary, title);
 
     FuriString* message = furi_string_alloc();
-    if(empty_blocks) {
-        // These empty blocks are past the card's physical capacity -- no data was lost, but say why
-        // they weren't written. ("Card too small" is reserved for the partial screen, where real data
-        // IS lost; this clone's data all fit.)
-        furi_string_cat_str(message, "Didn't fit on the card:\n");
+    // The list opens with its own words now that the page is not named after it. Empty top blocks are
+    // past the card's physical capacity -- no data was lost, so say why they were not written rather
+    // than calling them failures. ("Card too small" is reserved for the partial screen, where real
+    // data IS lost; this clone's data all fit.)
+    if(has_block_list) {
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
+        furi_string_cat_str(
+            message,
+            only_empty_tail ? "Didn't fit on the card: " :
+            wipe_mode       ? "Blocks not cleared: " :
+                              "Blocks not written: ");
     }
     // The bound is list_upto, never blocks_total: the wipe and gen1 paths reduce blocks_total to a
     // logical count that excludes the skipped backdoor blocks (56/57/62/63), yet failures are recorded
@@ -85,7 +92,7 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         // Not on a card-lost run, which gets no list either. A lifted card makes every block after it
         // time out, so on a long enough file the clock cuts the pass before the card is found gone,
         // and this note would put the lift down to the time budget and the card's speed.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         // The cut index, never blocks_total: this is a claim about which blocks were TRIED, and
         // blocks_total is a COUNT, one past the highest block that answered. Below the cut it
         // under-reports (the trailing run the tail-drop discards was attempted -- three writes and
@@ -145,7 +152,7 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         // answer after the field reset" would name a reset that never happened; the other reasons got
         // there and were met with silence. VerifyWipe does not downgrade to CardLost on that silence,
         // it logs and falls through, which is why the second wording belongs to them.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_str(
             message,
             card_lost ? "UID not re-checked: the card stopped answering before the identity check "
@@ -157,7 +164,7 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         // The clone's counterpart, on the one route that leaves its re-read unanswered -- has_details
         // in the write-fail scene says why a CardLost with uid_recheck is that route. uid_recheck alone
         // is not enough: it stays set on the Success, Partial and Fail that an answer produces.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_str(
             message,
             "UID not re-checked: the clone sent writes to blocks 56/57, which on a gen1 card are its "
@@ -166,56 +173,60 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
     }
     if(instance->iso15693_result.used_gen1 && instance->iso15693_result.gen1_blocks_skipped) {
         // Only where the file reached those blocks; see gen1_blocks_skipped.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_str(message, "gen1: 56/57/62/63 hold UID + unlock/commit, not file data.");
     }
-    // The survey's three findings, each independent of the others and none of them a failure. Residue
-    // first: it is the only one about the user's data.
     if(instance->iso15693_result.residue_found) {
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_printf(
             message,
-            "Blocks %u-%u are readable and still hold what was on the card before. The clone wrote "
-            "only the file's blocks; Wipe clears the rest.",
+            "Blocks %u-%u are readable and still hold non-zero data that was on the card before. "
+            "Only the blocks from the file were written. To clear the rest, use 'Wipe' first then "
+            "'Write' again.",
             instance->iso15693_result.residue_first,
             instance->iso15693_result.residue_last);
     }
     if(instance->iso15693_result.holds_more) {
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_printf(
             message,
-            "The card answers reads up to block %u but reports only %u, so it is larger than it "
-            "claims.",
-            instance->iso15693_result.survey_top,
-            instance->iso15693_result.card_blocks);
+            "The card is larger than it claims. It reports %u blocks but answers reads up to block "
+            "%u. Some readers may detect this.",
+            instance->iso15693_result.card_blocks,
+            instance->iso15693_result.survey_top);
     }
     if(instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
-        // Name whichever moved, and both when both did. Printing the pair unconditionally makes the
-        // reader hunt for which one is wrong, or take a matching number for the problem.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
-        furi_string_cat_str(message, "The card still reports ");
-        if(instance->iso15693_result.memory_differs) {
-            furi_string_cat_printf(message, "%u blocks", instance->iso15693_result.card_blocks);
-        }
-        if(instance->iso15693_result.memory_differs && instance->iso15693_result.ic_ref_differs) {
-            furi_string_cat_str(message, " and ");
-        }
-        if(instance->iso15693_result.ic_ref_differs) {
-            furi_string_cat_printf(message, "IC ref %02X", instance->iso15693_result.card_ic_ref);
-        }
-        // "configuration register", not "geometry": the gen2 backdoor programs the block count, the
-        // block size AND the IC reference through one register, which is why gen1 can reproduce none
-        // of them.
+        // Both sides, and only the halves that moved. Showing what the file asked for beside what the
+        // card says is what makes this actionable rather than a complaint.
+        //
+        // "This card", not "this gen1 card": the note fires whenever the two disagree, and gen1 is the
+        // usual cause but not the only one -- a card that is not magic at all, whose UID already
+        // matched the file's, reaches here too, with no configuration write ever taking. The gen1
+        // sentence below is a general fact about why such a card cannot be made to match, which is
+        // true wherever it is read.
+        const Iso15693PollerResult* r = &instance->iso15693_result;
+        const bool both = r->memory_differs && r->ic_ref_differs;
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
+        furi_string_cat_str(message, "The file says ");
+        if(r->memory_differs) furi_string_cat_printf(message, "%u blocks", r->file_blocks);
+        if(both) furi_string_cat_str(message, " and ");
+        if(r->ic_ref_differs) furi_string_cat_printf(message, "IC ref %02X", r->file_ic_ref);
+        furi_string_cat_str(message, ". This card reports ");
+        if(r->memory_differs) furi_string_cat_printf(message, "%u blocks", r->card_blocks);
+        if(both) furi_string_cat_str(message, " and ");
+        if(r->ic_ref_differs) furi_string_cat_printf(message, "IC ref %02X", r->card_ic_ref);
         furi_string_cat_str(
             message,
-            ", not the file's. gen1 has no configuration register, so a gen1 clone copies the UID "
-            "and the data but not how the card describes itself.");
+            ". gen1 cards have no configuration register, so a gen1 clone copies the UID and the "
+            "data but not how the card describes itself. Some readers may detect this. For a closer "
+            "copy use a gen1 card that already matches, or a gen2 card, which can be told what to "
+            "report.");
     }
     if(instance->iso15693_result.identity_failed && !card_lost) {
         // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not
         // match the source. Not on a card-lost run: a card lifted before the read-back fails it too,
         // and "rejected" would be false.
-        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_str(message, "AFI/DSFID: card rejected the write.");
     }
     widget_add_text_scroll_element(widget, 0, 13, 128, 51, furi_string_get_cstr(message));
