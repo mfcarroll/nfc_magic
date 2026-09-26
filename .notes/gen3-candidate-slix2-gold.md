@@ -50,6 +50,46 @@ un-finalized V3": it is a tag whose configuration area we cannot place, it is th
 kind here, and proxmark's own code treats writing the wrong values to those blocks as capable of
 bricking a tag. A wipe writes zeros to both.
 
+## The seller's account fits this, and refines it
+
+`tools/tag-inventory.json` records it: he hand-marked some tags `pm3` and said those are the ones
+proxmark can write, while the unmarked ones "need a custom application" he did not supply.
+**`slix2-gold-30mm` is one of the UNMARKED ones**, along with `slix-black-38x25` and
+`ti-2k-silver-1/2`. A variant whose configuration area proxmark does not recognise is exactly what
+that looks like from proxmark's side -- `cfinalize` refuses it -- so the measurement and his
+annotation agree, independently.
+
+**But "needs custom software" is not true of the UID write.** We moved this tag's UID with stock
+`hf 15 wrbl --ua -b 16`, an ordinary unaddressed WRITE BLOCK. Whatever needs a custom application,
+it is not reaching the UID register. The honest split:
+
+- the UID register at 0x10 -- reachable with a standard frame, MEASURED here
+- the configuration area at 0x14/0x15 -- matches no documented state, and `cfinalize` refuses it
+- finalize itself -- never attempted, and must not be
+
+So it is probably a V3-family variant rather than a standard V3, which is what mfcarroll expected
+from the purchase and is why the artifacts say "gen3's UID mechanism" rather than "a gen3 card".
+
+## The cheap test that would extend it, NOT run
+
+The unmarked group is the interesting set and the reading is testable. `slix-black-38x25` and
+`ti-2k-silver-1/2` have never had block 0x10 probed. The same one-frame reversible check would say
+whether they share this UID mechanism:
+
+    hf 15 rdbl -b 16                      RECORD it -- there is no full-sweep baseline for these
+    hf 15 reader
+    hf 15 wrbl --ua -b 16 -d AABBCCDD
+    hf 15 reader                          does the UID tail become DD CC BB AA?
+    hf 15 wrbl --ua -b 16 -d <original>   restore
+    hf 15 reader
+
+**Read block 16 first.** `slix2-gold-30mm` had a committed full sweep to restore from; these do not,
+so the restore value has to be captured in the same session or it is gone.
+
+If they move, "unmarked = a family sharing this mechanism" stops being a hypothesis about a seller's
+marker pen and becomes a measured property. If they do not, the gold tag is its own thing. Either
+result is worth having and neither belongs in this PR.
+
 ## What is NOT answered, and is not this PR's to answer
 
 Why a generation would put its UID registers on readable data blocks at all, when gen2 already does

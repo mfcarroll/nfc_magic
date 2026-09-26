@@ -144,7 +144,30 @@ silicon. Do not reinstate it.
   arrived behaves exactly like one that was never locked. The frames stay in the app.
 - **The V1 coin was never a special specimen** — measured identical to `slix-1k-coin18`.
 
-## ⚠️ POSSIBLE GEN3 ON THE SHELF — indicators only, not established
+## ⚠️ THE GOLD TAG HAS GEN3'S UID REGISTER, AND IS PROBABLY A VARIANT — `slix2-gold-30mm`
+
+**SETTLED 2026-09-26 by a write.** Block 0x10 is a UID register: `AA BB CC DD` into it moved the UID
+to `E0 48 03 00 DD CC BB AA`, the value the mapping implies, and the original bytes restored it.
+
+**It is NOT called a gen3 card anywhere, deliberately.** proxmark identifies an un-finalized V3 by a
+signature in 0x14/0x15; this tag is one bit off at 0x14 and seven off at 0x15, further still from
+the finalized values, so `hf 15 cfinalize` would refuse it. mfcarroll's purchase explains it: the
+seller marked some tags `pm3` and said the unmarked ones need a custom application, and this is one
+of the unmarked. A variant, most likely.
+
+**Its UID write needed no custom anything** -- stock `hf 15 wrbl --ua -b 16`. So whatever wants
+custom software, it is not the UID register.
+
+⚠️ **STILL DO NOT WIPE IT**, and the reason is now stronger: its configuration state cannot be
+placed at all, it is the only tag here that behaves this way, and proxmark's own code treats writing
+wrong values to 0x14/0x15 as capable of bricking a tag. A wipe zeroes both.
+
+**NOT RUN, and cheap:** the same reversible probe on the other unmarked tags -- `slix-black-38x25`,
+`ti-2k-silver-1/2` -- would say whether the unmarked group shares this mechanism. Read block 16
+FIRST; unlike the gold tag they have no committed full sweep to restore from. Full write-up and the
+frames in [gen3-candidate-slix2-gold.md](gen3-candidate-slix2-gold.md).
+
+## ~~POSSIBLE GEN3 ON THE SHELF~~ — how it looked before the write, kept for the reasoning
 
 `slix2-gold-30mm` — **DO NOT WIPE IT**. Full write-up in
 [gen3-candidate-slix2-gold.md](gen3-candidate-slix2-gold.md).
