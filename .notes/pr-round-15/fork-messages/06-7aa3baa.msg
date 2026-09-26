@@ -36,12 +36,12 @@ identity being disturbed and put back would be the app narrating its own
 process.
 
 THE CONSENT CALL, named because it is one. The repair sends the whole gen1
-sequence, unlock and commit included, and the gen1 opt-in screen is not shown on
-this path. That screen exists to warn that gen1 writes destroy four blocks of
-user data on a tag that is NOT gen1; this card has just proved that it is, by moving its UID to the
-value our write implied, so those addresses are registers rather than anyone's
-data. Leaving the card answering to bytes lifted out of the file is the worse
-outcome by a distance.
+sequence, unlock and commit included, and the gen1 opt-in screen is not shown
+on this path. That screen exists to warn that gen1 writes destroy four blocks
+of user data on a tag that is NOT gen1; this card has just proved that it is,
+by moving its UID to the value our write implied, so those addresses are
+registers rather than anyone's data. Leaving the card answering to bytes
+lifted out of the file is the worse outcome by a distance.
 
 THE RE-ADDRESS CHECKS ITS ANSWER NOW. It took whatever the inventory returned,
 and that inventory is the SDK's 1-slot unaddressed one, so a second tag in the
