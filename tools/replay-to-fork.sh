@@ -56,6 +56,29 @@ if ls "$DEV"/.notes/pr-round-*/reply.md >/dev/null 2>&1; then
 fi
 echo
 
+# --- the anchor check, BEFORE anything is built ---
+# A sync point syncs the TREE at its commit, so a shipped commit landing above the LAST anchor
+# reaches nobody. The verification at the end already catches it, but only after eight commits have
+# been built and signed -- and it has caught it three times, each time because the coverage was
+# checked before the last edits rather than after. Fail here instead, and say which commits.
+LAST_ANCHOR="$(basename "$(ls "$MSGDIR"/[0-9][0-9]-*.msg | tail -1)" .msg)"; LAST_ANCHOR="${LAST_ANCHOR#*-}"
+UNCOVERED=""
+for c in $(git -C "$DEV" rev-list --reverse "$LAST_ANCHOR..HEAD"); do
+  if git -C "$DEV" show --name-only --format= "$c" \
+     | grep -qE '^(magic/|scenes/|views/|helpers/|assets/|nfc_magic_app|application\.fam|CHANGELOG\.md)'; then
+    UNCOVERED="$UNCOVERED  $(git -C "$DEV" log -1 --format='%h %s' "$c")
+"
+  fi
+done
+if [ -n "$UNCOVERED" ]; then
+  echo "refusing to replay -- shipped commits sit ABOVE the last sync point ($LAST_ANCHOR):"
+  printf '%s' "$UNCOVERED"
+  echo "  fix: rename $MSGDIR/$(basename "$(ls "$MSGDIR"/[0-9][0-9]-*.msg | tail -1)") to the newest of them"
+  exit 1
+fi
+echo "anchor check: no shipped commit above $LAST_ANCHOR"
+echo
+
 # --- reset to the pushed base, discarding regenerable sync output ---
 git -C "$FORK" fetch origin "$BRANCH" >/dev/null 2>&1
 BASE="$(git -C "$FORK" rev-parse "origin/$BRANCH")"
