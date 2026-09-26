@@ -144,7 +144,10 @@ Iso15693_3Error iso15693_3_poller_inventory(Iso15693_3Poller* instance, uint8_t*
     if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
         return Iso15693_3ErrorTimeout;
     }
-    memcpy(uid, fake_tag.uid, ISO15693_3_UID_SIZE);
+    memcpy(
+        uid,
+        fake_tag.bystander_answers_inventory ? fake_tag.bystander_uid : fake_tag.uid,
+        ISO15693_3_UID_SIZE);
     return Iso15693_3ErrorNone;
 }
 

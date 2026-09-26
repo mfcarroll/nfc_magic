@@ -112,6 +112,13 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **The clone's identity writes are addressed too.** **WRITE AFI** and **WRITE DSFID** are *standard*
   commands, so an unaddressed one lands on a tag of any size, and a changed AFI can drop that tag out
   of a selective inventory.
+- **A clone that finds it is writing into a gen1 card's UID repairs it.** The gen2 check passes
+  whenever the card already carries the UID being written, because then it only proves the UID
+  matches — not that anything magic happened. On a **gen1** card, that let the file's blocks 56/57
+  land in the UID registers and left the card answering to bytes out of the file, while the result
+  screen said nothing about it. The write that moves the UID is also what proves what the card is, so the clone now
+  converts itself to a gen1 clone from that point, stops writing the file into the registers, puts the
+  intended UID back, and reports the run as the gen1 clone it turned out to be.
 - **A clone says what it left behind.** It writes the file's blocks and nothing else — destroying what
   you did not ask about is Wipe's job — so on a card bigger than the file, everything above it keeps the
   previous card's data. A **gen2** clone then reprograms the advertised count down to the file's, so the

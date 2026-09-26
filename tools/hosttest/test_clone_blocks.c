@@ -558,6 +558,87 @@ static void test_the_survey_stops_at_the_card_rather_than_the_ceiling(void) {
     end();
 }
 
+// ---- a gen1 card reached down the gen2 path --------------------------------------------------
+
+// The gen2 verify passes whenever the card already WEARS the target UID, because then it proves only
+// that the UID matches -- not that anything magic happened. On gen1 silicon that sends the data pass
+// straight into 56/57, which are the UID registers, and the card's identity becomes bytes lifted out
+// of the file. Measured: a 64-block source onto a gen1 SLIX already carrying its UID left the card
+// answering to 39 A5 39 5A 38 A5 38 5A -- the file's blocks 56 and 57, fed through the UID mapping.
+//
+// The write that moves the UID is also what proves what the card is, so the run converts itself into
+// a gen1 clone from that point: it stops feeding the file into registers, and afterwards puts the
+// target UID back.
+static void test_a_gen1_card_on_the_gen2_path_converts_and_repairs(void) {
+    begin("a clone that finds 56/57 are registers finishes as a gen1 clone and restores the UID");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 0, 63, 0x5A);
+
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    memcpy(inst.target_uid, target, ISO15693_3_UID_SIZE);
+    // skip_backdoor false: the gen2 arm's choice, made before the card could contradict it.
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(inst.uid_moved_by_write); // the card said what it is
+    CHECK(inst.clone_used_gen1); // ...and the run is reported as the gen1 clone it became
+    CHECK(inst.clone_gen1_blocks_skipped);
+    CHECK_EQ(inst.clone_blocks_total, 60); // 64 less the four registers
+    CHECK_EQ(inst.clone_failed_count, 0);
+
+    // The fixture holds a gen1 UID write until the next power-cycle, which is stricter than the
+    // hardware on purpose (see gen1_uid_pending). The repair's effect is visible on the far side.
+    fake_tag_power_cycle();
+    CHECK(memcmp(fake_tag.uid, target, ISO15693_3_UID_SIZE) == 0);
+    end();
+}
+
+// The same card WITHOUT a matching UID takes the gen1 path in the first place, skips the registers up
+// front, and never converts. Without this, the conversion is consistent with firing on every gen1 run.
+static void test_the_ordinary_gen1_path_does_not_convert(void) {
+    begin("a clone that skipped the registers from the start never converts or repairs");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_data_init(&source, 64, 4);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    iso15693_poller_write_source_blocks(&inst, NULL, true); // the gen1 arm's choice
+
+    CHECK(!inst.uid_moved_by_write);
+    end();
+}
+
+// And a gen2 card is untouched by any of it: 56/57 are ordinary memory there, the UID does not move,
+// and the file's data at those addresses is written like any other block. This is the case the
+// alternative fix -- skipping the registers whenever the UID already matched -- would have broken,
+// silently dropping four blocks of the file while reporting a clean success.
+static void test_a_gen2_card_writes_those_blocks_like_any_other(void) {
+    begin("on a gen2 card 56/57 are data, and the file's blocks there are written");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen2_magic = true; // NOT gen1: those addresses are memory
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 0, 63, 0x5A);
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(!inst.uid_moved_by_write);
+    CHECK_EQ(inst.clone_blocks_total, 64); // nothing deducted
+    CHECK_EQ(fake_tag.content[56][0], 0x5A); // and the file's data really is in them
+    CHECK_EQ(fake_tag.content[57][0], 0x5A);
+    end();
+}
+
 int main(void) {
     printf("iso15693 clone loop\n");
     test_clean_clone_fits();
@@ -577,6 +658,9 @@ int main(void) {
     test_a_card_that_states_no_count_is_not_an_over_claim();
     test_a_card_that_keeps_reporting_its_own_size_says_so();
     test_the_survey_stops_at_the_card_rather_than_the_ceiling();
+    test_a_gen1_card_on_the_gen2_path_converts_and_repairs();
+    test_the_ordinary_gen1_path_does_not_convert();
+    test_a_gen2_card_writes_those_blocks_like_any_other();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();

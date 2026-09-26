@@ -91,6 +91,13 @@ typedef struct {
     // that is reachable on a card that answers perfectly well. Inverted so the default advertises.
     bool hides_memory;
 
+    // A SECOND tag answers the inventory. The SDK's inventory is 1-slot and unaddressed (#251), so
+    // with two cards in the field it returns whichever wins the slot -- which may not be the one our
+    // addressed writes are reaching. Set to make every inventory answer for the bystander while the
+    // tag itself goes on behaving normally; that is the shape a stray UID has to be rejected in.
+    bool bystander_answers_inventory;
+    uint8_t bystander_uid[ISO15693_3_UID_SIZE];
+
     // Refuse any WRITE BLOCK whose OPTION flag is clear, with error 0x03 -- the tag naming the bit
     // rather than failing generically. Measured on TI Tag-it HF-I Plus (`white-coin`): flags 0x22 is
     // answered `01 03`, and the identical frame at 0x62 is taken.

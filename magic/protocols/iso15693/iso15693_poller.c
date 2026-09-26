@@ -384,6 +384,9 @@ struct Iso15693Poller {
     uint16_t clone_survey_top;
     bool clone_holds_more;
     bool clone_geometry_differs;
+    // A write to 56/57 moved the UID to exactly what that write implies, so those addresses are
+    // registers and this is gen1 silicon -- whichever path the run took to get here.
+    bool uid_moved_by_write;
     uint16_t clone_card_blocks;
     // Whether clone_card_blocks holds a CLAIM at all. The size finding says the card is bigger than
     // it claims, so it needs one: a GET SYSTEM INFO that did not answer, or a card that does not
@@ -754,8 +757,47 @@ static Iso15693_3Error iso15693_poller_write_block_addressed(
     return iso15693_poller_parse_write_response(instance->frame_rx);
 }
 
-// Take the address again from the card itself, after a write that may have moved it.
-static void iso15693_poller_readdress(Iso15693Poller* instance, Iso15693_3Poller* iso_poller) {
+// What the UID BECOMES if this write lands on gen1 silicon. The mapping is fixed: block 56 carries
+// uid[7..4] and block 57 uid[3..0], each byte in frame order. Computable because we know what we sent.
+static void iso15693_poller_predict_uid(
+    const uint8_t* current,
+    uint8_t block,
+    const uint8_t* data,
+    uint8_t* predicted) {
+    memcpy(predicted, current, ISO15693_3_UID_SIZE);
+    if(block == ISO15693_MAGIC_BLK_UID_7654) {
+        predicted[7] = data[0];
+        predicted[6] = data[1];
+        predicted[5] = data[2];
+        predicted[4] = data[3];
+    } else {
+        predicted[3] = data[0];
+        predicted[2] = data[1];
+        predicted[1] = data[2];
+        predicted[0] = data[3];
+    }
+}
+
+// Take the address again after a write that may have moved it -- but only to one of the two values
+// that write could legitimately have produced.
+//
+// There are exactly two honest outcomes. The UID is UNCHANGED, which means those addresses are
+// ordinary memory here: gen2 or a plain tag, and nothing to do. Or it is EXACTLY what the write
+// implies, which means they are registers: gen1, and the address must follow. Anything else did not
+// come from our write. The inventory is the SDK's 1-slot one, so with a second tag in the field it can
+// answer for the bystander (#251) -- and re-addressing to a stranger would point every later frame at
+// the wrong card. Keep the address we have and say so.
+//
+// Predicting does not replace the inventory, because the prediction only holds IF the card is gen1 --
+// which is the thing being tested. It makes the answer checkable instead of merely believed, and it is
+// what turns "the UID changed" into "the UID changed to the value our own write implies", which is a
+// strong enough premise to act on. Not airtight: a bystander holding the predicted UID would still
+// pass, and nothing can fix that -- magic cards make UIDs non-unique by construction and a 1-slot
+// inventory cannot tell two cards apart.
+static void iso15693_poller_readdress(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    const uint8_t* predicted) {
     uint8_t uid[ISO15693_3_UID_SIZE] = {0};
     if(iso15693_poller_verify_inventory(iso_poller, uid) != Iso15693_3ErrorNone) {
         // Nothing answered, so there is no new address to take and the old one stays. Do NOT fall
@@ -765,10 +807,16 @@ static void iso15693_poller_readdress(Iso15693Poller* instance, Iso15693_3Poller
         FURI_LOG_W(TAG, "no inventory answer after a UID register write; address unchanged");
         return;
     }
-    if(memcmp(instance->address_uid, uid, ISO15693_3_UID_SIZE) != 0) {
-        FURI_LOG_W(TAG, "the card's UID moved mid-pass; re-addressing");
-        memcpy(instance->address_uid, uid, ISO15693_3_UID_SIZE);
+    if(memcmp(instance->address_uid, uid, ISO15693_3_UID_SIZE) == 0) return;
+
+    if(memcmp(uid, predicted, ISO15693_3_UID_SIZE) != 0) {
+        FURI_LOG_W(
+            TAG, "a UID answered that our own write does not account for; address unchanged");
+        return;
     }
+    FURI_LOG_W(TAG, "the card's UID moved to what the write implies; re-addressing");
+    memcpy(instance->address_uid, uid, ISO15693_3_UID_SIZE);
+    instance->uid_moved_by_write = true;
 }
 
 // Did the block end up holding what we sent? The only question left on a card whose acknowledgement
@@ -837,8 +885,12 @@ static Iso15693_3Error iso15693_poller_write_block_retried(
     // It lives with the write rather than in the sweep because the rule is about the write: a clone
     // whose source reaches block 56 on a card that is gen1 magic underneath goes through the same
     // line, without that loop having to know it might.
-    if(iso15693_poller_is_uid_block(block)) {
-        iso15693_poller_readdress(instance, iso_poller);
+    // Only a full-width write can carry a whole UID half, and the registers are four bytes. A narrower
+    // block size cannot produce a predictable move, so there is nothing to check against.
+    if(iso15693_poller_is_uid_block(block) && size >= 4) {
+        uint8_t predicted[ISO15693_3_UID_SIZE] = {0};
+        iso15693_poller_predict_uid(instance->address_uid, block, data, predicted);
+        iso15693_poller_readdress(instance, iso_poller, predicted);
     }
     return error;
 }
@@ -993,6 +1045,46 @@ static void iso15693_poller_compare_reported_geometry(
     instance->clone_geometry_differs = memory_differs || ic_ref_differs;
 }
 
+// The card turned out to be gen1 after the pass had already fed the file into its UID registers. Put
+// the identity back and make the accounting say what a gen1 clone's would have said.
+//
+// The repair writes the gen1 sequence, which includes unlock and commit and so ARMS the card -- and
+// the gen1 opt-in screen was never shown, because this run went down the gen2 path. That consent
+// exists to warn that gen1 writes destroy four blocks of user data on a tag that is not gen1. This
+// card has just proved it IS gen1, by moving its UID to the value our write implied, so those four
+// addresses are registers rather than anyone's data and the warning's premise does not hold. Leaving
+// the card answering to bytes lifted out of the file would be the worse outcome by a distance.
+static void iso15693_poller_finish_conversion(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    uint16_t source_count) {
+    instance->clone_used_gen1 = true;
+
+    // The four are registers here, so the file's data at those addresses was never storable -- exactly
+    // as on the gen1 path, and reported the same way. Deduct them from the total and take back any
+    // failure recorded against them, so the counts match what a gen1 clone would have produced.
+    uint16_t skipped = 0;
+    for(size_t i = 0; i < COUNT_OF(iso15693_poller_backdoor_blocks); i++) {
+        const uint16_t backdoor = iso15693_poller_backdoor_blocks[i];
+        if(backdoor >= source_count) continue;
+        skipped++;
+        const bool was_failed =
+            (instance->clone_failed_bitmap[backdoor / 8] & (1u << (backdoor % 8))) != 0;
+        if(was_failed) {
+            iso15693_poller_unmark_failed(instance, backdoor);
+            if(instance->clone_failed_count > 0) instance->clone_failed_count--;
+        }
+    }
+    instance->clone_gen1_blocks_skipped = skipped > 0;
+    instance->clone_blocks_total = (uint16_t)(instance->clone_blocks_total - skipped);
+
+    // Nothing on screen says the identity was disturbed and put back, deliberately. What the user
+    // needs is what the CARD is -- gen1, with the file's data absent from those four addresses --
+    // and the gen1 caveat already says exactly that. The rest is how we got here.
+    iso15693_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
+    memcpy(instance->address_uid, instance->target_uid, ISO15693_3_UID_SIZE);
+}
+
 // Clone mode: write every data block from the source image with the standard ISO15693 WRITE BLOCK.
 // Real write errors are counted into the failure bitmap for Partial reporting. Runs synchronously on
 // the Nfc worker thread. When `skip_backdoor` is set (the gen1 path), blocks 56/57/62/63 are left
@@ -1068,6 +1160,11 @@ static bool iso15693_poller_write_source_blocks(
     // Do NOT skip blocks locked in the SOURCE image: the source's lock bits describe the ORIGINAL
     // card, not the magic target (which is writable regardless), and locked blocks are exactly where
     // real tags keep provisioned data. Attempt every block.
+    // skip_backdoor is the CALLER's decision, made before the card had a chance to contradict it. A
+    // write landing in 56/57 and moving the UID contradicts it, so the run switches here and repairs
+    // the identity afterwards.
+    bool skipping = skip_backdoor;
+    bool converted = false;
     bool wrote_any = false; // at least one block accepted a write
     bool wrote_above_failure = false; // a block wrote ABOVE one that failed -> not a capacity tail
     bool any_failure_answered =
@@ -1092,7 +1189,7 @@ static bool iso15693_poller_write_source_blocks(
             FURI_LOG_W(TAG, "clone: time limit reached at block %u of %u", block, source_count);
             break;
         }
-        if(skip_backdoor && iso15693_poller_is_backdoor_block(block)) {
+        if(skipping && iso15693_poller_is_backdoor_block(block)) {
             continue; // gen1 owns these; the gen1 UID sequence already wrote them
         }
         // Before the write, so a clean run reports progress too -- the success path below continues
@@ -1108,7 +1205,22 @@ static bool iso15693_poller_write_source_blocks(
                 wrote_above_failure = true;
             }
             wrote_any = true;
+            if(!skipping && instance->uid_moved_by_write) {
+                FURI_LOG_W(TAG, "clone: 56/57 are UID registers here; continuing as a gen1 clone");
+                skipping = true;
+                converted = true;
+            }
             continue;
+        }
+        // A write to 56/57 moved the UID to what that write implies, on a run that reached them
+        // because the gen2 verify passed. So this is gen1 silicon that the gen2 path was taken on --
+        // possible whenever the card already wore the target UID, since then the verify proves only
+        // that the UID matches, not that anything magic happened. From here the run is a gen1 clone:
+        // stop feeding the file into registers, and repair the identity after the pass.
+        if(!skipping && instance->uid_moved_by_write) {
+            FURI_LOG_W(TAG, "clone: 56/57 are UID registers here; continuing as a gen1 clone");
+            skipping = true;
+            converted = true;
         }
         FURI_LOG_W(TAG, "clone: block %u refused (err %d)", block, error);
         // Record every failed block in the bitmap so a result screen can name it, whichever bucket
@@ -1159,12 +1271,14 @@ static bool iso15693_poller_write_source_blocks(
     // reported as CardLost, whose counters the caller discards. So the work is done either way and is
     // simply thrown away on that path.
     for(; block < source_count; block++) {
-        if(skip_backdoor && iso15693_poller_is_backdoor_block(block)) {
+        if(skipping && iso15693_poller_is_backdoor_block(block)) {
             continue;
         }
         iso15693_poller_mark_failed(instance, block);
         instance->clone_failed_count++;
     }
+
+    if(converted) iso15693_poller_finish_conversion(instance, iso_poller, source_count);
 
     // `done` counts blocks ATTEMPTED, so this lands on 100% for a pass that ran to the end and on
     // wherever the clock stopped it for one that did not. Deliberate: the popup's last frame is the
@@ -2081,6 +2195,7 @@ static void iso15693_poller_start_internal(
     instance->clone_survey_top = 0;
     instance->clone_holds_more = false;
     instance->clone_geometry_differs = false;
+    instance->uid_moved_by_write = false;
     instance->clone_card_blocks = 0;
     instance->clone_card_blocks_known = false;
     instance->clone_card_ic_ref = 0;
