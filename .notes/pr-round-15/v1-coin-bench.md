@@ -58,8 +58,14 @@ physical top — it takes writes at block 100 against a claim of 79.
 
     tools/sweep-read-all.sh /dev/cu.usbmodemiceman1 ~/v1coin-sweep.txt
 
-It answers a second question for free: on every gen1 chip measured here, 56/57/62/63 answer no read
-at any point. A card that reads them is not behaving like the others.
+**The decisive part is what block 56 does.** On every gen1 chip measured here, 56/57/62/63 answer no
+read at any point — write-only registers, nothing to destroy. This coin advertises 28, so 56 sits
+above its count and has never been looked at. If it ANSWERS a read it is memory, and writing it
+destroys content no one has recorded; if it refuses, that matches the register pattern and the write
+is safe.
+
+The sweep also says whether this card aliases the way `slix2-gold-30mm` does — 128 cells mirrored
+across the 8-bit space — which would change how every later read is interpreted.
 
 ## The write to the UID register — reversible, and it goes first
 
@@ -69,9 +75,12 @@ been measured anywhere, so an addressed frame changes two variables at once and 
 say which one did it. That is what the TI OPTION misreading cost. Addressing is a separate question
 and this step repeats, so it can be asked afterwards.
 
-    hf 15 reader                         positive control BEFORE
-    hf 15 raw -ackw -d 0221380000ABCD    write block 56 (0x38), unaddressed
-    hf 15 reader                         positive control AFTER -- did the UID move?
+    hf 15 reader                              positive control BEFORE
+    hf 15 wrbl --ua -b 56 -d AABBCCDD -v      write block 56, unaddressed
+    hf 15 reader                              positive control AFTER -- did the UID move?
+
+**56 alone, not 56 and 57.** One register is enough to answer the question and leaves the other half
+of the UID untouched, so the restore is a single frame.
 
 **PREDICTED: refused, UID unchanged.** That is the project's standing expectation and the reason the
 card was kept. It can come out the other way, which is what makes it a test.
@@ -126,6 +135,10 @@ anything the source supports.
 
 ## Restore
 
-Block 56 back to its arrival value, `E0 11 22 33 44 55 66 91`. Record what the runs leave behind and
+    hf 15 wrbl --ua -b 56 -d 91665544
+
+The arrival UID is `E0 11 22 33 44 55 66 91`, so `uid[7..4]` is `91 66 55 44`. If the sweep showed
+block 56 ANSWERING a read, restore what it actually held instead — that value is memory, not a
+register, and the UID mapping does not apply. Record what the runs leave behind and
 **whether the card ends armed**, because that is a permanent change to the only specimen of its kind
 here — and, if the sender did not arm it, the end of the one chance to observe a locked card.
