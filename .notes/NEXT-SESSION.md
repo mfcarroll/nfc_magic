@@ -32,7 +32,14 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Thirteen shipped commits on `iso15693-dev`.** 168 host tests, the writing gate clean.
+**Nineteen shipped commits on `iso15693-dev`**, seven fork sync points. 168 host tests, the writing
+gate clean, both firmwares warning-free, clang-format clean.
+
+⚠️ **07 ANCHORS AT THE ROUND TIP**, so it carries the addressing AND the arm-model correction AND the
+self-review's text fixes. Anchor it earlier and the round ships a wrong chip count with its fix one
+sync point behind. If any shipped commit is added after `89c5c11`, 07's anchor MOVES -- the seven
+sync points once reached only as far as `b312653` while six shipped commits sat above them, and
+nothing but `replay-to-fork.sh`'s own final diff would have caught it.
 
 **THE KNOWN-COUNT GUARD IS BENCHED AND PASSES, both directions** --
 [known-count-guard-bench.md](pr-round-15/known-count-guard-bench.md) has the predictions, committed
@@ -61,6 +68,12 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 | `e030945` | the size note says what the card reports before what it is |
 | `19e6660` | the size note names the file where the two counts agree |
 | `b312653` | the gen1 backdoor sequence carries the card's address |
+| `9128500` | the self-review's first pass -- five stale claims |
+| `5884a53` | the wipe hazard is every gen1 card, not one someone armed |
+| `5f9ea90` | two numbers that moved, and four paragraphs that were two |
+| `0bd9987` | a contradiction in the release notes, and three mangled wraps |
+| `76b0377` | rewrap the residue bullet |
+| `d2b85ef` | the wipe's open question points at the evidence |
 | `757fa5a` | dev-only: the fake acts on an unaddressed gen1 write, so the control can fail |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each

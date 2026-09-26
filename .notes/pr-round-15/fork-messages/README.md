@@ -11,7 +11,7 @@ There is no comment-only commit among them.
 | 04 | `3fc118c` | the identity writes are addressed and take the flag |
 | 05 | `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
 | 06 | `19e6660` | what a clone leaves behind, and a gen1 card it lands in |
-| 07 | `b312653` | the gen1 backdoor sequence carries the card's address |
+| 07 | `89c5c11` | the gen1 registers, addressed and no longer mis-scoped |
 
 Dev order matches fork order, so no reorder. **06 collapses seven dev commits** — see below, because
 that is the one place this round does not get one decision per commit, and the reason is churn.
@@ -19,13 +19,26 @@ that is the one place this round does not get one decision per commit, and the r
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.
 
-## Why 07 comes last and stands alone
+## Why 07 comes last, and why it carries two decisions
 
 It is the one frame set 01 left out, and it carries its own measurement: at block 62 the addressed
 form is the only one NXP silicon answers, which is a fact about the frames rather than about the
 safety argument. Folding it into 01 would put a claim about block 62 inside a commit whose subject is
 data blocks, and would hide the re-address seam -- the one thing addressing this sequence costs --
 inside a commit that already explains a different re-address for a different reason.
+
+**It ANCHORS AT THE ROUND'S TIP, not at the commit that introduced the addressing**, and that is
+what makes it carry the arm-model correction as well. Six shipped dev commits land after the
+addressing: the correction itself, and then this round's own self-review fixing text the round had
+written. Anchored earlier, 07 would ship "measured on two chips" and an 08 would correct it to
+three -- a wrong number and its fix, one sync point apart, which is the churn 02 and 06 were both
+shaped to avoid. Zero churn won again, and the message is split under `==` headings so the two
+decisions stay separable by a reader.
+
+The arm correction is comment and release notes only; nothing about it changes behaviour. **Verify
+before replaying** that no shipped commit sits after 07's anchor -- `replay-to-fork.sh` checks this
+at the end, by re-syncing from dev HEAD and diffing, and it is the check that would have caught the
+seven sync points reaching only as far as `b312653` while six shipped commits sat above them.
 
 ## Why 01 and 02 are separate, and why 02 is not two commits
 

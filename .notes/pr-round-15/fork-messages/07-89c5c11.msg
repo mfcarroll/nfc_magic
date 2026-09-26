@@ -1,4 +1,10 @@
-NFC Magic ISO15693: the gen1 backdoor sequence carries the card's address
+NFC Magic ISO15693: the gen1 registers, addressed and no longer mis-scoped
+
+Two changes to the same four addresses -- who a write there can reach, and
+who a wipe there can hurt. They are one region of the card and they arrive
+together.
+
+== THE SEQUENCE CARRIES THE CARD'S ADDRESS ==
 
 The four gen1 backdoor frames now go out as addressed WRITE BLOCKs, flags 0x22
 with the UID in the frame, built by the same helper as every other write here.
@@ -65,5 +71,35 @@ WRITE BLOCK: the address is what makes it magic, not the command. The response
 is read for one thing, whether the card asked for the OPTION flag, and the
 send's return stays discarded -- the 62/63 refusals are expected and the UID
 moves regardless, so acting on them would abort a run that worked.
+
+== THE WIPE HAZARD IS EVERY GEN1 CARD, NOT ONE SOMEONE ARMED ==
+
+The notes and the screens scoped the wipe's identity risk to "a card left
+ARMED by an earlier gen1 UID write", at six places, three of them user-facing.
+There is nothing under that qualifier.
+
+Five cards here take a write to block 56 without an unlock ever having been
+ACCEPTED -- two with no unlock frame sent at all, one of those a card this app
+had never written. Those registers are simply writable. So the condition is
+not the card's history but gen1 plus a claim high enough for the sweep to
+reach 56/57, which is the reach rule and is already stated once in the poller.
+
+It matters because it UNDERSTATED the hazard, and in the direction that costs
+a user a card: nobody can know whether a tag was written before they got it,
+and nothing can detect it, so a warning aimed at that condition asks them to
+worry only if they know something unknowable -- while every gen1 card measured
+behaves the same way.
+
+Nothing is claimed in the other direction. There may well be a lock state;
+an acceptance of unlock or commit would have proved one, and a refusal proves
+nothing, since a card locked or unlocked before it arrived is indistinguishable
+from one that never was. The frames stay. What comes out is a precondition
+asserted on the hazard. The two places that RECORD an observation keep what
+they observed.
+
+One more release-notes line goes with it, and it is older than this work:
+"block contents are not compared" was true until the OPTION read-back, which
+compares exactly that on a card whose acknowledgement it cannot collect. The
+rule still holds and now carries its exception.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
