@@ -97,4 +97,44 @@ ones, so read them before the first frame rather than trusting anything written 
 
 ## RESULTS
 
+### pm3, run 1 — the card wearing the `slix_28` fixture UID, 2026-09-26
+
+**CARD NOT YET IDENTIFIED.** `E0 04 01 10 A1 A2 A3 A4` is `tools/test_nfc/iso15693_slix_28.nfc`'s
+UID, and more than one card on the shelf wears it — the type line decodes from the costume, not the
+silicon, so it cannot say which. mfcarroll's tape can. Left blank rather than guessed: naming the
+wrong specimen is how a chip-scoped result becomes a family-scoped one.
+
+    hf 15 reader                                    -> E0 04 01 10 A1 A2 A3 A4
+    hf 15 raw -ackw -d 2221A4A3A2A1100104E038AABBCCDD -> (3) 00 78 F0
+    hf 15 reader                                    -> E0 04 01 10 DD CC BB AA
+    hf 15 raw -ackw -d 2221AABBCCDD100104E138AABBCCDD -> command failed
+    hf 15 reader                                    -> E0 04 01 10 DD CC BB AA
+    hf 15 raw -ackw -d 2221AABBCCDD100104E038A4A3A2A1 -> (3) 00 78 F0
+    hf 15 reader                                    -> E0 04 01 10 A1 A2 A3 A4
+
+**Every prediction, exactly.** The predictions were committed in `73e9d76` before the first frame,
+so this is a test rather than an explanation.
+
+- **An ADDRESSED write to block 56 is accepted** — `00 78 F0`, the same answer the unaddressed form
+  gets on this chip.
+- **The UID moved to precisely the predicted value.** `AA BB CC DD` into block 56 comes back as the
+  UID's last four printed bytes REVERSED, `DD CC BB AA`, which is the `uid[7..4]` mapping
+  `iso15693_poller_predict_uid` computes. The value the app would have predicted is the value the
+  card produced.
+- **The address is ENFORCED.** One byte wrong — `E0` to `E1` in the last wire byte — and the card
+  says nothing, bracketed by a reader either side that shows it present and answering throughout
+  (BENCH-RULE 2b). So the silence is a refusal, not an absence, and the acceptance above is the card
+  MATCHING the address rather than ignoring the flag (BENCH-RULE 2).
+- **THE RE-ADDRESS SEAM WORKS, in miniature.** The restore is addressed to the UID the previous
+  write PRODUCED, and it is accepted. That is exactly what the app does between block 56 and block
+  57: write 56, take the new address, address the next frame to it. The one thing addressing this
+  sequence costs is the one thing this line exercises.
+
+**What it does NOT yet settle.** Whether this card is `SL2S5302`. The whole reason SLIX-S goes first
+is that its 40-block claim keeps the wipe's sweep away from block 56, so no addressed frame has ever
+reached that register on SLIX-S silicon; on NXP SLIX the clone's conversion path has already done it.
+If this was a SLIX, the card that could kill the change is still untested.
+
+### The Flipper run
+
 _Not run yet._
