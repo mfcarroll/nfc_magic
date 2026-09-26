@@ -18,7 +18,11 @@ because an earlier note asserts it. The recurring failure is a sentence that was
 ## Pass 1 — mechanical, and they are cheap
 
     (cd tools/hosttest && make clean && make)            168 tests, 0 failed
-    clang-format --dry-run --Werror on every shipped .c/.h
+    clang-format --dry-run --Werror on every shipped .c/.h    95 files, 0 need formatting
+      NOT the bare command -- it is not on PATH and this repo has no .clang-format, so the
+      bare form reports ALL 95 as dirty. Use the toolchain's, with the firmware's style file:
+      ../Momentum-Firmware/toolchain/current/bin/clang-format \
+        --style=file:../Momentum-Firmware/.clang-format --dry-run --Werror <file>
     tools/check-writing.py comments <every shipped .c/.h>
     tools/check-writing.py forkmsg .notes/pr-round-15/fork-messages
     tools/check-drafts.py .notes/pr-round-15/reply.md
