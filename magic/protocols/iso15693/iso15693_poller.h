@@ -103,7 +103,8 @@ void iso15693_poller_start_write_uid(
 // Writes the destructive gen1 sequence -- ordinary WRITE BLOCK into blocks 56/57/62/63, the four
 // registers the rest of this header calls the gen1 registers (ISO15693_MAGIC_BLK_* in the .c says which
 // is which). ANY writable tag accepts an ordinary write, so on a non-magic tag this destroys four
-// blocks of user data. A Write-UID has no payload to follow, so a verified UID is a clean Success.
+// blocks of user data. ADDRESSED, so the tag that loses them is the one the run activated and not any
+// other in the field -- which is what a caller's consent text can promise and what it cannot. A Write-UID has no payload to follow, so a verified UID is a clean Success.
 // Emits CardDetected, then Success, Fail (the gen1 UID didn't take) or CardLost. The sequence goes out
 // before anything is verified, so a Fail still carries gen1_attempted -- see that field for what the
 // caller then owes the user. Hardware-validated across three chips -- ISO15693_MAGIC_BLK_UNLOCK in

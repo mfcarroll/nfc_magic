@@ -186,9 +186,10 @@ Iso15693_3Error
     return Iso15693_3ErrorNone;
 }
 
-// The magic backdoor UID arrives as two frames carrying half the UID each, so hold them until both have
-// landed. uid[0] is the MSB, and the block named 7654 carries uid[7..4] -- see the frame layout comments
-// in iso15693_poller.c.
+// The gen2 backdoor UID arrives as two frames carrying half the UID each, so hold them until both have
+// landed. uid[0] is the MSB, and the register named 7654 carries uid[7..4] -- see the frame layout
+// comments in iso15693_poller.c. gen1 does NOT come through here: each of its halves takes effect on
+// its own, immediately, which is the hazard the re-address exists for.
 static uint8_t staged_uid[ISO15693_3_UID_SIZE];
 static bool staged_low; // blocks named 7654 -> uid[7..4]
 static bool staged_high; // blocks named 3210 -> uid[3..0]
@@ -215,10 +216,11 @@ static void fake_stage_uid_half(bool is_7654, const uint8_t* d) {
 // uid[7..4] and block 57 uid[3..0], each takes effect on its own, and an inventory in the same field
 // session already returns the changed UID. Measured on NXP ICODE SLIX and ST LRi2K.
 //
-// Deliberately NOT the staging the gen1 BACKDOOR path below uses. That one holds both halves until a
-// power-cycle, which is stricter than the hardware on purpose (see gen1_uid_pending in fake_tag.h);
-// this one is the hazard itself -- the card's identity moving out from under a pass that is still
-// running -- and deferring it would model the opposite of what was measured.
+// EVERY gen1 write to 56/57 lands here now, the backdoor sequence's own included, because addressing
+// that sequence made it the same frame as a data-block write and the card cannot tell them apart
+// either. Deliberately NOT the staging above: this is the hazard itself -- the card's identity moving
+// out from under a pass that is still running -- and deferring it would model the opposite of what
+// was measured.
 static void fake_apply_uid_half_now(bool is_7654, const uint8_t* d) {
     uint8_t uid[ISO15693_3_UID_SIZE];
     memcpy(uid, fake_tag.uid, sizeof(uid));
@@ -265,6 +267,34 @@ static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) 
         bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_ERROR);
         bit_buffer_append_byte(rx, ISO15693_3_RESP_ERROR_OPTION);
         return Iso15693_3ErrorNone;
+    }
+
+    // THE GEN1 BACKDOOR REGISTERS, decided before the block table because the table only knows about
+    // memory. On real gen1 silicon these four addresses are OUTSIDE the memory map -- measured on all
+    // three gen1 chips, they answer no read at any point, and the advertised count enumerates memory
+    // only, which is how a 28-block card still has them. Where the address IS memory here the table
+    // keeps its answer: that is the 64-block gen1 fixture the sweep-hazard tests are written against,
+    // a card that does not exist on the bench and is not meant to.
+    //
+    // They arrive here at all because the app's gen1 sequence is ADDRESSED now, so on the wire it is
+    // indistinguishable from a data-block write to the same address -- which is also true of the card,
+    // and is why it behaves the same way to both.
+    if(fake_tag.is_gen1_magic && !fake_block_answers(block)) {
+        if(block == 0x38 || block == 0x39) {
+            fake_tag.writes_accepted++;
+            fake_apply_uid_half_now(block == 0x38, data);
+            bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_NONE);
+            return Iso15693_3ErrorNone;
+        }
+        if(block == 0x3E || block == 0x3F) {
+            // REFUSED, in band, and never once accepted on any card in this project: `0x10` block-
+            // unavailable from the ST LRi2K, `0x0F` unknown error from both NXP parts. Modelled as
+            // the LRi2K's, since only one of them can be the fake's and the app's response parse
+            // maps both to a refusal it ignores here anyway.
+            bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_ERROR);
+            bit_buffer_append_byte(rx, ISO15693_3_RESP_ERROR_BLOCK_UNAVAILABLE);
+            return Iso15693_3ErrorNone;
+        }
     }
 
     if(!fake_block_answers(block) || fake_tag.kind[block] == FakeBlockLocked) {
@@ -365,20 +395,11 @@ Iso15693_3Error iso15693_3_poller_send_frame(
 
     if(buf->data[0] != 0x02) return Iso15693_3ErrorNone;
 
-    // gen1: 02 21 <block> d0 d1 d2 d3
-    if(buf->data[1] == 0x21 && buf->size >= 7) {
-        const uint8_t block = buf->data[2];
-        if(block == 0x38 || block == 0x39) {
-            if(fake_tag.is_gen1_magic) fake_stage_uid_half(block == 0x38, &buf->data[3]);
-            if(fake_tag.is_gen1_magic && staged_low && staged_high) {
-                // Deferred to the power-cycle on purpose, not because hardware defers it; see
-                // gen1_uid_pending in fake_tag.h.
-                fake_tag_arm_gen1_uid(staged_uid);
-                staged_low = staged_high = false;
-            }
-        }
-        return Iso15693_3ErrorNone;
-    }
+    // An UNADDRESSED gen1 backdoor write -- 02 21 <block> ... -- is a frame this app no longer sends,
+    // so nothing is modelled for it. A real gen1 card does act on one: the UID moves just the same,
+    // measured, and that is why leaving the sequence unaddressed was a bystander hazard rather than a
+    // harmless quirk. Anything arriving here in that form is a regression in the poller, not a card
+    // behaviour, and the tests that would catch it assert on the frame bytes instead.
 
     // gen2: 02 E0 09 <ref> d0 d1 d2 d3
     if(buf->data[1] == 0xE0 && buf->size >= 8 && buf->data[2] == 0x09) {
@@ -401,6 +422,8 @@ void fake_tag_set_uid_now(const uint8_t* uid) {
     memcpy(fake_tag.uid, uid, ISO15693_3_UID_SIZE);
 }
 
+// A card that arrived already armed -- see gen1_uid_pending in fake_tag.h. Callable only from a test;
+// no frame reaches it.
 void fake_tag_arm_gen1_uid(const uint8_t* uid) {
     memcpy(fake_tag.gen1_pending_uid, uid, ISO15693_3_UID_SIZE);
     fake_tag.gen1_uid_pending = true;

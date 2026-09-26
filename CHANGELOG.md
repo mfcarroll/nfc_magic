@@ -112,6 +112,16 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **The clone's identity writes are addressed too.** **WRITE AFI** and **WRITE DSFID** are *standard*
   commands, so an unaddressed one lands on a tag of any size, and a changed AFI can drop that tag out
   of a selective inventory.
+- **So is the gen1 backdoor sequence**, which was the most exposed frame set left. Its four frames are
+  ordinary **WRITE BLOCK**s aimed at blocks 56/57/62/63, and on any tag that large those are user
+  data — sent behind an opt-in whose warning is about the card in your hand, not a second one in the
+  field. Addressing them also turns out to be what makes the card *answer*: at block 62 an
+  unaddressed write gets silence from **NXP ICODE SLIX** and **SLIX-S** while the addressed one gets a
+  refusal you can read, and a UID one byte wrong gets silence again. **ST LRi2K** answers either form.
+  The two frames the sequence opens with are addressed on the same grounds, although no card here has
+  ever accepted one in any form. Writing block 56 moves the card's UID at once, so the sequence
+  re-reads the address before sending block 57 — without that, the second half would be sent to a card
+  that has already stopped listening.
 - **A clone that finds it is writing into a gen1 card's UID repairs it.** The gen2 check passes
   whenever the card already carries the UID being written, because then it only proves the UID
   matches — not that anything magic happened. On a **gen1** card, that let the file's blocks 56/57
@@ -149,11 +159,12 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   zeroing those on an un-finalized card **bricks it permanently**: the cost is the card, not just its
   identity. Stated on their authority rather than ours: no gen3 card exists on either side of this PR,
   so nothing here has been observed. Tracked as #255.
-- **The gen1 and gen2 backdoor sequences are still unaddressed**, and with two tags present the
-  post-wipe UID re-read can still answer with the bystander's UID rather than the card's — which
-  addressing cannot fix, since that read exists to find out whether the UID changed and so cannot be
-  aimed at a UID already in doubt. Keep one tag in the field at a time; a badge holder or a wallet is
-  enough to break this. Tracked as #251.
+- **The gen2 backdoor sequence is still unaddressed**, and cannot usefully be addressed: its command
+  is proprietary, so a tag that is not a gen2 magic card rejects it on the command rather than on the
+  address. And with two tags present the post-wipe UID re-read can still answer with the bystander's
+  UID rather than the card's — which addressing cannot fix, since that read exists to find out whether
+  the UID changed and so cannot be aimed at a UID already in doubt. Keep one tag in the field at a
+  time; a badge holder or a wallet is enough to break this. Tracked as #251.
 
 ## 2.2
 

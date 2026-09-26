@@ -47,14 +47,15 @@ typedef struct {
     // the sweep into ISO15693_POLLER_PASS_MAX_MS.
     uint32_t tick_cost_per_op;
 
-    // The fake holds a gen1 UID write until the next power-cycle. That is DELIBERATELY STRICTER than
-    // the hardware, and no longer models it: measured on one card of each of three chips -- ST LRi2K,
-    // NXP ICODE SLIX-S, NXP ICODE SLIX -- an inventory in the SAME field session as the write already
-    // returns the new UID, so there is no latch to model. The pessimistic version is kept because it
-    // makes a UID verify that skips its reset fail here rather than pass by luck.
-    // The poller's reason for the reset is a clean re-activation, not a latch; see
-    // ISO15693_MAGIC_BLK_UNLOCK in iso15693_poller.c.
-    // Set by fake_tag_arm_gen1_uid(); applied by fake_tag_power_cycle().
+    // A card that ARRIVES already armed: a UID change some earlier session staged, which this field
+    // session did not cause and cannot see until the next power-up. A fixture, set only by a test
+    // calling fake_tag_arm_gen1_uid() and applied by fake_tag_power_cycle().
+    //
+    // NOT a latch, and no longer reachable from a frame. Measured on one card of each of three chips
+    // -- ST LRi2K, NXP ICODE SLIX-S, NXP ICODE SLIX -- an inventory in the SAME field session as the
+    // write already returns the new UID, so a write this session sends takes effect at once; see
+    // fake_apply_uid_half_now. The poller's reason for its reset is a clean re-activation rather than
+    // a latch, which is what run_log.resets asserts instead.
     bool gen1_uid_pending;
     uint8_t gen1_pending_uid[ISO15693_3_UID_SIZE];
 

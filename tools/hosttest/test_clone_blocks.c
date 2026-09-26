@@ -593,8 +593,9 @@ static void test_a_gen1_card_on_the_gen2_path_converts_and_repairs(void) {
     CHECK_EQ(inst.clone_blocks_total, 60); // 64 less the four registers
     CHECK_EQ(inst.clone_failed_count, 0);
 
-    // The fixture holds a gen1 UID write until the next power-cycle, which is stricter than the
-    // hardware on purpose (see gen1_uid_pending). The repair's effect is visible on the far side.
+    // Power-cycled before the check for the same reason the poller resets: the repair is verified on a
+    // freshly activated card, not on the one whose identity moved mid-pass. The fake applies a gen1
+    // UID write at once, so this is about reading it the way the app does rather than about a latch.
     fake_tag_power_cycle();
     CHECK(memcmp(fake_tag.uid, target, ISO15693_3_UID_SIZE) == 0);
     end();

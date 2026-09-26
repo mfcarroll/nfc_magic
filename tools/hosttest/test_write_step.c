@@ -239,11 +239,13 @@ static void test_uid_moved_somewhere_unexpected(void) {
 
 // ---- the gen1 opt-in -----------------------------------------------------------------------------
 
-// gen1 writes the UID with ordinary WRITE BLOCKs into 56/57/62/63 and the card latches it only on the
-// next power-up. So the verify has to sit behind a reset -- read inline it would see the old UID and
-// report failure on exactly the card gen1 works on.
-static void test_gen1_uid_latches_on_the_power_cycle(void) {
-    begin("gen1 latches its UID on the field reset, and the verify sees it");
+// gen1 writes the UID with ordinary WRITE BLOCKs into 56/57/62/63, and the verify sits behind a field
+// reset. NOT because the card latches -- measured on three chips, it does not; the reset is there to
+// re-activate cleanly and read a card whose identity has just moved out from under the session. The
+// reset count is asserted rather than inferred, because the fake now moves the UID immediately and so
+// cannot fail a verify that skipped it.
+static void test_gen1_uid_takes_and_the_verify_sits_behind_a_reset(void) {
+    begin("a gen1 UID write takes, and its verify runs behind a field reset");
     fake_tag_init(64, 64, 4);
     fake_tag.is_gen1_magic = true;
     fake_tag.is_gen2_magic = false;
@@ -496,7 +498,7 @@ int main(void) {
     test_non_magic_tag_reports_not_gen2();
     test_write_uid_matching_current_is_unverifiable();
     test_uid_moved_somewhere_unexpected();
-    test_gen1_uid_latches_on_the_power_cycle();
+    test_gen1_uid_takes_and_the_verify_sits_behind_a_reset();
     test_gen1_failure_still_reports_the_spent_attempt();
     test_wipe_verifies_the_uid_unchanged();
     test_wipe_on_an_armed_gen1_card_reports_the_uid_change();
