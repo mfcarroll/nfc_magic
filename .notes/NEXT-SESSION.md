@@ -16,6 +16,50 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ OPEN, RAISED BY MFCARROLL 2026-09-26 — IS THE GEN2 BACKDOOR AN OVERSIGHT?
+
+**It is NOT addressed.** `iso15693_poller_build_gen2_frame` sends `02 E0 09 <ref> d0 d1 d2 d3` --
+flags `0x02`, unaddressed. The reason given at `ISO15693_MAGIC_FLAGS`, again at WHAT REMAINS
+UNADDRESSED, and in the 2.3 notes is that `0xE0` is proprietary, so "a conforming tag rejects it on
+the command and there is no standard frame for a bystander to take."
+
+**That argument covers CONFORMING tags only, and this app exists for the others.** Another gen2
+ISO15693 magic card in the field parses `0xE0 0x09` exactly as the target does. It would take the
+UID write AND the CFG frame, which reprograms block count, block size and IC reference -- a heavier
+payload than gen1's four blocks, on the one population likely to be carrying two magic cards.
+
+**Whether it CAN be addressed is untested, not impossible.** ISO15693-3 makes ADDRESSED a
+request-level flag and the conforming placement would be `22 E0 <uid x8> 09 <ref> d0..d3`, but a
+backdoor is not a conforming implementation and only the silicon says whether its parser honours the
+flag. **The test is two frames on `gen-2-card`** -- addressed with the right UID, then one byte
+wrong -- and it is reversible by re-cloning.
+
+**This is the same shape the round already reversed once**: the gen1 sequence carried a comment
+saying addressing it was unmeasured, mfcarroll challenged it, and the evidence was already there.
+Here the claim is stronger -- "cannot usefully be otherwise". Defensible: the risk is narrower,
+because only another gen2 magic card can act on them. Not defensible as it stands.
+
+**mfcarroll's call 2026-09-26: fix after the review.** Behavioural, so it needs its own sync point
+and a bench; the round is not final until it is settled.
+
+## ⚠️ SAFETY BRANCH FOR THE REVIEW FOLD — `wip-pre-review-fixes`
+
+Created 2026-09-26 before folding two review corrections into the commits that wrote the text.
+`5438061^..HEAD` was rewritten with `git filter-branch --tree-filter`, which is tree-level and so
+cannot produce the conflict markers a patch-level rebase produced earlier in this round.
+
+    git diff wip-pre-review-fixes HEAD -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+
+**Must show ONLY the two fixes** -- the CHANGELOG's OPTION bullet and the poller's unlock tally.
+Verified after the fold. **Sync points 07 and 08 have NEW SHAs** (`dcee20c`, `853855c`); 01-06 sit
+below the rewrite and are unchanged. The `.msg` filenames and the README table were renamed with
+them.
+
+⚠️ **THE FORK IS STALE.** `nfc-magic-iso15693` still holds the eight commits built from the OLD
+anchors. It needs `replay-to-fork.sh` re-run before any push -- which rewrites all eight, so it waits
+on mfcarroll.
+
 ## ⚠️ SAFETY BRANCH FOR THE RELEASE-NOTES MOVE — `wip-pre-notes-move`
 
 Created 2026-09-26 before stripping CHANGELOG.md from every commit in the round and adding it back
@@ -100,27 +144,27 @@ timeout path cannot be told from a quiet pass by hand. Harness and mutants cover
 Recorded because a stale belief about what the device is running has cost a bench session here
 before, and because the `experiment-eof-frame` build was on it earlier the same day.
 
-| | |
-|---|---|
-| `32f80be` | data-block writes carry the card's address |
-| `3327ad3` | the OPTION flag, and the acknowledgement it costs |
-| `0fd69e8` | the gen1 loss claim is made only where there was a loss |
-| `3fc118c` | the clone's identity writes are addressed, and take the OPTION flag |
-| `b2cce0b` | gen1 clones do not reproduce geometry, and the Partial claim is conditional |
-| `7aa3baa` | a clone that lands in a gen1 card's UID repairs it |
-| `bf5eea8` | a clone reports what it left on the card |
-| `7e1f2c6` | name the halves that differ, and do not read a register as capacity |
-| `e8de630` | the notes page says what the user can act on |
-| `89f3916` | why the clone reacts to the registers instead of predicting them |
-| `bd97fb7` | the size note says what the card reports before what it is |
-| `f11292f` | the size note names the file where the two counts agree |
-| `b9410ce` | the gen1 backdoor sequence carries the card's address |
-| `428adac` | the self-review's first pass -- five stale claims the addressing left behind |
-| `4f8765e` | the wipe hazard is every gen1 card, not one someone armed |
-| `54391db` | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `8ad18f9` | pass 2 -- a contradiction in the release notes, and three mangled wraps |
-| `2f516e6` | rewrap the residue bullet, which my own fix left at 121 characters |
-| `c5268ea` | the wipe's open question points at the evidence instead of repeating it |
+| dev | sync | |
+|---|---|---|
+| `748ba94` | 01 | data-block writes carry the card's address |
+| `c22389e` | 02 | the OPTION flag, and the acknowledgement it costs |
+| `71eb1e6` | 03 | the gen1 loss claim is made only where there was a loss |
+| `018921a` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `e64c0b2` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `c0d5786` |  | a clone reports what it left on the card |
+| `bafe828` |  | name the halves that differ, and do not read a register as capacity |
+| `61a5c72` |  | the notes page says what the user can act on |
+| `9788560` |  | why the clone reacts to the registers instead of predicting them |
+| `c5bd5d6` |  | the size note says what the card reports before what it is |
+| `a6a5e9a` | 06 | the size note names the file where the two counts agree |
+| `cf83484` |  | the gen1 backdoor sequence carries the card's address |
+| `cad5568` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `fe9c23c` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `a828406` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `3087c32` |  | the wipe's open question points at the evidence instead of repeating it |
+| `07db98c` |  | TI enforces the address too, and the gold tag has gen3's UID register |
+| `dcee20c` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `853855c` | 08 | the 2.3 release notes for this round |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
