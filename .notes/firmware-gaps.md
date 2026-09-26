@@ -138,6 +138,23 @@ others. A byte count could not have shown either.
 So the acknowledgement is real, it is correct, and it distinguishes a landed write from a refused one
 without touching the card's memory. **That is Gap 2 closed at the source rather than worked around.**
 
+### The EOF restores the normal shape — it does not add a capability
+
+Worth stating plainly, because "only TI needs this" invites the question of what the other chips do
+instead. They answer inline. `iso15693_poller_write_block_addressed` sends the frame and receives in
+ONE transaction: the response lands in `frame_rx` and `parse_write_response` reads its flags byte.
+That response is `00 78 F0` — the same bytes the EOF fetched from the TI card. Nothing logs it
+because a write succeeding is unremarkable.
+
+So the EOF is not a new capability for most cards. It puts the ONE card that defers its answer back
+into the shape every other card already uses, which is why the bytes corroborated against proxmark
+transcripts taken from entirely different chips.
+
+And note the order in the log, which is mildly perverse: the TI card ANSWERS the first write — with
+the `0x03` refusal that tells us to set OPTION — and stops answering once we comply. It is talkative
+right up until we do as it asked. The silence is not obstruction; 10.3.1 has it holding the response
+for an EOF.
+
 ### It is not 100% per attempt, and that matters for any implementation
 
 **9 of 96 probes timed out** (blocks 7, 16, 17, 18, 30, 32, 34, 36, 38). All but one answered on the
