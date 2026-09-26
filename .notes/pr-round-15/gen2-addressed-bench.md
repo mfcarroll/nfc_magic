@@ -23,16 +23,50 @@ backdoor is not a conforming implementation; only the silicon says.
 **Close the Flipper CLI and any other pm3 session** before the first frame. The port is exclusive and
 a busy port looks exactly like a card that refuses everything.
 
-## The cards — three, and two are TI silicon
+## The cards — READ 2026-09-26, and all three differ from the inventory
 
-| card | UID as inventoried | chip from the UID | note |
-|---|---|---|---|
-| `black-tag` | `E0 07 81 B8 AF 14 42 07` | `E0 07` = Texas Instruments | 64 blocks |
-| `white-coin` | `E0 07 80 3D E2 E7 3A 29` | `E0 07` = Texas Instruments | 64 blocks, TI Tag-it HF-I Plus |
-| `gen-2-card` | **READ IT FIRST** | unknown -- only ever worn a cloned UID | left advertising 256 blocks against 64 physical |
+**Every one is wearing a UID from an earlier test**, so the frames below were generated from what
+each card answers NOW, not from `tools/tag-inventory.json`.
 
-**`gen-2-card`'s UID is whatever was last cloned onto it, so read it before generating frames.**
-Identify each card by its tape, not by what it answers.
+| card | UID it wears now | reports | probe used | note |
+|---|---|---|---|---|
+| `gen-2-card` | `E0 04 01 10 A1 A2 A3 A4` | 28 blocks, IC ref 0x03 | `11223344` | back to 28 -- the 256-block fixture is undone |
+| `white-coin` | `E0 07 80 3D E2 E7 3A 29` | 64 blocks, IC ref 0x8B | `55667788` | its own baseline UID; block 8 already clean |
+| `black-tag` | `E0 04 01 10 E1 E2 E3 E4` | 70 blocks, IC ref 0x0F | `99AABBCC` | over-claims; blocks 0-1 hold the credential clone |
+
+**A DIFFERENT PROBE VALUE PER CARD**, because `gen-2-card` and `black-tag` both wear `E0 04 01 10`
+and a shared probe would make two transcripts indistinguishable.
+
+### What the type lines do NOT say
+
+A first draft of this sheet called `black-tag` and `white-coin` "TI silicon by their UID prefix".
+**That is reading a UID-decoded type line as silicon -- the error this round corrected twice**, once
+in the release notes and once for `gen-2-card`. `black-tag` presents as NXP SLIX right now because
+that is what it is wearing; its baseline capture says `E0 07`, and a baseline is only the first
+thing this project saw, not a factory reading.
+
+What is actually known, and it is behavioural rather than decoded:
+
+- **`white-coin` refuses a WRITE BLOCK with OPTION clear** and answers with OPTION set -- the
+  measurement the whole OPTION finding rests on. That is TI behaviour observed, not a prefix read.
+- **`black-tag` also refuses unaddressed WRITE BLOCK** where `gen-2-card` accepts it, recorded in
+  the inventory as the contrast #251 was filed around. Same refusal, so the same reading is
+  plausible; it is not the same evidence.
+- **`gen-2-card`'s silicon is unknown and the inventory says so in as many words.** It has never had
+  a read that predates a write.
+
+So: three CARDS, one chip identified behaviourally, one plausible, one unknown (BENCH-RULE 3).
+
+### Two shelf facts this read settles
+
+- **`gen-2-card` is no longer advertising 256 against 64.** It reports 28 and reads 28, so it was
+  re-cloned from the 28-block source and the CFG frame fixed the geometry. The warning at the head
+  of NEXT-SESSION is spent.
+- **`white-coin` block 8 reads `00 00 00 00`.** The restore written down after the addressed-write
+  bench and never confirmed is not outstanding; the whole card is zeros.
+- ⚠️ **`gen-2-card` and `SL2S5302` now share `E0 04 01 10 A1 A2 A3 A4`.** One card on the antenna at
+  a time, identified by its tape. It is also a neat illustration of why addressing does not close
+  #251: a 1-slot inventory cannot tell those two apart.
 
 ## ⚠️ THE HAZARD, and the pre-flight that bounds it
 
@@ -78,6 +112,82 @@ Then 5 and 6 from the tool, **addressed+OPTION and unaddressed+OPTION**, on the 
 sends the gen2 backdoor with OPTION clear and gen2 cloning works on TI silicon, so `0xE0` evidently
 needs no OPTION where `0x21` does -- worth confirming rather than assuming, since the round's whole
 OPTION finding came from one card wanting a flag nobody expected.
+
+## THE FRAMES, generated 2026-09-26 from the live UIDs
+
+Regenerate rather than copy if a card has moved since: `tools/gen2-addressed-frames.py <uid> --probe <4 bytes>`.
+
+### `gen-2-card`
+
+```
+  UID as printed      E0 04 01 10 A1 A2 A3 A4
+  on the wire         A4A3A2A1100104E0   (least significant byte first)
+  block 0x40 holds    A4A3A2A1   <- restore value, uid[7] uid[6] uid[5] uid[4]
+
+  1  positive control, the form the app sends today -- expect an answer, UID moves
+     hf 15 raw -ackw -d 02E0094011223344
+     UID should become   E0 04 01 10 44 33 22 11
+  2  restore, unaddressed -- always works, no re-address seam to worry about
+     hf 15 raw -ackw -d 02E00940A4A3A2A1
+  3  THE MEASUREMENT: addressed, correct UID, no OPTION
+     hf 15 raw -ackw -d 22E0A4A3A2A1100104E0094011223344
+  4  THE DISCRIMINATOR: addressed, UID one byte wrong -- must NOT move the UID
+     hf 15 raw -ckw  -d 22E0A4A3A2A1100104E1094011223344
+  5  addressed + OPTION, correct UID   (TI silicon wants OPTION on standard writes)
+     hf 15 raw -ackw -d 62E0A4A3A2A1100104E0094011223344
+  6  unaddressed + OPTION, correct UID
+     hf 15 raw -ackw -d 42E0094011223344
+  restore after ANY of 3-6 that moved it
+     hf 15 raw -ackw -d 02E00940A4A3A2A1
+```
+
+### `white-coin`
+
+```
+  UID as printed      E0 07 80 3D E2 E7 3A 29
+  on the wire         293AE7E23D8007E0   (least significant byte first)
+  block 0x40 holds    293AE7E2   <- restore value, uid[7] uid[6] uid[5] uid[4]
+
+  1  positive control, the form the app sends today -- expect an answer, UID moves
+     hf 15 raw -ackw -d 02E0094055667788
+     UID should become   E0 07 80 3D 88 77 66 55
+  2  restore, unaddressed -- always works, no re-address seam to worry about
+     hf 15 raw -ackw -d 02E00940293AE7E2
+  3  THE MEASUREMENT: addressed, correct UID, no OPTION
+     hf 15 raw -ackw -d 22E0293AE7E23D8007E0094055667788
+  4  THE DISCRIMINATOR: addressed, UID one byte wrong -- must NOT move the UID
+     hf 15 raw -ckw  -d 22E0293AE7E23D8007E1094055667788
+  5  addressed + OPTION, correct UID   (TI silicon wants OPTION on standard writes)
+     hf 15 raw -ackw -d 62E0293AE7E23D8007E0094055667788
+  6  unaddressed + OPTION, correct UID
+     hf 15 raw -ackw -d 42E0094055667788
+  restore after ANY of 3-6 that moved it
+     hf 15 raw -ackw -d 02E00940293AE7E2
+```
+
+### `black-tag`
+
+```
+  UID as printed      E0 04 01 10 E1 E2 E3 E4
+  on the wire         E4E3E2E1100104E0   (least significant byte first)
+  block 0x40 holds    E4E3E2E1   <- restore value, uid[7] uid[6] uid[5] uid[4]
+
+  1  positive control, the form the app sends today -- expect an answer, UID moves
+     hf 15 raw -ackw -d 02E0094099AABBCC
+     UID should become   E0 04 01 10 CC BB AA 99
+  2  restore, unaddressed -- always works, no re-address seam to worry about
+     hf 15 raw -ackw -d 02E00940E4E3E2E1
+  3  THE MEASUREMENT: addressed, correct UID, no OPTION
+     hf 15 raw -ackw -d 22E0E4E3E2E1100104E0094099AABBCC
+  4  THE DISCRIMINATOR: addressed, UID one byte wrong -- must NOT move the UID
+     hf 15 raw -ckw  -d 22E0E4E3E2E1100104E1094099AABBCC
+  5  addressed + OPTION, correct UID   (TI silicon wants OPTION on standard writes)
+     hf 15 raw -ackw -d 62E0E4E3E2E1100104E0094099AABBCC
+  6  unaddressed + OPTION, correct UID
+     hf 15 raw -ackw -d 42E0094099AABBCC
+  restore after ANY of 3-6 that moved it
+     hf 15 raw -ackw -d 02E00940E4E3E2E1
+```
 
 ## PREDICTIONS, committed before the run
 

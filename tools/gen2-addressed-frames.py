@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """Build the pm3 frames for the gen2 addressed-backdoor bench, from a UID as `hf 15 reader` prints it.
 
-    tools/gen2-addressed-frames.py E0 07 81 B8 AF 14 42 07
-    tools/gen2-addressed-frames.py E00781B8AF144207
+    tools/gen2-addressed-frames.py E0 04 01 10 A1 A2 A3 A4
+    tools/gen2-addressed-frames.py E0040110A1A2A3A4 --probe 11223344
+
+THE UID MUST BE THE ONE THE CARD WEARS RIGHT NOW, read with `hf 15 reader` in this session -- not
+the one the inventory records. Every gen2 card on this shelf has worn a cloned UID at some point,
+and an address taken from a stale record names a card that is not in the field: the write meets
+silence and reads exactly like the refusal the bench is looking for. Use --probe to give each card
+a distinct target so two transcripts can never be confused.
 
 THE QUESTION. Every gen2 backdoor frame this app sends is UNADDRESSED -- `02 E0 09 <ref> d0..d3`.
 The reason given in the poller and the release notes is that 0xE0 is proprietary, so a conforming
@@ -103,7 +109,16 @@ def main(argv):
     if not argv:
         print(__doc__)
         return 1
-    raw = "".join(argv).replace(" ", "")
+    probe = b"\xAA\xBB\xCC\xDD"
+    args = list(argv)
+    if "--probe" in args:
+        i = args.index("--probe")
+        probe = bytes.fromhex(args[i + 1])
+        del args[i:i + 2]
+        if len(probe) != 4:
+            print("--probe needs 4 bytes")
+            return 1
+    raw = "".join(args).replace(" ", "")
     try:
         uid = bytes.fromhex(raw)
     except ValueError:
@@ -112,7 +127,7 @@ def main(argv):
     if len(uid) != 8:
         print("need 8 UID bytes, got %d" % len(uid))
         return 1
-    frames(uid)
+    frames(uid, probe)
     return 0
 
 
