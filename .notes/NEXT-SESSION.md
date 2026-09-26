@@ -16,7 +16,27 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
-## ⚠️ TWO SAFETY BRANCHES — `wip-pre-unaddressed-fold` is the later one
+## ⚠️ SAFETY BRANCH FOR THE REPAIR REORDER — `wip-pre-repair-reorder` = `1c85d7428d5d20480f14ea7088a01023966018bb`
+
+Created 2026-09-26 before moving `628eede` (the gen1-card repair) ahead of `bbf3b77` (the clone
+survey), so the repair can be its own fork sync point instead of being buried inside a commit titled
+"what a clone leaves behind". The two are ADJACENT in the file, not coupled: the repair references no
+survey symbol at all.
+
+**THE CHECK, and it is robust to this file moving under it** -- recording a tip changes the tip, so
+do not chase a tree hash. The branch name is authoritative:
+
+    git diff wip-pre-repair-reorder <new HEAD> -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+
+**That must be EMPTY.** The reorder changes the ORDER of the shipped work and nothing else, which is
+what keeps the hardware bench standing. If it is not empty, something was lost:
+`git reset --hard wip-pre-repair-reorder`.
+
+Written HERE and COMMITTED before the rebase, because a previous session recorded branch tips in an
+uncommitted edit and lost them to a `reset --hard` made for an unrelated reason.
+
+## ⚠️ TWO OLDER SAFETY BRANCHES — `wip-pre-unaddressed-fold` is the later one
 
 `wip-pre-unaddressed-fold` holds the round as it stood before the stale-comment fold of
 2026-09-26; the SHAs below are from AFTER it. The older one:
