@@ -223,13 +223,15 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
 
 ## WHAT IS LEFT, in the order to take it
 
-1. **BENCH `b312653` ON THE THREE GEN1 CARDS.** The code is written and tested; what is untested is
-   the hardware, and the risk is the one the change creates -- addressing breaks a sequence that
-   worked. `lri2k-keychain`, `slix-1k-50x28`, `SL2S5302`. A gen1 Write-UID on each: the UID must land
-   WHOLE. Half a UID is exactly what a broken re-address produces, so a partial move is the failure
-   signature to watch for, not silence.
+1. ~~**BENCH `b312653`**~~ **DONE 2026-09-26 and it PASSES** --
+   [pr-round-15/gen1-addressed-bench.md](pr-round-15/gen1-addressed-bench.md) has the predictions,
+   committed before the first frame, and the transcripts. Plain Success and the WHOLE UID on all
+   three gen1 chips, plus the frames alone on `SL2S5302` -- the card that could have killed it, since
+   its 40-block claim had kept every addressed frame away from block 56 on SLIX-S silicon.
 
-   BENCH-RULE 0 first: close the CLI and the pm3 client before `./fbt launch`.
+   ⚠️ **THE THREE GEN1 CARDS ARE LEFT SHARING `E0 11 22 33 44 55 66 77`** unless the restore has since
+   been done. Indistinguishable to a 1-slot inventory while that holds. The values to go back to are
+   in the bench sheet; identify each card by its tape, not by what it answers.
 
 2. **THE SELF-REVIEW — PASS 1 IS DONE, 2026-09-26.** `9128500`, `5884a53`, `874c45f`, `c132e29`.
    What it found, all fixed: the reply still saying the backdoor sequences stay unaddressed; "five

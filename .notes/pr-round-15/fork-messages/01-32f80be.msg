@@ -23,7 +23,7 @@ registers, so the sweep's own zero-write moves the card's identity -- at once,
 with no power-cycle, measured on two chips. An address taken at activation is
 wrong from block 56 on: every later frame goes unanswered, the absent run
 trips, and the sweep reports a card shorter than the one in the field, on
-exactly the armed-gen1 path the UID check exists for. The re-address runs on
+exactly the gen1 path the UID check exists for. The re-address runs on
 the ATTEMPT rather than on a success, because a tag can apply a write without
 answering and this file declines that inference everywhere else. At most twice
 a sweep; 62/63 carry no UID and cost nothing.

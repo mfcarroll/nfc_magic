@@ -221,7 +221,7 @@ only ever worn a cloned UID, so the type line a reader prints for it describes w
 it rather than the chip underneath. The runs that decide it:
 
 - a **TI Tag-it** wipe and clone — the card that could not be written at all before this
-- an **armed gen1 ST LRi2K** wipe, where the UID moves under the sweep: 58/58 and the identity change
+- a **gen1 ST LRi2K** wipe, where the UID moves under the sweep: 58/58 and the identity change
   reported, unchanged from before, which is the point — the re-address is what stops the addressing
   from breaking that path
 - a **70-block source onto 64-block silicon**, on the second TI card, where the six blocks past the
@@ -231,6 +231,12 @@ it rather than the chip underneath. The runs that decide it:
   run now converts, the UID reads back intact, and it reports identically to the first
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, which is
   the residue case, and a **40-block SLIX-S** for the geometry one
+- **a gen1 Write UID on each of the three gen1 chips** for the backdoor addressing, to a target
+  differing in seven of its eight bytes: plain Success on all three and the whole UID read back, not
+  the half a broken re-address would leave. Beside it, on the SLIX-S, the frames alone — an addressed
+  write to block 56 accepted, the UID moving to exactly the value that write implies, a one-byte-wrong
+  address answered by nothing, and the restore addressed to the UID the first write produced, which
+  is the seam itself
 - unaddressed-write controls, to show nothing regressed: a full 64/64 wipe on the gen2 card and 28/28
   on a gen1 NXP SLIX
 
