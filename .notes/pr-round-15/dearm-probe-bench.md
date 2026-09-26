@@ -41,6 +41,29 @@ the antenna, not the UID.
 itself, so no hand-built frames are needed. It silently forces the OPTION flag for TI manufacturer
 bytes; none of these three is TI, so that does not apply here.
 
+## Starting states, recorded before any probe frame
+
+    lri2k-keychain    UID 00 00 00 00 00 00 00 00   DSFID 02
+    slix-1k-50x28     UID E0 04 01 10 5E ED 00 01   DSFID 00
+    SL2S5302          UID E0 04 01 10 A1 A2 A3 A4   DSFID 00
+
+Two wear cloned UIDs from earlier work; that is fine here, since the probe needs only a KNOWN
+starting value and a readable UID. **Restore each to the value above, not to its factory UID**, so
+the probe leaves every card where it found it.
+
+`lri2k-keychain` was the exception and was restored FIRST, to `E0 02 22 24 50 00 83 03`. Not
+tidiness: step B sends addressed frames, and addressing to an all-zero UID is a degenerate case — an
+odd result there would have been read as the backdoor refusing addressing when it was the zero UID
+all along, on the one card whose in-band `0x10` the whole belief rests on.
+
+    hf 15 wrbl --ua -b 56 -d 03830050    ( ok )
+    hf 15 wrbl --ua -b 57 -d 242202E0    ( ok )
+    hf 15 reader -> E0 02 22 24 50 00 83 03
+
+**That restore IS step A for this card** — two writes to the UID registers accepted, the UID moved,
+which is what "armed" means operationally. Its DSFID reads 02 against an original 00; restoring that
+needs a WRITE DSFID rather than a block write and has no bearing here.
+
 ## Step A — prove the card is armed. REVERSIBLE, and it must be able to fail
 
     hf 15 reader                                  note UID, call its top half U7654
