@@ -58,22 +58,21 @@ waiting for something we cannot send, the card that answers has decided.
 around, and much better to work around it than expand the scope of this to requiring a firmware
 upgrade, even if that means we aren't able to get the write acknowledgments back directly.
 
-We did build the missing call, to find out what it would cost. It is about six lines: the poller's
-encoder already writes SOF and EOF as literal bytes of the 1-of-4 stream, and the transmit path sends
-what it is handed with parity off, so a standalone EOF is a one-byte frame through the path the
-poller already uses — no transparent mode, no bit-banging. On a firmware branch carrying it, the TI
-card answers its writes: `00 78 F0` for a block that took, and `01 10 1E 06` for one past its
-capacity. One chip, and not proposed here.
+We did build it, to see what it would cost: about six lines, since the encoder already writes SOF and
+EOF as literal bytes and the transmit path sends what it is handed. On a branch carrying it, the TI
+card answers its writes directly — one frame instead of two, and the answer is the card's own rather
+than inferred. That last part matters more than the frame: a read-back cannot tell a write that took
+from a refused write to a block that already held the value.
 
-So the gap is real and the fix is small, but it is a firmware change and this app has to run on
-firmware that does not have it. A FAP resolves its API imports at load time, so it cannot carry a
-fallback keyed on the API version — naming a symbol the firmware lacks fails the whole load rather
-than degrading. The read-back is what works everywhere, and it is what ships.
+Not something this app can depend on, though. A FAP resolves its API imports at load time, so there
+is no fallback keyed on API version — naming a symbol the firmware lacks fails the whole load. So the
+read-back ships, and if that call ever lands in the minimum firmware supported here it replaces it
+outright.
 
 **Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and every
-one enforces the address — a UID one byte wrong gets nothing at all, on all five. The wipe retakes its address after writing 56 or 57,
-because on a gen1 card those two blocks are the UID and it moves immediately — measured on three
-chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
+one enforces the address — a UID one byte wrong gets nothing at all, on all five. The wipe retakes
+its address after writing 56 or 57, because on a gen1 card those two blocks are the UID and it moves
+immediately — measured on three chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
 absent run trips, and it reports a card shorter than the one in the field.
 
 **The clone's identity writes are addressed too.** WRITE AFI and WRITE DSFID are standard commands,
