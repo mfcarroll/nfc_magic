@@ -182,3 +182,43 @@ write to 62 is the discriminator between the two models, and no other card can r
 
 Decisive either way, which is what the card was kept for. The cost is low now: if accepted the card
 becomes armed, but it already behaves exactly as an armed card does, so nothing observable is lost.
+
+
+## The unlock write — SILENCE at either coding, and it settles nothing
+
+    hf 15 reader                            -> E0 11 22 33 44 55 66 91   (restored)
+    hf 15 raw    -ackw -d 02213E00000000    -> command failed
+    hf 15 reader                            -> E0 11 22 33 44 55 66 91
+    hf 15 raw -2 -ackw -d 02213E00000000    -> command failed
+    hf 15 reader                            -> E0 11 22 33 44 55 66 91
+
+Bracketed either side, so the silence is the card's answer and not an absence. Identical under
+1-of-256, so **the coding variable is eliminated** -- which also disposes of the retry-with-`-2`
+guard this sheet carried.
+
+**THE COIN DID NOT SETTLE THE QUESTION, and the plan is why.** It was designed for three outcomes --
+accepted, `01 10`, or card gone -- and the card supplied a fourth. Silence discriminates nothing: it
+is equally what a non-existent register does on a card that stays quiet, and what a committed one
+does. The one outcome that would have proved model (b) was an ACCEPTANCE, and there wasn't one.
+
+### What it did establish
+
+**Two cards, two different behaviours at block 62:**
+
+    lri2k-keychain     write to 62 -> 01 10 1E 06   in band, block unavailable
+    v1-coin-green18    write to 62 -> silence, both codings
+
+That retires an ambiguity this project has carried since the gen1 work -- "the client reported a
+failure that does not separate an error frame from silence". Here it genuinely is silence, measured
+with `hf 15 raw` and bracketed.
+
+**And model (b) is weaker for it.** If the registers existed and this card had never been committed,
+unlock should have been accepted. It was not. Either the sender committed it before posting, or the
+model is wrong. With four cards, zero acceptances of unlock or commit ever recorded, and a bare UID
+write that works on every one, **model (a) -- the registers are not there and those two frames do
+nothing -- is the better-supported reading.** Not proven. Better supported.
+
+### Still not a licence to drop the frames
+
+Unchanged by any of this: the cards that would prove them necessary are the ones nobody here owns,
+and proxmark sends them. Four for four remains a statement about this shelf.
