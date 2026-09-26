@@ -34,6 +34,26 @@ own python behind still holding it.
 An install that is working takes about two seconds. One that has been going for a minute is not slow,
 it is blocked.
 
+## 0b. A tool that fails silently is worse than one that crashes
+
+`sweep-read-all.sh` ran all seven batches against a `pm3` that did not exist, wrote 256 lines of
+`command not found` into the capture, and reported a malformed count at the end. Every batch failed
+identically and the script never noticed.
+
+**`pm3` is a shell ALIAS**, and aliases do not exist in scripts -- which is why it works when typed
+and not when called. The script resolves it explicitly now, from `$PM3`, the sibling checkout, or
+`PATH`, and says which.
+
+Two rules come out of it, and they generalise past this script:
+
+- **Check the FIRST unit of work, not the last.** A wrong port, a busy port, a missing binary and a
+  card off the antenna all look identical after 256 silent failures, and identical to each other.
+- **`grep -c` prints `0` and exits `1`.** So `$(grep -c x f || echo 0)` yields `"0\n0"` and every
+  later comparison breaks in a way that reads like a different bug entirely. `|| true`.
+
+Same family as the pm3 `-c` truncation in rule 0: the tool did part of the job and reported
+completion.
+
 ## 1. Every measurement needs its control, or you do not know what you measured
 
 A card accepting a correctly-addressed write does not show it MATCHED the address -- a tag ignoring
