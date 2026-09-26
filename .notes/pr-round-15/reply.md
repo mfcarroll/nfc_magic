@@ -81,10 +81,17 @@ error `0x0F` — to the identical addressed one, with a UID one byte wrong silen
 answers either form, with the specific `0x10`, "block not available". Three chips, five cards, each
 bracketed by a reader either side so a silence is a refusal rather than an absence.
 
+That is the refusals. **The acceptances are measured too**, which is the part that matters for a
+sequence whose job is to land: an addressed WRITE BLOCK to block 56 is taken on all three gen1 chips
+— ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — and the UID moves to exactly the value the write
+implies, with a one-byte-wrong address silent on the same card in the same session.
+
 The cost is one extra inventory. Block 56 moves the UID at once, so the sequence has to re-take its
 address before block 57 — without that the second half goes to a card that has stopped listening and
-the run ends with half a UID written. It uses the same prediction check as the wipe: the only UID
-accepted as the new address is the one that write implies.
+the run ends with half a UID written, which is neither the identity the card had nor the one asked
+for. It uses the same prediction check as the wipe: the only UID accepted as the new address is the
+one that write implies. Measured end to end on a SLIX-S: a write addressed to the UID the previous
+write produced is accepted, which is the whole of the seam.
 
 Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
 form of either: no card here has ever accepted one, in any form, including a card this app had never

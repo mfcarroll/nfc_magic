@@ -97,12 +97,12 @@ ones, so read them before the first frame rather than trusting anything written 
 
 ## RESULTS
 
-### pm3, run 1 — the card wearing the `slix_28` fixture UID, 2026-09-26
+### pm3 — `SL2S5302`, NXP ICODE SLIX-S, 2026-09-26
 
-**CARD NOT YET IDENTIFIED.** `E0 04 01 10 A1 A2 A3 A4` is `tools/test_nfc/iso15693_slix_28.nfc`'s
-UID, and more than one card on the shelf wears it — the type line decodes from the costume, not the
-silicon, so it cannot say which. mfcarroll's tape can. Left blank rather than guessed: naming the
-wrong specimen is how a chip-scoped result becomes a family-scoped one.
+**The card that could have killed the change, and it goes the other way.** Identified by mfcarroll,
+not by the transcript: `E0 04 01 10 A1 A2 A3 A4` is `tools/test_nfc/iso15693_slix_28.nfc`'s UID, so
+the `TYPE MATCH ... SLIX` line describes the costume rather than the silicon and more than one card
+here wears it.
 
     hf 15 reader                                    -> E0 04 01 10 A1 A2 A3 A4
     hf 15 raw -ackw -d 2221A4A3A2A1100104E038AABBCCDD -> (3) 00 78 F0
@@ -130,10 +130,14 @@ so this is a test rather than an explanation.
   57: write 56, take the new address, address the next frame to it. The one thing addressing this
   sequence costs is the one thing this line exercises.
 
-**What it does NOT yet settle.** Whether this card is `SL2S5302`. The whole reason SLIX-S goes first
-is that its 40-block claim keeps the wipe's sweep away from block 56, so no addressed frame has ever
-reached that register on SLIX-S silicon; on NXP SLIX the clone's conversion path has already done it.
-If this was a SLIX, the card that could kill the change is still untested.
+**SO AN ADDRESSED WRITE TO BLOCK 56 IS NOW MEASURED ON ALL THREE GEN1 CHIPS.** ST LRi2K through the
+wipe's sweep, NXP ICODE SLIX through the clone's conversion path, and NXP ICODE SLIX-S here. That was
+the last gap in the premise `b312653` rests on, and SLIX-S was the one holding it open: its 40-block
+claim puts the sweep's reach at 47, so nothing had ever addressed a frame to that register on this
+silicon.
+
+**Restored** (BENCH-RULE 9). The card is back on `E0 04 01 10 A1 A2 A3 A4`, confirmed by the last
+reader in the transcript, and it wore that before the run rather than a factory UID.
 
 ### The Flipper run
 
