@@ -85,6 +85,11 @@ typedef struct {
 
     // Get System Info fails outright, so the verify never reaches an answer at all.
     bool sysinfo_fails;
+    // Get System Info ANSWERS, but without the MEMORY flag -- so the card states no block count at
+    // all. Distinct from sysinfo_fails, and the distinction is the point: a survey that treats an
+    // unstated count as zero would call every readable block above the source an over-claim, and
+    // that is reachable on a card that answers perfectly well. Inverted so the default advertises.
+    bool hides_memory;
 
     // Refuse any WRITE BLOCK whose OPTION flag is clear, with error 0x03 -- the tag naming the bit
     // rather than failing generically. Measured on TI Tag-it HF-I Plus (`white-coin`): flags 0x22 is

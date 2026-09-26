@@ -402,11 +402,22 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             // over-capacity, no data lost), and any wipe -- whose sweep length is measured, so a run
             // that stopped short of the card's claim and one that covered it would otherwise look the
             // same. Both go to the result screen with their counts.
-            if(iso15693_wipe || (iso15693 && instance->iso15693_result.over_capacity > 0)) {
+            // ...and a clone that left the card carrying something of its own, in any of three ways:
+            // readable blocks above the source still holding the previous card's data, a card that
+            // answers reads past the count it now reports, or a geometry the card goes on reporting
+            // that is not the source's. None is a failure, and none fits the popup. The four terms
+            // below are three findings, because geometry is recorded as two independent halves.
+            const bool clone_notes = iso15693 && !iso15693_wipe &&
+                                     (instance->iso15693_result.residue_found ||
+                                      instance->iso15693_result.holds_more ||
+                                      instance->iso15693_result.geometry_differs);
+            if(iso15693_wipe || (iso15693 && instance->iso15693_result.over_capacity > 0) ||
+               clone_notes) {
                 scene_manager_set_scene_state(
                     instance->scene_manager,
                     NfcMagicSceneIso15693WriteFail,
                     iso15693_wipe ? NfcMagicIso15693WriteFailReasonWipeComplete :
+                    clone_notes   ? NfcMagicIso15693WriteFailReasonCloneComplete :
                                     NfcMagicIso15693WriteFailReasonOverCapacity);
                 scene_manager_next_scene(instance->scene_manager, NfcMagicSceneIso15693WriteFail);
             } else {

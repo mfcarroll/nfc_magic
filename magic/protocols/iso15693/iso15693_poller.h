@@ -212,6 +212,32 @@ typedef struct {
     // they "differ from the source" is describing blocks that do not exist. Set from the same
     // expression that deducts them from blocks_total, so the count and the caveat cannot disagree.
     bool gen1_blocks_skipped;
+    // SURVEY RESULTS, not write results: a clone carrying either is still a clean success, and both
+    // are reported as notes rather than as failures.
+    //
+    // Readable blocks above the source that still hold the PREVIOUS card's data. A clone writes the
+    // source's blocks and leaves the rest alone, which is right -- but on a gen2 card the CFG frame
+    // then rewrites the advertised count down to the source's, so the card claims to end where the
+    // source did and an ordinary dump shows a clean copy over data that is still there. Found by
+    // reading upward from the source count, never by trusting a count: on a magic card the count is
+    // a claim. first/last bound the non-empty ones and are meaningless while residue_found is false.
+    bool residue_found;
+    uint16_t residue_first;
+    uint16_t residue_last;
+    // The card answered a read ABOVE the count it now reports, so it is bigger than it claims -- the
+    // phantom tail the wipe's sweep exists for, arrived at by a clone instead. Separate from
+    // residue_found on purpose: a clone onto a WIPED larger card leaves a clean tail and still leaves
+    // a card presenting as smaller than it is. survey_top is the highest block proven readable.
+    bool holds_more;
+    uint16_t survey_top;
+    // The card goes on reporting a different geometry or IC reference from the source's. gen2
+    // programs those through its CFG register so they agree by construction; gen1 has no such
+    // register, so a gen1 clone carries the source's UID and data on a card that still announces its
+    // own size. Both sides are CLAIMS, deliberately -- the question is what a reader will see.
+    // card_blocks / card_ic_ref are what the CARD says and are 0 while geometry_differs is false.
+    bool geometry_differs;
+    uint16_t card_blocks;
+    uint8_t card_ic_ref;
     // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is
     // genuinely larger than the card's physical capacity. False for a scattered or anomalous failure,
     // which is reported generically with no capacity claim -- and false for ANY cut run, however

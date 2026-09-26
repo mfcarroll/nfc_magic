@@ -169,7 +169,7 @@ Iso15693_3Error
         return Iso15693_3ErrorTimeout;
     }
     if(fake_tag.sysinfo_fails) return Iso15693_3ErrorTimeout;
-    data->flags = ISO15693_3_SYSINFO_FLAG_MEMORY;
+    data->flags = fake_tag.hides_memory ? 0 : ISO15693_3_SYSINFO_FLAG_MEMORY;
     // Advertising a field and holding a value are independent, deliberately: write_identity requires
     // both, so a fake that coupled them could never exercise the half that matters.
     if(fake_tag.advertises_dsfid) data->flags |= ISO15693_3_SYSINFO_FLAG_DSFID;

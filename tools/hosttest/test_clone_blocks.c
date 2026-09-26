@@ -408,6 +408,156 @@ static void test_uncut_clone_sets_no_truncation(void) {
     end();
 }
 
+// ---- the survey above the source -----------------------------------------------------------------
+
+// A clone writes the source's blocks and leaves the rest alone. On a card bigger than the source that
+// means the previous card's data stays readable above it -- and on a gen2 clone the CFG frame then
+// reports the source's smaller count over the top, so an ordinary dump shows a clean copy. Measured on
+// a 64-block card cloned from a 28-block source: it reported 28 and blocks 28..63 still read back.
+//
+// The count cannot be the test, before or after, because on a magic card a count is a claim. So the
+// survey READS upward, and these pin what it concludes.
+static void test_the_survey_finds_data_left_above_the_source(void) {
+    begin("readable blocks above the source that still hold data are reported");
+    fake_tag_init(64, 64, 4); // honest about its size, and every block filled
+    fake_data_init(&source, 8, 4);
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_residue_found);
+    CHECK_EQ(inst.clone_residue_first, 8); // the first block the clone did not write
+    CHECK_EQ(inst.clone_residue_last, 63); // ...through the card's real top
+    // ...but this card's count is truthful, so there is nothing to say about its SIZE. The two
+    // findings are independent and this is the case that proves it.
+    CHECK(!inst.clone_holds_more);
+    end();
+}
+
+// The gen2 shape, and the one the warning exists for: the CFG frame reports the source's smaller count
+// over a card that still physically holds the rest, so an ordinary dump shows a clean copy and the
+// data above it is invisible. Measured on a 64-block card reporting 28 after the clone.
+static void test_a_card_reporting_less_than_it_holds_is_reported(void) {
+    begin("a card that answers above the count it reports is reported as larger than it claims");
+    fake_tag_init(28, 64, 4); // claims 28, holds 64, all filled
+    fake_data_init(&source, 8, 4);
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_holds_more);
+    CHECK_EQ(inst.clone_survey_top, 63);
+    CHECK(inst.clone_residue_found); // and in this case the space has data in it too
+    end();
+}
+
+// Existing is not residue. A clone onto a WIPED larger card leaves a clean tail, and warning about
+// data there would fire on every such run. The SIZE finding still stands, though -- the card is bigger
+// than it claims whether or not anything is left in it, which is the phantom tail the wipe sweeps for.
+static void test_an_empty_tail_is_size_without_residue(void) {
+    begin("an empty tail above the source is reported as size, not as data");
+    fake_tag_init(28, 64, 4); // claims 28, holds 64
+    fake_tag_fill(0, 63, 0x00); // ...and was wiped first, so the tail is clean
+    fake_data_init(&source, 8, 4);
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(!inst.clone_residue_found);
+    CHECK(inst.clone_holds_more);
+    CHECK_EQ(inst.clone_survey_top, 63);
+    end();
+}
+
+// And a card that really is the source's size says nothing at all. Without this the other two are
+// consistent with a survey that reports on every clone.
+static void test_a_card_the_size_of_its_source_is_quiet(void) {
+    begin("a card no bigger than its source reports nothing");
+    fake_tag_init(8, 8, 4);
+    fake_data_init(&source, 8, 4);
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(!inst.clone_residue_found);
+    CHECK(!inst.clone_holds_more);
+    CHECK(!inst.clone_geometry_differs);
+    end();
+}
+
+// "Larger than it claims" needs a claim. If GET SYSTEM INFO does not answer, the card's count is
+// unknown rather than zero -- and comparing against zero would make every readable block above the
+// source look like an over-claim, so one dropped frame would print "reports 0 blocks" about the
+// user's card. The survey still runs, and still finds the residue, because a READ answering is a fact
+// about the card either way; only the size finding depends on the claim.
+// The other way to have no claim, and the one that needs no failure to reach: the card answers GET
+// SYSTEM INFO and simply does not state a block count. Kept separate from the timeout case because a
+// guard written only against a failed frame would pass that test and still read an unstated count as
+// zero.
+static void test_a_card_that_states_no_count_is_not_an_over_claim(void) {
+    begin("a card that states no block count is not reported as larger than it claims");
+    fake_tag_init(28, 64, 4);
+    fake_data_init(&source, 8, 4);
+    fake_tag.hides_memory = true; // answers, but claims no size
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(!inst.clone_holds_more);
+    CHECK(!inst.clone_card_blocks_known);
+    CHECK(inst.clone_residue_found);
+    end();
+}
+
+static void test_an_unknown_card_count_is_not_an_over_claim(void) {
+    begin("a card whose count never answered is not reported as larger than it claims");
+    fake_tag_init(28, 64, 4); // claims 28, holds 64, all filled -- the over-claim shape
+    fake_data_init(&source, 8, 4);
+    fake_tag.sysinfo_fails = true; // ...but the claim never arrives
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(!inst.clone_holds_more); // no claim, so nothing to be larger than
+    CHECK(!inst.clone_card_blocks_known);
+    CHECK(inst.clone_residue_found); // the reads still answered, so this still stands
+    CHECK_EQ(inst.clone_residue_last, 63);
+    end();
+}
+
+// The geometry finding is a comparison of CLAIMS, which is the right subject: it answers "will the copy
+// present as the source", not "what is the silicon". gen2 programs its answer through the CFG register
+// so the two agree there; gen1 has no such register and the card goes on announcing its own size.
+static void test_a_card_that_keeps_reporting_its_own_size_says_so(void) {
+    begin("a card still reporting a geometry the source did not is reported");
+    fake_tag_init(40, 40, 4); // the card claims 40...
+    fake_data_init(&source, 28, 4); // ...cloned from a source claiming 28
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+
+    CHECK(inst.clone_geometry_differs);
+    CHECK_EQ(inst.clone_card_blocks, 40);
+    end();
+}
+
+// The survey stops a run past the card's top rather than walking to the block-number ceiling. No
+// result changes either way -- absent blocks contribute nothing -- so only the cost tells them apart,
+// and the cost is what matters: on a small card the difference is tens of reads against hundreds, each
+// paying a radio timeout, against a pass budget that also bounds a clone.
+//
+// Counted as a DIFFERENCE between two cards whose tops differ, so it pins the survey tracking the
+// card rather than any particular absolute.
+static void test_the_survey_stops_at_the_card_rather_than_the_ceiling(void) {
+    begin("the survey stops just past the card's top, not at the block-number ceiling");
+    fake_tag_init(28, 64, 4);
+    fake_data_init(&source, 8, 4);
+    Iso15693Poller inst;
+    run_clone(&inst, false);
+    const uint32_t reads_64 = fake_tag.reads_attempted;
+
+    fake_tag_init(28, 32, 4); // same claim, half the card
+    fake_data_init(&source, 8, 4);
+    run_clone(&inst, false);
+    const uint32_t reads_32 = fake_tag.reads_attempted;
+
+    CHECK_EQ(reads_64 - reads_32, 32); // exactly the 32 blocks the bigger card has and this one lacks
+    end();
+}
+
 int main(void) {
     printf("iso15693 clone loop\n");
     test_clean_clone_fits();
@@ -419,6 +569,14 @@ int main(void) {
     test_card_lifted_mid_clone();
     test_gen1_skips_the_backdoor_blocks();
     test_gen1_small_source_deducts_nothing();
+    test_the_survey_finds_data_left_above_the_source();
+    test_a_card_reporting_less_than_it_holds_is_reported();
+    test_an_empty_tail_is_size_without_residue();
+    test_a_card_the_size_of_its_source_is_quiet();
+    test_an_unknown_card_count_is_not_an_over_claim();
+    test_a_card_that_states_no_count_is_not_an_over_claim();
+    test_a_card_that_keeps_reporting_its_own_size_says_so();
+    test_the_survey_stops_at_the_card_rather_than_the_ceiling();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();
     test_empty_source();

@@ -190,6 +190,7 @@ static void test_every_reason_renders_its_own_screen(void) {
         {NfcMagicIso15693WriteFailReasonWipeComplete, "Wipe complete"},
         {NfcMagicIso15693WriteFailReasonWipeStopped, "Wipe stopped"},
         {NfcMagicIso15693WriteFailReasonOverCapacity, "Clone finished"},
+        {NfcMagicIso15693WriteFailReasonCloneComplete, "Clone finished"},
         {NfcMagicIso15693WriteFailReasonNothingWiped, "Wipe failed"},
         {NfcMagicIso15693WriteFailReasonNothingCloned, "Clone failed"},
         {NfcMagicIso15693WriteFailReasonWipeUidChanged, "UID changed"},
@@ -351,6 +352,74 @@ static void test_the_gen1_details_note_matches_the_source(void) {
     if(scroll) {
         CHECK(strstr(scroll, "not file data") != NULL);
         CHECK(strstr(scroll, "nothing in it was skipped") == NULL);
+    }
+    end();
+}
+
+// A clone that wrote everything can still leave the card carrying something worth saying, and neither
+// case is a failure. Three lines fit at y=20, so the summary gets ONE note and Details gets both --
+// residue leads, because it is about the user's data where the other is only about presentation.
+static void test_a_clean_clone_with_notes_says_the_most_important_one(void) {
+    begin("a clone with notes leads with the data finding, not the presentation one");
+    Iso15693PollerResult both = {0};
+    both.residue_found = true;
+    both.residue_first = 28;
+    both.residue_last = 63;
+    both.geometry_differs = true;
+    both.card_blocks = 40;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &both);
+    CHECK(fake_scene_text_contains("28-63"));
+    CHECK(!fake_scene_text_contains("still reports"));
+
+    Iso15693PollerResult geom = {0};
+    geom.geometry_differs = true;
+    geom.card_blocks = 40;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &geom);
+    CHECK(fake_scene_text_contains("still reports"));
+    end();
+}
+
+// A card that answers above the count it reports is larger than it claims, whether or not anything is
+// left in the space. That is the phantom tail the wipe sweeps for, reached by a clone instead, and it
+// must survive a clean tail -- otherwise a clone onto a wiped larger card says nothing at all.
+static void test_a_clean_tail_still_reports_the_size(void) {
+    begin("a card larger than it claims is reported even with nothing left in it");
+    Iso15693PollerResult r = {0};
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.card_blocks = 28;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    CHECK(fake_scene_text_contains("64"));  // survey_top + 1, what it actually holds
+    CHECK(fake_scene_text_contains("28"));  // ...against what it says
+    end();
+}
+
+// Details carries all three, each independent. Without this the summary's one-note limit would be the
+// only place any of them appeared, and two would be unreachable.
+static void test_details_carries_every_survey_finding(void) {
+    begin("Details names the residue, the size and the geometry together");
+    Iso15693PollerResult r = {0};
+    r.residue_found = true;
+    r.residue_first = 28;
+    r.residue_last = 63;
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.geometry_differs = true;
+    r.card_blocks = 28;
+    r.card_ic_ref = 0x02;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "still hold what was on the card before") != NULL);
+        CHECK(strstr(scroll, "larger than it") != NULL);
+        CHECK(strstr(scroll, "no geometry") != NULL);
     }
     end();
 }
@@ -697,6 +766,9 @@ int main(void) {
     test_wipe_card_lost_offers_details_for_the_uid_note();
     test_wipe_card_lost_with_a_verified_uid_offers_exit();
     test_wipe_card_lost_details_says_the_check_never_finished();
+    test_a_clean_clone_with_notes_says_the_most_important_one();
+    test_a_clean_tail_still_reports_the_size();
+    test_details_carries_every_survey_finding();
     test_the_gen1_caveat_only_claims_loss_when_the_source_reached_those_blocks();
     test_the_gen1_details_note_matches_the_source();
     test_wipe_card_lost_details_lists_no_blocks();

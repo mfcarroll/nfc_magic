@@ -160,6 +160,36 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
                 "gen1: the UID was set through 56/57/62/63. The file has no blocks that high, so "
                 "nothing in it was skipped.");
     }
+    // The survey's three findings, each independent of the others and none of them a failure. Residue
+    // first: it is the only one about the user's data.
+    if(instance->iso15693_result.residue_found) {
+        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        furi_string_cat_printf(
+            message,
+            "Blocks %u-%u are readable and still hold what was on the card before. The clone wrote "
+            "only the file's blocks; Wipe clears the rest.",
+            instance->iso15693_result.residue_first,
+            instance->iso15693_result.residue_last);
+    }
+    if(instance->iso15693_result.holds_more) {
+        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        furi_string_cat_printf(
+            message,
+            "The card answers reads up to block %u but reports only %u, so it is larger than it "
+            "claims.",
+            instance->iso15693_result.survey_top,
+            instance->iso15693_result.card_blocks);
+    }
+    if(instance->iso15693_result.geometry_differs) {
+        if(furi_string_size(message) > 0) furi_string_push_back(message, '\n');
+        furi_string_cat_printf(
+            message,
+            "The card reports %u blocks and IC ref %02X, not the file's. gen1 has no geometry "
+            "register, so a gen1 clone copies the UID and the data but not how the card describes "
+            "itself.",
+            instance->iso15693_result.card_blocks,
+            instance->iso15693_result.card_ic_ref);
+    }
     if(instance->iso15693_result.identity_failed) {
         // The card rejected the standard WRITE AFI / WRITE DSFID, so those identity fields may not
         // match the source.

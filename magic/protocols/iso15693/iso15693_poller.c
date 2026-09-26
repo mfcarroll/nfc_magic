@@ -375,6 +375,23 @@ struct Iso15693Poller {
     uint8_t clone_failed_bitmap[ISO15693_POLLER_BLOCK_BITMAP_SIZE];
     bool clone_used_gen1;
     bool clone_gen1_blocks_skipped;
+    // Readable blocks above the source that still hold the card's previous contents, and the card's
+    // own reported geometry where it does not match what the source claimed. Both are survey results
+    // rather than write results: a clone with either is still a clean success.
+    bool clone_residue_found;
+    uint16_t clone_residue_first;
+    uint16_t clone_residue_last;
+    uint16_t clone_survey_top;
+    bool clone_holds_more;
+    bool clone_geometry_differs;
+    uint16_t clone_card_blocks;
+    // Whether clone_card_blocks holds a CLAIM at all. The size finding says the card is bigger than
+    // it claims, so it needs one: a GET SYSTEM INFO that did not answer, or a card that does not
+    // advertise memory, leaves the count at zero and every readable block above the source would
+    // then look like an over-claim. That would be a statement about the user's hardware invented out
+    // of one absent frame, which is the inference this whole pass is built to refuse.
+    bool clone_card_blocks_known;
+    uint8_t clone_card_ic_ref;
     bool clone_capacity_confirmed;
     // Two flags, one result field: get_result ORs them behind a mode gate. Both are decided by a GET
     // SYSTEM INFO read-back rather than by the write's return value -- see write_identity for why the
@@ -884,6 +901,98 @@ static bool iso15693_poller_cut_pass_if_expired(
     return true;
 }
 
+// Does the card hold readable blocks ABOVE the source, and do any of them still carry data?
+//
+// A clone writes the source's blocks and nothing else, which is right -- destroying what the user did
+// not ask about is the wipe's job, not this one. But on a card bigger than the source, everything
+// above it keeps the PREVIOUS card's contents, and the user is not otherwise told: on a gen2 clone the
+// CFG frame rewrites the advertised count down to the source's, so the card then claims to end where
+// the source did and an ordinary dump shows a clean copy. Measured on a 64-block card cloned from a
+// 28-block source -- it reported 28, and blocks 28..63 still read the data written before the clone.
+//
+// THE ADVERTISED COUNT CANNOT BE THE TEST, before or after. On a magic card a claim is a costume, and
+// deriving "these blocks hold residue" from a number the card chose would be a guess wearing the
+// clothes of a measurement. So this READS, which is non-destructive -- the wipe's sweep writes because
+// it is wiping -- and past physical capacity a block refuses reads outright, which is the same
+// discriminator the pass above already uses when it asks whether a refused block is even there.
+//
+// Run whatever path was taken. clone_used_gen1 is known by now, and gen1 has no register that could
+// falsify its count -- but "gen1 claims are truthful" is an inference from the cards we own about a
+// mechanism, and this whole file exists because claims lie. Eight reads on a card telling the truth is
+// what not resting on that costs.
+//
+// TWO FACTS COME OUT OF THIS, and they are separate. A block above the source that EXISTS is a
+// statement about the card's size; one that exists and holds DATA is a statement about the previous
+// card's contents. Conflating them would either warn about every clone onto a wiped card, or say
+// nothing at all about a 64-block card now presenting as 28 with a clean tail -- which is the phantom
+// tail the wipe's sweep exists for, and is worth knowing whether or not anything is left in it.
+static void iso15693_poller_survey_above_source(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    uint16_t source_count,
+    uint8_t block_size) {
+    const uint8_t size = iso15693_poller_clamp_block_size(block_size);
+    if(size == 0) return;
+
+    const uint32_t start = furi_get_tick();
+    const uint32_t budget = furi_ms_to_ticks(ISO15693_POLLER_PASS_MAX_MS);
+    uint16_t absent_run = 0;
+
+    for(uint16_t block = source_count; block < ISO15693_POLLER_WIPE_MAX_BLOCKS; block++) {
+        // Not cut_pass_if_expired: a survey that runs out of time has found nothing, and marking the
+        // PASS truncated would downgrade a clone whose every block landed.
+        if(furi_get_tick() - start > budget) break;
+
+        uint8_t probe[ISO15693_MAX_BLOCK_SIZE] = {0};
+        if(iso15693_3_poller_read_block(iso_poller, probe, (uint8_t)block, size) !=
+           Iso15693_3ErrorNone) {
+            if(++absent_run >= ISO15693_POLLER_WIPE_ABSENT_RUN) break;
+            continue;
+        }
+        absent_run = 0;
+        // It answered, so it is there -- whatever it holds. That alone settles the size question.
+        instance->clone_survey_top = block;
+        if(instance->clone_card_blocks_known && block >= instance->clone_card_blocks) {
+            instance->clone_holds_more = true;
+        }
+        if(iso15693_poller_block_is_empty(probe, size)) continue;
+
+        if(!instance->clone_residue_found) {
+            instance->clone_residue_found = true;
+            instance->clone_residue_first = block;
+        }
+        instance->clone_residue_last = block;
+    }
+}
+
+// Will the copy PRESENT as the source? Both sides of this are claims, and that is the right subject:
+// the question is what a reader sees, not what the silicon is.
+//
+// gen2 programs its answer through the CFG register, so there the two agree by construction. gen1 has
+// no such register, so a gen1 clone carries the source's UID and data on a card that goes on reporting
+// its own size and IC reference -- measured on a 40-block SLIX-S wearing a 28-block SLIX's UID.
+static void iso15693_poller_compare_reported_geometry(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller) {
+    const Iso15693_3SystemInfo* src = &instance->clone_source->system_info;
+    Iso15693_3SystemInfo card = {0};
+    if(iso15693_3_poller_get_system_info(iso_poller, &card) != Iso15693_3ErrorNone) return;
+
+    // Only what the source actually reported can be compared; a field it never carried is not a
+    // mismatch, it is a field with no claim on either side of the comparison.
+    const bool memory_differs =
+        (src->flags & ISO15693_3_SYSINFO_FLAG_MEMORY) &&
+        (card.flags & ISO15693_3_SYSINFO_FLAG_MEMORY) &&
+        (card.block_count != src->block_count || card.block_size != src->block_size);
+    const bool ic_ref_differs = (src->flags & ISO15693_3_SYSINFO_FLAG_IC_REF) &&
+                                (card.flags & ISO15693_3_SYSINFO_FLAG_IC_REF) &&
+                                card.ic_ref != src->ic_ref;
+    instance->clone_card_blocks = card.block_count;
+    instance->clone_card_blocks_known = (card.flags & ISO15693_3_SYSINFO_FLAG_MEMORY) != 0;
+    instance->clone_card_ic_ref = card.ic_ref;
+    instance->clone_geometry_differs = memory_differs || ic_ref_differs;
+}
+
 // Clone mode: write every data block from the source image with the standard ISO15693 WRITE BLOCK.
 // Real write errors are counted into the failure bitmap for Partial reporting. Runs synchronously on
 // the Nfc worker thread. When `skip_backdoor` is set (the gen1 path), blocks 56/57/62/63 are left
@@ -1110,6 +1219,8 @@ static bool iso15693_poller_write_source_blocks(
         instance->clone_failed_count += instance->clone_over_capacity;
         instance->clone_over_capacity = 0;
     }
+    iso15693_poller_compare_reported_geometry(instance, iso_poller);
+    iso15693_poller_survey_above_source(instance, iso_poller, source_count, block_size);
     return true;
 }
 
@@ -1964,6 +2075,15 @@ static void iso15693_poller_start_internal(
     instance->uid_verified = false;
     instance->clone_used_gen1 = false;
     instance->clone_gen1_blocks_skipped = false;
+    instance->clone_residue_found = false;
+    instance->clone_residue_first = 0;
+    instance->clone_residue_last = 0;
+    instance->clone_survey_top = 0;
+    instance->clone_holds_more = false;
+    instance->clone_geometry_differs = false;
+    instance->clone_card_blocks = 0;
+    instance->clone_card_blocks_known = false;
+    instance->clone_card_ic_ref = 0;
     instance->clone_capacity_confirmed = false;
     instance->clone_blocks_done = 0;
     instance->progress_step = UINT8_MAX; // no band emitted yet, so the first call fires
@@ -2064,6 +2184,14 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
     memcpy(result->failed_bitmap, instance->clone_failed_bitmap, sizeof(result->failed_bitmap));
     result->used_gen1 = instance->clone_used_gen1;
     result->gen1_blocks_skipped = instance->clone_gen1_blocks_skipped;
+    result->residue_found = instance->clone_residue_found;
+    result->residue_first = instance->clone_residue_first;
+    result->residue_last = instance->clone_residue_last;
+    result->holds_more = instance->clone_holds_more;
+    result->survey_top = instance->clone_survey_top;
+    result->geometry_differs = instance->clone_geometry_differs;
+    result->card_blocks = instance->clone_card_blocks;
+    result->card_ic_ref = instance->clone_card_ic_ref;
     result->capacity_confirmed = instance->clone_capacity_confirmed;
     // Clone-mode only, mirroring success_or_partial: the flags are reset per run and written only in
     // the clone path, so this guard is future-proofing against them ever leaking cross-mode.

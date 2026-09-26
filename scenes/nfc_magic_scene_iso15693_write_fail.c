@@ -73,6 +73,7 @@ static bool
     const Iso15693PollerResult* result = &instance->iso15693_result;
     switch(reason) {
     case NfcMagicIso15693WriteFailReasonOverCapacity:
+    case NfcMagicIso15693WriteFailReasonCloneComplete:
         return true;
     case NfcMagicIso15693WriteFailReasonPartial:
         // pass_truncated on its own qualifies: on a cut clone the summary's "Not written" count mixes
@@ -118,6 +119,7 @@ static const char* nfc_magic_scene_iso15693_write_fail_title(uint32_t reason, bo
     case NfcMagicIso15693WriteFailReasonWipeStopped:
         return "Wipe stopped";
     case NfcMagicIso15693WriteFailReasonOverCapacity:
+    case NfcMagicIso15693WriteFailReasonCloneComplete:
         return "Clone finished";
     case NfcMagicIso15693WriteFailReasonPartial:
         // The only mode-dependent one, and the reason this is a function rather than an array.
@@ -151,6 +153,7 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
     const bool card_lost = (reason == NfcMagicIso15693WriteFailReasonCardLost);
     const bool partial = (reason == NfcMagicIso15693WriteFailReasonPartial);
     const bool over_capacity = (reason == NfcMagicIso15693WriteFailReasonOverCapacity);
+    const bool clone_complete = (reason == NfcMagicIso15693WriteFailReasonCloneComplete);
     const bool nothing_wiped = (reason == NfcMagicIso15693WriteFailReasonNothingWiped);
     const bool empty_source = (reason == NfcMagicIso15693WriteFailReasonEmptySource);
     const bool nothing_cloned = (reason == NfcMagicIso15693WriteFailReasonNothingCloned);
@@ -235,6 +238,33 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         if(failed > 0) furi_string_cat_printf(text, "\nNot cleared: %u", failed);
         widget_add_string_multiline_element(
             widget, 0, 13, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
+        furi_string_free(text);
+    } else if(clone_complete) {
+        // Clean success with something the bare popup cannot hold. Three lines fit at y=20, so this is
+        // the confirmation plus ONE note, and there are THREE in priority order: data left above the
+        // source > a card larger than it claims > a geometry it still reports. Residue leads because
+        // it is about the user's data; size comes next because it is about the card itself; geometry
+        // is only about how the copy presents. Details carries all three, so none is unreachable.
+        FuriString* text = furi_string_alloc();
+        furi_string_cat_str(text, "All data written.");
+        if(instance->iso15693_result.residue_found) {
+            furi_string_cat_printf(
+                text,
+                "\nBlocks %u-%u hold\nolder data.",
+                instance->iso15693_result.residue_first,
+                instance->iso15693_result.residue_last);
+        } else if(instance->iso15693_result.holds_more) {
+            furi_string_cat_printf(
+                text,
+                "\nCard holds %u blocks,\nreports %u.",
+                (uint16_t)(instance->iso15693_result.survey_top + 1),
+                instance->iso15693_result.card_blocks);
+        } else {
+            furi_string_cat_printf(
+                text, "\nCard still reports\n%u blocks.", instance->iso15693_result.card_blocks);
+        }
+        widget_add_string_multiline_element(
+            widget, 4, 20, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(over_capacity) {
         // Clean success: every source block was written, the card just advertises more blocks than it

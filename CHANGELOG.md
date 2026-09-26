@@ -112,6 +112,14 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **The clone's identity writes are addressed too.** **WRITE AFI** and **WRITE DSFID** are *standard*
   commands, so an unaddressed one lands on a tag of any size, and a changed AFI can drop that tag out
   of a selective inventory.
+- **A clone says what it left behind.** It writes the file's blocks and nothing else — destroying what
+  you did not ask about is Wipe's job — so on a card bigger than the file, everything above it keeps the
+  previous card's data. A **gen2** clone then reprograms the advertised count down to the file's, so the
+  card claims to end where the file did and an ordinary dump shows a clean copy over data that is still
+  readable. The clone now reads above the file's last block and reports three things it can find: data
+  left up there, a card that answers past the count it reports, and a card still announcing a geometry
+  the file did not. None is a failure and none makes the clone Partial; they appear as notes on the
+  result screen, with all of them behind **Details**.
 - **A gen1 clone that lost nothing now reports plain success.** gen1 writes the UID into blocks
   56/57/62/63, so a source containing those blocks loses them and the clone is still Partial — but a
   source below block 57 has none of them, nothing is missing, and every such clone was reported as
