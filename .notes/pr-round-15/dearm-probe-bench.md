@@ -435,5 +435,6 @@ addressed form, with the generic `0x0F`.
 | NXP SLIX | `slix-1k-coin18` | silence | **not tested** | not tested |
 
 **`coin18` is the gap, and it is mine.** It was only ever sent unaddressed frames, before the
-addressed form was known to matter. Four frames close it, and its UID is `slix_28`'s costume, the
-same one `SL2S5302` wears -- so the label is the only thing separating them.
+addressed form was known to matter. Four frames close it, and its addressed frames are the same
+bytes as `SL2S5302`'s because both wear `slix_28`'s costume -- but the two are an 18mm coin and a
+50x28mm label, so nothing can confuse them. `SL2S5302`'s actual look-alike is `slix-1k-50x28`.

@@ -376,7 +376,7 @@
         "recorded": "2026-09-08",
         "source": "seller listing / bag label"
       },
-      "form_factor": "18mm round coin, green PCB -- ONE OF TWO that are physically identical, with v1-coin-green18. Different provenance: this one came from the seller batch, that one was a gift.",
+      "form_factor": "18mm round coin, green PCB",
       "note": "Hand-marked `pm3` by the seller, who said these are the ones proxmark can write. The unmarked ones he said need a custom application he did not supply -- so on an unmarked tag a negative result from our probe CONFIRMS his annotation and does not refute the UID claim. Same bag as slix-1k-50x28, so same silicon expected in another form factor -- the pair is a free check on that, the way white-coin and black-tag were. || MEASURED 2026-09-08: SLIX, IC ref 0x01, 28/28, blank. Matches. Same bag as slix-1k-50x28 and they agree on every field, so the same-silicon claim for that pair holds.",
       "original": {
         "advertised_blocks": 28,
@@ -686,7 +686,7 @@
         "recorded": "2026-09-26",
         "source": "gift from another developer -- NOT a purchase, so there is no listing to check against"
       },
-      "form_factor": "18mm round coin, green PCB -- ONE OF TWO that are physically identical, with slix-1k-coin18. Different provenance: that one came from the seller batch, this one was a gift.",
+      "form_factor": "18mm round coin, green PCB",
       "note": "\u26a0\ufe0f READ BEFORE SPENDING THIS CARD, 2026-09-26. It is here to answer whether unlock+commit do anything on a card that has never had them run. NOTE the 'locked' framing is unsourced -- it came from this project's own notes, not from the sender, who said nothing on record about the card's state. It was a gift from another developer, not a purchase, so its arrival state is his. A REFUSED write to block 56 is informative; an ACCEPTED one is AMBIGUOUS, reading equally as 'V1 needs no unlock' and as 'he unlocked it before posting it', and taking the first at face value is the over-scoping this project keeps paying for. The cheapest measurement is not a frame: ask him whether he wrote to it or ran an unlock. Unlock+commit is IRREVERSIBLE and can only be spent once. Plan and predictions in .notes/pr-round-15/v1-coin-bench.md. || The UID is a placeholder: bytes 1-6 read 11 22 33 44 55 66, a counting sequence no real UID is, so the 'Emosyn-EM Microelectronics USA' type line decodes uid[1]=0x11 and says nothing about this silicon. || SWEPT 0-255 before any write: blocks 0-27 answer and are all zero, 28-255 answer nothing, and 56/57/62/63 refuse reads like every other gen1 card here. So a write to 56 destroys nothing.",
       "original": {
         "advertised_blocks": 28,
@@ -807,7 +807,7 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "white teardrop key fob -- ONE OF THREE that are physically identical. Non-magic. Only the UID tells them apart, and a magic card's UID is not an identity, so check --identify before acting on which one this is.",
+      "form_factor": "white teardrop key fob",
       "note": "The probed representative of the three. Classified non-magic on hardware 2026-08-24; the gen1 attempt sent ordinary WRITE BLOCKs at 56/57/62/63, all out of range on a 28-block tag, and block 27 still read its factory 57 5F 4F 4B afterwards -- so no aliasing, and the tag is byte-identical to its baseline.",
       "original": {
         "advertised_blocks": 28,
@@ -855,7 +855,7 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "white teardrop key fob -- ONE OF THREE that are physically identical. Non-magic. Only the UID tells them apart, and a magic card's UID is not an identity, so check --identify before acting on which one this is.",
+      "form_factor": "white teardrop key fob",
       "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
       "original": {
         "advertised_blocks": 28,
@@ -903,7 +903,7 @@
         "source": "seller listing",
         "total_bytes": 112
       },
-      "form_factor": "white teardrop key fob -- ONE OF THREE that are physically identical. Non-magic. Only the UID tells them apart, and a magic card's UID is not an identity, so check --identify before acting on which one this is.",
+      "form_factor": "white teardrop key fob",
       "note": "Read-only pass only; NO write has ever been attempted at this tag. Identical to white-tag-1 on every read-only measurement (NXP SLI, IC ref 0x01, 28 blocks, unlocked, factory 57 5F 4F 4B in block 27), so non-magic is inferred rather than measured -- which is why the inventory still says 'magic not tested'. Keep white-tag-3 as the untouched control.",
       "original": {
         "advertised_blocks": 28,
