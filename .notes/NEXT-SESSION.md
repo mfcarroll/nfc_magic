@@ -16,6 +16,16 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ SAFETY BRANCH FOR THE RELEASE-NOTES MOVE — `wip-pre-notes-move`
+
+Created 2026-09-26 before stripping CHANGELOG.md from every commit in the round and adding it back
+as one commit at the end. Same invariant as the other two rewrites:
+
+    git diff wip-pre-notes-move <new HEAD> -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+
+**EMPTY, or `git reset --hard wip-pre-notes-move`.**
+
 ## ⚠️ SAFETY BRANCH FOR THE CHURN PASS — `wip-pre-churn-pass`
 
 Created 2026-09-26 before rewriting intermediate commits to remove 110 lines of intra-push churn.
