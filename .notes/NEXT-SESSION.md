@@ -41,22 +41,22 @@ stayed silent on `SL2S5302`, which reports 40 and holds 40. The branch the guard
 reachable with any card here and was not claimed: every tag advertises the MEMORY flag, and the
 timeout path cannot be told from a quiet pass by hand. Harness and mutants cover it.
 
-The FAP on the Flipper is current as of `39df365`.
+The FAP on the Flipper is current as of `19e6660`.
 
 | | |
 |---|---|
 | `32f80be` | data-block writes carry the card's address |
 | `3327ad3` | the OPTION flag, and the acknowledgement it costs |
 | `0fd69e8` | the gen1 loss claim is made only where there was a loss |
-| `f1a6ae4` | the clone's identity writes are addressed, and take the OPTION flag |
-| `b9be432` | the release notes overstate what a gen1 clone reproduces |
-| `09523bc` | a clone reports what it left on the card |
-| `69f6e6e` | a clone that lands in a gen1 card's UID repairs it |
-| `ef4a4fd` | name the halves that differ, and do not read a register as capacity |
-| `d80630b` | the notes page says what the user can act on |
-| `146ff13` | why the clone reacts to the registers instead of predicting them |
-| `6122fd4` | the size note says what the card reports before what it is |
-| `39df365` | the size note names the file where the two counts agree |
+| `3fc118c` | the clone's identity writes are addressed, and take the OPTION flag |
+| `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
+| `bbf3b77` | a clone reports what it left on the card |
+| `628eede` | a clone that lands in a gen1 card's UID repairs it |
+| `9d3f9ed` | name the halves that differ, and do not read a register as capacity |
+| `fa85107` | the notes page says what the user can act on |
+| `93435ac` | why the clone reacts to the registers instead of predicting them |
+| `e030945` | the size note says what the card reports before what it is |
+| `19e6660` | the size note names the file where the two counts agree |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -136,6 +136,29 @@ EOF as literal bytes of the 1-of-4 stream — `0x21` and `0x04` — and `poller_
 it is handed with parity off, so a standalone EOF is a one-byte frame through the path the poller
 already uses. No transparent mode, no bit-banging. mfcarroll is interested in trying it on a branch
 of his Momentum fork.
+
+## OPEN QUESTION — should the gen1 backdoor sequence be addressed too?
+
+**mfcarroll argues yes, on the same safety grounds that settled AFI/DSFID, and the evidence is on his
+side.** Raised 2026-09-26 after he challenged a comment claiming addressing those frames was
+unmeasured. It is not.
+
+**Already measured to work:** the wipe's sweep zeroes 56/57/62/63 through the ADDRESSED path,
+re-addressing when the UID moves under it — that is the armed-LRi2K run, 58/58 cleared. And the
+clone's conversion path writes 56/57 addressed and watches the UID follow; that is how it detects a
+gen1 card on the gen2 path at all. So "it is the magic sequence, leave it alone" does not survive
+contact with what this round already does.
+
+**Genuinely unmeasured, and narrower than it looked:**
+- unlock (62) and commit (63) ACCEPTED addressed. No run has shown one taken, because an armed card
+  refuses them either way. **The V1 coin can answer this** if it turns out to be locked — add an
+  addressed variant to that bench.
+- the sequence is fire-and-forget (`send_backdoor_uid_gen1` ignores per-frame results), so addressing
+  it needs an inventory between frames. The wipe already does exactly that, so the machinery exists.
+
+**Not in this round.** It is a behavioural change to the one path that destroys four blocks on a
+non-magic tag, it needs gen1 bench time, and the round is built and benched. The comment says it is
+open rather than decided, so it is not re-derived as settled.
 
 ## WHAT IS LEFT, in the order to take it
 
