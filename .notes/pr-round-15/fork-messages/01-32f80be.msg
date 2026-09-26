@@ -44,10 +44,9 @@ backwards does not fail loudly: it addresses a card that is not in the field,
 so every write meets silence and the card reads as one that refuses
 everything.
 
-Left unaddressed, and said so at the define: the gen1 and gen2 backdoor
-sequences, and WRITE AFI / WRITE DSFID. The backdoors are measured to work
-unaddressed on all five cards and nothing has been measured about addressing
-them.
+Not covered by this commit, because they build their own frames rather than
+going through the write helper: the gen1 and gen2 backdoor sequences and the
+WRITE AFI / WRITE DSFID identity writes. The define says which.
 
 This does not CLOSE #251. The 1-slot inventory and the missing STAY QUIET are
 untouched, and the issue's worst consequence -- the post-wipe UID re-read

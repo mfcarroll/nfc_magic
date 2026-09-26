@@ -32,7 +32,7 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Twelve shipped commits on `iso15693-dev`.** 165 host tests, the writing gate clean.
+**Thirteen shipped commits on `iso15693-dev`.** 168 host tests, the writing gate clean.
 
 **THE KNOWN-COUNT GUARD IS BENCHED AND PASSES, both directions** --
 [known-count-guard-bench.md](pr-round-15/known-count-guard-bench.md) has the predictions, committed
@@ -57,6 +57,8 @@ The FAP on the Flipper is current as of `19e6660`.
 | `93435ac` | why the clone reacts to the registers instead of predicting them |
 | `e030945` | the size note says what the card reports before what it is |
 | `19e6660` | the size note names the file where the two counts agree |
+| `b312653` | the gen1 backdoor sequence carries the card's address |
+| `757fa5a` | dev-only: the fake acts on an unaddressed gen1 write, so the control can fail |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -175,7 +177,17 @@ other than `0x6996` reach 63; does the addressed form fare differently from the 
 stops being one-shot — which is the single constraint shaping that entire test. Spending the coin
 before asking this would be spending it under a restriction that might not exist.
 
-## OPEN QUESTION — should the gen1 backdoor sequence be addressed too?
+## ~~OPEN QUESTION — should the gen1 backdoor sequence be addressed too?~~ DONE
+
+**SHIPPED as `b312653`, fork sync point 07**, with the fake-tag control fix `757fa5a` beside it.
+Write-up: [pr-round-15/gen1-backdoor-addressed.md](pr-round-15/gen1-backdoor-addressed.md). Four
+mutants killed, 168 host tests, the FAP builds warning-free against API 87.47. **It has NOT been on
+hardware** -- the three gen1 cards are the run it still needs.
+
+The section below is the argument that decided it, kept because the fork message and the reply both
+rest on it.
+
+## The argument, as it stood
 
 **mfcarroll argues yes, on the same safety grounds that settled AFI/DSFID, and the evidence is on his
 side.** Raised 2026-09-26 after he challenged a comment claiming addressing those frames was
@@ -209,26 +221,13 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
 
 ## WHAT IS LEFT, in the order to take it
 
-1. **THE GEN1 BACKDOOR ADDRESSING — the only code left in this round.** mfcarroll's call, and the
-   evidence is now wider than the change needs. See the open-question section above and
-   [pr-round-15/dearm-probe-bench.md](pr-round-15/dearm-probe-bench.md) for the measurements.
+1. **BENCH `b312653` ON THE THREE GEN1 CARDS.** The code is written and tested; what is untested is
+   the hardware, and the risk is the one the change creates -- addressing breaks a sequence that
+   worked. `lri2k-keychain`, `slix-1k-50x28`, `SL2S5302`. A gen1 Write-UID on each: the UID must land
+   WHOLE. Half a UID is exactly what a broken re-address produces, so a partial move is the failure
+   signature to watch for, not silence.
 
-   `iso15693_poller_build_gen1_frame` takes `ISO15693_MAGIC_FLAGS` (0x02, unaddressed) and no UID.
-   The sequence is unlock, commit, 56, 57, sent fire-and-forget from
-   `iso15693_poller_send_backdoor_uid_gen1`, which ignores every per-frame result deliberately.
-
-   **The machinery already exists.** `iso15693_poller_predict_uid` computes exactly what the UID
-   becomes after a write to 56, and `iso15693_poller_readdress` takes the new address using that
-   prediction as its check. So: address unlock, commit and 56 to the current UID; re-address once 56
-   lands; then 57.
-
-   **Bench it on the three armed gen1 cards afterwards.** The risk is that addressing breaks a
-   sequence that works, and the cards to catch that are `lri2k-keychain`, `slix-1k-50x28` and
-   `SL2S5302`.
-
-   Two things the fork message must carry, because a reviewer will ask both: that unlock and commit
-   are addressed too although their addressed behaviour cannot be validated (every card refuses them
-   in any form), and that addressing is what makes NXP silicon ANSWER at those registers at all.
+   BENCH-RULE 0 first: close the CLI and the pm3 client before `./fbt launch`.
 
 2. **THE SELF-REVIEW, before the replay and after the code.** Round 15 has grown far past what it
    was, and every defect found tonight was found by a human read rather than a checker. Run the
@@ -239,7 +238,18 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
      away
    - **an inference about a person written as a report of what they said** — twice tonight, now its
      own rule in WRITING-RULES
-   - **a hedge hardened into a claim** — "possibly still LOCKED" became "he called it locked"
+   - **a hedge hardened into a claim** — "possibly still LOCKED" became "he called it locked".
+     **AND ONE IS STANDING, FOUND WHILE WRITING `b312653` AND DELIBERATELY LEFT FOR THIS PASS.** The
+     shipped text describes the wipe hazard as belonging to "a card left ARMED by an earlier gen1 UID
+     write". Five cards take a bare write to block 56 with no unlock in front of it, one of them never
+     written by this app, so no prior arming is needed and the qualifier **understates the hazard**:
+     it is every gen1 card whose advertised count lets the sweep reach 56/57. The reach rule is what
+     bounds it, not a card's history. `b312653` corrected the definition site
+     (`ISO15693_MAGIC_BLK_UNLOCK`) and the one direct twin it created; the rest is a deliberate
+     separate decision, because it touches user-facing release notes and #255's vocabulary:
+     `iso15693_poller.c` at the wipe's OPEN QUESTION and at `VerifyWipe`, `iso15693_poller.h:290`,
+     `nfc_magic_scene_iso15693_write_fail.c:396`, `nfc_magic_app_i.h:138`, `CHANGELOG.md` 71/74/150.
+     **Decide it deliberately, and if it changes, the reply needs a line.**
    - **scope**: name the chip, never the family; say how many CARDS and how many CHIPS
    - **every SHA and number re-derived against the tree at the moment of publishing**, not against
      the round it was drafted for
