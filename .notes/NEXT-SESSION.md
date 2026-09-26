@@ -1191,7 +1191,12 @@ review raised -- `NothingWiped` having no `uid_verified` route -- is ALREADY set
   merge yet" rests on.
 - **The comment cut's scope** — asked at the end of the round-10 reply, and round 11 did not answer
   it either way. The cut shipped regardless; the open part is whether he wants more taken.
-- **Whether he wants the gen3 pre-flight probe as its own PR.** Filed as
+- ~~**Whether he wants the gen3 pre-flight probe as its own PR.**~~ **NEVER ACTUALLY ASKED, and this
+  file carried it as "awaiting his call" for five rounds.** Checked 2026-09-26 across every main
+  reply and thread reply from rounds 10-14: the only mention of #255 in any of them is round 10
+  correcting its wording. Round 15's reply nearly shipped "still yours to call as its own PR", which
+  asserts a decision he was never given. An open item nobody opened is worse than a stale one -- it
+  cannot go stale, because it was never true. Filed as
   [#255](https://github.com/xMasterX/all-the-plugins/issues/255) (`type/enhancement`, filed 2026-08-20)
   carrying both register hazards: gen3 is detectable via the `0x14`/`0x15` signature, armed gen1 is not.
   The code cites it from both sites.

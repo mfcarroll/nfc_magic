@@ -261,17 +261,19 @@ That closes the list I gave you in the comment-cut round. The cut, the simplific
 release-notes trim, the addressed writes and the re-test on hardware are all in — which was the
 condition I put on the sixth item, the squash message, since it has to describe the final state.
 
-**That one is ready when you are.** This branch squashes, and the default body is every
-commit message concatenated; this round alone is eight. I have one drafted and will post it as its
-own comment when you are ready to merge, rather than putting it in front of you now.
+[👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
+changes still, then post it as its own comment.
 
 Three things are deliberately not in this PR, so they are not waiting on me:
 
 - **#251 is not closed.** The 1-slot inventory and the missing STAY QUIET are a different change, and
   the post-wipe UID re-read cannot be fixed by addressing at all.
-- **#255**, the gen3 pre-flight probe, is still yours to call as its own PR. Either way I will put
-  the wipe-hazard correction above onto that issue, since its wording has the same problem.
+- **#255 stays open.** The gen3 pre-flight probe it asks for is not in this PR and is not part of
+  this work. I will put the wipe-hazard correction above onto that issue, since its wording has the
+  same problem the release notes did.
 - **The host-test harness** stays out, as its own PR, for the size reason I gave before.
 
 I think it is ready.
+
+[👤] Or at least close. Claude may be slightly more confident than me. :)
 ~~~~
