@@ -116,6 +116,27 @@ when the distinct data occupies four cells. Nothing here detects a mirror, and n
 could without comparing contents across addresses on purpose. Recorded as a limit, not a defect to
 fix inside this round.
 
+## DECIDED — the wording stays, the limit is recorded and reported
+
+mfcarroll's call, 2026-09-26, and the reasoning is worth keeping because the alternative will look
+tempting later.
+
+The size note says a card "holds N blocks" on evidence that cannot tell memory from a mirror. Three
+options were on the table: leave it and record the limit, soften "holds" to something reads alone
+support, or detect aliasing by comparing contents across addresses.
+
+**Left alone.** gen3 was declared out of scope for this PR, and this is gen3 territory. The wording
+is accurate for every gen1 and gen2 card the feature does claim to handle, and hedging it for a class
+the PR does not support would make the common case worse to serve a card that is out of scope
+anyway. Softening it is a change that reads like caution and costs clarity on every other card.
+
+**Recorded here and reported to him**, in the round-15 reply, immediately after the survey's design
+rationale — because the rationale is "a block that answers a read exists", and this is the case where
+that stops being true. The reply states the aliasing from the write side, says the card is neither
+gen1 nor gen2, and notes that if it is gen3 then #255 is less hypothetical than when it was filed.
+
+Do not reopen this as a wording fix without the scope decision changing first.
+
 **Still open:** whether all 128 are physical storage. Blocks 80 and 100 take writes and hold them, so
 at least 101 addresses are real; 101-127 read as zero and have never been written.
 

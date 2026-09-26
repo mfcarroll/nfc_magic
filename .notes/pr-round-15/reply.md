@@ -121,6 +121,16 @@ the wipe's sweep, which writes because it is wiping.
 
 None of this is a failure and none of it makes the clone Partial. They are notes on a success.
 
+**One card here defeats that, and it is not one this PR supports.** The survey rests on a block that
+answers a read existing, which holds for every gen1 and gen2 card I have. One tag answers at all 256
+addresses because the top half of its address space aliases the bottom — write block 228 and block
+100 changes with it — so the survey would call a 128-cell card a 256-block one, and would meet the
+clone's own payload again through the alias and report it as data left over from before. That tag is
+neither gen1 nor gen2: its UID sits at 0x10/0x11 in the reversed layout and block 0x14 is one bit
+from the V3 config-mode signature, so it is gen3 territory, which this PR does not support. I have
+left the wording alone rather than hedge it for a card the feature does not claim to handle. If it
+does turn out to be gen3, that makes #255 rather less hypothetical than it was when you filed it.
+
 **The geometry half is also a correction to the release notes.** They said a clone writes the
 source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
 without qualification. That is the gen2 path: the gen2 backdoor has a CFG register that programs what
