@@ -668,7 +668,8 @@
         "backdoor_blocks_do_not_read": "56, 57, 62 and 63 all refuse reads. That is the write-only register pattern every other gen1 card here shows, and it means a write to 56 destroys no content: there is nothing at that address to lose.",
         "measured": "2026-09-26",
         "no_aliasing": "Nothing above the advertised count answers at all, so there is no mirror and no phantom tail -- unlike slix2-gold-30mm, which answers at every address in the 8-bit space with its top half mirroring its bottom.",
-        "silent_blocks": "28-255, all 228 of them"
+        "silent_blocks": "28-255, all 228 of them",
+        "verified_complete": "The archived capture is the COMPLETE run of all 256 addresses. An earlier version of this record was written from a capture that was still being appended to -- it had reached block 27 and was read as though the remaining 228 were silent. It happened to be right, because on this card everything above 27 IS silent, but that was luck: a card holding data high up, as slix2-gold-30mm does at block 100, would have been missed and the write cleared anyway."
       },
       "classification": {
         "verdict": "unclassified (no write probe run)"
