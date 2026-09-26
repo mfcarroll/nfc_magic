@@ -661,6 +661,37 @@
       },
       "source_url": "https://www.aliexpress.com/store/1112214"
     },
+    "v1-coin-green18": {
+      "classification": {
+        "verdict": "unclassified (no write probe run)"
+      },
+      "count_owned": 1,
+      "expected": {
+        "magic": true,
+        "note": "Sent as a V1/gen1 specimen, believed possibly still LOCKED. That belief is the reason it was kept unwritten, and it is the thing the bench is meant to settle.",
+        "recorded": "2026-09-26",
+        "source": "gift from another developer -- NOT a purchase, so there is no listing to check against"
+      },
+      "form_factor": "18mm round coin, green PCB",
+      "note": "\u26a0\ufe0f READ BEFORE SPENDING THIS CARD, 2026-09-26. It is here to answer whether a LOCKED V1 needs unlock+commit before a UID write, and it can only answer that if it arrived locked -- which is not established. It was a gift from another developer, not a purchase, so its arrival state is his. A REFUSED write to block 56 is informative; an ACCEPTED one is AMBIGUOUS, reading equally as 'V1 needs no unlock' and as 'he unlocked it before posting it', and taking the first at face value is the over-scoping this project keeps paying for. The cheapest measurement is not a frame: ask him whether he wrote to it or ran an unlock. Unlock+commit is IRREVERSIBLE and can only be spent once. Plan and predictions in .notes/pr-round-15/v1-coin-bench.md. || The UID is a placeholder: bytes 1-6 read 11 22 33 44 55 66, a counting sequence no real UID is, so the 'Emosyn-EM Microelectronics USA' type line decodes uid[1]=0x11 and says nothing about this silicon. || NOT SWEPT ABOVE BLOCK 27. hf 15 dump stops at the advertised count and the test writes block 56; run tools/sweep-read-all.sh before the first write.",
+      "original": {
+        "advertised_blocks": 28,
+        "afi": 0,
+        "block_size": 4,
+        "captured": "2026-09-26",
+        "captured_note": "AS ARRIVED, not as manufactured -- the distinction is the point. Nothing in this project has read or written this tag before this capture, so it is a true pre-write read BY US. But the card came from another developer as a favour rather than from a seller, and he may have written it before posting it. Uniform zeros, clear lock flags and the placeholder UID are all equally consistent with a factory state and with a developer who wiped it first; nothing here separates those. hf 15 dump covers blocks 0-27 only, the advertised count -- see tools/baselines/v1-coin-green18_2026-09-26_as-arrived.json.",
+        "dsfid": 0,
+        "from_baseline_probe": false,
+        "ic_ref": 1,
+        "locked_blocks": [],
+        "mfg_byte": 17,
+        "nonzero_blocks": [],
+        "sysinfo": "00 0F 91 66 55 44 33 22 11 E0 00 00 1B 03 01",
+        "type": "MATCH Emosyn-EM Microelectronics USA",
+        "uid": "E0 11 22 33 44 55 66 91",
+        "unreadable_blocks": []
+      }
+    },
     "white-card": {
       "classification": {
         "campaign": "20260913_005922",
