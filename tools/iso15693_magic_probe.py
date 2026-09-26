@@ -1406,6 +1406,22 @@ def inventory_render(inv, path=None):
             # edit can silently switch off is worse than none, because the file still looks complete.
             def _hazard_segs(note):
                 return [g for g in (note or "").split(" || ") if g.lstrip().startswith("\u26a0")]
+            # Which tags cannot be told apart by looking. Computed from form_factor rather than
+            # hand-maintained: a prose list of "these three are identical" goes stale the moment a
+            # tag is added, and this file is read precisely when someone is about to touch hardware.
+            byshape = {}
+            for c in sorted(inv.get("tags", {})):
+                ff = (inv["tags"][c].get("form_factor") or "").strip()
+                if ff and ff.lower() not in ("tag", "coin"):
+                    byshape.setdefault(ff, []).append(c)
+            groups = [(ff, cs) for ff, cs in sorted(byshape.items()) if len(cs) > 1]
+            if groups:
+                f.write("## Tags you cannot tell apart by looking\n\n")
+                f.write("Labels live on paper, UIDs live on silicon. Check the label, and remember a "
+                        "magic card's UID is not an identity.\n\n")
+                for ff, cs in groups:
+                    f.write("- **%s** \u2014 %s\n" % (ff, ", ".join("`%s`" % c for c in cs)))
+                f.write("\n")
             hazards = [(c, _hazard_segs(inv["tags"][c].get("note"))) for c in sorted(inv.get("tags", {}))]
             hazards = [(c, segs) for c, segs in hazards if segs]
             if hazards:

@@ -766,9 +766,9 @@ these notes carry.
 **Every physical tag is in [tag-inventory.md](tag-inventory.md)** — what it is, what it measured before
 anything wrote to it, and whether it has ever been written to. Read it before touching hardware, and
 `python3 tools/iso15693_magic_probe.py --identify` to find out which tag is actually on the antenna.
-Labels live on paper, UIDs live on silicon, and there are TWO groups of look-alikes:
-**three** non-magic white teardrop key fobs (`white-tag-1/2/3`) and **two** 18mm green PCB coins
-(`slix-1k-coin18`, `v1-coin-green18`). Both groups are now in each tag's `form_factor`.
+Labels live on paper, UIDs live on silicon. [tag-inventory.md](tag-inventory.md) opens with the
+groups that cannot be told apart by looking, computed from each tag's `form_factor` rather than
+listed by hand -- there are four, and two of them nobody had noticed.
 
 **The round-7 comment cut was BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed.** (It
 shipped long ago — this paragraph is the round-7 state as it stood. NOT the 2026-09-15 cut, which is
