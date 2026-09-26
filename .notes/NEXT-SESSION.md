@@ -229,7 +229,25 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
 
    BENCH-RULE 0 first: close the CLI and the pm3 client before `./fbt launch`.
 
-2. **THE SELF-REVIEW, before the replay and after the code.** Round 15 has grown far past what it
+2. **THE SELF-REVIEW — PASS 1 IS DONE, 2026-09-26.** `9128500`, `5884a53`, `874c45f`, `c132e29`.
+   What it found, all fixed: the reply still saying the backdoor sequences stay unaddressed; "five
+   cards take a bare write with no unlock in front of it" (true of two of them); the measurement
+   record still concluding that addressing the backdoor had no evidence behind it; a closed
+   measurement carried here as outstanding; fork message 04 describing an OPEN QUESTION comment that
+   07 deletes; four stale counts; the reply comparing against a version he has never had; and the
+   arm-model scope correction below, which turned out to be six sites and shipped as `5884a53`.
+
+   **WHAT PASS 2 STILL OWES:** the full eight-question read-through of the reply (1, 2, 7 and 8 are
+   done; 3, 4, 5 and 6 are not), the same read over fork messages 02, 03, 05 and 06, a coherence
+   read of the CHANGELOG's whole 2.3 section end to end, and the remaining numbers re-derived --
+   "58/58", "16 of the 30 lines", the block counts in the bench list.
+
+   **ALSO FOUND, NOT ACTED ON:** `check-writing.py comments` reads only `magic/**`, `scenes/*.c` and
+   `views/*.c`, so fourteen shipped files are never gated -- `nfc_magic_app_i.h` among them, which
+   held one of the arm sites. And its history rule false-positives on "is used to", in a line of
+   mishamyte's. Neither is worth changing mid-round; both are worth knowing.
+
+   The original checklist, for pass 2: Round 15 has grown far past what it
    was, and every defect found tonight was found by a human read rather than a checker. Run the
    gates, then the eight read-through questions in [WRITING-RULES.md](WRITING-RULES.md), then the
    checklist that actually catches things here:
