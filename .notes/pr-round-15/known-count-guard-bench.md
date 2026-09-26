@@ -114,3 +114,65 @@ prose, so the round's earlier bench results stand as recorded.
 Test A leaves `gen-2-card` claiming 28 over 64 physical with a clean tail, wearing
 `E0 04 01 10 A1 A2 A3 A4`. Test B leaves `SL2S5302` wearing the same UID with its own 40-block
 geometry intact -- which is the state that makes a later re-clone take the conversion path.
+
+---
+
+# RESULTS — both tests pass, and the wording did not
+
+Run by mfcarroll on the FAP installed from `cab704d`. Predictions above were committed first.
+
+## Test A — PASSED
+
+Wipe: **64/64**, exactly control 1's figure, so the card was in the state the clone assumed.
+Clone `iso15693_slix_28`: the note fired, holds **64**, reports **28**.
+
+Both halves matter. The note firing at all is the guard not suppressing a real finding. The 64 is the
+survey's own read-derived figure -- the card advertises 28 by then, so it cannot have been read off
+it -- and it agrees with the physical top the inventory established independently.
+
+## Test B — PASSED
+
+`SL2S5302` before, and it is NOT wearing the file's UID, so this is the gen1 path and not a
+conversion:
+
+    UID....... E0 04 01 10 F1 F2 F3 F4
+    SYSINFO... 00 0F F4 F3 F2 F1 10 01 04 E0 02 00 27 03 02
+    DSFID 0x02   AFI 0x00   IC ref 0x02   40 blocks
+
+Clone `iso15693_slix_28`, gen1 opt-in:
+
+    Clone finished
+    All data written.
+    Card still reports
+    40 blocks, IC ref 02.
+
+**No size note** -- which is the result. Blocks 28-39 are readable and above the SOURCE, and the card
+reports 40, so they are not above its CLAIM. A guard comparing against the source count would have
+printed "larger than it claims" here about a card that is exactly the size it says.
+
+After, and verified against the file the device actually opened -- `iso15693_slix_28.nfc` was pushed
+and read back byte-identical before the session:
+
+    UID....... E0 04 01 10 A1 A2 A3 A4     the source's
+    DSFID..... 0x00                        moved 02 -> 00, the source's
+    IC ref.... 0x02                        unchanged, which is the note's whole subject
+    40 blocks                              unchanged, same reason
+
+`hf 15 dump`: blocks 0 and 1 hold `A5 00 5A 00` and `A5 01 5A 01`, blocks 2-39 zero. The source's
+Data Content is `A5 00 5A 00 A5 01 5A 01` then zeros through block 27, so the copy is byte-exact and
+28-39 are the card's own empty tail. That empty tail is why the configuration note reached the
+summary line rather than the residue note -- the second of the two predicted forms.
+
+## What the runs changed
+
+The size note's wording, which fired correctly and read backwards: it led with the physical top,
+which the user has not been told about yet, before the count the card actually reports. It now says
+what the card reports first, and both figures as counts rather than a count against a block index.
+
+## State left behind
+
+`gen-2-card`: claiming 28 over 64 physical, clean tail, wearing `E0 04 01 10 A1 A2 A3 A4`. Restore by
+cloning any 64-block source onto it.
+`SL2S5302`: wearing `E0 04 01 10 A1 A2 A3 A4` with its own 40-block geometry and IC ref 02 intact.
+**Both now wear the same UID**, which is the state that sends a later re-clone of that file down the
+conversion path -- deliberate on neither card, so move one before testing anything else with it.
