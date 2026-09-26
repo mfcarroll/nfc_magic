@@ -24,6 +24,9 @@ BLK_UID_7654 = 0x38  # carries uid[7..4] -- the LAST four bytes `hf 15 reader` p
 SELFTEST_UID = bytes.fromhex("E002222450008303")          # lri2k-keychain, as `hf 15 reader` prints
 SELFTEST_ADDR = "03830050242202E0"                        # from `222103830050242202E00811223344`
 SELFTEST_RESTORE_DATA = "03830050"                        # from `02213803830050`
+SELFTEST_BLK57_DATA = "242202E0"                          # from `hf 15 wrbl --ua -b 57 -d 242202E0`
+
+BLK_UID_3210 = 0x39  # carries uid[3..0] -- the FIRST four bytes `hf 15 reader` prints
 
 
 def wire(uid):
@@ -36,7 +39,10 @@ def selftest():
         bad.append("address: %s != %s" % (wire(SELFTEST_UID), SELFTEST_ADDR))
     restore = bytes(reversed(SELFTEST_UID[4:8])).hex().upper()
     if restore != SELFTEST_RESTORE_DATA:
-        bad.append("restore data: %s != %s" % (restore, SELFTEST_RESTORE_DATA))
+        bad.append("block 56 data: %s != %s" % (restore, SELFTEST_RESTORE_DATA))
+    blk57 = bytes(reversed(SELFTEST_UID[0:4])).hex().upper()
+    if blk57 != SELFTEST_BLK57_DATA:
+        bad.append("block 57 data: %s != %s" % (blk57, SELFTEST_BLK57_DATA))
     if bad:
         print("SELFTEST FAILED against the measured transcript; refusing to emit frames:")
         for b in bad:
@@ -44,9 +50,29 @@ def selftest():
     return not bad
 
 
+def restore(uid):
+    """The two UNADDRESSED backdoor writes that set a whole UID, as proxmark's own wipe path sends
+    them. Unaddressed because pm3's wrbl --ua is what the earlier restores used and what the cards
+    are measured taking -- and because a card whose UID is being repaired may be sharing that UID
+    with another on the bench, which is precisely when an ADDRESS is no use.
+
+    Block 56 carries uid[7..4] and block 57 uid[3..0], each in frame order, so both payloads are a
+    printed half REVERSED. Two different reversals from the address form, which is why this is
+    generated rather than typed."""
+    print("  # ONE CARD ON THE ANTENNA. These frames are UNADDRESSED: every tag in the field takes")
+    print("  # them, and that is the point here -- but it means a second card gets this UID too.")
+    print("  hf 15 reader")
+    print("  hf 15 wrbl --ua -b 56 -d %s" % bytes(reversed(uid[4:8])).hex().upper())
+    print("  hf 15 wrbl --ua -b 57 -d %s" % bytes(reversed(uid[0:4])).hex().upper())
+    print("  hf 15 reader                     expect " + " ".join("%02X" % b for b in uid))
+
+
 def main(argv):
     if not selftest():
         return 2
+    mode = "probe"
+    if argv and argv[0] in ("--restore", "--probe"):
+        mode, argv = argv[0][2:], argv[1:]
     raw = "".join(argv).replace(":", "").replace("-", "")
     try:
         uid = bytes.fromhex(raw)
@@ -56,6 +82,11 @@ def main(argv):
     if len(uid) != 8:
         print("error: a UID is 8 bytes, got %d" % len(uid))
         return 2
+
+    if mode == "restore":
+        print("restore to    :  " + " ".join("%02X" % b for b in uid))
+        restore(uid)
+        return 0
 
     test = bytes([0xAA, 0xBB, 0xCC, 0xDD])
     # Block 56's DATA is uid[7],uid[6],uid[5],uid[4] -- data[0] lands in uid[7], the LAST byte
