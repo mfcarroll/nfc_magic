@@ -155,3 +155,43 @@ are opposite conclusions.
 In band from the correct address plus silence from the wrong one proves the card is filtering on the
 address at block 62. Silence from both would instead revise what is recorded about this chip
 answering in band at all.
+
+
+## The raw re-run — ADDRESSING IS PROVEN AT THE BACKDOOR REGISTERS
+
+    hf 15 raw -ackw -d 02213E00000000                    -> (4) 01 10 1E 06
+    hf 15 raw -ackw -d 222103830050242202E03E00000000    -> (4) 01 10 1E 06
+    hf 15 raw -ackw -d 222103830050242202E13E00000000    -> command failed  (silence)
+    hf 15 reader                                          -> E0 02 22 24 50 00 83 03
+
+Three results in four frames, and the third is what makes the second mean anything.
+
+**The addressed frame was address-matched and parsed.** It returned the identical in-band error to
+the unaddressed one -- flags `01`, error `10` (block not available), CRC `1E 06`. A card that
+ignored the addressing could not distinguish the two, but a card that answers the SAME error to both
+has evidently processed the addressed form on its merits.
+
+**And the card filters on the address.** One byte wrong -- `E0` to `E1` in the last UID byte -- and it
+says nothing at all, bracketed by a `hf 15 reader` that proves the card was present and answering
+throughout. Silence there is refusal, not absence.
+
+**So the refusal at 62 is because the card is ARMED, not because of the addressing.** Addressing is
+transparent at these registers. That is the evidence the gen1 backdoor addressing change needed and
+did not have: addressed WRITE BLOCK reaches block 62, is parsed there, and is filtered by UID.
+
+Incidentally `01 10 1E 06` is byte for byte what a TI Tag-it returned through the standalone EOF
+earlier the same day for blocks past its capacity -- the same error from different silicon, which is
+a small corroboration that both readings are of a real response rather than a fragment.
+
+## What is still unmeasured for the addressing change
+
+**unlock or commit ACCEPTED addressed.** Every card on the bench is armed, so every one refuses them
+whatever the form. Only an un-armed card can show one taken -- which is the V1 coin, and is why the
+addressed variant belongs in that spend.
+
+The reason to expect it to work is now much stronger than before this run: the frame is received,
+address-matched and parsed at that exact block, and the refusal is on a ground unrelated to
+addressing.
+
+**One chip.** ST LRi2K. `slix-1k-50x28` and `SL2S5302` should get the same four frames, substituting
+each card's own UID, before this is written up as anything broader.
