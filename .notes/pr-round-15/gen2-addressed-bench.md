@@ -366,6 +366,87 @@ refuses unaddressed WRITE BLOCK, so send both with OPTION set and the address as
 
 Block 8 currently reads `00 00 00 00`, so the restore is zeros and the read confirms it.
 
+### RESULT — `black-tag` addresses standard writes correctly. Gap closed.
+
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E008AABBCCDD  -> (3) 00 78 F0   RIGHT address, blk 8
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E10855667788  -> command failed WRONG address
+    hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000  -> (3) 00 78 F0   restore to zeros
+    hf 15 dump                                          -> blk 8 = 00 00 00 00
+    hf 15 raw -ackw -d 2220E4E3E2E1100104E008           -> (7) 00 00 00 00 00 77 CF
+
+The UID did not move on any of them, which is right: block 8 is data on a gen2 card, not a register.
+So this card ANSWERS an addressed `0x21` with the correct UID and is SILENT to a one-byte-wrong one,
+using the same construction the backdoor frame was refused with. **The address was never the
+problem.**
+
+### `white-coin` — 2026-09-26. IDENTICAL AGAIN. Three for three.
+
+    hf 15 reader                                        -> E0 07 80 3D E2 E7 3A 29  TI Tag-it HF-I Plus
+    hf 15 raw -ackw -d 02E0094011223344                 -> (3) 00 78 F0     unaddressed
+    hf 15 reader                                        -> E0 07 80 3D 44 33 22 11  MOVED
+    hf 15 raw -ackw -d 02E00940293AE7E2                 -> (3) 00 78 F0     restore
+    hf 15 reader                                        -> E0 07 80 3D E2 E7 3A 29  back
+    hf 15 raw -ackw -d 22E0293AE7E23D8007E0094011223344 -> command failed   ADDRESSED, correct UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ckw  -d 22E0293AE7E23D8007E1094011223344 -> command failed   ADDRESSED, wrong UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 62E0293AE7E23D8007E0094011223344 -> command failed   ADDRESSED + OPTION
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 42E0094011223344                 -> command failed   unaddressed + OPTION
+    hf 15 reader                                        -> E0 07 80 3D 44 33 22 11  *** MOVED ***
+    hf 15 raw -ackw -d 02E00940293AE7E2                 -> (3) 00 78 F0     restore
+    hf 15 reader                                        -> E0 07 80 3D E2 E7 3A 29  restored
+    hf 15 raw -ackw -d 22E0094011223344                 -> command failed   addressed bit, no UID
+    hf 15 reader                                        -> unchanged
+
+`white-coin` was already in the addressed-standard-write five, so its front-end is on record too.
+
+## CLOSED — three gen2 cards, and the reason in the code is wrong
+
+| | `gen-2-card` | `black-tag` | `white-coin` |
+|---|---|---|---|
+| addressed standard WRITE BLOCK, right UID | accepted | accepted | accepted |
+| addressed standard WRITE BLOCK, wrong UID | silent | silent | silent |
+| backdoor unaddressed `02 E0` | **UID moves** | **UID moves** | **UID moves** |
+| backdoor ADDRESSED, correct UID | refused | refused | refused |
+| backdoor addressed + OPTION | refused | refused | refused |
+| backdoor addressed bit, no UID | refused | refused | refused |
+| backdoor unaddressed + OPTION | **no answer, WRITE LANDS** | **no answer, WRITE LANDS** | **no answer, WRITE LANDS** |
+
+**THE GEN2 BACKDOOR IS REACHABLE ONLY UNADDRESSED.** Every one of these cards addresses a standard
+WRITE BLOCK correctly -- accepts the right UID, filters a wrong one -- so there is nothing wrong
+with the frames. The magic hook simply does not fire on the addressed path. There is no addressed
+form of this command to send.
+
+**What must change in the app is a REASON, not behaviour.** Three sites plus the reply say the gen2
+frames stay unaddressed because "0xE0 is proprietary, so a conforming tag rejects it on the command".
+That is an argument about conforming tags, and the population at risk is other MAGIC cards, which
+parse `0xE0 09` exactly as the target does. The measured statement replaces it, and the residual has
+to be stated rather than argued away: **another gen2 magic card in the field can take these frames,
+and nothing in this app can stop it.** Narrower than the gen1 hazard, not zero.
+
+**And OPTION swallows the acknowledgement on `0xE0` too**, on all three. The app never meets it --
+the gen2 sequence sends flags `0x02` and discards its send results anyway -- but it is the same
+mechanism the data-block read-back exists for, now shown on the proprietary command.
+
+## Two cheap things still open, neither blocking
+
+- **The wrong-address control was restored before it was read.** `6221...E1...55667788` was silent,
+  and the block was overwritten with zeros before anyone looked. Silence is good evidence here --
+  the same card answers `6221...E0...` -- but `42E0...` proved on this very bench that no answer and
+  no write are different things. Two frames close it, and block 8 is zeros now so there is nothing
+  to lose: send the wrong-address write, then read block 8 and expect zeros still.
+
+        hf 15 raw -ckw  -d 6221E4E3E2E1100104E10855667788
+        hf 15 raw -ackw -d 2220E4E3E2E1100104E008          expect 00 00 00 00
+
+- **`black-tag`'s chip is still only plausible.** It took `6221` (addressed + OPTION) but was never
+  sent `2221` (addressed, no OPTION). A refusal with error `0x03` would identify it behaviourally
+  the way `white-coin` was identified, rather than by the `E0 07` its baseline capture wore.
+
+        hf 15 raw -ackw -d 2221E4E3E2E1100104E008AABBCCDD   0x03 => wants OPTION, like white-coin
+        hf 15 raw -ackw -d 6221E4E3E2E1100104E00800000000   restore whatever happens
+
 
 ## Restore, and record the restore
 
