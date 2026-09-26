@@ -93,6 +93,29 @@ something, find where it is recorded. If it is not recorded, either say what is 
 "filed as #255", "described as a V1 specimen" -- or go and ask them. A person's words are the one
 class of fact that cannot be reconstructed from context.
 
+## ⚠️ Never write a running commentary a later commit in the same push must maintain
+
+Round 15 shipped **110 lines of intra-push churn** -- lines added by one fork commit and removed by a
+later one in the same push. Round 11's residual was 11 and was documented as the acceptable limit.
+Two causes, both structural, both avoidable, and neither is carelessness:
+
+**A RUNNING INVENTORY OF WHAT IS NOT YET DONE.** The poller kept "what remains unaddressed" in THREE
+places -- the `ISO15693_MAGIC_FLAGS` header, a central `WHAT REMAINS UNADDRESSED` list, and the write
+helper's note about who builds their own frames. Every commit that addressed one more frame set had
+to edit all three, so 01, 04 and 08 each rewrote the same paragraph. **A comment that enumerates what
+OTHER code does not do is a duplicate by construction, and it goes stale on a schedule.** Each frame
+builder should state what IT does; nothing should hold the list.
+
+**RELEASE NOTES WRITTEN INCREMENTALLY.** 01 added a bullet for addressed data blocks, 04 added
+another for the identity writes, 08 added a third for the backdoor -- then 08 merged all three,
+because to a user they are one fact. The merge is right and the churn was avoidable: **a release note
+belongs at the LAST sync point that changes the behaviour it describes, not at each one.** The
+CHANGELOG is a release artifact, not a running log, and nothing forces it to be updated per commit.
+
+Both reduce to one rule: **if a later commit in the same push will have to edit the sentence, do not
+write the sentence yet.** The reviewer reads the delta between rounds, so text that appears and is
+rewritten inside a single push is pure cost to him.
+
 ## ⚠️ Narration of our own process, wearing the clothes of a finding
 
 Four in one round, all caught by mfcarroll's eye and none by a checker: "yours is better than what I
