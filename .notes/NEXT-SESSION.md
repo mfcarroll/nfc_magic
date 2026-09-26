@@ -75,9 +75,15 @@ silicon. Do not reinstate it.
    `[👤]` marks mfcarroll's own paragraphs and is POSTED as-is -- checked against round 10's
    comment 5652071967, which carries one.
 
-4. **The fork messages** -- [pr-round-15/fork-messages/](pr-round-15/fork-messages/) has four, for the
-   first four commits only. Five more are needed, and the README's sync-point table with them.
-   Written fresh: no dev SHAs, no tests (tools/ does not sync), no round narrative.
+4. ~~**The fork messages**~~ -- **DONE 2026-09-26.** Six sync points for nine shipped commits;
+   [pr-round-15/fork-messages/](pr-round-15/fork-messages/) has all six and the README's table.
+   Gate clean. **06 deliberately collapses four dev commits** -- the survey, the repair, the
+   register-as-capacity fix and the wording -- because published separately he would see a geometry
+   note leading with a number that matched and then see it corrected twice; 16 of the 30 lines the
+   survey adds to the details scene are rewritten later. Splitting the repair out was tried and is
+   blocked: it does not apply without the survey. The README records the reasoning and the one
+   residual staleness (the Partial release-notes line, stale at 03 and 04, fixed at 05, and not
+   closable by reordering).
 
 5. **Then the replay**, `tools/replay-to-fork.sh .notes/pr-round-15/fork-messages`. It resets to
    `origin/<branch>` first, runs the writing gate, refuses on a finding, and does not push. Unlock

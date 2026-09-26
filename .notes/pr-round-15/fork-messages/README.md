@@ -1,7 +1,7 @@
-# Round 15 — four sync points, all behavioural
+# Round 15 — six sync points, all behavioural but one
 
-The addressing round. Unlike every round since the comment cut, **every one of these changes
-behaviour** — there is no comment-only commit among them.
+The addressing round. Every one of these changes behaviour except 05, which is the release notes.
+There is no comment-only commit among them.
 
 | # | sync at | one decision |
 |---|---|---|
@@ -9,12 +9,13 @@ behaviour** — there is no comment-only commit among them.
 | 02 | `4c1844b` | the OPTION flag, and the read-back it costs |
 | 03 | `844de55` | the gen1 loss claim is gated on there being a loss |
 | 04 | `721dd30` | the identity writes are addressed and take the flag |
+| 05 | `d751b13` | the release notes overstate what a gen1 clone reproduces |
+| 06 | `45be57a` | what a clone leaves behind, and a gen1 card it lands in |
 
-Dev order matches fork order, so no reorder. **Zero intra-round churn**: the round was rebuilt from
-21 commits into 8 precisely so that none of these is corrected by a later one. Verified by tree hash
-before and after the rebuild — the content is identical, only its shape changed.
+Dev order matches fork order, so no reorder. **06 collapses four dev commits** — see below, because
+that is the one place this round does not get one decision per commit, and the reason is churn.
 
-The four notes commits are dev-only and are not sync points.
+The five notes commits are dev-only and are not sync points.
 
 ## Why 01 and 02 are separate, and why 02 is not two commits
 
@@ -31,12 +32,41 @@ then-fix pairing he has flagged twice, wearing a different hat.
 gen1 loss claim is made only where there was a loss — applied at three sites. Split, the first
 invites "why was the outcome not fixed in the same breath?"
 
+## Why 06 carries two decisions
+
+It syncs the tree at the last of four dev commits: the clone survey, the gen1-card-on-the-gen2-path
+repair, the register-as-capacity fix and the notes-page wording. Published one per sync point, he
+would see the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01,
+not the file's" — which leads with a number that matched — and then see it corrected twice. **16 of
+the 30 lines the survey adds to the details scene are rewritten by the last of the four.**
+
+Splitting the repair out from the survey was tried and is not available: it does not apply without
+the survey in the tree, and a tree-based sync cannot take half a commit. So the choice was two
+decisions in one diff against three sync points showing him a wrong screen string and its fixes.
+**Zero churn won**, on the same grounds as 02: a sync point must not show him an error we then fix.
+
+The message is split under three headings so the two decisions are still separable by a reader.
+
+## Residual churn — one release-notes line, and it cannot be removed
+
+03 changes when a gen1 clone reports Partial. The release-notes line describing that behaviour —
+"a clone that used gen1 reports Partial and flags those blocks" — is corrected at 05, so it is
+**stale in the fork tree at 03 and 04**. That is the twin-site defect from round 12, at two commits'
+width.
+
+It cannot be closed by reordering: `d751b13` does not apply before `721dd30`, so 05 already sits at
+the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
+which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
+the same with its 11 residual lines.
+
 ## What these messages must NOT claim
 
 - **No tests.** Every test is in `tools/hosttest/`, which does not sync, so a message citing one
   describes a change absent from its own diff. The mutation results, the host-test counts and the
-  fake tag's new block kind all stay out. That evidence belongs in the reply.
+  fake tag's new block kinds all stay out. That evidence belongs in the reply.
 - **No dev SHAs**, and no reference to the round having been rebuilt.
 - **No bench narrative.** The measurements are stated as results, not as the sequence that found
   them — several of them corrected an earlier reading during this round, and he reads the delta,
   not the search.
+- **`gen-2-card` has no known chip.** Do not call it an EM-Marin; that type line belongs to a
+  credential cloned onto it. Four identified chips, plus one card whose silicon was never captured.
