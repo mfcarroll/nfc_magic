@@ -34,8 +34,16 @@ and the writing gate clean. The FAP on the Flipper is current.
 
 Measurements in [pr-round-15/](pr-round-15/): `addressed-writes-measured.md`,
 `addressed-writes-implemented.md`, `residue-and-geometry.md`, `controls-2026-09-24.md`.
-**Everything measured passed on hardware** across five cards and five chips -- TI Tag-it (x2), NXP
-SLIX, NXP SLIX-S, ST LRi2K, EM-Marin.
+**Everything measured passed on hardware** across seven cards covering FOUR identified chips -- TI
+Tag-it (x2), NXP SLIX (x2), NXP SLIX-S, ST LRi2K -- plus `gen-2-card`, whose silicon is unknown.
+
+⚠️ **`gen-2-card` IS NOT "EM-Marin" AND IS NOT A FIFTH CHIP.** That type line belongs to the expired
+access credential cloned onto it before the project's first instrumented read;
+`tools/tag-inventory.json` records it under `carries_cloned_credential` and says in as many words
+that nothing there describes the card. Its own measured facts are 64 physical blocks and gen2 magic.
+The label was in `controls-2026-09-24.md` and in the reply draft and is corrected in both -- it is
+the same error this round corrected in the release notes, reading a UID-decoded type line as
+silicon. Do not reinstate it.
 
 ## WHAT IS LEFT, in the order to take it
 
@@ -60,11 +68,10 @@ SLIX, NXP SLIX-S, ST LRi2K, EM-Marin.
    answers it. If it works, the read-back is dead on that path and Gap 2 stops being a firmware
    dependency.
 
-3. **The reply** -- [pr-round-15/reply.md](pr-round-15/reply.md), drafted and NOT posted, now
-   UNDER-DESCRIBING the round by five commits and still carrying a "five cards across four chips"
-   caveat the SLIX-S run retired. It owes him a retraction: we told him TI refuses an unaddressed
-   WRITE BLOCK and that addressing was therefore a compatibility requirement. It refuses writes
-   without the OPTION flag, addressed or not, and no chip here requires addressing.
+3. ~~**The reply**~~ -- **REWRITTEN 2026-09-26, still NOT posted and still unread by mfcarroll.**
+   [pr-round-15/reply.md](pr-round-15/reply.md) now covers all nine commits (it under-described the
+   round by five), leads with the retraction, and states the bench as seven cards over four
+   identified chips. Both gates clean. It still needs mfcarroll's read before it goes anywhere.
    `[👤]` marks mfcarroll's own paragraphs and is POSTED as-is -- checked against round 10's
    comment 5652071967, which carries one.
 
