@@ -414,3 +414,26 @@ be a transcription slip. Raised by mfcarroll. Cheap to settle:
 
 If it answers unaddressed again, the LRi2K genuinely differs and that is a chip fact worth having. If
 it is silent this time, the earlier reading was wrong and the pattern is uniform across all three.
+
+
+### The LRi2K re-run — it really does answer unaddressed
+
+    hf 15 reader                                      -> E0 02 22 24 50 00 83 03
+    hf 15 raw -ackw -d 02213E00000000                 -> (4) 01 10 1E 06
+    hf 15 raw -ackw -d 2221...E03E00000000            -> (4) 01 10 1E 06
+    hf 15 reader                                      -> E0 02 22 24 50 00 83 03
+
+Same as the first run, bracketed again. **Not a transcription slip -- a chip fact.** The ST LRi2K
+answers a write to block 62 in either form, with the specific `0x10`; the NXP parts answer only the
+addressed form, with the generic `0x0F`.
+
+| chip | card | unaddressed at 62 | addressed at 62 | wrong address |
+|---|---|---|---|---|
+| ST LRi2K | `lri2k-keychain` | `01 10` | `01 10` | silence |
+| NXP SLIX | `slix-1k-50x28` | silence | `01 0F` | silence |
+| NXP SLIX-S | `SL2S5302` | silence | `01 0F` | silence |
+| NXP SLIX | `slix-1k-coin18` | silence | **not tested** | not tested |
+
+**`coin18` is the gap, and it is mine.** It was only ever sent unaddressed frames, before the
+addressed form was known to matter. Four frames close it, and its UID is `slix_28`'s costume, the
+same one `SL2S5302` wears -- so the label is the only thing separating them.
