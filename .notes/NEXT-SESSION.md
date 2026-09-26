@@ -97,6 +97,12 @@ The hazard is the wipe: the release notes carry an attributed report that zeroin
 un-finalized V3 card, those are blocks 20 and 21, and on this card nothing ever refuses a write so the
 sweep would not stop early.
 
+**DECIDED: the size note's wording stays.** The survey can be defeated by an aliasing card, which
+this one is, but gen3 is out of scope for this PR and the wording is accurate for every gen1 and gen2
+card the feature handles. The limit is recorded in the write-up and reported to him in the reply,
+placed right after the survey's design rationale. Do not reopen it as a wording fix unless the scope
+decision changes.
+
 **It does not change a benched result**, and it does not yet change the squash message's "No gen3
 card exists on either side of this PR" either -- that needs the write test. What it does change now
 is three unscoped shipped comments claiming a past-capacity block refuses reads, which this card
