@@ -306,3 +306,44 @@ anything. **The model was ours, and nothing measured supports it.**
 Removing them from the app. The cards that would prove them necessary are the ones nobody here owns,
 and proxmark sends them. Four cards is a statement about this shelf, not about magic ISO15693 tags.
 The frames stay; what changes is that the comments should stop describing a lock nobody has seen.
+
+
+## CLOSED — the coin answers like every other NXP card, and the lock model has nothing left
+
+    hf 15 raw -ackw -d 2221<uid>3E00000000   correct UID  -> (4) 01 0F 68 EE
+    hf 15 raw -ackw -d 2221<uid>3E00000000   wrong UID    -> command failed
+
+| card | committed? | unaddressed | addressed | wrong addr |
+|---|---|---|---|---|
+| `lri2k-keychain` (ST LRi2K) | yes | `01 10` | `01 10` | silence |
+| `slix-1k-50x28` (NXP SLIX) | yes | silence | `01 0F` | silence |
+| `slix-1k-coin18` (NXP SLIX) | yes | silence | `01 0F` | silence |
+| `SL2S5302` (NXP SLIX-S) | yes | silence | `01 0F` | silence |
+| **`v1-coin-green18`** | **no** | silence | **`01 0F`** | silence |
+
+**AND THE EARLIER COMPARISON HERE WAS WORTHLESS, WHICH IS WORTH KEEPING.** "A committed card and an
+uncommitted one behave identically" was recorded off two silences -- and every NXP card is silent to
+an unaddressed frame regardless of history, so the two sides were silent for a reason that had
+nothing to do with commitment. The coin had never been asked in the form its chip answers. Completing
+the matrix on `coin18` is what exposed it.
+
+Re-run properly, the conclusion survives: **asked in the form the chip answers, a card that has never
+been committed is indistinguishable from three that have.**
+
+### What the coin actually turned out to be
+
+Not a special specimen. It is measured identical to `slix-1k-coin18` in every respect available --
+same form factor, same 28 blocks and IC ref `0x01`, same bare UID write accepted with no unlock, same
+backdoor signature. Very likely the same product. "The only card that can answer whether unlock is
+needed" described a card there were already two of.
+
+### The lock model, finally
+
+- **five cards** take a bare UID write with no unlock or commit in front of it
+- **zero acceptances** of unlock or commit, ever, on any card, here or in proxmark's documentation
+- **no difference** between a committed card and an uncommitted one, asked properly
+- `0x10` is *block unavailable*, `0x0F` is *unknown error*, and proxmark attaches no semantics to
+  either frame
+
+Nothing measured supports it. The frames stay in the app -- the cards that would prove them necessary
+are the ones nobody owns -- but the comments should stop describing a lock nobody has ever seen.
