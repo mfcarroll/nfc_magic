@@ -74,6 +74,32 @@ for any of the reads interleaved with them. The card was nonetheless fully writt
 patterns at blocks 0, 8, 32 and 63 were present before the wipe and all 64 blocks read back as zeros
 after it, while the app reported that nothing had been cleared.
 
+## ⭐ A possible app-side route to Gap 2 — UNTESTED, raised by mfcarroll
+
+The read-back exists because we cannot send the standalone EOF an OPTION write's response waits for.
+That may be wrong, and the test is cheap.
+
+`iso15693_3_poller_send_frame` appends the CRC unconditionally, so an empty buffer through it is
+SOF + 2 CRC bytes + EOF -- a malformed short frame, not an EOF. **But the CRC is added by the
+`iso15693_3` layer, not the HAL.** `nfc_poller_trx` takes an already-CRC'd buffer and the HAL only
+does the 1-of-4 encoding, so calling it DIRECTLY with an empty buffer emits **SOF + EOF and nothing
+else**. Its contract -- "Must ONLY be used inside the callback function" -- is satisfied: the write
+path runs inside the poller callback. The only plumbing needed is keeping the `Nfc*` that
+`iso15693_poller_alloc` is already handed and currently drops.
+
+**Why it is still a question rather than a fix.** proxmark's `CodeIso15693AsReaderEOF` emits the EOF
+symbol ALONE. Ours would be SOF then EOF. Whether a card waiting for an EOF accepts that, or treats
+the SOF as a new request and resets, is silicon-dependent and the spec does not settle it.
+
+**The test:** store the `Nfc*`, send the empty frame immediately after an OPTION write, and see
+whether a response arrives instead of a timeout. One run on a TI Tag-it answers it.
+
+**If it works** the acknowledgement comes back directly, the read-back is dead on that path, and a
+write costs one frame instead of a write plus a read -- and Gap 2 stops being a firmware dependency
+at all, leaving only Gap 1 upstream. **If it does not**, nothing changes.
+
+Not a blocker either way: the read-back is measured and safe.
+
 ## What a fix looks like
 
 1. Give `iso15693_3_poller_write_block` a flags argument and an optional UID, or add an addressed
