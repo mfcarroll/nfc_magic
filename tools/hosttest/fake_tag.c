@@ -395,11 +395,25 @@ Iso15693_3Error iso15693_3_poller_send_frame(
 
     if(buf->data[0] != 0x02) return Iso15693_3ErrorNone;
 
-    // An UNADDRESSED gen1 backdoor write -- 02 21 <block> ... -- is a frame this app no longer sends,
-    // so nothing is modelled for it. A real gen1 card does act on one: the UID moves just the same,
-    // measured, and that is why leaving the sequence unaddressed was a bystander hazard rather than a
-    // harmless quirk. Anything arriving here in that form is a regression in the poller, not a card
-    // behaviour, and the tests that would catch it assert on the frame bytes instead.
+    // An UNADDRESSED gen1 backdoor write -- 02 21 <block> d0 d1 d2 d3. The app does not send one, and
+    // this is here so that the tests asserting it does not have something that can FAIL. A real gen1
+    // card acts on an unaddressed write to 56/57 exactly as it acts on an addressed one -- the UID
+    // moves just the same, measured -- which is what made leaving the sequence unaddressed a
+    // bystander hazard rather than a harmless quirk. Modelled as silence instead, every such test
+    // would pass on a poller that had reverted to the old flags, because nothing would have happened
+    // for the reason that nothing was listening.
+    if(buf->data[1] == 0x21 && buf->size >= 7) {
+        const uint8_t block = buf->data[2];
+        if(fake_tag.is_gen1_magic && (block == 0x38 || block == 0x39)) {
+            fake_tag.writes_accepted++;
+            fake_apply_uid_half_now(block == 0x38, &buf->data[3]);
+            bit_buffer_reset(rx);
+            bit_buffer_append_byte(rx, ISO15693_3_RESP_FLAG_NONE);
+        }
+        // 62/63 answer nothing in this form on the NXP parts and 0x10 on the ST LRi2K; either way no
+        // card here has ever taken one, so there is nothing to apply.
+        return Iso15693_3ErrorNone;
+    }
 
     // gen2: 02 E0 09 <ref> d0 d1 d2 d3
     if(buf->data[1] == 0xE0 && buf->size >= 8 && buf->data[2] == 0x09) {
