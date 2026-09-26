@@ -155,6 +155,18 @@ treats a single EOF timeout as "the write failed" would be wrong about one block
 untested, and this project has twice shipped a claim scoped to a family from a single card. Do not
 write "cards answer a standalone EOF" anywhere.
 
+**And that cannot be widened with the cards here — do not try, it looks testable and is not.** I
+proposed re-running on the LRi2K and the SLIX as "just a card swap". Both produced no EOF lines at
+all, which reads like a broken build and is not: the probe is guarded on a write TIMING OUT and on
+`write_option`, and `write_option` is set only by an `0x03` refusal. Those chips take writes without
+the OPTION flag and acknowledge them normally, so neither condition is ever met.
+
+That is the mechanism rather than the probe. **A standalone EOF only has something to collect when
+the card is holding a response pending, which only happens with OPTION set.** On a card that answers
+its writes directly there is nothing for an EOF to fetch. `white-coin` and `black-tag` are both TI
+Tag-it, so the bench holds exactly one chip that can exercise this, and widening the claim needs
+silicon nobody here owns.
+
 **And it cannot be used by this PR.** It needs API 87.2, and the PR targets stock firmware. The
 read-back stays in round 15 regardless; this makes it removable later, upstream willing.
 
