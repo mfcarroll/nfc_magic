@@ -27,23 +27,41 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**Nine shipped commits on `iso15693-dev`.** 161 host tests, both firmwares warning-free, clang-format
-and the writing gate clean. The FAP on the Flipper is current.
+**Ten shipped commits on `iso15693-dev`.** 163 host tests, the writing gate clean. ⚠️ **The FAP on
+the Flipper is from BEFORE the review fold** -- the only behavioural change since is the known-count
+guard below, which no bench run has exercised; rebuild before measuring anything.
 
 | | |
 |---|---|
-| `db3d8ac` | data-block writes carry the card's address |
-| `4c1844b` | the OPTION flag, and the acknowledgement it costs |
-| `844de55` | the gen1 loss claim is made only where there was a loss |
-| `721dd30` | the clone's identity writes are addressed, and take the OPTION flag |
-| `857fe72` | a clone reports what it left on the card |
-| `9e49250` | a clone that lands in a gen1 card's UID repairs it |
-| `55d0762` | name the halves that differ, and do not read a register as capacity |
-| `45be57a` | the notes page says what the user can act on |
+| `32f80be` | data-block writes carry the card's address |
+| `3327ad3` | the OPTION flag, and the acknowledgement it costs |
+| `0fd69e8` | the gen1 loss claim is made only where there was a loss |
+| `4169416` | the clone's identity writes are addressed, and take the OPTION flag |
+| `d06abf4` | the release notes overstate what a gen1 clone reproduces |
+| `7db84ed` | a clone reports what it left on the card |
+| `2d0119d` | a clone that lands in a gen1 card's UID repairs it |
+| `fa3697a` | name the halves that differ, and do not read a register as capacity |
+| `c9a9cbe` | the notes page says what the user can act on |
+| `1cb7501` | why the clone reacts to the registers instead of predicting them |
+
+⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
+fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
+rebuilt tree is byte-identical to the old tip with the fixes applied on top, and only the six commits
+that needed a fix changed patch-id -- two of those only by context shift. What the fold carried:
+
+- the **five chips** claim, which counted `gen-2-card` as silicon, out of the release notes, a poller
+  comment and fork message 01
+- the survey comment claiming THREE facts and listing two -- the third comes from a sibling function
+- the `CloneComplete` reason described as two triggers at three sites when it has three, the omitted
+  one being the only one that fires alone
+- a doc block left describing `write_block_retried` while sitting above `write_landed`
+- **one behavioural fix**: the size finding needs a claim to be larger than, and `GET SYSTEM INFO`
+  does not always make one. Four mutants, all killed; two survived a first pass, one of them because
+  the fake tag advertised memory unconditionally and now can be told not to.
 
 Measurements in [pr-round-15/](pr-round-15/): `addressed-writes-measured.md`,
 `addressed-writes-implemented.md`, `residue-and-geometry.md`, `controls-2026-09-24.md`.
-**Everything measured passed on hardware** across seven cards covering FOUR identified chips -- TI
+**Everything measured before the fold passed on hardware** across seven cards covering FOUR identified chips -- TI
 Tag-it (x2), NXP SLIX (x2), NXP SLIX-S, ST LRi2K -- plus `gen-2-card`, whose silicon is unknown.
 
 ⚠️ **`gen-2-card` IS NOT "EM-Marin" AND IS NOT A FIFTH CHIP.** That type line belongs to the expired
