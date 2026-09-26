@@ -1,6 +1,7 @@
 # Round 15 — main reply (DRAFT, NOT POSTED)
 
-Post between the `~~~~` markers. **No internal process in the payload.**
+Post between the `~~~~` markers. **No internal process in the payload.** `[👤]` marks a paragraph
+written by mfcarroll; it is POSTED as-is, so mishamyte can see which words are his.
 
 Not answering a review — he has not replied to round 14. This is the addressing work, and a
 correction to what round 14 told him.
@@ -43,6 +44,10 @@ cleared. Silence from a card that asked for the flag is now settled by reading t
 comparing it. An in-band error frame is still taken at face value: the card that stays silent is
 waiting for something we cannot send, the card that answers has decided.
 
+[👤] I'd argue that SDK limit is a real gap in the firmware for iso15693, but it's one we can work
+around, and much better to work around it than expand the scope of this to requiring a firmware
+upgrade, even if that means we aren't able to get the write acknowledgments back directly.
+
 **Addressed data-block writes**, which is what #251 asks for. Every chip here accepts them and four
 answer nothing at all to a UID one byte wrong. The wipe retakes its address after writing 56 or 57,
 because on a gen1 card those two blocks are the UID and it moves immediately — measured on two chips.
@@ -50,8 +55,11 @@ Without that, every later frame carries an address the card no longer answers to
 run trips, and it reports a card shorter than the one in the field.
 
 **The clone's identity writes are addressed too.** WRITE AFI and WRITE DSFID are standard commands,
-so an unaddressed one lands on a tag of any size, and a changed AFI can drop that tag out of a
-selective inventory.
+so an unaddressed one lands on a tag of any size. The AFI is the worse of the two: a reader can
+inventory selectively on it, so an installation with a mixed tag population uses it to make its door
+readers see door cards and not stock labels. Change a bystander's AFI and it stops answering the
+inventory its own system runs — the card still reads fine to anything generic, but to the system
+that owns it the card has simply gone.
 
 **Two reporting fixes that came out of the same work.** A gen1 clone told the user that blocks
 56/57/62/63 "differ from the source" whatever the source was — but a source below block 57 has no
@@ -59,7 +67,7 @@ such blocks, and on every gen1 chip measured those four addresses answer no read
 registers outside the memory map rather than blocks with something to displace. The claim is now
 made only when the source actually reached them. And a gen1 clone that lost nothing is no longer
 reported as Partial: the counts said "28/28, not written 0" under a Partial banner with a note
-saying nothing had been skipped.
+saying nothing had been skipped. Those report a simple "Success" instead.
 
 ## What this does to the scope
 
@@ -68,7 +76,7 @@ The addressing is the safety fix #251 was filed as.
 
 I have kept both, and the reason is the range. A bystander does not have to be touching the antenna
 on ISO15693 — a wallet or a badge holder is enough — and a clone's payload or a wipe's zeros landing
-on someone's other card is the kind of damage this PR has been careful about throughout.
+on someone's other card is the kind of inadvertent damage this PR has been careful about throughout.
 
 **It does not close #251.** The 1-slot INVENTORY_T5 and the missing STAY QUIET are untouched, and the
 issue's worst consequence cannot be fixed this way at all: the post-wipe UID re-read can still be

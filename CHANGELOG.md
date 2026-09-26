@@ -12,9 +12,11 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **Info** — UID, manufacturer, chip type, GET SYSTEM INFO (memory / DSFID / AFI / IC ref), and the
   full block data (scrollable, `*` marks a locked block). Chip decode tells NXP **SLI / SLIX / SLIX2**
   (and the -S / -L variants) apart.
-- **Clone from a saved `.nfc`** — writes the UID, all data blocks, and the source's identity (IC ref /
-  block geometry / AFI / DSFID), so the copy advertises the same chip. gen2 is tried first; if the card
-  turns out not to be gen2, gen1 is offered as an explicit opt-in.
+- **Clone from a saved `.nfc`** — writes the UID and all data blocks. On a **gen2** card it also writes
+  the source's identity (IC ref / block geometry / AFI / DSFID), so the copy advertises the same chip.
+  **gen1 has no geometry register**, so a gen1 clone carries the source's UID and data on a card that
+  still reports its own size and IC reference. gen2 is tried first; if the card turns out not to be
+  gen2, gen1 is offered as an explicit opt-in.
 - **Wipe** — zeros every data block the card physically holds, **including 56/57/62/63**. On a gen2
   card those are ordinary user data, so sparing them would leave real data behind. On a **gen1** card
   they are the UID / unlock / commit registers, so a wipe cannot promise to leave the UID intact — it
@@ -52,7 +54,7 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   those four blocks — and **a failed attempt names them**, so they can be restored from a backup.
 - **gen1 fidelity is surfaced.** Because the gen1 backdoor lives in blocks 56/57/62/63, a gen1 clone
   cannot reproduce a source that keeps data there. The opt-in screen says so before anything is
-  written, and a clone that used gen1 reports Partial and flags those blocks.
+  written, and a clone whose source reached those blocks reports Partial and names them.
 - **Writes are verified by read-back.** The UID is re-read after an RF field power-cycle; AFI / DSFID
   are re-read and compared, and a field the copy doesn't carry is reported as Partial with a note.
   Block contents are not compared — a data block counts as written when the card acknowledges it.
