@@ -766,7 +766,9 @@ these notes carry.
 **Every physical tag is in [tag-inventory.md](tag-inventory.md)** — what it is, what it measured before
 anything wrote to it, and whether it has ever been written to. Read it before touching hardware, and
 `python3 tools/iso15693_magic_probe.py --identify` to find out which tag is actually on the antenna.
-Labels live on paper, UIDs live on silicon, and three of the tags are physically identical.
+Labels live on paper, UIDs live on silicon, and TWO of the tags are physically identical --
+`slix-1k-coin18` and `v1-coin-green18`, both 18mm coins. Corrected 2026-09-26 by mfcarroll, who
+has them in front of him; this line claimed three and nothing recorded which three.
 
 **The round-7 comment cut was BUILT: sixteen commits on dev, on top of `04d5f8a`, all signed.** (It
 shipped long ago — this paragraph is the round-7 state as it stood. NOT the 2026-09-15 cut, which is
