@@ -86,6 +86,25 @@ PROFILES = {
                           data={0: _HDR0, 1: _HDR1},
                           note="257 blocks -- above the wire's 256 ceiling; only a hand-edited file "
                                "reaches the gen2 CFG clamp"),
+    # The ONLY profile that carries a REAL card's UID, and that is the whole point of it. A file whose
+    # UID already matches the tag in the field passes the gen2 verify without anything magic having
+    # happened -- the poller says so at that branch -- so the run reaches the data pass and the survey
+    # on a tag that is NOT magic, with no backdoor write and no gen1 opt-in. That is the only route to
+    # a clone whose card count was NOT set by this app, which is the case the size note's "the same as
+    # the file" clause has to stay quiet in.
+    #
+    # Targets slix2-gold-30mm: advertises 79, and answers a read at every address in the 8-bit block
+    # space, so it is also the only card that can show the survey what it does with no read edge.
+    # ic_ref and afi/dsfid are the card's OWN values, so the identity write is a no-op and the only
+    # thing left differing is the block count.
+    #
+    # THE UID MUST BE THE CARD'S CURRENT ONE. If it is not, the gen2 verify fails and the app offers
+    # the gen1 opt-in -- which on THIS card overwrites four blocks of real memory, since 56/57/62/63
+    # are in range here. Re-read the card before using this file.
+    "slix2_selfuid_8": dict(uid="E0 48 03 00 01 CD F1 36", ic_ref=0x01, dsfid=0x00, afi=0x00, blocks=8,
+                            data={0: _HDR0, 1: _HDR1},
+                            note="slix2-gold-30mm's OWN UID, 8 blocks -- reaches the survey on a "
+                                 "non-magic tag without a backdoor write or a gen1 opt-in"),
     "wipeseed_64": dict(uid="E0 04 01 10 5E ED 00 01", ic_ref=0x0F, dsfid=0x00, afi=0x00, blocks=64,
                         data={b: "5A%02XA5%02X" % (b, b) for b in range(64)},
                         note="64 blocks, EVERY block 5A<blk>A5<blk> -- wipe-residue seed for the merge gate"),
