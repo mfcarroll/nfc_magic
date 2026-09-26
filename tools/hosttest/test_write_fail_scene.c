@@ -442,6 +442,30 @@ static void test_the_details_button_follows_the_gen1_caveat(void) {
     end();
 }
 
+// And the case the caveat no longer takes: a gen1 clone that reached the four with nothing there is
+// complete, so it gets the success tone and Finish, with a note -- the copy differs from the file in that
+// those four are registers -- rather than a partial.
+static void test_a_gen1_clone_that_lost_nothing_finishes_with_a_note(void) {
+    begin("a gen1 clone that lost nothing at 56/57/62/63 finishes with a note");
+    Iso15693PollerResult r = {0};
+    r.blocks_total = 60;
+    r.used_gen1 = true;
+    r.gen1_blocks_skipped = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    CHECK(fake_scene_text_contains("All data written."));
+    CHECK(fake_scene_text_contains("registers, not data."));
+    CHECK(fake_scene.played_success);
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Finish");
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Details");
+
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) CHECK(strstr(scroll, "not file data") != NULL);
+    end();
+}
+
 static void test_the_gen1_details_note_matches_the_source(void) {
     begin("the gen1 Details note does not claim missing file data that the file never had");
     Iso15693PollerResult small = {0};
@@ -539,6 +563,49 @@ static void test_a_clean_tail_still_reports_the_size(void) {
     // both digits while telling the user the opposite of the truth.
     CHECK(fake_scene_text_contains("reports 28 blocks")); // what the card says
     CHECK(fake_scene_text_contains("holds 64")); // ...against what it is
+    end();
+}
+
+// Where the card's reported count and the file's are the SAME number, the size note says so -- the
+// reported count is not arbitrary, it is what the file asked for, and a user looking at "reports 28"
+// has no other way to know that. Gated on the values being equal rather than on which path ran,
+// because nothing here knows who wrote the count.
+static void test_the_size_note_says_when_the_count_came_from_the_file(void) {
+    begin("the size note names the file where the card reports the file's own count");
+    Iso15693PollerResult r = {0};
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.card_blocks = 28;
+    r.file_blocks = 28; // the same number, however it got there
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) CHECK(strstr(scroll, "the same as the file") != NULL);
+    end();
+}
+
+// ...and stays quiet about it where they differ, which is the case that makes the clause a claim
+// rather than a reading of two values. The geometry note sits on the same page saying they do NOT
+// match, so a size note asserting agreement would contradict the bullet under it.
+static void test_the_size_note_claims_no_agreement_where_there_is_none(void) {
+    begin("the size note does not mention the file where the two counts differ");
+    Iso15693PollerResult r = {0};
+    r.holds_more = true;
+    r.survey_top = 63;
+    r.card_blocks = 40; // the card's own, untouched -- a gen1 clone
+    r.file_blocks = 28;
+    r.memory_differs = true;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
+    const char* scroll = fake_scene_scroll_text();
+    CHECK(scroll != NULL);
+    if(scroll) {
+        CHECK(strstr(scroll, "the same as the file") == NULL);
+        CHECK(strstr(scroll, "reports 40 blocks but holds 64") != NULL);
+    }
     end();
 }
 
@@ -922,9 +989,12 @@ int main(void) {
     test_a_clean_clone_with_notes_says_the_most_important_one();
     test_the_summary_names_only_the_half_that_moved();
     test_a_clean_tail_still_reports_the_size();
+    test_the_size_note_says_when_the_count_came_from_the_file();
+    test_the_size_note_claims_no_agreement_where_there_is_none();
     test_details_carries_every_survey_finding();
     test_the_gen1_caveat_only_claims_loss_when_the_source_held_data_there();
     test_the_details_button_follows_the_gen1_caveat();
+    test_a_gen1_clone_that_lost_nothing_finishes_with_a_note();
     test_the_gen1_details_note_matches_the_source();
     test_wipe_card_lost_details_lists_no_blocks();
     test_wipe_stopped_says_it_timed_out();

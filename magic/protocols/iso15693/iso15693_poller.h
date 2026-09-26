@@ -223,38 +223,34 @@ typedef struct {
     // addresses make a clone Partial. A file that reaches them with nothing there loses nothing, and a
     // screen saying they "differ from the source" would be describing a loss that did not happen.
     bool gen1_data_lost;
-    // SURVEY RESULTS, not write results: a clone carrying either is still a clean success, and both
-    // are reported as notes rather than as failures.
+    // SURVEY RESULTS, not write results. How a clone reports them is at
+    // NfcMagicIso15693WriteFailReasonCloneComplete; why the survey reads rather than trusting the
+    // card's count, and why these are separate findings, is at iso15693_poller_survey_above_source.
     //
-    // Readable blocks above the source that still hold the PREVIOUS card's data. A clone writes the
-    // source's blocks and leaves the rest alone, which is right -- but on a gen2 card the CFG frame
-    // then rewrites the advertised count down to the source's, so the card claims to end where the
-    // source did and an ordinary dump shows a clean copy over data that is still there. Found by
-    // reading upward from the source count, never by trusting a count: on a magic card the count is
-    // a claim. first/last bound the non-empty ones and are meaningless while residue_found is false.
+    // Readable blocks above the source that still hold data from before the clone. first/last bound
+    // the non-empty ones and are meaningless while residue_found is false.
     bool residue_found;
     uint16_t residue_first;
     uint16_t residue_last;
-    // The card answered a read ABOVE the count it now reports, so it is bigger than it claims -- the
-    // phantom tail the wipe's sweep exists for, arrived at by a clone instead. Separate from
-    // residue_found on purpose: a clone onto a WIPED larger card leaves a clean tail and still leaves
-    // a card presenting as smaller than it is. survey_top is the highest block proven readable.
+    // The card answered a read ABOVE the count it now reports, so it is bigger than it claims.
+    // survey_top is the highest block proven readable.
     bool holds_more;
     uint16_t survey_top;
-    // The card goes on reporting a different geometry or IC reference from the source's. gen2
-    // programs those through its CFG register so they agree by construction; gen1 has no such
-    // register, so a gen1 clone carries the source's UID and data on a card that still announces its
-    // own size. Both sides are CLAIMS, deliberately -- the question is what a reader will see.
-    // card_blocks / card_ic_ref are what the CARD says, and are 0 while neither flag is set.
-    // ...recorded as two, because they move independently: a file and a card can agree on block
-    // count and disagree on IC reference, and a screen naming both would then describe a mismatch
-    // that is not there. Either, neither or both.
+    // The card goes on reporting a different block count or IC reference from the source's -- see
+    // iso15693_poller_compare_reported_geometry in the .c. Two flags, because they move independently:
+    // a file and a card can agree on block count and disagree on IC reference, and a screen naming
+    // both would then describe a mismatch that is not there. Either, neither or both.
+    //
+    // card_blocks / card_ic_ref are what the CARD reported, and 0 when GET SYSTEM INFO did not answer
+    // or did not carry that field -- which a scene cannot tell apart, so each note that prints one is
+    // gated on a flag that needed a real value: memory_differs, ic_ref_differs, or holds_more for the
+    // size note, which reads card_blocks whether or not either flag here is set.
     bool memory_differs;
     bool ic_ref_differs;
     uint16_t card_blocks;
     uint8_t card_ic_ref;
-    // ...and what the FILE said, so the note can show both sides rather than leaving the
-    // reader to remember what they asked for.
+    // ...and what the FILE said, so the note can show both sides rather than leaving the reader to
+    // remember what they asked for.
     uint16_t file_blocks;
     uint8_t file_ic_ref;
     // The failures are a persistent, contiguous run at the very top of the card, i.e. the source is

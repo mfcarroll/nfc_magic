@@ -370,9 +370,7 @@ struct Iso15693Poller {
     // A frame went to 56/57 on the gen2 path, so the identity is re-read before the run reports -- see
     // Iso15693WriteStateVerifyClone.
     bool clone_uid_recheck;
-    // Readable blocks above the source that still hold the card's previous contents, and the card's
-    // own reported geometry where it does not match what the source claimed. Both are survey results
-    // rather than write results: a clone with either is still a clean success.
+    // The survey's results, copied out by get_result; the result struct says what each one means.
     bool clone_residue_found;
     uint16_t clone_residue_first;
     uint16_t clone_residue_last;
@@ -954,23 +952,19 @@ static bool iso15693_poller_cut_pass_if_expired(
 // the source did and an ordinary dump shows a clean copy. Measured on a 64-block card cloned from a
 // 28-block source -- it reported 28, and blocks 28..63 still read the data written before the clone.
 //
-// THE ADVERTISED COUNT CANNOT BE THE TEST, before or after. On a magic card a claim is a costume,
-// and deriving "these blocks hold residue" from a number the card chose would be a guess wearing
-// the clothes of a measurement. So this READS, which is non-destructive -- the wipe's sweep writes
-// because it is wiping -- and on the cards measured a block past physical capacity refuses reads
-// outright (see ISO15693_POLLER_WIPE_MAX_BLOCKS), which is the same discriminator the pass above
-// already uses when it asks whether a refused block is even there.
+// THE ADVERTISED COUNT CANNOT BE THE TEST, before or after: on a magic card it is whatever was last
+// programmed. So this READS, which is non-destructive (the wipe's sweep writes because it is
+// wiping), and on the cards measured a block past physical capacity refuses reads outright (see
+// ISO15693_POLLER_WIPE_MAX_BLOCKS) -- the same discriminator the data pass below already uses when it
+// asks whether a refused block is even there.
 //
-// Run whatever path was taken. clone_used_gen1 is known by now, and gen1 has no register that could
-// falsify its count -- but "gen1 claims are truthful" is an inference from the cards we own about a
-// mechanism, and this whole file exists because claims lie. Eight reads on a card telling the truth is
-// what not resting on that costs.
+// It runs on the gen1 path too. That gen1 cannot misstate its count is known only for the cards
+// measured, and the check costs ISO15693_POLLER_WIPE_ABSENT_RUN reads past the card's top.
 //
-// TWO FACTS COME OUT OF THIS, and they are separate. A block above the source that EXISTS is a
-// statement about the card's size; one that exists and holds DATA is a statement about the previous
-// card's contents. Conflating them would either warn about every clone onto a wiped card, or say
-// nothing at all about a 64-block card now presenting as 28 with a clean tail -- which is the phantom
-// tail the wipe's sweep exists for, and is worth knowing whether or not anything is left in it.
+// TWO FACTS COME OUT OF THIS, and they are separate. A block that answers above the count the card
+// reports is a statement about its size; one above the source that holds DATA is a statement about
+// what the card held before. Conflating them would either warn about every clone onto a wiped card,
+// or say nothing at all about a 64-block card now presenting as 28 with a clean tail.
 static void iso15693_poller_survey_above_source(
     Iso15693Poller* instance,
     Iso15693_3Poller* iso_poller,
@@ -1020,8 +1014,8 @@ static void iso15693_poller_survey_above_source(
     }
 }
 
-// Will the copy PRESENT as the source? Both sides of this are claims, and that is the right subject:
-// the question is what a reader sees, not what the silicon is.
+// Does the card report the block count and IC reference the source did? Claims on both sides,
+// because a reader shows claims.
 //
 // gen2 programs its answer through the CFG register, so there the two agree by construction. gen1 has
 // no such register, so a gen1 clone carries the source's UID and data on a card that goes on reporting
@@ -1049,10 +1043,6 @@ static void iso15693_poller_compare_reported_geometry(
     instance->clone_card_blocks = card.block_count;
     instance->clone_card_blocks_known = (card.flags & ISO15693_3_SYSINFO_FLAG_MEMORY) != 0;
     instance->clone_card_ic_ref = card.ic_ref;
-    // Recorded separately, because they move independently and a screen must name only what moved.
-    // A 28-block file onto a 28-block card reporting a different IC reference is a real mismatch, and
-    // saying "the card reports 28 blocks, not the file's" about it describes a number that matches.
-    // Both can differ at once, and then both are named.
     instance->clone_memory_differs = memory_differs;
     instance->clone_ic_ref_differs = ic_ref_differs;
     instance->clone_file_blocks = src->block_count;

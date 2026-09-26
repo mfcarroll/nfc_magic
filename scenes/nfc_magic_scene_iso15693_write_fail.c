@@ -242,11 +242,11 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             widget, 0, 13, AlignLeft, AlignTop, FontSecondary, furi_string_get_cstr(text));
         furi_string_free(text);
     } else if(clone_complete) {
-        // Clean success with something the bare popup cannot hold. Three lines fit at y=20, so this is
-        // the confirmation plus ONE note, and there are THREE in priority order: data left above the
-        // source > a card larger than it claims > a geometry it still reports. Residue leads because
-        // it is about the user's data; size comes next because it is about the card itself; geometry
-        // is only about how the copy presents. Details carries all three, so none is unreachable.
+        // Clean success with something the bare popup cannot hold. Three lines fit at y=20: the
+        // confirmation plus ONE note, chosen in priority order -- residue first because it is about
+        // the user's data, then size because it is about the card, then the block count or IC
+        // reference it reports, which is only how the copy presents, then a gen1 card's four register
+        // addresses, where the file had nothing to lose. Details carries every one.
         FuriString* text = furi_string_alloc();
         furi_string_cat_str(text, "All data written.");
         if(instance->iso15693_result.residue_found) {
@@ -256,15 +256,10 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
                 instance->iso15693_result.residue_first,
                 instance->iso15693_result.residue_last);
         } else if(instance->iso15693_result.holds_more) {
-            // What the card SAYS first, then what it is. That is the order a reader of the card
-            // meets them in: the reported count is what a tool prints, and the physical top is the
-            // surprise underneath it. Both are COUNTS, deliberately -- naming the reported count
-            // against a top BLOCK number mixes a count with an index and invites an off-by-one.
-            //
-            // Neither says who set that count. The gen2 CFG frame usually did, but it goes out
-            // before the verify and lands only on a magic card: a tag that is not magic and already
-            // wore the file's UID passes the verify with its own geometry untouched, and a gen1
-            // clone never had a geometry frame at all. Both reach this line.
+            // What the card SAYS first, then what it is: the reported count is what a tool prints.
+            // Both are COUNTS, deliberately -- naming the reported count against a top BLOCK number
+            // mixes a count with an index and invites an off-by-one. Neither says who set that count;
+            // see the size note in nfc_magic_scene_iso15693_partial_details.c.
             furi_string_cat_printf(
                 text,
                 "\nCard reports %u blocks,\nbut holds %u.",

@@ -114,10 +114,12 @@ typedef enum {
     NfcMagicIso15693WriteFailReasonCardLost, // no card in the field / card removed mid-write
     NfcMagicIso15693WriteFailReasonPartial, // clone: UID written but some data blocks failed
     // clone OK and nothing lost, but the card carries something the bare Success popup cannot hold.
-    // Any of THREE: readable blocks above the source still holding the previous card's data, a card
-    // answering reads past the count it now reports, or a geometry it goes on reporting that is not
-    // the source's. None is a failure and none is Partial. The middle one fires on its own after a
-    // clone onto a wiped larger card, which is why it is not folded into the first.
+    // Any of the survey's three findings -- readable blocks above the source still holding data from
+    // before the clone, a card answering reads past the count it now reports, or a block count or IC
+    // reference it goes on reporting that is not the source's -- or a gen1 clone whose file reached
+    // 56/57/62/63 with nothing there, where the card has registers in place of the file's blocks.
+    // None is a failure and none is Partial. Why the survey's are kept apart is at
+    // iso15693_poller_survey_above_source.
     NfcMagicIso15693WriteFailReasonCloneComplete,
     NfcMagicIso15693WriteFailReasonOverCapacity, // clone OK, but the card now advertises more blocks
         // than it physically holds (the extra were empty, so nothing was lost) -- a success with a note

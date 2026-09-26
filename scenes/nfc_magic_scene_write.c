@@ -398,21 +398,22 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
                     instance->iso15693_target_uid,
                     ISO15693_3_UID_SIZE);
             }
-            // Two ISO15693 successes carry information the bare "Success!" popup has nowhere to put:
-            // a clone that left the card advertising more blocks than it physically holds (empty
-            // over-capacity, no data lost), and any wipe -- whose sweep length is measured, so a run
-            // that stopped short of the card's claim and one that covered it would otherwise look the
-            // same. Both go to the result screen with their counts.
-            // ...and a clone that left the card carrying something of its own, in any of three ways:
-            // readable blocks above the source still holding the previous card's data, a card that
-            // answers reads past the count it now reports, or a geometry the card goes on reporting
-            // that is not the source's. None is a failure, and none fits the popup. The four terms
-            // below are three findings, because geometry is recorded as two independent halves.
-            const bool clone_notes = iso15693 && !iso15693_wipe &&
-                                     (instance->iso15693_result.residue_found ||
-                                      instance->iso15693_result.holds_more ||
-                                      instance->iso15693_result.memory_differs ||
-                                      instance->iso15693_result.ic_ref_differs);
+            // Three ISO15693 successes carry information the bare "Success!" popup has nowhere to
+            // put: a clone whose file was larger than the card (empty over-capacity, no data lost),
+            // a clone that ends with a note -- the survey's three findings, or a gen1 card whose
+            // four register addresses the file reached with nothing there, all listed at
+            // NfcMagicIso15693WriteFailReasonCloneComplete -- and any wipe, whose sweep length is
+            // measured, so a run that stopped short of the card's claim and one that covered it
+            // would otherwise look the same. All three go to the result screen. The notes' test
+            // below has five terms for four findings, because the card's reported block count and
+            // IC reference are recorded separately. It has no mode term: both places that read it
+            // test for a wipe first, and a wipe never sets these fields.
+            const bool clone_notes = iso15693 && (instance->iso15693_result.residue_found ||
+                                                  instance->iso15693_result.holds_more ||
+                                                  instance->iso15693_result.memory_differs ||
+                                                  instance->iso15693_result.ic_ref_differs ||
+                                                  (instance->iso15693_result.used_gen1 &&
+                                                   instance->iso15693_result.gen1_blocks_skipped));
             if(iso15693_wipe || (iso15693 && instance->iso15693_result.over_capacity > 0) ||
                clone_notes) {
                 scene_manager_set_scene_state(

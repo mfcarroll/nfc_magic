@@ -181,6 +181,26 @@ static void test_over_capacity_clone_goes_to_the_result_screen(void) {
     end();
 }
 
+// A gen1 clone whose file reached 56/57/62/63 with nothing there lost nothing, but the copy differs
+// from the file in one way a reader can see, so it ends on the notes screen rather than the bare popup.
+// A gen1 clone whose file stopped below 56 has nothing to say, and stays on the popup.
+static void test_a_gen1_clone_that_reached_the_registers_ends_with_a_note(void) {
+    begin("a gen1 clone reaching 56/57/62/63 ends with a note; one below them does not");
+    setup(NfcMagicProtocolIso15693, NfcMagicIso15693ModeClone);
+    app.iso15693_result.used_gen1 = true;
+    app.iso15693_result.gen1_blocks_skipped = true;
+    send(NfcMagicCustomEventWorkerSuccess);
+    CHECK(routed_to() == NfcMagicSceneIso15693WriteFail);
+    CHECK(reason_set() == NfcMagicIso15693WriteFailReasonCloneComplete);
+
+    setup(NfcMagicProtocolIso15693, NfcMagicIso15693ModeClone);
+    app.iso15693_result.used_gen1 = true;
+    app.iso15693_result.gen1_blocks_skipped = false;
+    send(NfcMagicCustomEventWorkerSuccess);
+    CHECK(routed_to() == NfcMagicSceneSuccess);
+    end();
+}
+
 // A clean clone has nothing extra to report, so it gets the ordinary Success popup.
 static void test_clean_clone_gets_the_success_popup(void) {
     begin("a clean clone gets the plain Success popup");
@@ -342,6 +362,7 @@ int main(void) {
     test_other_protocols_route_to_uscuid_partial();
     test_wipe_success_goes_to_the_result_screen();
     test_over_capacity_clone_goes_to_the_result_screen();
+    test_a_gen1_clone_that_reached_the_registers_ends_with_a_note();
     test_clean_clone_gets_the_success_popup();
     test_write_uid_success_refreshes_the_stored_uid();
     test_iso15693_card_lost_is_terminal();
