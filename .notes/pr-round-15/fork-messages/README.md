@@ -1,4 +1,4 @@
-# Round 15 — six sync points, all behavioural but one
+# Round 15 — seven sync points, all behavioural but one
 
 The addressing round. Every one of these changes behaviour except 05, which is the release notes.
 There is no comment-only commit among them.
@@ -11,11 +11,21 @@ There is no comment-only commit among them.
 | 04 | `3fc118c` | the identity writes are addressed and take the flag |
 | 05 | `b2cce0b` | the release notes overstate what a gen1 clone reproduces |
 | 06 | `19e6660` | what a clone leaves behind, and a gen1 card it lands in |
+| 07 | `b312653` | the gen1 backdoor sequence carries the card's address |
 
 Dev order matches fork order, so no reorder. **06 collapses seven dev commits** — see below, because
 that is the one place this round does not get one decision per commit, and the reason is churn.
 
-The twelve notes commits are dev-only and are not sync points.
+The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
+message cites the cards rather than a test.
+
+## Why 07 comes last and stands alone
+
+It is the one frame set 01 left out, and it carries its own measurement: at block 62 the addressed
+form is the only one NXP silicon answers, which is a fact about the frames rather than about the
+safety argument. Folding it into 01 would put a claim about block 62 inside a commit whose subject is
+data blocks, and would hide the re-address seam -- the one thing addressing this sequence costs --
+inside a commit that already explains a different re-address for a different reason.
 
 ## Why 01 and 02 are separate, and why 02 is not two commits
 
