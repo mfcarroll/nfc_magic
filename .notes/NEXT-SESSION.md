@@ -108,7 +108,7 @@ card exists on either side of this PR" either -- that needs the write test. What
 is three unscoped shipped comments claiming a past-capacity block refuses reads, which this card
 contradicts whatever it turns out to be.
 
-## ⚠️ THE FLIPPER IS CARRYING AN EXPERIMENT, NOT THIS BRANCH
+## The EOF experiment is ANSWERED — SOF+EOF is refused, a bare EOF is untried
 
 Branch **`experiment-eof-frame` = `74bfe45`**, off the round-15 tip. The FAP installed on the device is
 built from THAT, not from `iso15693-dev`. Rebuilding from this branch replaces it and the probe is
@@ -119,12 +119,18 @@ with an empty buffer put SOF + EOF on the air and satisfy the standalone EOF an 
 for? Purely additive — it logs `EOF-TEST blk N: trx=… rx=… bytes` and then falls through to the
 read-back, so behaviour is identical either way. 165 host tests pass on the branch.
 
-**Run it before the locked V1 coin**: cheap, reversible, and it could delete the read-back, where the
-coin is spendable once. Wipe or clone a TI Tag-it and read the log.
+**RESULT: refused.** All 88 probes over 72 blocks returned `NfcErrorTimeout`. The read-back stays.
+Write-up in [firmware-gaps.md](firmware-gaps.md), including why the log's `rx=2 bytes` is a stale
+buffer rather than a response.
 
-- `trx=0` with `rx` non-empty, logged `<== ANSWERED` → the EOF works. The read-back dies on that
-  path, a write costs one frame instead of two, and the firmware gap stops being a dependency.
-- every line `trx=` non-zero with `rx=0 bytes` → it does not. Drop the branch; nothing changes.
+**The device is back on the round build.** The branch is kept as the base for the app half of the
+firmware change below, not because anything still needs running on it.
+
+**What the run also established:** a bare EOF is about six lines. The poller encoder writes SOF and
+EOF as literal bytes of the 1-of-4 stream — `0x21` and `0x04` — and `poller_tx_common` transmits what
+it is handed with parity off, so a standalone EOF is a one-byte frame through the path the poller
+already uses. No transparent mode, no bit-banging. mfcarroll is interested in trying it on a branch
+of his Momentum fork.
 
 ## WHAT IS LEFT, in the order to take it
 

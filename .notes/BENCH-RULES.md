@@ -19,6 +19,21 @@ tree puts it there -- with the toolchain's python, not the system one.
 Same shape as the stale FAP earlier the same day, and as the rule below about the control that
 cannot fail: the evidence was about a different object from the one under test.
 
+## 0. The serial port is exclusive — close the other client first
+
+Cost 13 minutes on 2026-09-26. `./fbt launch` hung with nothing on the Flipper's screen, long enough
+to look like a broken build, because a `log debug` CLI session was still attached to
+`/dev/cu.usbmodemflip_Matthew1`. `runfap.py` waits on that port with no timeout, so it does not fail
+— it sits.
+
+Same shape as pm3, which also takes the port exclusively: the interactive client has to be closed
+before a script can reach the device. **Before any install or sweep, close the CLI and the pm3
+client.** `lsof /dev/cu.usbmodemflip_*` names whatever is holding it, and a killed run can leave its
+own python behind still holding it.
+
+An install that is working takes about two seconds. One that has been going for a minute is not slow,
+it is blocked.
+
 ## 1. Every measurement needs its control, or you do not know what you measured
 
 A card accepting a correctly-addressed write does not show it MATCHED the address -- a tag ignoring
