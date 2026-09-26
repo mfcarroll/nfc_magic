@@ -240,11 +240,13 @@ static void test_uid_moved_somewhere_unexpected(void) {
 
 // ---- the gen1 opt-in -----------------------------------------------------------------------------
 
-// gen1 writes the UID with ordinary WRITE BLOCKs into 56/57/62/63 and the card latches it only on the
-// next power-up. So the verify has to sit behind a reset -- read inline it would see the old UID and
-// report failure on exactly the card gen1 works on.
-static void test_gen1_uid_latches_on_the_power_cycle(void) {
-    begin("gen1 latches its UID on the field reset, and the verify sees it");
+// gen1 writes the UID with ordinary WRITE BLOCKs into 56/57/62/63, and the verify sits behind a field
+// reset. NOT because the card latches -- measured on three chips, it does not; the reset is there to
+// re-activate cleanly and read a card whose identity has just moved out from under the session. The
+// reset count is asserted rather than inferred, because the fake now moves the UID immediately and so
+// cannot fail a verify that skipped it.
+static void test_gen1_uid_takes_and_the_verify_sits_behind_a_reset(void) {
+    begin("a gen1 UID write takes, and its verify runs behind a field reset");
     fake_tag_init(64, 64, 4);
     fake_tag.is_gen1_magic = true;
     fake_tag.is_gen2_magic = false;
@@ -275,6 +277,72 @@ static void test_gen1_failure_still_reports_the_spent_attempt(void) {
     CHECK_EQ(terminal_event(), Iso15693PollerEventFail);
     CHECK(inst.gen1_attempted);
     CHECK(!inst.clone_used_gen1); // the UID did not take
+    CHECK(!inst.uid_unexpected); // ...and did not move either, so there is no new UID to report
+    end();
+}
+
+// The gen1 sequence re-addresses between 56 and 57, and if 57 is lost the card is left with half a UID,
+// neither its own nor the target. That card IS gen1, and the UID it answers to now is the only way to
+// find it again, so the gen1 verify reports it the way the gen2 verify reports one.
+static void test_a_half_written_gen1_uid_is_reported_as_unexpected(void) {
+    begin("a gen1 run left with half a UID reports the UID the card now answers to");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag.is_gen2_magic = false;
+    fake_tag.uid_register_drop_mask = 0x2; // 56 lands, 57 is lost
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeWriteUid, true);
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK_EQ(terminal_event(), Iso15693PollerEventFail);
+    CHECK(inst.uid_unexpected);
+    CHECK(memcmp(inst.uid_readback, fake_tag.uid, ISO15693_3_UID_SIZE) == 0);
+    CHECK(memcmp(fake_tag.uid, TARGET_UID, ISO15693_3_UID_SIZE) != 0); // half of it, not all
+    end();
+}
+
+// The other half: 56's frame lost, so the card keeps answering to its own address, 57 lands there, and
+// the card is left with the target's head under its own tail -- the second of the two UIDs a half can
+// leave.
+static void test_a_gen1_run_that_wrote_only_57_is_reported_as_unexpected(void) {
+    begin("a gen1 run that wrote only block 57 reports the UID the card now answers to");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag.is_gen2_magic = false;
+    fake_tag.uid_register_drop_mask = 0x1; // 56 is lost, 57 lands
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeWriteUid, true);
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK_EQ(terminal_event(), Iso15693PollerEventFail);
+    CHECK(inst.uid_unexpected);
+    CHECK(memcmp(inst.uid_readback, fake_tag.uid, ISO15693_3_UID_SIZE) == 0);
+    CHECK(memcmp(&fake_tag.uid[0], &TARGET_UID[0], 4) == 0); // the target's head...
+    CHECK(memcmp(&fake_tag.uid[4], &TARGET_UID[4], 4) != 0); // ...and not its tail
+    end();
+}
+
+// With a second tag in the field the 1-slot inventory can answer for it (#251), so a UID that is
+// neither the card's nor the target may be that tag's. Only the two a half-written sequence leaves are
+// this card's. Anything else keeps the gen1-failed report, whose screen names the four blocks the
+// user's consent has just cost -- printing the stranger's UID as this card's would replace it.
+static void test_a_stranger_at_the_gen1_verify_keeps_the_spent_blocks_report(void) {
+    begin("a stranger's UID at the gen1 verify is not reported as this card's");
+    fake_tag_init(64, 64, 4); // an ordinary tag, so the sequence lands in its memory
+    fake_tag.is_gen1_magic = false;
+    fake_tag.is_gen2_magic = false;
+    fake_tag.bystander_answers_inventory = true;
+    memset(fake_tag.bystander_uid, 0x77, sizeof(fake_tag.bystander_uid));
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeWriteUid, true);
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK_EQ(terminal_event(), Iso15693PollerEventFail);
+    CHECK(inst.gen1_attempted); // the report that names 56/57/62/63...
+    CHECK(!inst.uid_unexpected); // ...not one printing the stranger's UID as this card's
     end();
 }
 
@@ -527,6 +595,33 @@ static void test_a_clone_that_wrote_56_rereads_the_uid_behind_a_reset(void) {
     end();
 }
 
+// A gen1 card already wearing the file's UID takes the gen2 path, converts at 56, and repairs its UID
+// with frames that each go out once. Lose one and the card answers to bytes out of the file, under a
+// screen that would otherwise report the clone. The re-read is what catches it.
+static void test_a_repair_that_lost_a_frame_reports_the_uid_the_card_answers_to(void) {
+    begin("a converted clone whose repair lost a frame reports the UID the card answers to");
+    fake_tag_init(64, 64, 4);
+    fake_tag.is_gen1_magic = true;
+    fake_tag.is_gen2_magic = false;
+    fake_tag_set_uid_now(TARGET_UID); // already the file's UID, so the gen2 verify passes
+    fake_tag.uid_register_drop_mask = 0x2; // the pass's 56 lands; the repair's is lost
+    static Iso15693_3Data src;
+    fake_data_init(&src, 64, 4);
+    fake_data_fill(&src, 0, 63, 0x5A);
+
+    Iso15693Poller inst = make_poller(Iso15693PollerModeClone, false);
+    inst.clone_source = &src;
+    memcpy(inst.target_uid, TARGET_UID, ISO15693_3_UID_SIZE);
+    run_poller(&inst, 0);
+
+    CHECK(inst.uid_moved_by_write); // it did convert
+    CHECK_EQ(terminal_event(), Iso15693PollerEventFail);
+    CHECK(inst.uid_unexpected);
+    CHECK(memcmp(inst.uid_readback, fake_tag.uid, ISO15693_3_UID_SIZE) == 0);
+    CHECK(memcmp(fake_tag.uid, TARGET_UID, ISO15693_3_UID_SIZE) != 0);
+    end();
+}
+
 // And a card gone by the re-read has confirmed nothing, so there is no result to report.
 static void test_a_card_gone_before_the_reread_is_card_lost(void) {
     begin("a clone whose card is gone at the re-read reports CardLost");
@@ -617,8 +712,11 @@ int main(void) {
     test_non_magic_tag_reports_not_gen2();
     test_write_uid_matching_current_is_unverifiable();
     test_uid_moved_somewhere_unexpected();
-    test_gen1_uid_latches_on_the_power_cycle();
+    test_gen1_uid_takes_and_the_verify_sits_behind_a_reset();
     test_gen1_failure_still_reports_the_spent_attempt();
+    test_a_half_written_gen1_uid_is_reported_as_unexpected();
+    test_a_gen1_run_that_wrote_only_57_is_reported_as_unexpected();
+    test_a_stranger_at_the_gen1_verify_keeps_the_spent_blocks_report();
     test_wipe_verifies_the_uid_unchanged();
     test_wipe_on_an_armed_gen1_card_reports_the_uid_change();
     test_wipe_card_gone_after_reset_still_reports();
@@ -630,6 +728,7 @@ int main(void) {
     test_clone_on_non_magic_writes_nothing();
     test_empty_source_clone_is_refused_before_writing();
     test_a_clone_that_wrote_56_rereads_the_uid_behind_a_reset();
+    test_a_repair_that_lost_a_frame_reports_the_uid_the_card_answers_to();
     test_a_card_gone_before_the_reread_is_card_lost();
     test_a_clone_lost_mid_pass_reports_an_unread_uid_once_56_was_sent();
     test_the_last_progress_frame_waits_for_the_reread();

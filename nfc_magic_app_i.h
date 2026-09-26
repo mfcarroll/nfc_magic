@@ -131,6 +131,7 @@ typedef enum {
         // original nor the target. The card IS magic -- this is the only outcome that proves it -- so
         // it must not share the "not a magic tag" screen. The UID it answers with is in the result.
         // A clone's re-read after a pass that reached 56/57 lands here the same way.
+        // So does a gen1 sequence that leaves half a UID.
     NfcMagicIso15693WriteFailReasonGen1Failed, // the opt-in gen1 UID didn't verify. The sequence is
         // sent before anything is checked, so blocks 56/57/62/63 were overwritten regardless -- on what
         // is most likely an ordinary tag. Naming them is the point of the screen.

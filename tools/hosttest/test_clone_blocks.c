@@ -615,8 +615,9 @@ static void test_a_gen1_card_on_the_gen2_path_converts_and_repairs(void) {
     CHECK_EQ(inst.clone_blocks_total, 60); // 64 less the four registers
     CHECK_EQ(inst.clone_failed_count, 0);
 
-    // The fixture holds a gen1 UID write until the next power-cycle, which is stricter than the
-    // hardware on purpose (see gen1_uid_pending). The repair's effect is visible on the far side.
+    // Power-cycled before the check for the same reason the poller resets: the repair is verified on a
+    // freshly activated card, not on the one whose identity moved mid-pass. The fake applies a gen1
+    // UID write at once, so this is about reading it the way the app does rather than about a latch.
     fake_tag_power_cycle();
     CHECK(memcmp(fake_tag.uid, target, ISO15693_3_UID_SIZE) == 0);
     end();
@@ -875,6 +876,33 @@ static void test_a_card_lifted_during_the_survey_claims_no_size(void) {
     end();
 }
 
+// A register write can also fail outright before the UID moves: here every attempt at 56 is lost and
+// the move comes at 57. The pass recorded 56 as a failure, and since a register answers no read, an
+// empty one went into the over-capacity count rather than the failure count. The conversion has to take
+// it back from the count it went into.
+static void test_a_failure_before_the_move_is_taken_back_from_its_own_count(void) {
+    begin("a register failure recorded before the UID moved is taken back from its own count");
+    static const uint8_t target[ISO15693_3_UID_SIZE] =
+        {0xE0, 0x04, 0x01, 0x10, 0xB1, 0xB2, 0xB3, 0xB4};
+    fake_tag_init(28, 28, 4); // 28..63 answer nothing, so the registers sit outside memory
+    fake_tag.is_gen1_magic = true;
+    fake_tag.uid_register_drop_mask = 0x7; // the three attempts at 56
+    fake_data_init(&source, 64, 4);
+    fake_data_fill(&source, 56, 56, 0x00); // empty, and absent to a read: filed as past capacity
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.clone_source = &source;
+    memcpy(inst.target_uid, target, ISO15693_3_UID_SIZE);
+    iso15693_poller_write_source_blocks(&inst, NULL, false);
+
+    CHECK(inst.uid_moved_by_write); // 57 moved it
+    CHECK_EQ(inst.clone_over_capacity, 0); // 56's entry taken back from where the pass put it
+    CHECK_EQ(inst.clone_failed_count, 32); // 28..55 and 58..61, each holding data
+    CHECK(!bitmap_bit(&inst, 56));
+    CHECK(inst.clone_capacity_confirmed);
+    end();
+}
+
 // The two halves of the geometry comparison move independently, and the screen names only the one
 // that moved. A 28-block file onto a 28-block card whose IC reference differs is a real mismatch --
 // but saying "the card reports 28 blocks, not the file's" about it describes a number that matches.
@@ -954,6 +982,7 @@ int main(void) {
     test_a_failure_the_conversion_takes_back_leaves_the_capacity_edge();
     test_a_register_write_is_not_evidence_about_capacity();
     test_a_card_lifted_during_the_survey_claims_no_size();
+    test_a_failure_before_the_move_is_taken_back_from_its_own_count();
     test_geometry_names_the_half_that_actually_differs();
     test_gen1_partial_backdoor_overlap();
     test_uncut_clone_sets_no_truncation();

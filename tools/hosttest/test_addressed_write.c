@@ -452,6 +452,102 @@ static void test_a_uid_our_write_does_not_account_for_is_refused(void) {
     end();
 }
 
+// ---- the gen1 backdoor sequence -------------------------------------------------------------------
+
+// The magic sequence is four ordinary WRITE BLOCKs at four unusual addresses, and this is what it now
+// puts on the wire. Byte for byte against the frame measured on `lri2k-keychain`, which answered UID
+// E0 02 22 24 50 00 83 03 and returned an in-band refusal (01 10, block unavailable) to
+// 22 21 03 83 00 50 24 22 02 E0 3E 00 00 00 00 while a UID one byte wrong got silence.
+//
+// Pinned as bytes rather than as behaviour because that refusal is what proves the frame arrived: the
+// card address-matched and PARSED a write at block 62 and objected to the block, not to the frame.
+static void test_the_gen1_backdoor_frame_is_addressed(void) {
+    begin("a gen1 backdoor frame carries the card's UID, least significant byte first");
+    const uint8_t uid[ISO15693_3_UID_SIZE] = {0xE0, 0x02, 0x22, 0x24, 0x50, 0x00, 0x83, 0x03};
+    const uint8_t unlock[ISO15693_MAGIC_REGISTER_SIZE] = {0x00, 0x00, 0x00, 0x00};
+    const uint8_t expected[] = {
+        0x22, // SUBCARRIER_1 | DATA_RATE_HI | T4_ADDRESSED -- not the old unaddressed 0x02
+        0x21, // WRITE BLOCK, the standard command: the address is what makes this magic
+        0x03, 0x83, 0x00, 0x50, 0x24, 0x22, 0x02, 0xE0, // the UID, reversed
+        0x3E, // unlock
+        0x00, 0x00, 0x00, 0x00};
+
+    fake_tag_init(28, 28, 4);
+    Iso15693Poller inst;
+    driver_init(&inst);
+    memcpy(inst.address_uid, uid, ISO15693_3_UID_SIZE);
+    iso15693_poller_send_gen1_frame(&inst, NULL, ISO15693_MAGIC_BLK_UNLOCK, unlock);
+
+    CHECK_EQ(bit_buffer_get_size_bytes(inst.frame_tx), sizeof(expected));
+    for(size_t i = 0; i < sizeof(expected) && i < bit_buffer_get_size_bytes(inst.frame_tx); i++) {
+        CHECK_EQ(bit_buffer_get_byte(inst.frame_tx, i), expected[i]);
+    }
+    end();
+}
+
+// THE SEAM ADDRESSING THIS SEQUENCE CREATES, and the one thing it costs. Block 56 carries uid[7..4]
+// and takes effect immediately -- no power-cycle, measured on NXP ICODE SLIX and ST LRi2K -- so by the
+// time block 57 goes out the card has already stopped answering to the address the frame before it
+// used. Without the re-address in the middle, 57 meets silence and the card is left wearing half the
+// target UID and half its own. The unaddressed form had no such seam.
+//
+// A 28-BLOCK CARD deliberately, which is what the gen1 cards on the bench actually are: the four
+// registers sit outside its memory map and answer no read ever, so nothing here can be a data write
+// that happens to land. Both halves have to arrive as register writes or the UID does not complete.
+static void test_the_gen1_sequence_readdresses_between_the_two_halves(void) {
+    begin("the gen1 sequence re-addresses after block 56, so block 57 still reaches the card");
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+
+    const uint8_t target[ISO15693_3_UID_SIZE] = {0xE0, 0x04, 0x01, 0x50, 0x11, 0x22, 0x33, 0x44};
+    uint8_t half_moved[ISO15693_3_UID_SIZE];
+    memcpy(half_moved, fake_tag.uid, sizeof(half_moved));
+    memcpy(&half_moved[4], &target[4], 4); // what block 56 alone implies
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    iso15693_poller_send_backdoor_uid_gen1(&inst, NULL, target);
+
+    // Both halves landed, which is only possible if 57 was addressed to the moved UID.
+    CHECK(memcmp(fake_tag.uid, target, ISO15693_3_UID_SIZE) == 0);
+    // Re-addressed ONCE, after 56 -- not again after 57, which nothing asks for.
+    CHECK(memcmp(inst.address_uid, half_moved, ISO15693_3_UID_SIZE) == 0);
+    CHECK(inst.uid_moved_by_write);
+    // Only the two UID registers took anything. unlock and commit are refused in band -- `0x10` on the
+    // ST LRi2K, `0x0F` on both NXP parts, never once accepted on any card here -- and the sequence
+    // carries on regardless, which is why its per-frame results are ignored.
+    CHECK_EQ(fake_tag.writes_accepted, 2);
+    end();
+}
+
+// WHAT ADDRESSING THE SEQUENCE IS FOR (#251). These four frames are plain WRITE BLOCKs at 56/57/62/63,
+// which on any tag that big is ordinary user data, and they go out behind an opt-in whose warning is
+// about the card in the user's hand. Unaddressed, a second tag in the field takes them too -- and on
+// ISO15693 a bystander need only be in a wallet or a badge holder, not on the antenna.
+//
+// The control that could have failed: the same sequence, one byte wrong in the address, against a card
+// that is genuinely gen1 and answering. Before this change it would have moved that card's UID.
+static void test_the_gen1_sequence_addressed_elsewhere_moves_nothing(void) {
+    begin("a gen1 sequence addressed to another card leaves this one's UID alone");
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    uint8_t before[ISO15693_3_UID_SIZE];
+    memcpy(before, fake_tag.uid, sizeof(before));
+
+    const uint8_t target[ISO15693_3_UID_SIZE] = {0xE0, 0x04, 0x01, 0x50, 0x11, 0x22, 0x33, 0x44};
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    inst.address_uid[0] ^= 0x01; // one byte wrong
+
+    iso15693_poller_send_backdoor_uid_gen1(&inst, NULL, target);
+
+    CHECK(memcmp(fake_tag.uid, before, ISO15693_3_UID_SIZE) == 0);
+    CHECK_EQ(fake_tag.writes_accepted, 0);
+    CHECK(!inst.uid_moved_by_write);
+    end();
+}
+
 int main(void) {
     printf("iso15693 addressed write\n");
     test_frame_layout();
@@ -467,6 +563,9 @@ int main(void) {
     test_silence_alone_is_still_a_failure();
     test_an_answered_refusal_is_not_overruled_by_a_read();
     test_the_read_back_is_compared_not_just_attempted();
+    test_the_gen1_backdoor_frame_is_addressed();
+    test_the_gen1_sequence_readdresses_between_the_two_halves();
+    test_the_gen1_sequence_addressed_elsewhere_moves_nothing();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
 }

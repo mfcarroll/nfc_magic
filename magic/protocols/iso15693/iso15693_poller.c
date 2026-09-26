@@ -14,12 +14,12 @@
 #endif
 
 // Magic ISO15693 ("Chinese magic") backdoor UID write, ported from proxmark3 (GPLv3)
-// SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Unaddressed frames are sent to
-// hidden backdoor blocks; the CRC is appended by iso15693_3_poller_send_frame. Two card generations
-// are handled here -- a third, gen3, is neither detected nor supported, and a wipe can destroy one
-// (see the hazard note in nfc_magic_scene_write_confirm.c). The write always tries gen2 first, and
-// offers gen1 -- which is destructive on a
-// non-magic tag -- only as an explicit user opt-in after gen2 leaves the UID unchanged.
+// SetTag15693Uid / SetTag15693Uid_v2 (armsrc/iso15693.c). Frames are sent to hidden backdoor blocks;
+// the CRC is appended by iso15693_3_poller_send_frame. Two card generations are handled here -- a
+// third, gen3, is neither detected nor supported, and a wipe can destroy one (see the hazard note in
+// nfc_magic_scene_write_confirm.c). The write always tries gen2 first, and offers gen1 -- which is
+// destructive on a non-magic tag -- only as an explicit user opt-in after gen2 leaves the UID
+// unchanged.
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
 // Data blocks are written ADDRESSED: the card's UID travels in the frame and only that card answers.
@@ -78,17 +78,23 @@
 // settles it by reading the block back.
 #define ISO15693_POLLER_OPTION_FLAG (ISO15693_3_REQ_FLAG_T4_OPTION)
 
-// gen1: WRITE BLOCK (0x21) to backdoor blocks; 4 data bytes each. The UID blocks are named by the
-// UID bytes they carry (uid[0] is the MSB, so uid[7..4] is the numerically low half of the UID).
-#define ISO15693_MAGIC_CMD_WRITE    (0x21U) // ISO15693 WRITE BLOCK
+// gen1: an ordinary ISO15693 WRITE BLOCK aimed at four backdoor addresses; 4 data bytes each, which
+// is what ISO15693_MAGIC_REGISTER_SIZE is. The command is the standard one, so the frame is built by
+// iso15693_poller_build_write_frame like every other write here -- see
+// iso15693_poller_send_gen1_frame. The UID blocks are named by the UID bytes they carry (uid[0] is
+// the MSB, so uid[7..4] is the numerically low half of the UID).
+#define ISO15693_MAGIC_REGISTER_SIZE (4U)
 // MEASURED on five cards across three chips: the sequence sets the UID, it reads back, and the
-// original restores byte-identically. On one card of each chip, tested while ARMED: the UID
-// changes IMMEDIATELY -- an inventory in the SAME field session as the write already returns the
-// new one -- so there is no power-up latch on any chip tested; and writes to 62/63 are REFUSED
-// while 56/57 are accepted, so the UID moves on 56/57 alone and the refusals do not stop it. On
-// the ST LRi2K that refusal is IN BAND (error 0x10, block not available); on the other two the
-// client reported a failure that does not separate an error frame from silence, so "the registers
-// answer" is one chip.
+// original restores byte-identically. On one card of each chip: the UID changes IMMEDIATELY -- an
+// inventory in the SAME field session as the write already returns the new one -- so there is no
+// power-up latch on any chip tested; and writes to 62/63 are REFUSED while 56/57 are accepted, so
+// the UID moves on 56/57 alone and the refusals do not stop it.
+//
+// The refusal is IN BAND on all three, but only in the ADDRESSED form: the ST LRi2K answers either
+// form with error 0x10, block not available, while both NXP parts answer the addressed form with the
+// generic 0x0F and the unaddressed form with nothing at all. That asymmetry is the second reason the
+// sequence is addressed -- see iso15693_poller_send_gen1_frame -- and it is why "the registers
+// answer" was one chip for as long as the frames went out unaddressed.
 //
 // ALSO MEASURED, on the three gen1 chips: the four addresses are not memory. They answer no read at
 // any point. On those chips the advertised count is fixed silicon rather than the gen2 CFG frame, so
@@ -99,14 +105,22 @@
 // registers, that makes "how far past the claim does the sweep run" a question -- see the reach rule
 // at the wiped == 0 branch.
 //
-// STILL INFERENCE: what 0x3E and 0x3F actually do. proxmark sends them first and names neither, and
-// doc/magic_cards_notes.md's ISO15693-magic section is a TODO, so "unlock" and "arms" are our reading.
-// Neither register has been observed to ACCEPT a write -- the card was armed before that could be
-// tested, and nothing tried since has cleared the arm, the wipe's own zero write to 63 included.
-#define ISO15693_MAGIC_BLK_UNLOCK   (0x3EU) // written as 0; inferred: unlock
-#define ISO15693_MAGIC_BLK_COMMIT   (0x3FU) // written as 0x6996; inferred: arms the UID change
-#define ISO15693_MAGIC_BLK_UID_7654 (0x38U) // uid[7..4]
-#define ISO15693_MAGIC_BLK_UID_3210 (0x39U) // uid[3..0]
+// STILL INFERENCE, and thinner than the names suggest: what 0x3E and 0x3F actually do. proxmark sends
+// them first and names neither, and doc/magic_cards_notes.md's ISO15693-magic section is a TODO, so
+// "unlock" and "arms" are our reading of a sequence that carries no explanation anywhere.
+//
+// NEITHER HAS EVER BEEN OBSERVED ACCEPTED, on any card here, in any form -- including one that had
+// never been written by this app. Five cards take a write to 56 with no unlock or commit in front of
+// it, so neither is necessary on this shelf, and 0x10 is "block not available" rather than "refused",
+// which reads as these two addresses not existing on this silicon at all.
+//
+// They stay regardless, and this is not an argument for dropping them: five cards is a statement
+// about this shelf, the cards that would need these frames are the ones nobody here owns, and
+// proxmark sends them. It is an argument about what may be claimed for them, which is nothing.
+#define ISO15693_MAGIC_BLK_UNLOCK    (0x3EU) // written as 0; inferred: unlock
+#define ISO15693_MAGIC_BLK_COMMIT    (0x3FU) // written as 0x6996; inferred: arms the UID change
+#define ISO15693_MAGIC_BLK_UID_7654  (0x38U) // uid[7..4]
+#define ISO15693_MAGIC_BLK_UID_3210  (0x39U) // uid[3..0]
 
 // The same four as one list, because several places ask "is this a backdoor block?": the clone loop
 // skips them, its back-fill skips them again, the reported total deducts them, a converted clone takes
@@ -423,24 +437,6 @@ struct Iso15693Poller {
     bool running;
 };
 
-// gen1 frame: 02 21 <block> d0 d1 d2 d3 (+CRC).
-static void iso15693_poller_build_gen1_frame(
-    BitBuffer* tx,
-    uint8_t block,
-    uint8_t d0,
-    uint8_t d1,
-    uint8_t d2,
-    uint8_t d3) {
-    bit_buffer_reset(tx);
-    bit_buffer_append_byte(tx, ISO15693_MAGIC_FLAGS);
-    bit_buffer_append_byte(tx, ISO15693_MAGIC_CMD_WRITE);
-    bit_buffer_append_byte(tx, block);
-    bit_buffer_append_byte(tx, d0);
-    bit_buffer_append_byte(tx, d1);
-    bit_buffer_append_byte(tx, d2);
-    bit_buffer_append_byte(tx, d3);
-}
-
 // gen2 frame: 02 E0 09 <ref> d0 d1 d2 d3 (+CRC).
 static void iso15693_poller_build_gen2_frame(
     BitBuffer* tx,
@@ -458,34 +454,6 @@ static void iso15693_poller_build_gen2_frame(
     bit_buffer_append_byte(tx, d1);
     bit_buffer_append_byte(tx, d2);
     bit_buffer_append_byte(tx, d3);
-}
-
-// Per-frame transceive results are intentionally ignored, and the reason is measured rather than
-// assumed: on an armed card the 62/63 writes come back REFUSED -- in band, error 0x10, on the LRi2K;
-// see ISO15693_MAGIC_BLK_UNLOCK for what the other two chips could and could not show -- and the UID
-// moves anyway. Acting on these returns would abort a run that worked. The UID read-back is the only
-// honest check.
-static void
-    iso15693_poller_send_backdoor_uid_gen1(Iso15693_3Poller* iso_poller, const uint8_t* uid) {
-    BitBuffer* tx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
-    BitBuffer* rx = bit_buffer_alloc(ISO15693_POLLER_BUF_SIZE);
-
-    iso15693_poller_build_gen1_frame(tx, ISO15693_MAGIC_BLK_UNLOCK, 0x00, 0x00, 0x00, 0x00);
-    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
-
-    iso15693_poller_build_gen1_frame(tx, ISO15693_MAGIC_BLK_COMMIT, 0x69, 0x96, 0x00, 0x00);
-    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
-
-    iso15693_poller_build_gen1_frame(
-        tx, ISO15693_MAGIC_BLK_UID_7654, uid[7], uid[6], uid[5], uid[4]);
-    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
-
-    iso15693_poller_build_gen1_frame(
-        tx, ISO15693_MAGIC_BLK_UID_3210, uid[3], uid[2], uid[1], uid[0]);
-    iso15693_3_poller_send_frame(iso_poller, tx, rx, ISO15693_3_FDT_WRITE_POLL_FC);
-
-    bit_buffer_free(tx);
-    bit_buffer_free(rx);
 }
 
 // The gen2 CFG block also programs what the card *reports* for system-info geometry / IC ref. For a
@@ -807,6 +775,99 @@ static void iso15693_poller_readdress(
     instance->uid_moved_by_write = true;
 }
 
+// One frame of the gen1 backdoor sequence: 22 21 <uid, LSB first> <block> d0 d1 d2 d3, or 62 with the
+// OPTION flag. The same builder and the same flags as a data-block write, because that is what this
+// is -- a WRITE BLOCK like any other. What makes it magic is the ADDRESS it names, not the command,
+// which is exactly why it must be addressed: these four are plain writes to blocks that are ordinary
+// user data on any tag that big, behind an opt-in whose warning is about the card in the user's hand
+// rather than a second one in the field. #251.
+//
+// It is also the only form NXP silicon ANSWERS. At block 62, NXP ICODE SLIX and SLIX-S give silence
+// unaddressed and a parseable refusal (0x0F) addressed, with a UID one byte wrong silent again; ST
+// LRi2K answers either form with the specific 0x10. So the response below exists only because the
+// frame carries an address.
+//
+// That response is read for one thing -- whether the card asked for the OPTION flag -- and the send's
+// return is discarded; see the sequence below for why it cannot settle anything.
+static void iso15693_poller_send_gen1_frame(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    uint8_t block,
+    const uint8_t* data) {
+    iso15693_poller_build_write_frame(
+        instance->frame_tx,
+        iso15693_poller_write_flags(instance),
+        instance->address_uid,
+        block,
+        data,
+        ISO15693_MAGIC_REGISTER_SIZE);
+    if(iso15693_3_poller_send_frame(
+           iso_poller, instance->frame_tx, instance->frame_rx, ISO15693_3_FDT_WRITE_POLL_FC) ==
+       Iso15693_3ErrorNone) {
+        iso15693_poller_note_option_wanted(instance, instance->frame_rx);
+    }
+}
+
+// The gen1 backdoor UID sequence: unlock, commit, then the two halves of the UID. The ORDER is the
+// point, which is why it is written out here rather than driven off the membership list.
+//
+// Per-frame transceive results are intentionally ignored, and the reason is measured rather than
+// assumed: the 62/63 writes come back REFUSED -- in band, 0x10 on the ST LRi2K and 0x0F on both NXP
+// parts, and never once accepted on any card here -- and the UID moves anyway. Acting on these
+// returns would abort a run that worked. The UID read-back is the only honest check.
+//
+// THE RE-ADDRESS IN THE MIDDLE IS LOAD-BEARING. Block 56 carries uid[7..4] and takes effect
+// immediately -- no power-cycle, measured on NXP ICODE SLIX and ST LRi2K -- so by the time block 57
+// goes out the card has already stopped answering to the address the frame before it used. Remove it
+// and 57 is sent to a card that is no longer there: the run ends with half a UID written, and on the
+// opt-in path that is a card whose identity is now neither the one it had nor the one asked for.
+//
+// iso15693_poller_readdress is the same one the sweep uses, checked against the same prediction: the
+// only UID it will accept is the one this write implies. A card that answers anything else keeps the
+// old address and the sequence carries on -- which on a card that is not gen1 is the ordinary case,
+// since there the UID never moves at all.
+static void iso15693_poller_send_backdoor_uid_gen1(
+    Iso15693Poller* instance,
+    Iso15693_3Poller* iso_poller,
+    const uint8_t* uid) {
+    static const uint8_t unlock[ISO15693_MAGIC_REGISTER_SIZE] = {0x00, 0x00, 0x00, 0x00};
+    static const uint8_t commit[ISO15693_MAGIC_REGISTER_SIZE] = {0x69, 0x96, 0x00, 0x00};
+    const uint8_t uid_7654[ISO15693_MAGIC_REGISTER_SIZE] = {uid[7], uid[6], uid[5], uid[4]};
+    const uint8_t uid_3210[ISO15693_MAGIC_REGISTER_SIZE] = {uid[3], uid[2], uid[1], uid[0]};
+
+    iso15693_poller_send_gen1_frame(instance, iso_poller, ISO15693_MAGIC_BLK_UNLOCK, unlock);
+    iso15693_poller_send_gen1_frame(instance, iso_poller, ISO15693_MAGIC_BLK_COMMIT, commit);
+
+    iso15693_poller_send_gen1_frame(instance, iso_poller, ISO15693_MAGIC_BLK_UID_7654, uid_7654);
+
+    uint8_t predicted[ISO15693_3_UID_SIZE] = {0};
+    iso15693_poller_predict_uid(
+        instance->address_uid, ISO15693_MAGIC_BLK_UID_7654, uid_7654, predicted);
+    iso15693_poller_readdress(instance, iso_poller, predicted);
+
+    iso15693_poller_send_gen1_frame(instance, iso_poller, ISO15693_MAGIC_BLK_UID_3210, uid_3210);
+}
+
+// The two UIDs the gen1 sequence can leave when only one of its halves lands: 56's frame without 57's,
+// or 57's without 56's. Each is predicted from the original the way the sequence predicts 56, so these
+// are the only answers a half-written card can give. A half the two UIDs already share makes one of
+// them the original or the target, which the caller rules out first.
+static bool
+    iso15693_poller_uid_is_half_written(const Iso15693Poller* instance, const uint8_t* uid) {
+    const uint8_t* target = instance->target_uid;
+    const uint8_t uid_7654[ISO15693_MAGIC_REGISTER_SIZE] = {
+        target[7], target[6], target[5], target[4]};
+    const uint8_t uid_3210[ISO15693_MAGIC_REGISTER_SIZE] = {
+        target[3], target[2], target[1], target[0]};
+    uint8_t half[ISO15693_3_UID_SIZE] = {0};
+    iso15693_poller_predict_uid(
+        instance->original_uid, ISO15693_MAGIC_BLK_UID_7654, uid_7654, half);
+    if(memcmp(uid, half, ISO15693_3_UID_SIZE) == 0) return true;
+    iso15693_poller_predict_uid(
+        instance->original_uid, ISO15693_MAGIC_BLK_UID_3210, uid_3210, half);
+    return memcmp(uid, half, ISO15693_3_UID_SIZE) == 0;
+}
+
 // Did the block end up holding what we sent? The only question left on a card whose acknowledgement
 // we cannot collect. Reads need no OPTION flag and are answered normally, which is what makes this
 // available at all.
@@ -1092,7 +1153,12 @@ static void iso15693_poller_finish_conversion(
     // Nothing on screen says the identity was disturbed and put back, deliberately. What the user
     // needs is what the CARD is, and the run now reports exactly as a gen1 clone of this file would.
     // The rest is how we got here.
-    iso15693_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
+    iso15693_poller_send_backdoor_uid_gen1(instance, iso_poller, instance->target_uid);
+    // The sequence re-addresses itself after block 56; this takes the other half, which block 57 has
+    // just written. Unconditional rather than an inventory here: the run reached here BECAUSE the UID
+    // followed a write to 56/57, so the registers are proven. Whether each frame LANDED is another
+    // question: one lost frame is enough to leave the file's bytes in the UID, so the identity is
+    // read back after the pass; see Iso15693WriteStateVerifyClone.
     memcpy(instance->address_uid, instance->target_uid, ISO15693_3_UID_SIZE);
 }
 
@@ -1461,10 +1527,10 @@ static uint16_t iso15693_poller_wipe_blocks(
     // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle either
     // are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm sequence is
     // unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses writes to 62/63, so
-    // the sweep reaches commit and is turned away rather than clearing it. That the refusal is IN
-    // BAND -- error 0x10, the card answering rather than staying silent -- is measured on the LRi2K
-    // and on the LRi2K alone; see ISO15693_MAGIC_BLK_UNLOCK. A card left armed by an earlier gen1 UID
-    // write therefore stays armed while its UID moves.
+    // the sweep reaches commit and is turned away rather than clearing it. The refusal is IN BAND --
+    // the card answering rather than staying silent -- on all three gen1 chips, but only for the
+    // ADDRESSED form, which is the form the sweep has always used; see ISO15693_MAGIC_BLK_UNLOCK. A
+    // card left armed by an earlier gen1 UID write therefore stays armed while its UID moves.
     // Reproduced end-to-end on an armed LRi2K: it reported "Wiped 58/58", the UID changed
     // immediately, the re-read below caught it as Partial, and the card was still armed
     // afterwards.
@@ -1979,7 +2045,7 @@ static NfcCommand
             // reaches this line: write_step is entered only from the Ready event, so at start the
             // flag claimed spent gen1 registers for a card the field never saw.
             instance->gen1_attempted = true;
-            iso15693_poller_send_backdoor_uid_gen1(iso_poller, instance->target_uid);
+            iso15693_poller_send_backdoor_uid_gen1(instance, iso_poller, instance->target_uid);
             instance->write_state = Iso15693WriteStateVerifyGen1;
             return NfcCommandReset;
         }
@@ -2100,6 +2166,19 @@ static NfcCommand
             // which any writable tag accepts. So on the tag this most likely is -- an ordinary one --
             // four blocks of user data are now gone. gen1_attempted carries that to the result screen;
             // reporting only "not a magic tag" here would hide the damage the user consented to.
+            //
+            // Unless the UID MOVED, just not to the target -- one half written and not the other, if a
+            // frame was lost or the re-address between 56 and 57 missed. That card is gen1, and the
+            // UID it now answers to is the only way to find it again, so it is reported the way
+            // VerifyGen2 reports one. Only as one of the two UIDs a half can leave, though, the rule
+            // readdress applies: any other answer did not come from these frames -- a second tag
+            // answering the 1-slot inventory, most likely (#251) -- and printed as this card's it would
+            // replace the screen that names the four blocks the user's consent has just cost.
+            if(memcmp(readback, instance->original_uid, ISO15693_3_UID_SIZE) != 0 &&
+               iso15693_poller_uid_is_half_written(instance, readback)) {
+                instance->uid_unexpected = true;
+                memcpy(instance->uid_readback, readback, ISO15693_3_UID_SIZE);
+            }
             iso15693_poller_report(instance, Iso15693PollerEventFail);
             return NfcCommandStop;
         }
