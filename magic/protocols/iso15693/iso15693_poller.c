@@ -1173,6 +1173,12 @@ static bool iso15693_poller_write_source_blocks(
     // skip_backdoor is the CALLER's decision, made before the card had a chance to contradict it. A
     // write landing in 56/57 and moving the UID contradicts it, so the run switches here and repairs
     // the identity afterwards.
+    //
+    // Do NOT pre-empt that by skipping these four whenever the card already wears the target UID.
+    // That condition does not mean gen1: a real gen2 card re-cloned from a DIFFERENT image sharing
+    // its UID reaches it too, and there 56/57/62/63 are ordinary memory. The skip would deduct them
+    // from the total and report a clean "Cloned 60/60" over four blocks of the file it chose not to
+    // write. Reacting costs a UID that moves and is put back; predicting costs user data, silently.
     bool skipping = skip_backdoor;
     bool converted = false;
     bool wrote_any = false; // at least one block accepted a write
