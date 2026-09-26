@@ -1530,12 +1530,11 @@ static uint16_t iso15693_poller_wipe_blocks(
     // registers, so a sweep that reaches them moves the card's identity.
     //
     // WHICH CARDS: every gen1 card whose geometry lets the sweep get that far, and no history is
-    // needed. Five cards here take a write to 56 without an unlock ever having been accepted, two of
-    // them with nothing sent in front of it at all -- including one this app had never written. So
-    // "a card someone previously ran a gen1 write on" is not the condition; the reach rule at the
-    // wiped == 0 branch is, and it is what keeps most of this shelf clear of it. Reproduced
-    // end-to-end on an LRi2K: "Wiped 58/58", the UID changed immediately, and the re-read below
-    // caught it as Partial.
+    // needed -- those registers take a write with nothing in front of them, which is the evidence at
+    // ISO15693_MAGIC_BLK_UNLOCK. So "a card someone previously ran a gen1 write on" is not the
+    // condition; the reach rule at the wiped == 0 branch is, and it is what keeps most of this shelf
+    // clear of it. Reproduced end-to-end on an LRi2K: "Wiped 58/58", the UID changed immediately,
+    // and the re-read below caught it as Partial.
     //
     // The sweep cannot defend itself by clearing block 63 on the way past. Writes to 62/63 are
     // refused on all three gen1 chips -- in band, and only for the ADDRESSED form, which is the form
