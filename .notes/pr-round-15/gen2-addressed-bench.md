@@ -279,6 +279,42 @@ reason":** set the ADDRESSED bit but lay the frame out unaddressed, with no UID 
 
 Same register, same probe, same risk as the frames already run.
 
+### RESULT — it did NOT move, so the model above was WRONG
+
+    hf 15 reader                            -> E0 04 01 10 A1 A2 A3 A4
+    hf 15 raw -ackw -d 22E0094011223344     -> command failed
+    hf 15 reader                            -> E0 04 01 10 A1 A2 A3 A4   unchanged
+
+**The flags byte IS read and the ADDRESSED bit IS honoured.** The card was not passing the frame
+through to a parser that choked on the UID bytes; it saw ADDRESSED, went looking for a UID in the
+next eight bytes, found `09 40 11 22 33 44` and two bytes of CRC, did not match itself, and stayed
+silent. That is correct ISO15693 behaviour for an addressed frame naming a different card.
+
+### WHAT THE TWO REFUSALS TOGETHER MEAN
+
+This card is already on record accepting an addressed STANDARD write, with the same byte order at
+the same offset (`addressed-writes-measured.md`, the `gen-2-card` section):
+
+    hf 15 raw -ackw -d 2221D4D3D2D1100104E00811223344    addressed WRITE blk 8 -> 00 78 F0
+    hf 15 raw -ackw -d 2221D4D3D2D1100104E10855667788    WRONG UID             -> no answer
+
+So the front-end implements addressing correctly, and the address I built was not malformed --
+the same construction works on this card with command `0x21`. Line the three results up:
+
+| frame | reaches the backdoor? |
+|---|---|
+| `02 E0 09 40 <data>` unaddressed | yes -- UID moves |
+| `22 E0 09 40 <data>` addressed bit, no UID | no -- treated as an addressed frame for another card |
+| `22 E0 <correct UID> 09 40 <data>` | no -- the UID matches and it is still refused |
+
+**THE BACKDOOR IS ONLY REACHABLE UNADDRESSED.** Not because the card cannot address -- it
+demonstrably can, on the same silicon in the same session -- but because the magic hook does not
+fire on the addressed path. The third row is the one that settles it: the address matched and the
+command was still rejected, so nothing about the address was the problem.
+
+That is a stronger and more useful statement than either the guess this sheet started with or the
+claim in the shipped comment. It is one card so far; `white-coin` and `black-tag` remain.
+
 
 ## Restore, and record the restore
 
