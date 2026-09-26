@@ -8,7 +8,7 @@ subset is a script rather than a paragraph.
     tools/check-writing.py comments <paths>    shipped source
     tools/check-writing.py forkmsg <dir>       fork messages, incl. attributed statements
     tools/check-writing.py headings <files>    replies and threads
-    tools/check-drafts.py <files>              replies and threads: refs, SHAs, lines, attribution
+    tools/check-drafts.py <files>              replies: refs, SHAs, lines, attribution, narration
 
 Both pattern files carry a SELFTEST of phrasings that actually shipped, asserted on every run and
 refusing to scan if it fails. `gen1-staleness.py` reported a clean sweep while missing eight of
@@ -92,6 +92,23 @@ about a person.
 something, find where it is recorded. If it is not recorded, either say what is actually known --
 "filed as #255", "described as a V1 specimen" -- or go and ask them. A person's words are the one
 class of fact that cannot be reconstructed from context.
+
+## ⚠️ Narration of our own process, wearing the clothes of a finding
+
+Four in one round, all caught by mfcarroll's eye and none by a checker: "yours is better than what I
+had written", "the re-address checks its answer NOW", "we did build it to see what it would cost",
+and "which I can now say rather than infer". Every one was true, well-written, and about the wrong
+subject.
+
+The test is question 1's cousin: **is this sentence about the code and the decision, or about us --
+what we tried, what we learned, how we feel about it?** A reviewer reading a reply wants the fact,
+not the route to it. "I did not expect that" is how we feel; "the NXP parts are silent unaddressed"
+is the finding. A commit message may legitimately say what its own diff changed; a reply almost
+never needs to.
+
+**CHECKED now**, in `check-drafts.py`, on reply payloads only and deliberately narrow -- first-person
+discovery and surprise. It found a fifth instance on its first run, in a paragraph written minutes
+earlier to fix the fourth.
 
 ## The read-through — what to actually look for
 

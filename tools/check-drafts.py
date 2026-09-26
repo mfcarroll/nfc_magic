@@ -53,6 +53,33 @@ ATTRIBUTION = re.compile(
     r"(filed|raised|asked|said|called|reported|opened|wrote|flagged|requested|suggested"
     r"|described|named|claimed|believes?|wants?|thinks?|felt|meant)\b", re.I)
 
+# NARRATION OF OUR OWN PROCESS, wearing the clothes of a finding. WRITING-RULES has the test -- is
+# this passage about the CODE and the decision, or about us: what we tried, what we learned, how we
+# feel about it. mfcarroll has now caught four of these by eye in one round: "yours is better than
+# what I had written", "the re-address checks its answer NOW", "we did build it to see what it would
+# cost", and "which I can now say rather than infer". Every one was true, well-written, and about
+# the wrong subject.
+#
+# Deliberately narrow: first-person discovery and surprise, which a reply almost never needs. A
+# commit message MAY legitimately say what its own diff changed, so this runs on reply payloads only.
+NARRATION = re.compile(
+    r"\b(I (did ?n[o']t|could ?n[o']t) (expect|see|tell)"
+    r"|I can now\b|rather than infer\b|I had (written|recorded|assumed)"
+    r"|turn(s|ed) out to\b|as it happens\b|it emerged\b"
+    r"|we (did |had )?(built|tried|ran) (it|this|that)"
+    r"|to (see|find out) what it would cost)", re.I)
+
+NARRATION_SELFTEST = [
+    (True, "I did not expect that, and it means the sequence had been going out"),
+    (True, "which I can now say rather than infer"),
+    (True, "That tag also turned out to keep a writable UID register"),
+    (True, "We did build it, to see what it would cost"),
+    (True, "yours is better than what I had written"),
+    (False, "the card answers its writes directly"),
+    (False, "a UID one byte wrong gets nothing at all"),
+    (False, "the survey reads upward from the source count"),
+]
+
 ATTRIBUTION_SELFTEST = [
     (True, "less hypothetical than when you filed it"),
     (True, "a coin the sender called locked"),
@@ -136,8 +163,9 @@ def main():
             print("  %-46s %s" % (p, " ".join(str(x) for x in sorted(anch[p]))))
         return 0
     fails = [t for want, t in ATTRIBUTION_SELFTEST if bool(ATTRIBUTION.search(t)) != want]
+    fails += [t for want, t in NARRATION_SELFTEST if bool(NARRATION.search(t)) != want]
     if fails:
-        print("SELFTEST FAILED -- the attribution pattern does not do what it claims:")
+        print("SELFTEST FAILED -- a pattern does not do what it claims:")
         for t in fails:
             print("   " + t)
         return 2
@@ -200,6 +228,11 @@ def main():
             if m:
                 flag("attributed", m.group()[:30],
                      "a claim about what a PERSON said -- find the record or say what is known")
+
+            m = NARRATION.search(l) if i not in in_code else None
+            if m:
+                flag("narration", m.group()[:30],
+                     "about US rather than the code -- state the fact, not the discovery")
 
             for m in re.finditer(r'`([A-Za-z0-9_]+\.[ch])[:.](\d+)`', l):
                 f, n = m.group(1), int(m.group(2))

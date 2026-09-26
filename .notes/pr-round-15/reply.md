@@ -31,7 +31,7 @@ measured taking an unaddressed one.
 
 **A second correction, smaller but user-facing.** The release notes scoped the wipe's identity
 hazard to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier.
-Five cards here take a write to block 56 without an unlock ever having been accepted — two of them
+Five cards here take a write to block 56 without an "unlock" ever having been accepted — two of them
 with nothing sent in front of it at all, one of those a card this app had never written. On all
 three gen1 chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim
 lets the sweep reach them: the reach rule, not the card's history. Which matters, because a user
@@ -58,11 +58,11 @@ waiting for something we cannot send, the card that answers has decided.
 around, and much better to work around it than expand the scope of this to requiring a firmware
 upgrade, even if that means we aren't able to get the write acknowledgments back directly.
 
-We did build it, to see what it would cost: about six lines, since the encoder already writes SOF and
-EOF as literal bytes and the transmit path sends what it is handed. On a branch carrying it, the TI
-card answers its writes directly — one frame instead of two, and the answer is the card's own rather
-than inferred. That last part matters more than the frame: a read-back cannot tell a write that took
-from a refused write to a block that already held the value.
+That call is about six lines: the encoder already writes SOF and EOF as literal bytes, and the
+transmit path sends what it is handed. On a firmware branch carrying it, the TI card answers its
+writes directly — one frame instead of two, and the answer is the card's own rather than inferred.
+That last part matters more than the frame: a read-back cannot tell a write that took from a refused
+write to a block that already held the value.
 
 Not something this app can depend on, though. A FAP resolves its API imports at load time, so there
 is no fallback keyed on API version — naming a symbol the firmware lacks fails the whole load. So the
@@ -94,8 +94,7 @@ takes an addressed write and the UID moves to exactly the value that write impli
 wrong gets nothing, on the same card in the same session. And at block 62, which every card refuses,
 **addressing is what makes them answer at all**: the NXP parts are silent unaddressed and return a
 readable `0x0F` addressed, while the LRi2K answers either form with the specific `0x10`, "block not
-available". I did not expect that, and it means the sequence had been going out in the one form four
-of these cards ignore.
+available". So the sequence had been going out in the one form four of these cards ignore.
 
 The cost is the same re-address the wipe needs, for the same reason, and here it sits between the two
 halves of one UID: without it block 57 goes to a card that has stopped listening, and the run ends
@@ -129,8 +128,8 @@ feeding the file into the registers, carries on with everything above them, and 
 target UID back through the gen1 sequence. The end state is the one an ordinary gen1 clone produces
 — a shape already tested and already reported correctly — rather than a new one.
 
-**The re-address checks its answer now**, which the same work made possible. After a write to 56 or
-57 the run has to discover what the card answers to, and the only tool for that is an inventory. The
+**The re-address checks its answer.** After a write to 56 or 57 the run has to discover what the
+card answers to, and the only tool for that is an inventory. The
 SDK's is 1-slot and unaddressed, so with a second tag in the field it can come back with the
 bystander's UID instead (#251) — and taking that at face value would aim every later frame at the
 wrong card, at the exact moment this one's identity is in doubt.
@@ -179,28 +178,13 @@ None of this is a failure and none of it makes the clone Partial. They are notes
 
 **One card here defeats that, and it is not one this PR supports.** The survey rests on a block that
 answers a read existing, which holds for every gen1 and gen2 card I have. One tag answers at all 256
-addresses because the top half of its address space aliases the bottom — write block 228 and block
-100 changes with it — so the survey would call a 128-cell card a 256-block one, and would meet the
-clone's own payload again through the alias and report it as data left over from before. I have left
-the wording alone rather than hedge it for a card the feature does not claim to handle.
+addresses because its address space aliases — write block 228 and block 100 changes with it — so the
+survey would call a 128-cell card a 256-block one, and would meet the clone's own payload again
+through the alias and report it as data left over from before. I have left the wording alone rather
+than hedge it for a card the feature does not claim to handle.
 
-**That tag carries gen3's UID mechanism, which I can now say rather than infer.** Its UID reads out
-of blocks 0x10/0x11, which on its own means nothing — memory holding a copy of a UID is ordinary. So
-I wrote `AA BB CC DD` into block 0x10 and the UID moved to `E0 48 03 00 DD CC BB AA`: exactly what
-that write implies, byte order and all. Writing the original four bytes back restored it. A register,
-not a copy.
-
-**I am not calling it a gen3 card, because its configuration area does not match.** `hf 15 cfinalize`
-identifies an un-finalized V3 by a signature in 0x14/0x15; this tag is one bit off at 0x14 and
-nowhere near at 0x15, and it matches the finalized values less well still. So proxmark would refuse
-to finalize it, and what I have is a tag with V3's UID mechanism and an unrecognised configuration
-area — which is worth reporting precisely rather than rounding to a generation.
-
-**It does make #255's premise measured rather than assumed.** The hazard there is that a wipe sweeps
-those UID registers because they sit well inside any claim, and they are now confirmed to be
-registers on a card in my hand. The brick is still not observed: whether zeroing 0x14/0x15 destroys
-anything stays on 0x6r1an0y's authority, since confirming it would cost the only tag either of us has
-that behaves this way. The release notes say exactly that now.
+That tag also keeps a writable UID register inside the range a wipe sweeps, which is what #255 is
+about. The detail goes there rather than here.
 
 **The geometry half is also a correction to the release notes.** The 2.3 entry said a clone writes
 the source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
