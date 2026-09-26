@@ -139,7 +139,8 @@ typedef enum {
         // so nothing was written -- a read-back against a UID the card already has proves nothing
     NfcMagicIso15693WriteFailReasonWipeUidChanged, // wipe: the blocks cleared, but the UID read back
         // afterwards is not the one the card presented before. On gen1 that is the wipe zeroing blocks
-        // 56/57, which ARE the UID registers, on a card left armed by an earlier gen1 UID write.
+        // 56/57, which ARE the UID registers and take a write with nothing sent in front of them, so
+        // it needs no prior gen1 write on the card -- only a sweep that reaches them.
     NfcMagicIso15693WriteFailReasonWipeComplete, // wipe: a clean success -- the sweep was not cut and
         // nothing it reached is known to still hold data. NOT "no block refused": a block that refuses
         // every write and then reads back empty is deliberately not counted, because nothing was lost

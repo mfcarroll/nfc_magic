@@ -297,8 +297,8 @@ typedef struct {
     // outright is logged and ignored, since it cannot be told from the card being lifted the
     // moment the wipe finished.
     //
-    // "Moved" is the generous reading. Observed on an armed LRi2K: the UID went to ALL ZEROS, and
-    // an ISO15693 UID must begin 0xE0, so the card was left with no valid identity rather than a
+    // "Moved" is the generous reading. Observed on an LRi2K: the UID went to ALL ZEROS, and an
+    // ISO15693 UID must begin 0xE0, so the card was left with no valid identity rather than a
     // different one. It still answered inventory, so it stayed reachable -- which is why
     // uid_readback is printed.
     bool uid_changed;

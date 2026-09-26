@@ -1526,22 +1526,24 @@ static uint16_t iso15693_poller_wipe_blocks(
     uint16_t wiped = 0;
 
     // OPEN QUESTION, gen1 only. The full argument, the gen3 case beside it and what would settle either
-    // are in #255. In brief: this loop zeroes the gen1 UID registers (56/57); the arm sequence is
-    // unlock=0 then commit=0x6996 then the UID blocks; and an ARMED card refuses writes to 62/63, so
-    // the sweep reaches commit and is turned away rather than clearing it. The refusal is IN BAND --
-    // the card answering rather than staying silent -- on all three gen1 chips, but only for the
-    // ADDRESSED form, which is the form the sweep has always used; see ISO15693_MAGIC_BLK_UNLOCK. A
-    // card left armed by an earlier gen1 UID write therefore stays armed while its UID moves.
-    // Reproduced end-to-end on an armed LRi2K: it reported "Wiped 58/58", the UID changed
-    // immediately, the re-read below caught it as Partial, and the card was still armed
-    // afterwards.
+    // are in #255. In brief: this loop zeroes blocks 56/57, which on gen1 silicon ARE the UID
+    // registers, so a sweep that reaches them moves the card's identity.
     //
-    // Do NOT try to de-arm by pre-writing the commit block. On an armed card that write is refused
-    // outright, so there is nothing to reorder; on any other, writing commit before unlock reverses
-    // the only order observed to work -- ours on an LRi2K as well as proxmark's -- so it is either
-    // rejected too or, worse, leaves unlock freshly zeroed, one step INTO the arm sequence,
-    // immediately before this loop touches the UID registers. No blind ordering is safe, because
-    // the only route to the armed state is through the sequence that sets it.
+    // WHICH CARDS: every gen1 card whose geometry lets the sweep get that far, and no history is
+    // needed. Five cards here take a write to 56 without an unlock ever having been accepted, two of
+    // them with nothing sent in front of it at all -- including one this app had never written. So
+    // "a card someone previously ran a gen1 write on" is not the condition; the reach rule at the
+    // wiped == 0 branch is, and it is what keeps most of this shelf clear of it. Reproduced
+    // end-to-end on an LRi2K: "Wiped 58/58", the UID changed immediately, and the re-read below
+    // caught it as Partial.
+    //
+    // The sweep cannot defend itself by clearing block 63 on the way past. Writes to 62/63 are
+    // refused on all three gen1 chips -- in band, and only for the ADDRESSED form, which is the form
+    // the sweep uses; see ISO15693_MAGIC_BLK_UNLOCK. Nor by reordering: writing commit before unlock
+    // reverses the only order anyone has ever sent, so it is either refused too or, worse, leaves
+    // unlock freshly zeroed immediately before this loop touches the UID registers. No blind
+    // ordering is safe, and the two registers have never been observed to accept anything, so there
+    // is no sequence here to undo.
     //
     // So the order is left alone, matching proxmark's `hf 15 wipe`, and what ships is the reporting:
     // Iso15693WriteStateVerifyWipe re-reads the UID after the sweep. Its field power-cycle is not what
@@ -1988,9 +1990,9 @@ static NfcCommand
             // read never accumulates a run, so it walks past 56/57 whatever it claims. Staying short
             // of 56 takes A < 49 AND claim < 57 together.
             //
-            // So on an ARMED gen1 card this path can move the UID, report "Wipe failed", never run the
-            // check and never say the check did not run -- the one path where the mitigation #255
-            // describes does not run at all. The short-circuit predates this feature and is left as it is.
+            // So on a gen1 card this path can move the UID, report "Wipe failed", never run the check
+            // and never say the check did not run -- the one path where the mitigation #255 describes
+            // does not run at all. The short-circuit is left as it is.
             if(wiped == 0) {
                 iso15693_poller_report(instance, Iso15693PollerEventFail);
                 return NfcCommandStop;
@@ -2123,18 +2125,18 @@ static NfcCommand
     case Iso15693WriteStateVerifyWipe: {
         // Did the wipe move the card's UID? On gen2 it cannot -- the wipe sends no UID command and the
         // gen2 UID lives in a separate register space -- so on a gen2 card this is a regression test
-        // that should never fire. On gen1 it is the point: blocks 56/57 ARE the UID
-        // registers, and an arm left by an earlier gen1 UID write survives into this one, so a
-        // wipe zeroing those blocks can rewrite the UID. The OPEN QUESTION in
+        // that should never fire. On gen1 it is the point: blocks 56/57 ARE the UID registers and
+        // they take a write with nothing sent in front of them, so any gen1 card the sweep reaches
+        // them on can come back wearing a different UID. The OPEN QUESTION in
         // iso15693_poller_wipe_blocks has the mechanism, including why this sweep reaching commit
         // does not help: reordering blind writes cannot fix it, but reporting it can, and the
         // screens no longer promise the UID is left alone.
         //
         // This is a state of its own, entered after NfcCommandReset, for the reason
         // iso15693_poller.h gives for the gen2 and gen1 UID verifies. It is a separate state
-        // rather than an inline read because the sweep has just written to 56/57, and on an armed
-        // gen1 card that IS a gen1 UID write -- so this is precisely the card the check exists
-        // for, and it should read from a cleanly re-activated tag rather than mid-sequence.
+        // rather than an inline read because the sweep has just written to 56/57, and on a gen1 card
+        // that IS a UID write -- so this is precisely the card the check exists for, and it should
+        // read from a cleanly re-activated tag rather than mid-sequence.
         //
         // uid_changed is set only from a positive observation, and the cost of that rule is here: a
         // card bricked so thoroughly that it no longer inventories goes unreported. Lifting the card
