@@ -129,7 +129,8 @@ clone's own payload again through the alias and report it as data left over from
 neither gen1 nor gen2: its UID sits at 0x10/0x11 in the reversed layout and block 0x14 is one bit
 from the V3 config-mode signature, so it is gen3 territory, which this PR does not support. I have
 left the wording alone rather than hedge it for a card the feature does not claim to handle. If it
-does turn out to be gen3, that makes #255 rather less hypothetical than it was when you filed it.
+does turn out to be gen3, it is the first such card either of us has had, and #255 stops resting on
+an attributed report.
 
 **The geometry half is also a correction to the release notes.** They said a clone writes the
 source's identity — IC ref, block geometry, AFI, DSFID — "so the copy advertises the same chip",
