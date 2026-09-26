@@ -113,3 +113,45 @@ resolving, so record the raw output rather than the summary line.
   its plan should be rewritten before it is spent.
 - **An in-band `01 10` to an ADDRESSED frame** → independent of the de-arm question, that is the
   evidence that addressed frames reach the backdoor registers, which the addressing work needs.
+
+
+---
+
+# RESULTS — `lri2k-keychain`
+
+    hf 15 wrbl --ua -b 62 -d 00000000     ( fail )
+    hf 15 wrbl --ua -b 63 -d 69960000     ( fail )
+    hf 15 wrbl --ua -b 63 -d 00000000     ( fail )
+    hf 15 wrbl --ua -b 63 -d 96690000     ( fail )
+    hf 15 wrbl --ua -b 62 -d FFFFFFFF     ( fail )
+    hf 15 wrbl -u E002222450008303 -b 62 -d 00000000     ( fail )
+    hf 15 wrbl -u E002222450008303 -b 63 -d 00000000     ( fail )
+
+    hf 15 wrbl --ua -b 56 -d 11223344     ( ok )   -> UID E0 02 22 24 44 33 22 11
+    hf 15 wrbl --ua -b 56 -d 03830050     ( ok )   -> UID E0 02 22 24 50 00 83 03   restored
+
+**No value re-locks it.** Five values across both registers, unaddressed, plus both addressed —
+refused every time, while block 56 still takes a write immediately afterwards. On this chip the card
+stays armed and the de-arm question is answered in the negative.
+
+## But the tool was wrong, and half the probe got nothing
+
+`hf 15 wrbl -v` does not print the response. Every refusal is a bare `( fail )`, so **an in-band
+error frame and silence are still indistinguishable** — which is exactly the ambiguity this probe
+existed to resolve, and the flag was specified on the assumption that `-v` would surface it. The
+recorded `01 10` on this card must have come from `hf 15 raw`.
+
+It costs the addressing evidence too. `( fail )` on the addressed frame reads equally as "the card
+address-matched, parsed the write and refused it" and as "the card ignored the addressing", and those
+are opposite conclusions.
+
+**Re-run with raw frames and a mis-addressed control**, which is what makes it conclusive:
+
+    hf 15 raw -ackw -d 02213E00000000                    unaddressed unlock
+    hf 15 raw -ackw -d 222103830050242202E03E00000000    addressed, CORRECT uid
+    hf 15 raw -ackw -d 222103830050242202E13E00000000    addressed, WRONG uid (E0->E1)
+    hf 15 reader                                          positive control
+
+In band from the correct address plus silence from the wrong one proves the card is filtering on the
+address at block 62. Silence from both would instead revise what is recorded about this chip
+answering in band at all.
