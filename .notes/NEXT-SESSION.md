@@ -233,7 +233,7 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
    been done. Indistinguishable to a 1-slot inventory while that holds. The values to go back to are
    in the bench sheet; identify each card by its tape, not by what it answers.
 
-2. **THE SELF-REVIEW — PASS 1 IS DONE, 2026-09-26.** `9128500`, `5884a53`, `874c45f`, `c132e29`.
+2. ~~**THE SELF-REVIEW**~~ **BOTH PASSES DONE, 2026-09-26.** Pass 1: `9128500`, `5884a53`, `874c45f`, `c132e29`.
    What it found, all fixed: the reply still saying the backdoor sequences stay unaddressed; "five
    cards take a bare write with no unlock in front of it" (true of two of them); the measurement
    record still concluding that addressing the backdoor had no evidence behind it; a closed
@@ -241,10 +241,28 @@ Needs bench time on gen1 silicon before it ships — three armed cards are avail
    07 deletes; four stale counts; the reply comparing against a version he has never had; and the
    arm-model scope correction below, which turned out to be six sites and shipped as `5884a53`.
 
-   **WHAT PASS 2 STILL OWES:** the full eight-question read-through of the reply (1, 2, 7 and 8 are
-   done; 3, 4, 5 and 6 are not), the same read over fork messages 02, 03, 05 and 06, a coherence
-   read of the CHANGELOG's whole 2.3 section end to end, and the remaining numbers re-derived --
-   "58/58", "16 of the 30 lines", the block counts in the bench list.
+   **PASS 2 IS DONE TOO, 2026-09-26.** `5f9ea90`, `0bd9987`, `76b0377`, `d2b85ef`. What it found:
+
+   - **"measured on two chips" was stale as of that morning** -- the SLIX-S run made it three, at
+     five sites.
+   - **"16 of the 30 lines" is 19**, because the collapsed range grew from five commits to seven.
+     The README now records how to re-derive it rather than inviting the next person to quote it.
+   - **THE RELEASE NOTES CONTRADICTED THEMSELVES**, 44 lines apart and both inside 2.3: "block
+     contents are not compared" against this round's own OPTION read-back, which compares exactly
+     that. Found by reading the section end to end; no checker was ever going to.
+   - **a blank line between two list items** made the whole Behaviour list loose in CommonMark.
+   - **three mangled wraps** -- 115 and 106 characters against a 104 file, 110 against an 80 file.
+     Then the fix for one of them produced a 121, caught by re-running the measurement instead of
+     trusting the edit.
+   - **consolidation**: the reply's gen1 section was four paragraphs doing the work of two, with the
+     one-byte-wrong control stated twice and a welded seam; the bench list is a list of RUNS and the
+     gen1 item had grown to six lines by re-arguing its own section; two adjacent paragraphs both
+     scoping #251 are one; 06's last paragraph did four things in thirteen lines; and the five-card
+     unlock evidence had two homes in the poller, 1,300 lines apart.
+
+   Re-derived and correct as they stand: 58/58 on a 56-block LRi2K, seven cards over four identified
+   chips, every block count in the bench list, and the fork subjects (88 chars is in line with the
+   pushed history's own 87, so that is the project's norm rather than a defect).
 
    **THE GATE WAS WIDENED INSTEAD OF RECORDING ITS GAPS**, on mfcarroll's call: `replay-to-fork.sh`
    now gates all 95 shipped `.c`/`.h` from the same path list `sync-to-fork.sh` overlays from (it
