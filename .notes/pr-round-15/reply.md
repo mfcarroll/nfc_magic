@@ -175,10 +175,9 @@ and the type line a reader prints for it is decoded from that UID rather than fr
 notes now say so.
 
 Both sides of that comparison are claims, deliberately: the question is what a reader will see, not
-what the silicon is. Demonstrated in both directions, on the bench, in one sitting: three gen1 cards
-— ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — all read as **Emosyn-EM Microelectronics USA** while
-carrying one written UID, then as three correct manufacturers once each was put back on its own.
-Same cards, same reader, minutes apart, and nothing about the silicon changed in between.
+what the silicon is. Three gen1 cards — ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — all read as
+**Emosyn-EM Microelectronics USA** while carrying one written UID, and as three correct manufacturers
+once each was back on its own. Same cards, same reader, minutes apart; only eight bytes changed.
 
 ## The gen1 caveat, and a register read as capacity
 
@@ -208,11 +207,9 @@ on someone's other card is the kind of inadvertent damage this PR has been caref
 **It does not close #251.** The 1-slot INVENTORY_T5 and the missing STAY QUIET are untouched, and the
 issue's worst consequence cannot be fixed this way at all: the post-wipe UID re-read can still be
 answered by a bystander, and that check exists to discover whether the UID changed, so it cannot be
-aimed at a UID already in doubt.
-
-What does stay unaddressed is the **gen2** backdoor, and usefully so: its command is `0xE0` and
-proprietary, so a tag that is not a gen2 magic card rejects it on the command rather than on the
-address.
+aimed at a UID already in doubt. The one frame set left unaddressed is the **gen2** backdoor, and
+usefully so — its command is `0xE0` and proprietary, so a tag that is not a gen2 magic card rejects
+it on the command rather than on the address.
 
 ## The bench
 
@@ -231,12 +228,9 @@ it rather than the chip underneath. The runs that decide it:
   run now converts, the UID reads back intact, and it reports identically to the first
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, which is
   the residue case, and a **40-block SLIX-S** for the geometry one
-- **a gen1 Write UID on each of the three gen1 chips** for the backdoor addressing, to a target
-  differing in seven of its eight bytes: plain Success on all three and the whole UID read back, not
-  the half a broken re-address would leave. Beside it, on the SLIX-S, the frames alone — an addressed
-  write to block 56 accepted, the UID moving to exactly the value that write implies, a one-byte-wrong
-  address answered by nothing, and the restore addressed to the UID the first write produced, which
-  is the seam itself
+- **a gen1 Write UID on each of the three gen1 chips**, to a target differing in seven of its eight
+  bytes so that half a UID could not pass as a whole one: plain Success on all three, and the frames
+  alone run separately on the SLIX-S
 - unaddressed-write controls, to show nothing regressed: a full 64/64 wipe on the gen2 card and 28/28
   on a gen1 NXP SLIX
 
