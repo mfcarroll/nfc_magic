@@ -81,6 +81,25 @@ The label was in `controls-2026-09-24.md` and in the reply draft and is correcte
 the same error this round corrected in the release notes, reading a UID-decoded type line as
 silicon. Do not reinstate it.
 
+## ⚠️ A GEN3 CANDIDATE TURNED UP, and the PR says one does not exist
+
+`slix2-gold-30mm` — **DO NOT WIPE IT**. Full write-up in
+[gen3-candidate-slix2-gold.md](gen3-candidate-slix2-gold.md).
+
+Its UID sits at blocks 0x10/0x11 in the reversed gen3 layout, and 0x14/0x15 carry a value matching
+the V3 config-mode signature in five of eight bytes positionally, `0x14` differing by one bit. The
+probe recorded `gen3_signature: false` from an exact `==` against two constants, which cannot tell
+"not V3" from "V3 with a signature we do not have". It also takes writes above its advertised count
+and answers reads at every address, so it has no edge discoverable either way.
+
+The hazard is the wipe: the release notes carry an attributed report that zeroing 0x14/0x15 bricks an
+un-finalized V3 card, those are blocks 20 and 21, and on this card nothing ever refuses a write so the
+sweep would not stop early.
+
+**It does not change a benched result.** What it changes is the squash message's "No gen3 card exists
+on either side of this PR", three unscoped shipped comments claiming a past-capacity block refuses
+reads, and the standing of #255 — filed on an attributed report that now may have a card behind it.
+
 ## WHAT IS LEFT, in the order to take it
 
 1. **The locked V1 coin.** An 18mm green PCB coin, never written to, possibly still LOCKED -- the only
