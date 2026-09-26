@@ -222,3 +222,43 @@ nothing -- is the better-supported reading.** Not proven. Better supported.
 
 Unchanged by any of this: the cards that would prove them necessary are the ones nobody here owns,
 and proxmark sends them. Four for four remains a statement about this shelf.
+
+
+## Commit is silent too — the card does not answer at either address
+
+    hf 15 reader                         -> E0 11 22 33 44 55 66 91
+    hf 15 raw -ackw -d 02213F69960000    -> command failed
+    hf 15 reader                         -> E0 11 22 33 44 55 66 91
+
+Bracketed. So this coin is silent at 62 AND 63, in both codings, while taking a bare UID write at 56.
+
+## The test that should have been first — `slix-1k-coin18`
+
+mfcarroll's, and it is better than anything above because it tests the lock model with a card already
+owned instead of reasoning from an absence.
+
+`slix-1k-coin18` is the **same form factor and visually identical** to the new coin, but it arrived
+in the seller batch with `slix-1k-50x28` and **it has been written**: it was one of the four
+`pm3`-marked tags the gen1 write probe ran on. So under model (b) it is COMMITTED, and the new coin
+is not.
+
+**If the two behave identically at 62/63, commitment makes no observable difference -- and model (b)
+predicts one.** That is a direct test rather than an inference from silence.
+
+    hf 15 reader
+    hf 15 raw -ackw -d 02213E00000000
+    hf 15 raw -ackw -d 02213F69960000
+    hf 15 reader
+
+No restore: writes to 62/63 are refused everywhere, so nothing changes. Run `--identify` first --
+three tags here are visually identical and `coin18` no longer wears its factory UID.
+
+**And the second possibility is worth saying out loud:** if they are the same product, the new coin
+was never a special specimen, and "the only card that can answer whether unlock is needed" was a
+description of a card we already had two of.
+
+| card | 56 write | 62 write | committed? |
+|---|---|---|---|
+| `lri2k-keychain` | accepted | `01 10` in band | yes |
+| `v1-coin-green18` | accepted | silence | supposedly not |
+| `slix-1k-coin18` | ? | ? | yes |
