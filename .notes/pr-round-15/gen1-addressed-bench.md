@@ -139,6 +139,48 @@ silicon.
 **Restored** (BENCH-RULE 9). The card is back on `E0 04 01 10 A1 A2 A3 A4`, confirmed by the last
 reader in the transcript, and it wore that before the run rather than a factory UID.
 
-### The Flipper run
+### The Flipper — all three gen1 cards, 2026-09-26
 
-_Not run yet._
+`Write UID` -> target `E0 11 22 33 44 55 66 77` -> "Not gen2 magic card" -> gen1 opt-in accepted.
+
+| card | chip | screen | UID after | DSFID after |
+|---|---|---|---|---|
+| `SL2S5302` | NXP ICODE SLIX-S | **plain Success** | `E0 11 22 33 44 55 66 77` | `00` |
+| `lri2k-keychain` | ST LRi2K | **plain Success** | `E0 11 22 33 44 55 66 77` | `02` |
+| `slix-1k-50x28` | NXP ICODE SLIX | **plain Success** | `E0 11 22 33 44 55 66 77` | `00` |
+
+**THE WHOLE TARGET, ON ALL THREE.** Not the tail, which is the failure this target was chosen to
+expose: block 56 carries the printed tail and 57 the printed head, so `E0 11 22 33 44 55 66 77`
+against each card's own UID differs in seven of eight bytes and a run that wrote 56 and lost 57
+would have left the head behind. None did. The re-address between the two halves holds on every gen1
+chip here.
+
+**Plain Success, not Partial.** A Write-UID has no payload to follow, so a verified UID is a clean
+success — that is `0fd69e8`'s outcome fix arriving on hardware, on the path it was written for.
+
+**Two incidental controls, neither planned.**
+
+- **DSFID survived, per card**: `02` on the LRi2K against `00` on the other two, which is what each
+  wore going in. A Write-UID sends the four backdoor frames and nothing else, and if the sequence
+  had scribbled outside the UID registers this is where it would show. It did not.
+- **The type line now reads `Emosyn-EM Microelectronics USA` on all three**, because `uid[1]` is
+  `0x11` in the target. Three different chips, one type line, decoded from the costume. That is the
+  release-notes correction this round already made, demonstrated live -- and it is the same mistake
+  that produced `gen-2-card`'s "EM-Marin" label, which the round also had to take back out.
+
+## ⚠️ What the run left behind, and what each card must go back to
+
+`E0 11 22 33 44 55 66 77`, on `SL2S5302`, `lri2k-keychain` and `slix-1k-50x28` at once. They are
+indistinguishable to an inventory while that holds, and the SDK's is 1-slot, so with two of them near
+the antenna anything addressed can reach either. **Restore them one at a time, and identify each by
+its tape rather than by what it answers.**
+
+The values to restore to, from the de-arm probe's own record of the states it found:
+
+    lri2k-keychain    E0 02 22 24 50 00 83 03   (its factory UID; it was restored to this then)
+    slix-1k-50x28     E0 04 01 10 5E ED 00 01
+    SL2S5302          E0 04 01 10 A1 A2 A3 A4
+
+`SL2S5302`'s is confirmed current -- it read exactly that at the head of today's pm3 run. The other
+two were NOT re-read before today's Flipper run, so those two lines are the last recorded value
+rather than an observed one.
