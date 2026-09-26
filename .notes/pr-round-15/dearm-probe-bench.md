@@ -368,3 +368,49 @@ somewhere may need them, and the cards that would prove it are the ones nobody o
 It does matter for the addressing change, though. If those two frames stay, they have to be addressed
 too — and their addressed behaviour is the half that cannot be tested, because every card refuses
 them in any form.
+
+
+## THE RESULT THAT MATTERS — addressing makes the card ANSWER
+
+`slix-1k-50x28` and `SL2S5302`, both bracketed by a reader either side:
+
+    02213E00000000                      -> command failed        SILENCE
+    2221<uid>3E00000000  correct UID    -> (4) 01 0F 68 EE       IN BAND
+    2221<uid>3E00000000  wrong UID      -> command failed        SILENCE
+
+**Identical on both cards, and the opposite of what was predicted here.** The prediction was that the
+NXP SLIX coins would be silent like `coin18` and prove nothing about addressing. Instead the
+unaddressed frame gets silence and **the addressed frame gets a parseable refusal**.
+
+`0x0F` is `ISO15693_3_RESP_ERROR_UNKNOWN` -- a generic refusal, where the LRi2K gives the specific
+`0x10`, block unavailable. Different chips, different codes, both refusals.
+
+### Why this is the strongest evidence yet for addressing the backdoor
+
+It is no longer only a safety argument. **Addressing those registers makes the card respond at all.**
+
+- The card address-matched and parsed an addressed WRITE BLOCK at block 62 -- on two more chips.
+- A one-byte-wrong address gets silence from both, so the filtering is real and not an artefact.
+- Unaddressed, the same write to the same block returns nothing at all on these chips.
+
+So the app currently sends its backdoor sequence in the one form these cards will not answer. That
+does not make the sequence fail -- the UID still moves -- but it means every frame of it is sent
+blind on NXP SLIX silicon when it need not be.
+
+**Three chips now** have addressed frames shown reaching, being parsed at, and being filtered at a
+backdoor register: ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S. That was the evidence the gen1
+addressing change lacked, and it is now broader than the change needs.
+
+### The LRi2K is the outlier and should be re-run
+
+It answered `01 10` to the UNADDRESSED frame, where both SLIX cards are silent. That is the single
+data point breaking an otherwise clean pattern, and one card differing is the shape that turns out to
+be a transcription slip. Raised by mfcarroll. Cheap to settle:
+
+    hf 15 reader
+    hf 15 raw -ackw -d 02213E00000000
+    hf 15 raw -ackw -d 222103830050242202E03E00000000
+    hf 15 reader
+
+If it answers unaddressed again, the LRi2K genuinely differs and that is a chip fact worth having. If
+it is silent this time, the earlier reading was wrong and the pattern is uniform across all three.
