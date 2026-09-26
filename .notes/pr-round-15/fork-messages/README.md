@@ -53,8 +53,11 @@ the tail rather than a new one being appended after it: extending an already-col
 churn, while a sync point after it would show him the superseded wording and then its fix. Published
 one per sync point, he would see the survey introduce a geometry note reading "The card reports 28
 blocks and IC ref 01, not the file's" — which leads with a number that matched — and then see it
-corrected twice. **16 of the 30 lines the survey adds to the details scene are rewritten by the last
-of the seven.**
+corrected twice. **19 of the 30 lines the survey adds to the details scene are gone or rewritten by
+the last of the seven** — re-derived 2026-09-26 by matching every line `bbf3b77` adds to
+`nfc_magic_scene_iso15693_partial_details.c` against that file at `19e6660`. It read 16 when the
+range was five commits; the figure moves whenever the range does, so re-derive it rather than quote
+it.
 
 Splitting the repair out from the survey was tried and is not available: it does not apply without
 the survey in the tree, and a tree-based sync cannot take half a commit. So the choice was two

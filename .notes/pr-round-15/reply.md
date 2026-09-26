@@ -60,9 +60,9 @@ upgrade, even if that means we aren't able to get the write acknowledgments back
 
 **Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and four
 answer nothing at all to a UID one byte wrong. The wipe retakes its address after writing 56 or 57,
-because on a gen1 card those two blocks are the UID and it moves immediately — measured on two chips.
-Without that, every later frame carries an address the card no longer answers to, the sweep's absent
-run trips, and it reports a card shorter than the one in the field.
+because on a gen1 card those two blocks are the UID and it moves immediately — measured on three
+chips. Without that, every later frame carries an address the card no longer answers to, the sweep's
+absent run trips, and it reports a card shorter than the one in the field.
 
 **The clone's identity writes are addressed too.** WRITE AFI and WRITE DSFID are standard commands,
 so an unaddressed one lands on a tag of any size. The AFI is the worse of the two: a reader can
@@ -75,23 +75,20 @@ that owns it the card has simply gone.
 frames are plain WRITE BLOCKs at blocks 56/57/62/63, and on any tag large enough to have them that is
 user data — sent behind an opt-in whose warning is about the card in the user's hand.
 
-Addressing them turns out to be what makes the card **answer**, which I did not expect. At block 62,
-NXP ICODE SLIX and SLIX-S are silent to an unaddressed write and return a refusal you can read —
-error `0x0F` — to the identical addressed one, with a UID one byte wrong silent again. ST LRi2K
-answers either form, with the specific `0x10`, "block not available". Three chips, five cards, each
-bracketed by a reader either side so a silence is a refusal rather than an absence.
+Measured on five cards across all three gen1 chips — ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S —
+every frame bracketed by a reader either side, so a silence is a refusal and not an absence. Block 56 takes an
+addressed write and the UID moves to exactly the value that write implies; a UID one byte wrong gets
+nothing, on the same card in the same session. And at block 62, which every card refuses,
+**addressing is what makes them answer at all**: the NXP parts are silent unaddressed and return a
+readable `0x0F` addressed, while the LRi2K answers either form with the specific `0x10`, "block not
+available". I did not expect that, and it means the sequence had been going out in the one form four
+of these cards ignore.
 
-That is the refusals. **The acceptances are measured too**, which is the part that matters for a
-sequence whose job is to land: an addressed WRITE BLOCK to block 56 is taken on all three gen1 chips
-— ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S — and the UID moves to exactly the value the write
-implies, with a one-byte-wrong address silent on the same card in the same session.
-
-The cost is one extra inventory. Block 56 moves the UID at once, so the sequence has to re-take its
-address before block 57 — without that the second half goes to a card that has stopped listening and
-the run ends with half a UID written, which is neither the identity the card had nor the one asked
-for. It uses the same prediction check as the wipe: the only UID accepted as the new address is the
-one that write implies. Measured end to end on a SLIX-S: a write addressed to the UID the previous
-write produced is accepted, which is the whole of the seam.
+The cost is the same re-address the wipe needs, for the same reason, and here it sits between the two
+halves of one UID: without it block 57 goes to a card that has stopped listening, and the run ends
+having written half an identity — neither the one the card had nor the one asked for. Measured end to
+end: a write addressed to the UID the *previous* write produced is accepted, which is the whole of
+the seam.
 
 Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
 form of either: no card here has ever accepted one, in any form, including a card this app had never

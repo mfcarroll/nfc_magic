@@ -818,7 +818,7 @@ static void iso15693_poller_send_gen1_frame(
 // returns would abort a run that worked. The UID read-back is the only honest check.
 //
 // THE RE-ADDRESS IN THE MIDDLE IS LOAD-BEARING. Block 56 carries uid[7..4] and takes effect
-// immediately -- no power-cycle, measured on NXP ICODE SLIX and ST LRi2K -- so by the time block 57
+// immediately -- no power-cycle, on all three gen1 chips here -- so by the time block 57
 // goes out the card has already stopped answering to the address the frame before it used. Remove it
 // and 57 is sent to a card that is no longer there: the run ends with half a UID written, and on the
 // opt-in path that is a card whose identity is now neither the one it had nor the one asked for.

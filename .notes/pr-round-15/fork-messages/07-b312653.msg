@@ -25,8 +25,8 @@ clone's conversion path writes 56/57 addressed and watches the UID follow,
 which is how a gen1 card on the gen2 path is detected at all.
 
 THE ONE THING IT COSTS is a re-address in the middle. Block 56 carries
-uid[7..4] and takes effect immediately -- no power-cycle, measured on NXP
-ICODE SLIX and ST LRi2K -- so by the time block 57 goes out the card has
+uid[7..4] and takes effect immediately -- no power-cycle, on all three gen1
+chips measured -- so by the time block 57 goes out the card has
 stopped answering to the address the frame before it used. Without the
 re-address, 57 is sent to a card that is no longer there and the run ends with
 half a UID written: neither the identity the card had nor the one asked for.
