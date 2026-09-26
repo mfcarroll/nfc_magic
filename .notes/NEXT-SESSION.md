@@ -16,6 +16,17 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ SAFETY BRANCH FOR THE CHURN PASS — `wip-pre-churn-pass`
+
+Created 2026-09-26 before rewriting intermediate commits to remove 110 lines of intra-push churn.
+**The check is the same one the repair reorder used** and is robust to this file moving:
+
+    git diff wip-pre-churn-pass <new HEAD> -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+
+**That must be EMPTY.** Only the intermediate trees change. If it is not:
+`git reset --hard wip-pre-churn-pass`.
+
 ## ⚠️ SAFETY BRANCH FOR THE REPAIR REORDER — `wip-pre-repair-reorder` = `1c85d7428d5d20480f14ea7088a01023966018bb`
 
 Created 2026-09-26 before moving `628eede` (the gen1-card repair) ahead of `bbf3b77` (the clone
