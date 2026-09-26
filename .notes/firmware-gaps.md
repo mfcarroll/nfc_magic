@@ -100,6 +100,49 @@ at all, leaving only Gap 1 upstream. **If it does not**, nothing changes.
 
 Not a blocker either way: the read-back is measured and safe.
 
+### RUN 2026-09-26 — it does NOT work, and the failure is the predicted one
+
+Branch `experiment-eof-frame`, wipe of a TI Tag-it, 72 blocks. Every probe returned `trx=2` --
+`NfcErrorTimeout` -- with no exception across 88 attempts. The card did not answer SOF + EOF.
+
+**A caveat about the log, because the line is misleading.** It also printed `rx=2 bytes` every time,
+which is NOT a response. `nfc_poller_trx` does not reset `rx_buffer`; it fills it only on success and
+breaks out before touching it on the timeout path. Those two bytes are stale -- almost certainly the
+`01 03` OPTION refusal from the head of the run, which is the last thing that buffer legitimately
+held. The `trx` code is the only signal in that line. Uniform across every block, so the result
+itself is clean.
+
+**This does not condemn the EOF approach, only SOF+EOF.** Which is exactly the ambiguity recorded
+above: proxmark emits the EOF symbol ALONE, ours prepends a SOF, and a card reading that SOF as the
+start of a fresh request would answer nothing -- which is what happened.
+
+The run also re-confirmed the read-back: blocks 0-63 each needed ONE attempt (write times out, probe
+times out, read-back succeeds, break) while 64-71 burned all three, and the wipe reported 64 cleared
+of 72 attempted. Correct on both counts.
+
+### And a real EOF is a SIX-LINE change, which the run also established
+
+`iso15693_3_poller_encode_frame` in `targets/f7/furi_hal/furi_hal_nfc_iso15693.c` writes the SOF and
+EOF as literal bytes of the 1-of-4 stream:
+
+    frame_buf[0] = 0x21;            // SOF
+    ...
+    frame_buf[byte_pos++] = 0x04;   // EOF
+
+So a standalone EOF is a one-byte frame, `0x04`, through `furi_hal_nfc_poller_tx_common` -- the same
+call the poller already uses, which clears the FIFO, disables parity and transmits the bits as given.
+**No transparent mode and no bit-banging**, which is what proxmark needs because it drives the field
+itself. The pieces:
+
+1. `furi_hal_nfc_iso15693_poller_tx_eof()` -- emit `0x04`, 8 bits, via `poller_tx_common`. Mirrors
+   `furi_hal_nfc_iso15693_listener_tx_sof()`, which is a two-line function.
+2. An `Nfc` level call beside `nfc_iso15693_listener_tx_sof()`. To be useful it wants a trx shape --
+   send the EOF, then run `nfc_poller_trx_state_machine` with the FWT so the answer is collected.
+3. The app calls it after an OPTION write instead of reading the block back.
+
+Still silicon-dependent, and still unanswered: whether a TI Tag-it accepts a bare EOF. The point is
+that finding out is now cheap.
+
 ## What a fix looks like
 
 1. Give `iso15693_3_poller_write_block` a flags argument and an optional UID, or add an addressed
