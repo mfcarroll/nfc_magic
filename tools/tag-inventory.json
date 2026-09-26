@@ -474,6 +474,7 @@
           "date": "2026-09-26",
           "mirror": 205,
           "now": "AA BB CC DD",
+          "restored": "UNKNOWN -- last seen holding the marker in the full sweep; not checked since",
           "was": "00 00 00 00",
           "why": "a write inside the advertised 79"
         },
@@ -482,6 +483,7 @@
           "date": "2026-09-26",
           "mirror": 208,
           "now": "DE AD BE EF",
+          "restored": "UNKNOWN -- last seen holding the marker in the full sweep; not checked since",
           "was": "00 00 00 00",
           "why": "a write ABOVE the advertised count"
         },
@@ -489,7 +491,9 @@
           "block": 100,
           "date": "2026-09-26",
           "mirror": 228,
-          "now": "11 22 33 44",
+          "now": "00 00 00 00",
+          "restored": true,
+          "restored_note": "Read as zero at the start of the 2026-09-26 alias test, so it was put back between the sweep and that test.",
           "was": "00 00 00 00",
           "why": "a write well above it"
         },
@@ -562,7 +566,7 @@
           "20": "A5 3B 44 2C",
           "21": "21 0F 50 00"
         },
-        "restore": "Write 00 00 00 00 to blocks 77, 80 and 100. Every one was read as zero before it was written, and that returns the card to the state above. Nothing else has been written.",
+        "restore": "Blocks 100 and 228 are confirmed back to 00 00 00 00. Blocks 77 and 80 were still holding their markers at the full sweep and have not been checked since -- write 00 00 00 00 to each, or read them first if the current state matters. Nothing else on the card has ever been written.",
         "state": "every block 00 00 00 00 except 16, 17, 20, 21",
         "why_this_is_a_pre_write_state": "Nothing has ever written to this card through this project. The three 2026-09-26 writes are the only ones, each was preceded by a read showing zero, and the full sweep confirms no other address holds anything unaccounted for."
       },
