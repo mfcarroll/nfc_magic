@@ -80,11 +80,10 @@ a wrapped line does not hang-indent.
 AND THEY SAY WHAT TO DO. The residue note names non-zero data and tells the user
 to Wipe and write again. The size note names what the card REPORTS before what
 it holds, since the reported count is the one a reader of the card meets first,
-and
-gives both as counts -- naming a count against a top block index differs by one
-for a reason the sentence never gives. Where the card's count and the file's are
-the same number, Details says so, since otherwise the reported count reads as
-arbitrary when it is usually exactly what the file asked for.
+and gives both as counts -- naming a count against a top block index differs by
+one for a reason the sentence never gives. Where the card's count and the file's
+are the same number, Details says so, since otherwise the reported count reads
+as arbitrary when it is usually exactly what the file asked for.
 
 Gated on the two values being EQUAL, not on which path ran, and it stops short
 of saying who set the count. The gen2 CFG frame usually did, but it goes out

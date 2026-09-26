@@ -31,8 +31,8 @@ measured taking an unaddressed one.
 
 **A second correction, smaller but user-facing.** The release notes scoped the wipe's identity
 hazard to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier.
-Five cards here take a write to block 56 without an "unlock" ever having been accepted — two of them
-with nothing sent in front of it at all, one of those a card this app had never written. On all
+Five cards here take a write to block 56 with no "unlock" or "commit" in front of it at all — one of
+them a card this app had never written — and neither frame has ever been accepted by anything. On all
 three gen1 chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim
 lets the sweep reach them: the reach rule, not the card's history. Which matters, because a user
 cannot know a card's history and nothing can detect it. The notes and the screens say so now, and I
@@ -105,8 +105,8 @@ the seam.
 Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
 form of either: no card here has ever accepted one, in any form, including a card this app had never
 written. The same evidence says they are not needed — five cards take the write to 56 without an
-unlock ever having been observed changing the behaviour of a card, two of them with no unlock frame
-sent at all. They stay anyway: proxmark sends them, and the cards that would prove them necessary
+unlock or commit in front of it at all, and neither has ever been observed changing the behaviour of
+any card here. They stay anyway: proxmark sends them, and the cards that would prove them necessary
 are ones neither of us has.
 
 ## A clone could destroy the identity of the card it was copying onto

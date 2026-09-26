@@ -475,9 +475,12 @@ notes change before any reset, including one you are about to make for a differe
 
 ## The measurements behind it
 
-**All five chips accept addressed WRITE BLOCK.** Measured 2026-09-24, full transcripts and frames in
-[pr-round-15/addressed-writes-measured.md](pr-round-15/addressed-writes-measured.md). That file is
-the input to the implementation; read it before writing code.
+**All five CARDS accept addressed WRITE BLOCK** -- four identified chips plus `gen-2-card`, whose
+silicon was never captured. Not "five chips": counting that card as silicon is the error corrected in
+the release notes, a poller comment and fork message 01 this round. Measured 2026-09-24, full
+transcripts and frames in
+[pr-round-15/addressed-writes-measured.md](pr-round-15/addressed-writes-measured.md). That file is the
+input to the implementation; read it before writing code.
 
 The design is settled by measurement rather than by argument:
 
@@ -489,11 +492,13 @@ The design is settled by measurement rather than by argument:
 - the SDK cannot do it: `iso15693_3_poller_write_block` hardcodes the flags and
   `iso15693_3_write_block_response_parse` is internal, so we need our own builder and response check
 
-**Nothing is outstanding on that measurement.** `SL2S5302`'s mis-addressed control was run
-2026-09-24 -- silence, bracketed by a reader either side -- so four of the five chips have
-enforcement directly tested. The fifth is TI Tag-it, and its enforcement is untested: the reason once
-given for skipping it ("it refuses unaddressed writes, so it already discriminates") was withdrawn
-the same day, because what it refuses is a write without the OPTION flag. Untested, not covered.
+**Nothing is outstanding on that measurement, and the last gap closed 2026-09-26.** `SL2S5302`'s
+mis-addressed control was run 2026-09-24 -- silence, bracketed by a reader either side. TI Tag-it was
+the one card left without one, because the reason first given for skipping it ("it refuses
+unaddressed writes, so it already discriminates") was withdrawn the same day: what it refuses is a
+write without the OPTION flag. It was sent a mis-addressed frame with OPTION set in both, so the
+address was the only variable -- silence to the wrong UID, `00 78 F0` to the right one. **Five of
+five enforce the address.**
 
 **Two controls also passed** before this, in
 [pr-round-15/controls-2026-09-24.md](pr-round-15/controls-2026-09-24.md): EM-Marin still wipes 64/64,

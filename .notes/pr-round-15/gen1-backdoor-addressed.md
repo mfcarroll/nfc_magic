@@ -57,10 +57,12 @@ argument alone.
 The same evidence settles that they are not NEEDED: five cards take the write to 56 without an unlock
 ever having been ACCEPTED, and `0x10` is *block not available* rather than *refused*.
 
-Two of the five had no unlock frame sent at all -- `slix-1k-50mm` and `v1-coin-green18`, bare writes
-as the first frames of their sessions. The other three -- `lri2k-keychain`, `slix-1k-50x28`,
-`SL2S5302` -- were sent unlock and commit, had both REFUSED, and took the 56 write anyway. Recorded
-because "with no unlock in front of it" is true of two of them and the claim is true of all five. They stay regardless --
+**Five of the five took a BARE write, with no unlock and no commit in front of it** -- settled by
+[v1-coin-bench.md](v1-coin-bench.md) and [dearm-probe-bench.md](dearm-probe-bench.md), which between
+them cover all three gen1 chips. `slix-1k-50mm` and `lri2k-keychain` took one as the FIRST FRAME of a
+session, so nothing could have armed them within it. An earlier draft here said only two had, which
+was true before those two benches ran and is the figure that reached the poller and the reply.
+They stay regardless --
 proxmark sends them, and the cards that would prove them necessary are the ones nobody here owns.
 
 ## What the host tests pin, and what the mutants had to kill

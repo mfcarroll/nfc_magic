@@ -1,6 +1,6 @@
 # Round 15 — seven behavioural sync points, then the release notes
 
-The addressing round. Every one of these changes behaviour except 05, which is the release notes.
+The addressing round. Every one of these changes behaviour except 08, which is the release notes.
 There is no comment-only commit among them.
 
 | # | sync at | one decision |
@@ -21,13 +21,13 @@ artifact, not a running log, and he reads the delta between rounds. The old CHAN
 folded into 08 with the rest.
 
 **Dev history WAS reordered, twice and deliberately**: the repair moved ahead of the survey so it
-could be its own sync point. See below. 07 collapses six dev commits, and that is the one place this
-round does not get one decision per commit; the reason is churn.
+could be its own sync point. See below. 06 collapses six dev commits and 07 collapses seven, and
+those are the two places this round does not get one decision per commit; the reason is churn.
 
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.
 
-## Why 08 comes last, and why it carries two decisions
+## Why 07 carries two decisions, and anchors where it does
 
 It is the one frame set 01 left out, and it carries its own measurement: at block 62 the addressed
 form is the only one NXP silicon answers, which is a fact about the frames rather than about the
@@ -35,18 +35,18 @@ safety argument. Folding it into 01 would put a claim about block 62 inside a co
 data blocks, and would hide the re-address seam -- the one thing addressing this sequence costs --
 inside a commit that already explains a different re-address for a different reason.
 
-**It ANCHORS AT THE ROUND'S TIP, not at the commit that introduced the addressing**, and that is
+**It ANCHORS ABOVE THE SELF-REVIEW, not at the commit that introduced the addressing**, and that is
 what makes it carry the arm-model correction as well. Six shipped dev commits land after the
 addressing: the correction itself, and then this round's own self-review fixing text the round had
-written. Anchored earlier, 08 would ship "measured on two chips" and an 08 would correct it to
-three -- a wrong number and its fix, one sync point apart, which is the churn 02 and 06 were both
-shaped to avoid. Zero churn won again, and the message is split under `==` headings so the two
-decisions stay separable by a reader.
+written. Anchored earlier, 07 would ship "measured on two chips" and a later sync point would
+correct it to three -- a wrong number and its fix, one sync point apart, which is the churn 02 and
+06 were both shaped to avoid. Zero churn won again, and the message is split under `==` headings so
+the two decisions stay separable by a reader.
 
 The arm correction is comment and release notes only; nothing about it changes behaviour. **Verify
 before replaying** that no shipped commit sits after 08's anchor -- `replay-to-fork.sh` checks this
-at the end, by re-syncing from dev HEAD and diffing, and it is the check that would have caught the
-seven sync points reaching only as far as `b312653` while six shipped commits sat above them.
+up front now, and the end-state diff catches it too. It is what would have caught the sync points
+once reaching only as far as the addressing commit while six shipped commits sat above them.
 
 ## Why 01 and 02 are separate, and why 02 is not two commits
 
@@ -82,38 +82,42 @@ pre-reorder tip and the rebuilt one is EMPTY across every shipped path, and acro
 bench standing. The repair also builds and passes the host tests at its own commit, so it is a sync
 point a reviewer can actually stop at.
 
-**07 still collapses six**: the survey, the register-as-capacity fix, the notes-page wording, the
-comment explaining the repair, and the two size-note corrections. Published one per sync point he
-would see the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01,
-not the file's" -- which leads with a number that matched -- and then see it corrected twice. **19 of
-the 30 lines the survey adds to the details scene are gone or rewritten by the last of the six** --
+**06 COLLAPSES SIX**: the survey, the register-as-capacity fix, the notes-page wording, the comment
+explaining the repair, and the two size-note corrections. Published one per sync point he would see
+the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01, not the
+file's" -- which leads with a number that matched -- and then see it corrected twice. **19 of the 30
+lines the survey adds to the details scene are gone or rewritten by the last of the six** --
 re-derived 2026-09-26 by matching every line the survey adds to
-`nfc_magic_scene_iso15693_partial_details.c` against that file at 07's anchor. It read 16 when the
-range was five commits; the figure moves whenever the range does, so re-derive it rather than quote
-it. **Zero churn won**, on the same grounds as 02: a sync point must not show him an error we then
-fix.
+`nfc_magic_scene_iso15693_partial_details.c` against that file at 06's anchor, counting a duplicated
+line once for each time it was added. It read 16 when the range was five commits; the figure moves
+whenever the range does, so re-derive it rather than quote it -- and match multiset, not membership,
+or repeated lines like a lone brace read as survivors and the figure comes out low. **Zero churn
+won**, on the same grounds as 02: a sync point must not show him an error we then fix.
 
-One line of the repair is restructured at 07 -- `if(!skipping && instance->uid_moved_by_write)`
+**07 collapses seven**, for the reason in its own section above.
+
+One line of the repair is restructured at 06 -- `if(!skipping && instance->uid_moved_by_write)`
 hoisted into a named variable by the register-as-capacity fix. That is a readability change, not a
 correction, which is the benign kind.
 
-## Residual churn — one release-notes line, and it cannot be removed
+## Residual churn — the release-notes line is GONE, and one helper remains
 
-03 changes when a gen1 clone reports Partial. The release-notes line describing that behaviour —
-"a clone that used gen1 reports Partial and flags those blocks" — is corrected at 05, so it is
-**stale in the fork tree at 03 and 04**. That is the twin-site defect from round 12, at two commits'
-width.
+**The release-notes churn this section used to describe no longer exists.** 03 changes when a gen1
+clone reports Partial; the notes line describing that behaviour was written at 03 and corrected at
+05, so it stood stale in the fork tree at 03 and 04 -- the twin-site defect from round 12, at two
+commits' width. Moving every release note into 08 closed it outright: only 08 touches `CHANGELOG.md`,
+so no sync point before it can carry a notes line for a later one to rewrite. **Check that rather
+than believing it** -- `git log <round base>..<tip> -- CHANGELOG.md` must name exactly one commit.
 
-A second, milder one: 01 introduces `iso15693_poller_readdress` taking whatever the inventory
-returns, and 06 tightens it to accept only the UID the write implies. Not error-then-fix — 01's
-version is correct for what 01 does, and the check needs `predict_uid`, which arrives with the
-conversion work in 06 that motivated it. Recorded because it is the same SHAPE as the line above and
-a reader comparing 01 against 06 will see it.
+What remains is legitimate: 01 introduces `iso15693_poller_readdress` taking whatever the inventory
+returns, and **05** tightens it to accept only the UID the write implies. Not error-then-fix -- 01's
+version is correct for what 01 does, and the check needs `predict_uid`, which arrives with the repair
+at 05 that motivated it. A reader comparing 01 against 05 will see it, which is why it is written
+down. The other is `send_backdoor_uid_gen1`'s signature changing at 07, for the same kind of reason.
 
-The first cannot be closed by reordering: `42d961e` does not apply before `131a59f`, so 05 already
-sits at the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
-which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
-the same with its 11 residual lines.
+The two clusters that COULD be removed are measured and deliberately left; they are in
+[NEXT-SESSION.md](../../NEXT-SESSION.md) under KNOWN REMAINING WORK, at 28 lines (02 -> 04) and 13
+(03 -> 06). Round 11 recorded its 11 residual lines the same way rather than hiding them.
 
 ## What these messages must NOT claim
 

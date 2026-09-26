@@ -12,8 +12,8 @@ WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same
 chip without qualification, which is the gen2 path only; the Partial
 claim for a gen1 clone is now conditional; the wipe hazard is no longer
 scoped to a card someone previously armed, because five cards take a
-write to block 56 with no unlock ever accepted; and the gen3 note says
-which half of its warning is observed here.
+write to block 56 with no unlock or commit in front of it at all; and
+the gen3 note says which half of its warning is observed here.
 
 WRITTEN AS ONE COMMIT DELIBERATELY. Release notes are a release artifact,
 not a running log. Written per commit they are rewritten by later commits

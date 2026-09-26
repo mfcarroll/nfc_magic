@@ -69,7 +69,10 @@ fail in the way it is most likely to fail. Block 56 carries uid[7..4] and block 
 if the target differs from the original only in the low half, a run that writes 56 and loses 57 is
 INDISTINGUISHABLE from a run that wrote both. Every UID here starts `E0`, so vary bytes 1-3 as well.
 
-For `E0 02 22 24 50 00 83 03`, `E0 11 22 33 44 55 66 77` differs in seven of eight.
+For `E0 02 22 24 50 00 83 03`, `E0 11 22 33 44 55 66 77` differs in both halves -- which is the
+property that matters. It differs in six of eight bytes, not seven: byte 0 is `E0` on every ISO15693
+tag and byte 2 is `22` in both by coincidence. Count bytes and the number moves with the next card;
+count halves and it cannot.
 
 **PREDICTION: Success, and the UID reads back as the whole target**, on all three cards.
 
@@ -151,7 +154,7 @@ reader in the transcript, and it wore that before the run rather than a factory 
 
 **THE WHOLE TARGET, ON ALL THREE.** Not the tail, which is the failure this target was chosen to
 expose: block 56 carries the printed tail and 57 the printed head, so `E0 11 22 33 44 55 66 77`
-against each card's own UID differs in seven of eight bytes and a run that wrote 56 and lost 57
+against each card's own UID differs in BOTH HALVES and a run that wrote 56 and lost 57
 would have left the head behind. None did. The re-address between the two halves holds on every gen1
 chip here.
 
