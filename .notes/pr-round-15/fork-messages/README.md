@@ -8,9 +8,9 @@ There is no comment-only commit among them.
 | 01 | `32f80be` | data-block writes carry the card's address |
 | 02 | `3327ad3` | the OPTION flag, and the read-back it costs |
 | 03 | `0fd69e8` | the gen1 loss claim is gated on there being a loss |
-| 04 | `4169416` | the identity writes are addressed and take the flag |
-| 05 | `d06abf4` | the release notes overstate what a gen1 clone reproduces |
-| 06 | `923ca1a` | what a clone leaves behind, and a gen1 card it lands in |
+| 04 | `f1a6ae4` | the identity writes are addressed and take the flag |
+| 05 | `b9be432` | the release notes overstate what a gen1 clone reproduces |
+| 06 | `39df365` | what a clone leaves behind, and a gen1 card it lands in |
 
 Dev order matches fork order, so no reorder. **06 collapses seven dev commits** — see below, because
 that is the one place this round does not get one decision per commit, and the reason is churn.
@@ -59,7 +59,7 @@ The message is split under three headings so the two decisions are still separab
 **stale in the fork tree at 03 and 04**. That is the twin-site defect from round 12, at two commits'
 width.
 
-It cannot be closed by reordering: `d06abf4` does not apply before `4169416`, so 05 already sits at
+It cannot be closed by reordering: `b9be432` does not apply before `f1a6ae4`, so 05 already sits at
 the earliest point it can. Closing it would mean collapsing 03, 04 and 05 into a single sync point,
 which costs the 01/02-style separation argued for above. Recorded rather than hidden — round 11 did
 the same with its 11 residual lines.

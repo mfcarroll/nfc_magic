@@ -30,6 +30,15 @@ that then looks absent to the reader that uses it.
 That closes the write half of #251. The backdoor sequences stay unaddressed, and
 the post-wipe UID re-read remains unfixable by addressing.
 
+The file's own list of what remains unaddressed is corrected with them: it had
+counted these two among the unaddressed frames and called them the strongest
+case for addressing with nothing behind it, which this commit is. The gen1
+backdoor's entry now carries why it is NOT addressed, which is not squeamishness
+about magic sequences -- the sequence is unlock, commit, 56, 57, and the write to
+56 moves the card's UID at once, so an addressed form would have to re-address
+between its third and fourth frames, inside a sequence that deliberately ignores
+per-frame results.
+
 Nothing was needed here for the missing acknowledgement. write_identity never
 trusted the send's return, because the SDK has no response parser for these two
 commands, so it was already built around a GET SYSTEM INFO read-back.

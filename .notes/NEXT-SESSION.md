@@ -16,7 +16,12 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
-## ⚠️ SAFETY BRANCH FOR THE FOLD — `wip-round15-prefold` = `58ff3e4333467bb9fe192bb3c48914d5d6e4f9ad`
+## ⚠️ TWO SAFETY BRANCHES — `wip-pre-unaddressed-fold` is the later one
+
+`wip-pre-unaddressed-fold` holds the round as it stood before the stale-comment fold of
+2026-09-26; the SHAs below are from AFTER it. The older one:
+
+## ⚠️ SAFETY BRANCH FOR THE EARLIER FOLD — `wip-round15-prefold` = `58ff3e4333467bb9fe192bb3c48914d5d6e4f9ad`
 
 Created 2026-09-26 before folding the review findings into the commits that introduced them. If the
 fold goes wrong, `git reset --hard 58ff3e4333467bb9fe192bb3c48914d5d6e4f9ad` restores the round exactly as it was benched.
@@ -36,22 +41,22 @@ stayed silent on `SL2S5302`, which reports 40 and holds 40. The branch the guard
 reachable with any card here and was not claimed: every tag advertises the MEMORY flag, and the
 timeout path cannot be told from a quiet pass by hand. Harness and mutants cover it.
 
-The FAP on the Flipper is current as of `923ca1a`.
+The FAP on the Flipper is current as of `39df365`.
 
 | | |
 |---|---|
 | `32f80be` | data-block writes carry the card's address |
 | `3327ad3` | the OPTION flag, and the acknowledgement it costs |
 | `0fd69e8` | the gen1 loss claim is made only where there was a loss |
-| `4169416` | the clone's identity writes are addressed, and take the OPTION flag |
-| `d06abf4` | the release notes overstate what a gen1 clone reproduces |
-| `7db84ed` | a clone reports what it left on the card |
-| `2d0119d` | a clone that lands in a gen1 card's UID repairs it |
-| `fa3697a` | name the halves that differ, and do not read a register as capacity |
-| `c9a9cbe` | the notes page says what the user can act on |
-| `1cb7501` | why the clone reacts to the registers instead of predicting them |
-| `209f614` | the size note says what the card reports before what it is |
-| `923ca1a` | the size note names the file where the two counts agree |
+| `f1a6ae4` | the clone's identity writes are addressed, and take the OPTION flag |
+| `b9be432` | the release notes overstate what a gen1 clone reproduces |
+| `09523bc` | a clone reports what it left on the card |
+| `69f6e6e` | a clone that lands in a gen1 card's UID repairs it |
+| `ef4a4fd` | name the halves that differ, and do not read a register as capacity |
+| `d80630b` | the notes page says what the user can act on |
+| `146ff13` | why the clone reacts to the registers instead of predicting them |
+| `6122fd4` | the size note says what the card reports before what it is |
+| `39df365` | the size note names the file where the two counts agree |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
