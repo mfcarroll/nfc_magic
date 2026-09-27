@@ -28,8 +28,8 @@ TI's — so the frame that "worked addressed" differed in two bits, not one. A s
 same way: an **addressed** write with the flag clear is refused `0x03` there too, so it is the flag
 and not the address on both.
 
-**Nothing measured here requires an addressed write.** Five cards covering four identified chips,
-and `gen-2-card`, are each measured taking an unaddressed one.
+**Nothing measured here requires an addressed write.** All seven cards take an unaddressed one — the
+two TI cards once the OPTION flag is set, which is orthogonal to the address.
 
 **A second correction, smaller but user-facing.** The release notes scoped the wipe's identity hazard to
 a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier. Five gen1 cards
@@ -95,7 +95,9 @@ accidentally modifying any other card in the vicinity.
 Measured on five cards across all three gen1 chips — ST LRi2K, NXP ICODE SLIX, NXP ICODE SLIX-S —
 every frame bracketed by a reader either side, so a silence is not an absence. Block 56
 takes an addressed write and the UID moves to exactly the value that write implies; a UID one byte
-wrong gets nothing, on the same card in the same session. And at block 62, which every card refuses,
+wrong writes nothing — the UID is unchanged when read back, one card of each gen1 chip. So the
+register the sequence exists to protect is itself filtered on the address. And at block 62, which
+every card refuses,
 **addressing is what makes them answer at all**: the NXP parts are silent unaddressed and return a
 readable `0x0F` addressed, while the LRi2K answers either form with the specific `0x10`, "block not
 available". So the sequence had been going out in the one form four of these cards ignore.
@@ -272,8 +274,10 @@ proxmark's ISO15693 V3 magic support. The runs that decide it:
 - **a gen1 Write UID on each of the three gen1 chips**, to a target differing from each card's own
   UID in BOTH halves, so half a UID could not pass as a whole one: plain Success on all three, and
   the frames alone run separately on the SLIX-S
-- the unaddressed controls behind "nothing measured here requires an addressed write", on the build
-  before this round: a full 64/64 wipe on `gen-2-card` and 28/28 on a gen1 NXP SLIX
+- the unaddressed writes behind "nothing measured here requires an addressed write", now on all seven:
+  full wipes on `gen-2-card` (64/64) and a gen1 NXP SLIX (28/28), the backdoor's own unaddressed frames
+  on the LRi2K and SLIX-S, and an unaddressed WRITE BLOCK on the v2 sticker and — with the OPTION flag
+  — on both TI cards
 - **the address filter on each of the seven**, read back rather than inferred: a write aimed one byte
   wrong at a block holding something else, the block unchanged afterwards, and then the same frame
   with the right address changing it — so the silence is the address and not a malformed frame

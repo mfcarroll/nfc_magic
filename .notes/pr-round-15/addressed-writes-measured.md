@@ -214,6 +214,37 @@ The correctly-addressed write is in the set because every failure mode of this p
 silence -- wrong card, moved UID, mangled frame, bad coupling -- and without it the refusal above
 proves nothing. Full write-up in [loose-ends-bench.md](loose-ends-bench.md).
 
+## THE UID REGISTER ITSELF IS FILTERED — 2026-09-26, three gen1 chips
+
+Everything above is the filter on ORDINARY blocks. Block 56 is the gen1 UID register, and the one
+mis-addressed write ever sent there — on `SL2S5302`, in the earlier bench — had carried the value the
+register already held, so a landed write would have read identically to a refused one. The filter at
+56 rested on that inconclusive frame, while the whole gen1 sequence exists to keep exactly this write
+off a bystander.
+
+Closed by `tools/gen1-addressed-frames.py`, which now sends the mis-addressed control with data
+(`44 33 22 11`) DISTINCT from the correct-address write (`AA BB CC DD`) and reads the UID back. One
+card per gen1 chip:
+
+| chip | card | correct address at 56 | mis-addressed, distinct data | verdict |
+|---|---|---|---|---|
+| ST LRi2K | `lri2k-keychain` | UID moves to the written value | refused, UID unchanged | FILTERED |
+| NXP SLIX-S | `SL2S5302` | UID moves to the written value | refused, UID unchanged | FILTERED |
+| NXP SLIX | `slix-1k-50x28` | UID moves to the written value | refused, UID unchanged | FILTERED |
+
+So the register the sequence is addressed to protect is itself measured turning a wrong address away,
+not only inferred from the data blocks. Transcripts in [loose-ends-2-bench.md](loose-ends-2-bench.md).
+
+## THE TWO TI CARDS TAKE AN UNADDRESSED WRITE WITH OPTION — 2026-09-26
+
+`black-tag`, `hf 15 wrbl --ua -o -b 8`: block 8 blank, the unaddressed write of `AA BB CC DD` accepted
+and read back, then restored to zero — so it takes an unaddressed write once the OPTION flag is set,
+where the plain `--ua` with the flag clear is refused (`error 1`). That matches `white-coin`'s
+`42 21 08 AABBCCDD` in [controls-2026-09-24.md](controls-2026-09-24.md) and completes the pair: the
+OPTION flag, not the address, is what the TI cards require. `v2-sticker-50x28` takes a plain `--ua`
+write with no flag. **All seven cards are now measured taking an unaddressed write.** Transcripts in
+[loose-ends-2-bench.md](loose-ends-2-bench.md).
+
 ## What this settles for the implementation
 
 1. **Always-addressed is safe.** No card refuses it; the card that could have blocked it does not.

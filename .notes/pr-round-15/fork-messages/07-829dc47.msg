@@ -41,6 +41,13 @@ being filtered, not a write that landed without answering. TI Tag-it, the one
 card never sent a mis-addressed frame before, is among them, with the OPTION
 flag set in both frames so the address was the only variable.
 
+THE UID REGISTER ITSELF FILTERS ON THE ADDRESS. A write to block 56 with the
+address one byte wrong, carrying data the register does not hold, is refused and
+the UID is unchanged when read back -- one card of each gen1 chip. Block 56 is
+the register the whole sequence exists to keep off a bystander, so the address
+filter is now measured on the frame that matters most, not only on the data
+blocks.
+
 THE ONE THING THE SEQUENCE COSTS is a re-address in the middle. Block 56 carries
 uid[7..4] and takes effect immediately -- no power-cycle. So by the time block
 57 goes out the card has stopped answering to the address the frame before it
