@@ -25,8 +25,8 @@ stands, the likelier mishamyte starts work on it.
 
 **The safety branch `wip-pre-round14-correction`** -- the name is authoritative, and it includes the
 commit recording it -- was created before folding five comment fixes into the commits that wrote them:
-the clock cut, the clamp, and `0c76458`, which becomes the eighth commit of round 14. The rewrite is
-tree-level and touches two files. **Check it before any note is edited:**
+the clock cut, the clamp, and `0c76458` (`f899c78` after it), which becomes the eighth commit of
+round 14. The rewrite is tree-level and touches two files. **Check it before any note is edited:**
 
     git diff wip-pre-round14-correction HEAD -- magic scenes views helpers assets \
         CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
@@ -35,6 +35,19 @@ tree-level and touches two files. **Check it before any note is edited:**
 The first must show ONLY the five comment fixes, in `iso15693_poller.c` and `nfc_magic_scene_write.c`;
 the second must be EMPTY. Otherwise `git reset --hard wip-pre-round14-correction`. Every later SHA
 moves, so every round-15 anchor is renamed after it.
+
+**DONE, and verified:** the rewrite (5 hunks in those 2 files, proven comment-only; `.notes/` and
+`tools/` untouched; 200 commits, messages byte-identical); the correction set in
+[pr-round-15/round14-correction/](pr-round-15/round14-correction/), eight anchors, each checked for
+markers, its own tests, `-Werror` compile and imports; round 15's eight `.msg` files renamed, and
+both anchor tables re-derived by subject. `replay-to-fork.sh` now refuses an anchor that is not on
+the branch and a fork base that is not dev's tree before the first anchor -- the two checks that
+would have caught this -- and gates every sync point's tree instead of HEAD's.
+
+**LEFT, in order:** build it signed in the real fork (`BASE=749f10e6 PARTIAL=1`); mfcarroll's go-ahead
+for the force-push, with the lease the replay prints; post
+[round14-correction/comment.md](pr-round-15/round14-correction/comment.md), also on a go-ahead; then
+round 15, whose own replay then runs on the corrected base.
 
 ## ✅ SETTLED — THE GEN2 BACKDOOR CANNOT BE ADDRESSED, MEASURED ON FOUR CARDS
 
@@ -203,25 +216,25 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 
 | dev | sync | |
 |---|---|---|
-| `748ba94` | 01 | data-block writes carry the card's address |
-| `c22389e` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `71eb1e6` | 03 | the gen1 loss claim is made only where there was a loss |
-| `018921a` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `e64c0b2` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `c0d5786` |  | a clone reports what it left on the card |
-| `bafe828` |  | name the halves that differ, and do not read a register as capacity |
-| `61a5c72` |  | the notes page says what the user can act on |
-| `9788560` |  | why the clone reacts to the registers instead of predicting them |
-| `c5bd5d6` |  | the size note says what the card reports before what it is |
-| `a6a5e9a` | 06 | the size note names the file where the two counts agree |
-| `cf83484` |  | the gen1 backdoor sequence carries the card's address |
-| `cad5568` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `fe9c23c` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `a828406` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `3087c32` |  | the wipe's open question points at the evidence instead of repeating it |
-| `07db98c` |  | TI enforces the address too, and the gold tag has gen3's UID register |
-| `dcee20c` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `f689965` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `8b8f310` | 01 | data-block writes carry the card's address |
+| `08e58ac` | 02 | the OPTION flag, and the acknowledgement it costs |
+| `f8ceaf7` | 03 | the gen1 loss claim is made only where there was a loss |
+| `17dfde2` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `550dd9c` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `2321d12` |  | a clone reports what it left on the card |
+| `f0c787d` |  | name the halves that differ, and do not read a register as capacity |
+| `381db1b` |  | the notes page says what the user can act on |
+| `238a996` |  | why the clone reacts to the registers instead of predicting them |
+| `1566dab` |  | the size note says what the card reports before what it is |
+| `d5f711b` | 06 | the size note names the file where the two counts agree |
+| `901ea13` |  | the gen1 backdoor sequence carries the card's address |
+| `fa74acb` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `c5fac91` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `7b666aa` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `2dd5320` |  | the wipe's open question points at the evidence instead of repeating it |
+| `dba1a2a` |  | TI enforces the address too, and the gold tag has gen3's UID register |
+| `9eca7e6` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `c0c3af4` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the

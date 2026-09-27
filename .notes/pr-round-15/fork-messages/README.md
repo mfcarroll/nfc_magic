@@ -6,14 +6,14 @@ started stating a measurement.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `748ba94` | data-block writes carry the card's address |
-| 02 | `c22389e` | the OPTION flag, and the read-back it costs |
-| 03 | `71eb1e6` | the gen1 loss claim is gated on there being a loss |
-| 04 | `018921a` | the identity writes are addressed and take the flag |
-| 05 | `e64c0b2` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `a6a5e9a` | what a clone leaves behind, and what it says about it |
-| 07 | `dcee20c` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `f689965` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 01 | `8b8f310` | data-block writes carry the card's address |
+| 02 | `08e58ac` | the OPTION flag, and the read-back it costs |
+| 03 | `f8ceaf7` | the gen1 loss claim is gated on there being a loss |
+| 04 | `17dfde2` | the identity writes are addressed and take the flag |
+| 05 | `550dd9c` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `d5f711b` | what a clone leaves behind, and what it says about it |
+| 07 | `9eca7e6` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `c0c3af4` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
