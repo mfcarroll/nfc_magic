@@ -211,13 +211,25 @@ def main(argv):
     print("  hf 15 reader                                       expect "
           + " ".join("%02X" % b for b in moved))
     print()
-    print("  # the mis-addressed control, against the MOVED uid -- one byte wrong, expect SILENCE")
+    # The mis-addressed control writes DIFFERENT data from what block 56 now holds. The old form
+    # reused AABBCCDD -- the value step 1 just wrote -- so a wrong-address write that LANDED left the
+    # block unchanged and read identically to a refused one, the flaw white-coin's control had at
+    # block 8. Block 56 IS the UID register, so a landed write moves the UID and `hf 15 reader` shows
+    # it directly. Step 1 already accepted, so the frame shape is proven and a silence here is the
+    # address (BENCH-RULE 2, a control that cannot fail is not a control).
+    control = bytes([0x44, 0x33, 0x22, 0x11])
+    control_moved = uid[0:4] + bytes(reversed(control))
     bad = bytearray(moved)
     bad[0] ^= 0x01
+    print("  # the mis-addressed control, against the MOVED uid -- one byte wrong, DIFFERENT data")
     print("  hf 15 raw -ackw -d 2221%s%02X%s"
-          % (wire(bytes(bad)), BLK_UID_7654, test.hex().upper()))
-    print("  hf 15 reader                                       expect "
-          + " ".join("%02X" % b for b in moved) + "  (brackets the silence)")
+          % (wire(bytes(bad)), BLK_UID_7654, control.hex().upper()))
+    print("      PREDICTION: silence")
+    print("  hf 15 reader                                       *** THE MEASUREMENT ***")
+    print("      " + " ".join("%02X" % b for b in moved)
+          + "   wrong address wrote NOTHING -- the filter is MEASURED at block 56")
+    print("      " + " ".join("%02X" % b for b in control_moved)
+          + "   IT WROTE: this chip does not filter block 56 on the address")
     print()
     print("  # restore, addressed to the MOVED uid -- this is the re-address seam in miniature")
     print("  hf 15 raw -ackw -d 2221%s%02X%s"
