@@ -271,11 +271,41 @@ Then the six backdoor frames already generated, and the four phase-0 OPTION read
     hf 15 raw -ackw -d 222099665544332211E008           -> 00 A1 B2 C3 D4 60 3E
 
 **Read before AND after the wrong-address frame, with data that differs from what the block held.**
-Every other enforcement control here rests on silence, and `white-coin`'s read-back -- the one this
-sheet called the strongest -- came after the RIGHT address wrote and used the SAME data in both
-frames, so a landed wrong-address write would have been invisible to it. **This is the first direct
-measurement on the project that a mis-addressed write changes nothing.** Six cards accept an
-addressed write; this is the one where the refusal is proved rather than inferred.
+**This is the first direct measurement on the project that a mis-addressed write changes nothing.**
+Every enforcement control on all six cards, audited:
+
+| card | wrong-address frame | read after it? | distinguishes? |
+|---|---|---|---|
+| `slix-1k-50mm` | `2221…E008 55667788` silent | no -- an INVENTORY followed | no |
+| `gen-2-card` | `2221…E108 55667788` silent | no | no |
+| `SL2S5302` | `2221…E108 55667788` silent | no -- `hf 15 reader` either side | no |
+| `white-coin` | `6221…E108 AABBCCDD` silent | yes, but AFTER the right-address write | no -- SAME data in both frames |
+| `black-tag` | `6221…E108 55667788` silent | yes, but after the RESTORE | no |
+| **`v2-sticker-50x28`** | **`2221…E108 55667788` silent** | **yes, before any restore** | **YES -- distinct data** |
+
+**WHY NOBODY CAUGHT IT, and it is not slackness in the earlier work.** Until tonight, silence and
+no-write were the same thing on this bench. `42E0...` is what separated them -- a frame that reported
+failure and wrote anyway. The earlier controls were designed for the question that existed then, and
+they answer it: the card does not ANSWER a mis-addressed frame. BENCH-RULE 2b was applied properly,
+with readers bracketing the silence. What they do not answer is a question nobody could ask yet.
+
+**The shipped wording is already accurate, which is luck rather than foresight.** The release notes
+and the poller both say the card "is answered by nothing" / "answers NOTHING" to a wrong UID -- a
+claim about the ANSWER, exactly what was measured. **The reply says "every one ENFORCES the
+address"**, which is the stronger reading, and for five of six cards that is an inference rather than
+a measurement.
+
+**The inference is sound and worth stating as one.** In every control the flags are identical between
+the right- and wrong-address frames, and the right-address frame answered; for the wrong one to have
+written silently the card would have to process the write and suppress the answer BECAUSE of the
+address, which is not a mechanism -- if it matched it would answer, and if it did not match it would
+not process. The `42E0...` case does not transfer: there the FLAGS differed between the answering and
+silent cases.
+
+**Closing it properly is five cheap runs**, and the template is above: give the wrong-address frame
+DIFFERENT data from what the block holds, and read the block BEFORE restoring. Worth doing on at
+least one more card of a different chip, and it is mfcarroll's call whether all five are worth the
+bench time.
 
 ### THE BACKDOOR — gen2 confirmed, and it matches the other three on every frame
 
