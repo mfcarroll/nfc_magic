@@ -90,6 +90,53 @@ def option_probe(uid, block=8):
     print("  hf 15 raw -ackw -d %02X21%s%02X<original>" % (OPTION_ADDRESSED, wire(uid), block))
 
 
+def enforce(uid, holds, option, block=8):
+    """Does a mis-addressed write LAND? Silence does not answer that, and until 2026-09-26 nothing
+    on this bench distinguished the two.
+
+    Every enforcement control here but one rests on the card not ANSWERING a wrong address. That was
+    the same thing as not writing until `42E0...` -- the gen2 backdoor with OPTION set -- reported
+    failure and moved the UID anyway. That is a FLAG effect rather than an ADDRESS effect, so the
+    inference still holds; it is just an inference on five of six cards.
+
+    THE TWO THINGS THE EARLIER CONTROLS EACH MISSED, and both are needed:
+      - the probe data must DIFFER from what the block already holds, or a landed write and a
+        refused one read identically. `white-coin`'s control sent AABBCCDD in both frames.
+      - the read must come BEFORE any restore. `black-tag`'s came after, so it confirmed the
+        restore and nothing else.
+
+    The right-address write goes AFTER the wrong-address one rather than before: it proves the frame
+    shape was good, so a silence at step 1 was the ADDRESS and not a malformed frame (BENCH-RULE 2,
+    a control that cannot fail is not a control).
+    """
+    flags = OPTION_ADDRESSED if option else 0x22
+    bad = bytearray(uid)
+    bad[0] ^= 0x01
+    holds = holds.upper().replace(" ", "")
+    probe = "55667788" if holds != "55667788" else "A1B2C3D4"
+    print("  # 0. the card, and what block %d holds RIGHT NOW" % block)
+    print("  hf 15 reader                     expect " + " ".join("%02X" % b for b in uid))
+    print("  hf 15 rdbl -b %d                  this run assumes it holds %s" % (block, holds))
+    print()
+    print("  # 1. WRONG address, data that DIFFERS from what is in there")
+    print("  hf 15 raw -ckw  -d %02X21%s%02X%s" % (flags, wire(bytes(bad)), block, probe))
+    print("      PREDICTION: silence")
+    print()
+    print("  # 2. *** THE MEASUREMENT *** -- did it write anyway?")
+    print("  hf 15 rdbl -b %d" % block)
+    print("      %s   the wrong address wrote NOTHING -- enforcement MEASURED" % holds)
+    print("      %s   IT WROTE. Stop and report: the round's safety claim rests on this" % probe)
+    print()
+    print("  # 3. RIGHT address, same data -- the control, and it must be able to fail")
+    print("  hf 15 raw -ackw -d %02X21%s%02X%s" % (flags, wire(uid), block, probe))
+    print("      PREDICTION: 00 78 F0. Proves the frame shape was good, so step 1 was the ADDRESS")
+    print("  hf 15 rdbl -b %d                  expect %s" % (block, probe))
+    print()
+    print("  # 4. restore, and confirm")
+    print("  hf 15 raw -ackw -d %02X21%s%02X%s" % (flags, wire(uid), block, holds))
+    print("  hf 15 rdbl -b %d                  expect %s" % (block, holds))
+
+
 def restore(uid):
     """The two UNADDRESSED backdoor writes that set a whole UID, as proxmark's own wipe path sends
     them. Unaddressed because pm3's wrbl --ua is what the earlier restores used and what the cards
@@ -111,7 +158,15 @@ def main(argv):
     if not selftest():
         return 2
     mode = "probe"
-    if argv and argv[0] in ("--restore", "--probe", "--option-probe"):
+    argv = list(argv)
+    option = "--option" in argv
+    argv = [a for a in argv if a != "--option"]
+    holds = "00000000"
+    if "--holds" in argv:
+        i = argv.index("--holds")
+        holds = argv[i + 1]
+        del argv[i:i + 2]
+    if argv and argv[0] in ("--restore", "--probe", "--option-probe", "--enforce"):
         mode, argv = argv[0][2:], argv[1:]
     raw = "".join(argv).replace(":", "").replace("-", "")
     try:
@@ -122,6 +177,12 @@ def main(argv):
     if len(uid) != 8:
         print("error: a UID is 8 bytes, got %d" % len(uid))
         return 2
+
+    if mode == "enforce":
+        print("card          :  " + " ".join("%02X" % b for b in uid)
+              + ("   OPTION set" if option else "   OPTION clear"))
+        enforce(uid, holds, option)
+        return 0
 
     if mode == "option-probe":
         print("card          :  " + " ".join("%02X" % b for b in uid))
