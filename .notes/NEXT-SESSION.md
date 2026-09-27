@@ -16,6 +16,26 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ ROUND 14 WAS PUSHED FROM ORPHANED ANCHORS, AND IS BEING CORRECTED — `wip-pre-round14-correction`
+
+Found by the final review, [pr-round-15/final-review.md](pr-round-15/final-review.md) F1. The PR holds
+dev `868c598`'s tree, which no branch contained; `wip-round14-as-pushed` keeps it. mfcarroll's call
+2026-09-26: force-push a corrected round 14 FIRST, then do round 15 -- the longer the wrong content
+stands, the likelier mishamyte starts work on it.
+
+**The safety branch `wip-pre-round14-correction`** -- the name is authoritative, and it includes the
+commit recording it -- was created before folding five comment fixes into the commits that wrote them:
+the clock cut, the clamp, and `0c76458`, which becomes the eighth commit of round 14. The rewrite is
+tree-level and touches two files. **Check it before any note is edited:**
+
+    git diff wip-pre-round14-correction HEAD -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+    git diff wip-pre-round14-correction HEAD -- .notes tools
+
+The first must show ONLY the five comment fixes, in `iso15693_poller.c` and `nfc_magic_scene_write.c`;
+the second must be EMPTY. Otherwise `git reset --hard wip-pre-round14-correction`. Every later SHA
+moves, so every round-15 anchor is renamed after it.
+
 ## ✅ SETTLED — THE GEN2 BACKDOOR CANNOT BE ADDRESSED, MEASURED ON FOUR CARDS
 
 mfcarroll asked whether leaving it unaddressed was an oversight. **It is not a choice at all.**
