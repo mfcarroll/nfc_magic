@@ -1,6 +1,9 @@
 # Next session — ROUND 14 IS PUSHED AND POSTED. The blocker is the addressing work, not him.
 
-**Pushed `749f10e6..dbc11980`, a fast-forward of 7, all signed.** PR head confirmed via the API
+**⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
+an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
+[issuecomment-5852338281](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5852338281).
+See the section below. **Originally pushed `749f10e6..dbc11980`, a fast-forward of 7, all signed.** PR head confirmed via the API
 before posting. **Posted:** the main reply as
 [issuecomment-5824709850](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5824709850),
 and all seven thread replies, each verified by `in_reply_to` AND by the root's file.
@@ -46,10 +49,15 @@ would have caught this -- and gates every sync point's tree instead of HEAD's.
 
 **BUILT, signed, 8 of 8, in the real fork: head `1d411dec`** -- trees and messages identical to the
 throwaway build that was tested, the stale round-15 replay kept as `backup-stale-round15-replay`.
-**LEFT, in order:** mfcarroll's go-ahead for the force-push, with the lease the replay prints
-(`--force-with-lease=nfc-magic-iso15693:dbc11980561bb56115a19d0f8ce31b4fd4fa4502`); post
-[round14-correction/comment.md](pr-round-15/round14-correction/comment.md), also on a go-ahead; then
-round 15, whose own replay then runs on the corrected base.
+**PUSHED AND POSTED 2026-09-26, on mfcarroll's go-ahead.** `git push --force-with-lease=
+nfc-magic-iso15693:dbc11980...` took the branch `dbc11980` -> `1d411dec`; the PR head reads `1d411dec`
+through the API, 144 commits, and the timeline records the force-push. The comment went up as
+[issuecomment-5852338281](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5852338281),
+its body checked against the payload. **Its compare link uses TWO dots** -- with three, GitHub diffs
+from the common ancestor, which after a force-push is his head, and showed all of round 14, code
+included, under a sentence saying comment-only. Caught before posting by opening the link.
+
+**Round 15 now builds on `1d411dec`**, and its replay's base check holds it there.
 
 ## ✅ SETTLED — THE GEN2 BACKDOOR CANNOT BE ADDRESSED, MEASURED ON FOUR CARDS
 
