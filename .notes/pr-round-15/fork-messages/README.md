@@ -1,7 +1,8 @@
-# Round 15 — seven behavioural sync points, then the release notes
+# Round 15 — seven behavioural sync points, then the gen2 measurement and the release notes
 
-The addressing round. Every one of these changes behaviour except 08, which is the release notes.
-There is no comment-only commit among them.
+The addressing round. 01-07 each change behaviour. 08 changes none: it is the whole round's release
+notes plus the one comment that had to move with them, because a note stopped arguing a case and
+started stating a measurement.
 
 | # | sync at | one decision |
 |---|---|---|
@@ -12,7 +13,7 @@ There is no comment-only commit among them.
 | 05 | `e64c0b2` | a clone that lands in a gen1 card's UID repairs it |
 | 06 | `a6a5e9a` | what a clone leaves behind, and what it says about it |
 | 07 | `dcee20c` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `853855c` | the 2.3 release notes for this round |
+| 08 | `252b00c` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
