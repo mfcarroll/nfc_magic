@@ -6,6 +6,7 @@ headings, historical framing in a shipped comment, a fork message citing tests t
 Prose rules nobody runs are documentation, not a gate. This runs the greppable subset.
 
     check-writing.py comments <path>...     shipped source: history, dev SHAs, long blocks
+    check-writing.py comments-new <base> <root>   only what <root>'s tree ADDS over <base>'s
     check-writing.py forkmsg <dir>          fork messages: dev SHAs, tools/ paths, test claims
     check-writing.py headings <file>...     a heading whose own section contradicts it
 
@@ -75,6 +76,32 @@ def comments(paths):
                     warn.append((p, start, "long-block", f"{run} lines -- justify or cut"))
                 run = 0
     return bad, warn
+
+
+def comments_new(args):
+    """Findings in the ROOT tree that the BASE tree does not already have.
+
+    A replay ships every sync point's tree, not just the tip, so each one is gated -- but an
+    intermediate tree can carry a finding it did not introduce, one already on the branch that a
+    later sync point in the same push removes. Gating those would refuse a correction for the text
+    it corrects. So this reports only what the tree ADDS: matched on (path within its tree, kind,
+    text) as a multiset, since line numbers move between trees and the same phrase can occur twice.
+    """
+    from collections import Counter
+
+    def scan(root):
+        files = sorted(str(p) for p in Path(root).rglob("*.[ch]"))
+        found, _ = comments(files)
+        return [(str(Path(p).relative_to(root)), i, k, t) for p, i, k, t in found]
+
+    have = Counter((p, k, t) for p, _, k, t in scan(args[0]))
+    new = []
+    for p, i, k, t in scan(args[1]):
+        if have[(p, k, t)]:
+            have[(p, k, t)] -= 1
+        else:
+            new.append((p, i, k, t))
+    return new, []
 
 
 def forkmsg(d):
@@ -156,7 +183,8 @@ def main():
         print(__doc__)
         return 2
     mode, args = sys.argv[1], sys.argv[2:]
-    res = {"comments": comments, "forkmsg": lambda a: (forkmsg(a[0]), []),
+    res = {"comments": comments, "comments-new": comments_new,
+           "forkmsg": lambda a: (forkmsg(a[0]), []),
            "headings": lambda a: (headings(a), [])}[mode](args)
     found, warn = res
     for where, line, kind, detail in warn:
