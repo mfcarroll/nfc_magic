@@ -312,6 +312,50 @@ Earlier drafts of the gen2 sheet framed it as "on a card that is not TI", which 
 under-stated. The population is now two cards that require the flag and two that do not, all four
 behaving identically when it is set.
 
+### PHASE 0 CLOSED — no gen3 signature, with the flag or without it
+
+    hf 15 raw -ackw -d 422014   -> (8) 00 00 00 00 00 00 8F F7
+    hf 15 raw -ackw -d 422015   -> (8) 00 00 00 00 00 00 8F F7
+    hf 15 raw -ackw -d 422010   -> (8) 00 00 00 00 00 00 8F F7
+    hf 15 raw -ackw -d 422011   -> (8) 00 00 00 00 00 00 8F F7
+
+Eight bytes rather than seven because OPTION adds the block security byte to a READ response:
+flags `00`, security `00`, data `00 00 00 00`, CRC. All four identical, CRC included, which is what
+byte-identical responses produce -- the block number is not in the response.
+
+| | expected for V3 | read, with OPTION |
+|---|---|---|
+| `0x14` | `A5 2B 44 2C` | `00 00 00 00` |
+| `0x15` | `21 AE 93 00` config / `69 E2 5D 00` finalized | `00 00 00 00` |
+| `0x10`/`0x11` | the UID, reversed | `00 00 00 00` |
+
+**No V3 signature, no UID copy, and the OPTION reads AGREE with the plain dump.** Nothing hides
+behind the flag on this card. `hf 15 info` was taken between every frame and never moved: UID,
+DSFID `00`, AFI `00`, IC ref `0x8B`, 64 x 4 throughout. Final dump: 64 blocks, all zeros.
+
+### ⚠️ AND IT EXPOSES A LOOSE END ON `slix2-gold-30mm` — not this PR, but record it
+
+**This is the first time the project has run the OPTION read against the plain read and seen them
+agree**, which is the control a disagreement would have to be measured against.
+
+The gold tag never got that control. Its `0x14` = `A5 3B 44 2C` and `0x15` = `21 0F 50 00` came from
+`hf 15 dump` -- a PLAIN read. **proxmark's V3 detection reads those blocks WITH the OPTION flag**
+(`cmdhf15.c:3362-3373`, recorded in [iso15693-primer.md](../iso15693-primer.md) lines 84-85). So the
+"one bit off at 0x14" comparison was made against bytes obtained by a different method from the one
+the constants belong to.
+
+It may well read the same either way -- it does on this sticker. But it is untested there, and the
+gold tag write-up draws its conclusions from those four bytes.
+
+    hf 15 raw -ackw -d 422014      on slix2-gold-30mm
+    hf 15 raw -ackw -d 422015
+
+**Two frames, reads only, and the DO-NOT-WIPE on that card does not touch them.** Out of scope for
+this PR; gen3 is. Flagged because the reply carries a `[👤]` paragraph saying that tag "doesn't match
+the configuration patterns expected by the gen3 code in proxmark" -- **mfcarroll's own words, not
+ours to edit** -- and this is the one thing that could put a wrinkle in it. Worth him knowing before
+it is posted, and it is cheap to settle either way.
+
 ### What was NOT touched, on purpose
 
 `0x14`/`0x15` never written, so the gen3 brick hazard was never in play. `0x47`/`0x52` never written,
