@@ -44,8 +44,10 @@ both anchor tables re-derived by subject. `replay-to-fork.sh` now refuses an anc
 the branch and a fork base that is not dev's tree before the first anchor -- the two checks that
 would have caught this -- and gates every sync point's tree instead of HEAD's.
 
-**LEFT, in order:** build it signed in the real fork (`BASE=749f10e6 PARTIAL=1`); mfcarroll's go-ahead
-for the force-push, with the lease the replay prints; post
+**BUILT, signed, 8 of 8, in the real fork: head `1d411dec`** -- trees and messages identical to the
+throwaway build that was tested, the stale round-15 replay kept as `backup-stale-round15-replay`.
+**LEFT, in order:** mfcarroll's go-ahead for the force-push, with the lease the replay prints
+(`--force-with-lease=nfc-magic-iso15693:dbc11980561bb56115a19d0f8ce31b4fd4fa4502`); post
 [round14-correction/comment.md](pr-round-15/round14-correction/comment.md), also on a go-ahead; then
 round 15, whose own replay then runs on the corrected base.
 
