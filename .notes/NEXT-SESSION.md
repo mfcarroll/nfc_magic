@@ -463,7 +463,22 @@ now). Two clusters are worth removing and one is not:
 byte-identical afterwards. And check every sync point for conflict markers before trusting a
 scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how this is caught cheaply.
 
-## WHAT IS LEFT — a fresh-context review, then his read, then the replay
+## WHAT IS LEFT — his read of the reply, then the push, then the posts
+
+**As of 2026-09-26 late:** the fresh-context review is DONE ([pr-round-15/final-review.md](pr-round-15/final-review.md));
+round 14 is corrected ON THE PR (see the section at the head); every round-15 finding is folded in
+(safety branch `wip-pre-round15-fixes`) and **round 15 is BUILT, signed 8 of 8, in the fork: head
+`2085648a`, a fast-forward from `1d411dec`**, every sync point checked for markers, its own tests,
+`-Werror` compile and imports, fork 01 now exactly its own change. Nothing of round 15 is pushed.
+
+1. **mfcarroll reads [pr-round-15/reply.md](pr-round-15/reply.md)** -- eight paragraphs changed today,
+   no `[👤]` one -- and [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md), new.
+2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
+   fast-forward. Re-run the replay first if anything in dev changed since `2085648a` was built.
+3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
+
+The older plan below is kept for its record; the order above supersedes it.
+
 
 **Everything below this heading is DONE unless it says otherwise.** The order from here:
 
@@ -482,7 +497,8 @@ scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how thi
 - **~40 lines of removable intra-push churn**, under KNOWN REMAINING WORK below. Measured and left.
 - **`lri2k-keychain` block 8** is the one card whose old probe residue was not cleared; `slix-1k-50mm`
   was cleared 2026-09-26 and the rest were already blank.
-- **The #255 comment** carrying the arm-model correction, to be posted with the round.
+- **The #255 comment** is drafted: [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md), both errors, the
+  armed scoping and the latch. Posted with the round, on a go-ahead.
 - **`slix2-gold-30mm` and the unmarked tags** -- the reversible UID-register probe on
   `slix-black-38x25` and `ti-2k-silver-1/2` is still unrun, and cheap.
 - **Brian's gen3 stickers are untouched** and out of scope for this PR.
