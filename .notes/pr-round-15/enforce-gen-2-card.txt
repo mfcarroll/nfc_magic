@@ -1,0 +1,90 @@
+$ pm3 -c 'hf 15 reader;hf 15 rdbl -b 8'
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260927003353.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 reader;hf 15 rdbl -b 8
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 reader
+
+[+] UID.... E0 04 01 10 A1 A2 A3 A4
+[+] DSFID.. 00
+[+] TYPE MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX )
+
+[usb|script] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+
+$ pm3 -c 'hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000'
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260927003354.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000
+[+] (3) 00 78 F0 
+
+$ pm3 -c 'hf 15 raw -ckw  -d 2221A4A3A2A1100104E10855667788;hf 15 rdbl -b 8'
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260927003355.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 raw -ckw  -d 2221A4A3A2A1100104E10855667788;hf 15 rdbl -b 8
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 raw -ckw  -d 2221A4A3A2A1100104E10855667788
+[!] command failed
+[usb|script] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+
+$ pm3 -c 'hf 15 raw -ackw -d 2221A4A3A2A1100104E00855667788;hf 15 rdbl -b 8'
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260927003356.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 raw -ackw -d 2221A4A3A2A1100104E00855667788;hf 15 rdbl -b 8
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 raw -ackw -d 2221A4A3A2A1100104E00855667788
+[+] (3) 00 78 F0 
+[usb|script] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 55 66 77 88 | 0 | Ufw.
+[=] ------------+---+------
+
+
+$ pm3 -c 'hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000;hf 15 rdbl -b 8'
+[=] Session log /Users/matthew.carroll.personal/.proxmark3/logs/log_20260927003358.txt
+[+] loaded `/Users/matthew.carroll.personal/.proxmark3/preferences.json`
+[+] execute command from commandline: hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000;hf 15 rdbl -b 8
+
+[+] Using UART port /dev/cu.usbmodemiceman1
+[+] Communicating with PM3 over USB-CDC
+[+] Max frame size: 624 bytes
+[usb|script] pm3 --> hf 15 raw -ackw -d 2221A4A3A2A1100104E00800000000
+[+] (3) 00 78 F0 
+[usb|script] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+

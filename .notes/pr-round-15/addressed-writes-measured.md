@@ -127,16 +127,51 @@ is indistinguishable from absence.
 
 ## Running total
 
-| chip | card | accepts addressed | enforces address | stale-address after UID move |
-|---|---|---|---|---|
-| TI Tag-it HF-I Plus | `white-coin` | yes | **yes** | n/a -- not gen1 |
-| NXP ICODE SLIX 0x01 | `slix-1k-50mm` | yes | yes | **yes** |
-| gen-2-card's silicon | `gen-2-card` | yes | yes | n/a -- not gen1 |
-| ST LRi2K | `lri2k-keychain` | yes | yes | **yes** |
-| NXP ICODE SLIX-S 0x02 | `SL2S5302` | yes | yes | not run |
+| chip | card | accepts addressed | enforces address | how enforcement is known | stale-address after UID move |
+|---|---|---|---|---|---|
+| TI Tag-it HF-I Plus | `white-coin` | yes | **yes** | **read back, distinct data** | n/a -- not gen1 |
+| TI Tag-it behaviour | `black-tag` | yes | **yes** | **read back, distinct data** | n/a -- not gen1 |
+| NXP ICODE SLIX 0x01 | `slix-1k-50mm` | yes | yes | **read back, distinct data** | **yes** |
+| gen-2-card's silicon | `gen-2-card` | yes | yes | **read back, distinct data** | n/a -- not gen1 |
+| ST LRi2K | `lri2k-keychain` | yes | yes | silence only | **yes** |
+| NXP ICODE SLIX-S 0x02 | `SL2S5302` | yes | yes | **read back, distinct data** | not run |
+| unknown | `v2-sticker-50x28` | yes | yes | **read back, distinct data** | n/a -- not gen1 |
 
 **Every chip this app can write accepts addressed WRITE BLOCK.** That is the premise of the whole
-approach and it now holds across all five, rather than the one it started from.
+approach and it now holds across seven cards, rather than the one it started from.
+
+## ENFORCEMENT IS MEASURED, NOT INFERRED — 2026-09-26, six cards
+
+**Silence is not the same as a non-write**, and nothing on this bench distinguished them until the
+gen2 backdoor with OPTION set reported failure and moved the UID anyway. Every enforcement result
+above had rested on the card not ANSWERING a wrong address, which was the question that existed when
+they were run -- and is a weaker claim than "enforces".
+
+Closed by `tools/enforce-bench.py`, which sends the wrong-address frame with data that DIFFERS from
+what the block holds, reads the block BEFORE any restore, and only then sends the right-address
+frame -- so a silence is shown to be the address rather than a malformed frame.
+
+| card | flags | wrong address | block after | right address | block after | verdict |
+|---|---|---|---|---|---|---|
+| `gen-2-card` | `22` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
+| `SL2S5302` | `22` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
+| `slix-1k-50mm` | `22` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
+| `black-tag` | `62` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
+| `white-coin` | `62` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
+| `v2-sticker-50x28` | `22` | silent | unchanged | `00 78 F0` | -- | ENFORCED |
+
+Transcripts in `enforce-<card>.txt`. Every card restored to what it held and confirmed by a read.
+
+**The flags column is measured too.** The script probes it by writing the block's OWN current value
+back with OPTION clear -- a no-op whether accepted or refused -- and reads the answer. It returned
+`62` for `black-tag` and `white-coin` and `22` for the rest, independently reproducing the `0x03`
+result each of those two gave by hand.
+
+**`lri2k-keychain` is the one still on silence alone.** Its enforcement came free from the
+stale-address result rather than from a dedicated frame: after a write to 56 moved the UID, the
+pre-write address got silence and the new one was answered. That is a different and arguably better
+control -- the "wrong" address was one the card really had held -- but the block was not read back,
+so a silent write is not excluded there the way it now is on the other six.
 
 **CLOSED 2026-09-26 -- all five chips filter on the address.** TI's was the last blank, left on a
 reason withdrawn the same day it was given ("it refuses unaddressed writes, so it is already
