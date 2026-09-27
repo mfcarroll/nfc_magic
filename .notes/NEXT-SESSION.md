@@ -36,7 +36,7 @@ want the flag for ordinary writes. The app never meets it -- `ISO15693_MAGIC_FLA
 once, inside the gen2 builder, while the sticky flag lives in `iso15693_poller_write_flags()` -- so
 the finding confirms the hardcoded `0x02` rather than changing anything.
 
-## ⚠️ OPEN, RAISED BY MFCARROLL 2026-09-26 — IS THE GEN2 BACKDOOR AN OVERSIGHT?
+## The argument that sent the gen2 question to the bench, kept because the shipped text rests on it
 
 **It is NOT addressed.** `iso15693_poller_build_gen2_frame` sends `02 E0 09 <ref> d0 d1 d2 d3` --
 flags `0x02`, unaddressed. The reason given at `ISO15693_MAGIC_FLAGS`, again at WHAT REMAINS
@@ -59,8 +59,9 @@ saying addressing it was unmeasured, mfcarroll challenged it, and the evidence w
 Here the claim is stronger -- "cannot usefully be otherwise". Defensible: the risk is narrower,
 because only another gen2 magic card can act on them. Not defensible as it stands.
 
-**mfcarroll's call 2026-09-26: fix after the review.** Behavioural, so it needs its own sync point
-and a bench; the round is not final until it is settled.
+**mfcarroll's call 2026-09-26 was to fix it after the review, expecting a behavioural change.** The
+bench made it a reason change instead -- see the settled section above. The prediction that it would
+need its own sync point and a bench was half right: it needed the bench.
 
 ## ⚠️ SAFETY BRANCH FOR THE GEN2 WRITE-UP — `wip-pre-gen2-writeup`
 
