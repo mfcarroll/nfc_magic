@@ -27,9 +27,14 @@ because an earlier note asserts it. The recurring failure is a sentence that was
     tools/check-writing.py forkmsg .notes/pr-round-15/fork-messages
     tools/check-drafts.py .notes/pr-round-15/reply.md
     FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev                 in ../Momentum-Firmware, zero warnings
+      AFTER rm -rf build/f7-firmware-C/.extapps/nfc_magic_dev. SCons signs by content, so a build
+      that is already up to date prints no CC line at all, and "zero warnings" then means nothing
+      was compiled. Count the CC lines (71).
     tools/comment-only.py <each shipped commit>           prove what claims to be comment-only
     tools/check-stale-shas.py                             0 stale; notes citing dead commits
-    tools/replay-to-fork.sh <msgdir>                      its own verification is a real check
+    tools/replay-to-fork.sh <msgdir> <throwaway clone>    its own verification is a real check
+      NOT into ../all-the-plugins: it resets that fork, and the real replay waits on mfcarroll.
+      git clone --shared the fork, point origin at its GitHub URL, commit.gpgsign false there.
 
     per sync point, not just the tip:  no conflict markers, compiles, passes its own tests
 
