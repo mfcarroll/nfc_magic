@@ -16,6 +16,26 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ✅ SETTLED — THE GEN2 BACKDOOR CANNOT BE ADDRESSED, MEASURED ON FOUR CARDS
+
+mfcarroll asked whether leaving it unaddressed was an oversight. **It is not a choice at all.**
+Measured 2026-09-26 on `gen-2-card`, `black-tag`, `white-coin` and `v2-sticker-50x28`: each takes
+the unaddressed `02 E0 09` and refuses the addressed form -- correct UID, with and without OPTION,
+and with the address bit set but no UID in the frame. All four also take an addressed ordinary
+WRITE BLOCK and go silent on a wrong address, so the frames are well formed and the cards' addressing
+works. The backdoor is not reachable that way. Transcripts in
+[pr-round-15/gen2-addressed-bench.md](pr-round-15/gen2-addressed-bench.md).
+
+**Shipped as a REASON change, not a behaviour change**, folded into sync point 08: the measurement
+now sits at `iso15693_poller_build_gen2_frame`, the flags define keeps only why the byte is used
+literally, and the release note states the residual instead of arguing it away -- another gen2 magic
+card in the field takes these frames and nothing here can stop it.
+
+**AND OPTION SWALLOWS THE ACKNOWLEDGEMENT ON `0xE0` TOO**, on all four, including two that do not
+want the flag for ordinary writes. The app never meets it -- `ISO15693_MAGIC_FLAGS` appears exactly
+once, inside the gen2 builder, while the sticky flag lives in `iso15693_poller_write_flags()` -- so
+the finding confirms the hardcoded `0x02` rather than changing anything.
+
 ## ⚠️ OPEN, RAISED BY MFCARROLL 2026-09-26 — IS THE GEN2 BACKDOOR AN OVERSIGHT?
 
 **It is NOT addressed.** `iso15693_poller_build_gen2_frame` sends `02 E0 09 <ref> d0 d1 d2 d3` --
@@ -41,6 +61,20 @@ because only another gen2 magic card can act on them. Not defensible as it stand
 
 **mfcarroll's call 2026-09-26: fix after the review.** Behavioural, so it needs its own sync point
 and a bench; the round is not final until it is settled.
+
+## ⚠️ SAFETY BRANCH FOR THE GEN2 WRITE-UP — `wip-pre-gen2-writeup`
+
+Created 2026-09-26 before folding the gen2 measurement into sync point 08. Same invariant:
+
+    git diff wip-pre-gen2-writeup HEAD -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+
+**Only `CHANGELOG.md` and `iso15693_poller.c` may differ**, and only in comments and release notes.
+Verified after the fold, and every sync point re-checked for conflict markers, compiled and tested.
+
+⚠️ **08's ANCHOR MOVED THREE TIMES TONIGHT** -- the content fold, then the message rewrite, then
+moving the comment to the frame builder -- and the `.msg` filename was renamed after each.
+**Rewrite the message BEFORE naming the file**, or the rename happens twice for no reason.
 
 ## ⚠️ SAFETY BRANCH FOR THE REVIEW FOLD — `wip-pre-review-fixes`
 
