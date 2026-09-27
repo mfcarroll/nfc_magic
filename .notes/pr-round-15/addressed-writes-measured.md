@@ -167,7 +167,30 @@ back with OPTION clear -- a no-op whether accepted or refused -- and reads the a
 `62` for `black-tag` and `white-coin` and `22` for the rest, independently reproducing the `0x03`
 result each of those two gave by hand.
 
-**`lri2k-keychain` is the one still on silence alone.** Its enforcement came free from the
+**ALL SEVEN ARE MEASURED.** `lri2k-keychain` was the last on silence alone -- its enforcement came
+free from the stale-address result rather than a dedicated frame, which is arguably a better control
+(the "wrong" address was one the card had really held) but never read the block back. Run
+2026-09-26: `E0 02 22 24 50 00 83 03`, flags `22`, wrong address silent and block 8 unchanged, right
+address `00 78 F0` and block 8 `55667788`, restored. **No card is left on an inference.**
+
+### What the sweep of the shelf also turned up
+
+**`slix-1k-50mm` HAS LOST ITS ORIGINAL DATA, and it was never recorded.** Its 2026-09-08 baseline
+has `nonzero_blocks: [0, 1]` and a note saying in as many words "this tag is NOT blank. Blocks 0 and
+1 hold data" -- the bytes themselves were never captured, because a decode bug ate them and
+`original` is write-once. **Both blocks now read `00 00 00 00`.** Lost somewhere between 2026-09-08
+and 2026-09-26; the card is `gen1_write: true` and has been cloned and wiped many times since, and
+nothing here says which run did it.
+
+Nothing can be done about it now. It is recorded in the inventory so the tag is never re-baselined
+as "blank", which it was not.
+
+**And blocks 8 and 9 held probe residue** -- `11 22 33 44` from session A and `99 AA BB CC` from
+session B, sitting there since 2026-09-24. Zeroed 2026-09-26 with the addressed form and the whole
+card verified 28/28 blank. With 0 and 1 already gone, uniformly blank is the only honest end state:
+fragments of old probes read as content to anyone who picks the card up later.
+
+**The old text, kept for the shape of the argument:** Its enforcement came free from the
 stale-address result rather than from a dedicated frame: after a write to 56 moved the UID, the
 pre-write address got silence and the new one was answered. That is a different and arguably better
 control -- the "wrong" address was one the card really had held -- but the block was not read back,
