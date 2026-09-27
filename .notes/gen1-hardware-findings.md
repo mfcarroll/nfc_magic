@@ -145,7 +145,8 @@ in-band-refusal result stays at one chip while the latch result goes to three.
 **A `SL2S5302` inventory note was falsified by this run.** It reasoned that 40 blocks puts 56/57/62/63
 out of range, so "a gen1 attempt is harmless here after all". Blocks 56 and 57 accepted the write and
 the UID moved. The UID registers are backdoor registers, not memory, so the advertised geometry says
-nothing about whether they exist -- which is what `4aee03d` already concluded. Corrected in the
+nothing about whether they exist -- which is what the round-9 commit validating gen1 on five cards
+across three chips already concluded. Corrected in the
 inventory. The app is unaffected: 40 is below 49, so the wipe sweep stops around block 47 and never
 reaches them.
 
@@ -230,7 +231,8 @@ The cut was promised as one decision with nothing else in it. None of this goes 
 - [ ] **`tools/README.md`**: record that `physical_blocks` is a lower bound (Finding 4).
 - [ ] **Consider a `gen1` verification test in `tools/hosttest`** — the fixture now makes the model
       checkable, though the harness is host-side and cannot drive a card.
-- [x] **THE GEN3 HAZARD IS WORSE THAN WE DOCUMENT** — **DONE in Round 7, commit `c8beff5`.**
+- [x] **THE GEN3 HAZARD IS WORSE THAN WE DOCUMENT** — **DONE in Round 7**, by the commit making the
+      gen3 wipe cost the card in both warnings.
       The CHANGELOG entry is corrected and attributed, and the wipe confirm now carries
       "This can \e#brick\e# a gen3 card!" behind a "Wipe? (gen1/gen2 only)" title. #255's own
       text still carries the softer wording — editing an issue means posting, so it is not done.

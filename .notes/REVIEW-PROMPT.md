@@ -28,7 +28,10 @@ because an earlier note asserts it. The recurring failure is a sentence that was
     tools/check-drafts.py .notes/pr-round-15/reply.md
     FBT_NO_SYNC=1 ./fbt fap_nfc_magic_dev                 in ../Momentum-Firmware, zero warnings
     tools/comment-only.py <each shipped commit>           prove what claims to be comment-only
+    tools/check-stale-shas.py                             0 stale; notes citing dead commits
     tools/replay-to-fork.sh <msgdir>                      its own verification is a real check
+
+    per sync point, not just the tip:  no conflict markers, compiles, passes its own tests
 
 A gate reporting clean means only that its patterns did not match. Four of the classes below have
 no checker at all.
@@ -98,6 +101,29 @@ Each one shipped into a draft this round.
     Corollary, learned the same way: **resolving a run of rebase conflicts by script is how the
     marker got committed.** If a resolution is worth automating, its result is worth reading.
 
+12. **A CONTROL THAT PROVES THE WEAKER CLAIM.** Six cards had "enforces the address" from the card
+    not ANSWERING a mis-addressed write. Silence and non-write were the same thing here until a
+    frame reported failure and wrote anyway. **Name what the control actually excludes, then check
+    that is what the sentence claims.** Two ways it went wrong in one evening: the probe data was
+    the same in both frames, so a landed write read identically to a refused one; and the block was
+    restored before it was read, so the read confirmed the restore and nothing else. **A restore
+    that runs before the measurement destroys the measurement.**
+
+13. **AN ARGUMENT THAT COVERS THE WRONG POPULATION.** "0xE0 is proprietary, so a conforming tag
+    rejects it on the command" — true, and the tags at risk are other MAGIC cards, which parse it
+    exactly as the target does. Ask who the sentence is about, and whether they are the ones the
+    hazard is about.
+
+14. **EVIDENCE GATHERED BY A DIFFERENT METHOD FROM THE CONSTANTS IT IS COMPARED WITH.** A tag's
+    config blocks were read with `hf 15 dump` and matched against values proxmark reads WITH the
+    OPTION flag. It turned out identical, so nothing changed — but that was luck, and nobody had
+    checked. When a comparison uses someone else's constants, use their method.
+
+15. **A SCOPE RULE APPLIED IN THE WRONG DIRECTION.** The rule here is "do not count a card of
+    unknown silicon as an identified chip". Applied backwards it became "three cards, one chip",
+    when one of the three demonstrably differs from the other two. **Unidentified is not absent.**
+    Count what is identified, say the rest separately, and never imply the rest is not there.
+
 ## Pass 3 — the read-through, which no checker replaces
 
 The eight questions in `.notes/WRITING-RULES.md`, against every paragraph of the reply. The ones that
@@ -108,6 +134,15 @@ finding; does it duplicate something whose home is elsewhere.
 
 `[👤]` marks mfcarroll's own paragraphs. They are posted as-is, they are not yours to edit, and the
 attribution and narration rules do not apply to them.
+
+## Two habits that cost time rather than correctness
+
+- **A note that cites a dev SHA is a claim that rots silently.** This round rebuilt five times.
+  `tools/check-stale-shas.py` catches the unreachable ones; it cannot catch a SHA that still
+  resolves and now names the wrong commit, which is what an anchor written into prose becomes.
+  The `.msg` filenames and the fork README table are the only anchors anyone should read.
+- **Rewrite a commit message before naming a file after its SHA.** 08's anchor moved three times in
+  one evening and the file was renamed after each.
 
 ## What must NOT be re-opened
 

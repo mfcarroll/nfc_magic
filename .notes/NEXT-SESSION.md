@@ -87,9 +87,11 @@ cannot produce the conflict markers a patch-level rebase produced earlier in thi
         CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
 
 **Must show ONLY the two fixes** -- the CHANGELOG's OPTION bullet and the poller's unlock tally.
-Verified after the fold. **Sync points 07 and 08 have NEW SHAs** (`dcee20c`, `853855c`); 01-06 sit
-below the rewrite and are unchanged. The `.msg` filenames and the README table were renamed with
-them.
+Verified after the fold. **Sync points 07 and 08 have NEW SHAs**; 01-06 sit below the rewrite and
+are unchanged. **08's moved three times on 2026-09-26** -- the content fold, the message rewrite,
+then relocating the comment -- so do not read an anchor out of this file. **The table in
+[pr-round-15/fork-messages/README.md](pr-round-15/fork-messages/README.md) is the one place anchors
+are recorded, and `tools/replay-to-fork.sh` reads the `.msg` filenames rather than any prose.**
 
 ⚠️ **THE FORK IS STALE.** `nfc-magic-iso15693` still holds the eight commits built from the OLD
 anchors. It needs `replay-to-fork.sh` re-run before any push -- which rewrites all eight, so it waits
@@ -199,7 +201,7 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 | `3087c32` |  | the wipe's open question points at the evidence instead of repeating it |
 | `07db98c` |  | TI enforces the address too, and the gold tag has gen3's UID register |
 | `dcee20c` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `853855c` | 08 | the 2.3 release notes for this round |
+| `f689965` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -404,7 +406,39 @@ now). Two clusters are worth removing and one is not:
 byte-identical afterwards. And check every sync point for conflict markers before trusting a
 scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how this is caught cheaply.
 
-## WHAT IS LEFT, in the order to take it
+## WHAT IS LEFT — a fresh-context review, then his read, then the replay
+
+**Everything below this heading is DONE unless it says otherwise.** The order from here:
+
+1. **A FINAL REVIEW IN FRESH CONTEXT**, driven by [REVIEW-PROMPT.md](REVIEW-PROMPT.md), which now
+   carries fifteen defect classes -- every one of them something that shipped into a draft in this
+   round. Classes 12-15 are new on 2026-09-26 and came out of the gen2 bench.
+2. **mfcarroll's read of [pr-round-15/reply.md](pr-round-15/reply.md)**, which has caught more than
+   any other check here.
+3. **The replay**, `tools/replay-to-fork.sh .notes/pr-round-15/fork-messages`, with 1Password
+   unlocked so the eight come out signed. ⚠️ **THE FORK IS STALE** -- it holds eight commits built
+   from anchors that have since moved three times, so it must be rebuilt before anything is pushed.
+4. **Then the push**, which needs an explicit go-ahead every time. Then posting, same rule.
+
+**STILL OPEN, none of it blocking:**
+
+- **~40 lines of removable intra-push churn**, under KNOWN REMAINING WORK below. Measured and left.
+- **`lri2k-keychain` block 8** is the one card whose old probe residue was not cleared; `slix-1k-50mm`
+  was cleared 2026-09-26 and the rest were already blank.
+- **The #255 comment** carrying the arm-model correction, to be posted with the round.
+- **`slix2-gold-30mm` and the unmarked tags** -- the reversible UID-register probe on
+  `slix-black-38x25` and `ti-2k-silver-1/2` is still unrun, and cheap.
+- **Brian's gen3 stickers are untouched** and out of scope for this PR.
+
+## The round-15 measurement records cite pre-rebuild SHAs
+
+`addressed-writes-implemented.md`, `gen1-backdoor-addressed.md`, `known-count-guard-bench.md` and
+`gen1-addressed-bench.md` name commits by SHA from before the five rebuilds. Those SHAs are still
+reachable from the safety branches, so `git show` works, but they are not on this branch and
+`check-stale-shas.py` is deliberately quiet about them. **Read those files by SUBJECT, not by SHA.**
+
+## The order the bench work was actually taken, kept for what it settled
+
 
 1. ~~**BENCH `b312653`**~~ **DONE 2026-09-26 and it PASSES** --
    [pr-round-15/gen1-addressed-bench.md](pr-round-15/gen1-addressed-bench.md) has the predictions,
