@@ -308,7 +308,65 @@ hf 15 rdbl -b 8                       expect 00 00 00 00
 hf 15 reader                          brackets: card present throughout
 ```
 
+```
+[usb] pm3 --> hf 15 info
+[=] Using scan mode
 
+[=] --- Tag Information ---------------------------
+[+] UID....... E0 07 81 B8 AF 14 42 07
+[+] TYPE MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)
+[+] SYSINFO... 00 0F 07 42 14 AF B8 81 07 E0 02 00 3F 03 8B 
+[+] DSFID..... 0x02
+[+] AFI....... 0x00
+[+] IC ref.... 0x8B
+[+] Tag memory layout (vendor dependent)
+[+]     4 ( or 3 ) bytes/blocks x 64 blocks
+[+]     256 total bytes
+
+[usb] pm3 --> hf 15 reader
+
+[+] UID.... E0 07 81 B8 AF 14 42 07
+[+] DSFID.. 02
+[+] TYPE MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)
+
+[usb] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb] pm3 --> hf 15 wrbl --ua -o -b 8 -d AABBCCDD
+[=] Using unaddressed mode
+[+] Writing to page 08 (0x08) | AA BB CC DD   ( ok )
+[usb] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] AA BB CC DD | 0 | ????
+[=] ------------+---+------
+
+[usb] pm3 --> hf 15 wrbl --ua -o -b 8 -d 00000000
+[=] Using unaddressed mode
+[+] Writing to page 08 (0x08) | 00 00 00 00   ( ok )
+[usb] pm3 --> hf 15 rdbl -b 8
+[=] Using scan mode
+
+[=] #  8        |lck| ascii
+[=] ------------+---+------
+[=] 00 00 00 00 | 0 | ....
+[=] ------------+---+------
+
+[usb] pm3 --> hf 15 reader
+
+[+] UID.... E0 07 81 B8 AF 14 42 07
+[+] DSFID.. 02
+[+] TYPE MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)
+
+[usb] pm3 --> 
+```
 
 ### v2-sticker-50x28 — TRANSCRIPT
 
