@@ -276,7 +276,7 @@ proxmark's ISO15693 V3 magic support. The runs that decide it:
   before this round: a full 64/64 wipe on `gen-2-card` and 28/28 on a gen1 NXP SLIX
 - **the address filter on each of the seven**, read back rather than inferred: a write aimed one byte
   wrong at a block holding something else, the block unchanged afterwards, and then the same frame
-  with the right address accepted — so the silence is the address and not a malformed frame
+  with the right address changing it — so the silence is the address and not a malformed frame
 - **the gen2 backdoor in four flag and address combinations on each of the four gen2 cards**, which
   is what settles that it cannot be addressed
 

@@ -36,7 +36,7 @@ to 56 was two chips when the data-block writes were addressed, and the SLIX-S
 run above is the third. And the address enforcement was four of five cards,
 resting on silence; it is now read back on seven. A write to a UID one byte
 wrong, carrying data the block does not hold, leaves the block unchanged, and
-the same frame at the right address is accepted -- so the silence is the address
+the same frame at the right address changes it -- so the silence is the address
 being filtered, not a write that landed without answering. TI Tag-it, the one
 card never sent a mis-addressed frame before, is among them, with the OPTION
 flag set in both frames so the address was the only variable.

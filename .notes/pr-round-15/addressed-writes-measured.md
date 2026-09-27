@@ -161,7 +161,7 @@ frame -- so a silence is shown to be the address rather than a malformed frame.
 | `slix-1k-50mm` | `22` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
 | `black-tag` | `62` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
 | `white-coin` | `62` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
-| `v2-sticker-50x28` | `22` | silent | unchanged | `00 78 F0` | -- | ENFORCED |
+| `v2-sticker-50x28` | `22` | silent | unchanged | `00 78 F0` | `A1B2C3D4`, from blank, read before the wrong frame | ENFORCED |
 
 Transcripts in `enforce-<card>.txt`, except the v2 sticker's, which is in
 [v2-sticker-bench.md](v2-sticker-bench.md). Every card restored to what it held and confirmed by a read.
