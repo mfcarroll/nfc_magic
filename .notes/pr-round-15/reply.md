@@ -24,19 +24,21 @@ All four combinations, on the same card, each read back from it:
 
 The original reading changed one variable and took the 0x01 as a refusal of the unaddressed form.
 Its control was `hf 15 wrbl`, which silently forces OPTION on for any tag whose manufacturer byte is
-TI's — so the frame that "worked addressed" differed in two bits, not one.
+TI's — so the frame that "worked addressed" differed in two bits, not one. A second card behaves the
+same way: an **addressed** write with the flag clear is refused `0x03` there too, so it is the flag
+and not the address on both.
 
 **Nothing here requires an addressed write.** Five cards covering four identified chips are each
 measured taking an unaddressed one.
 
-**A second correction, smaller but user-facing.** The release notes scoped the wipe's identity
-hazard to a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier.
-Five cards here take a write to block 56 with no "unlock" or "commit" in front of it at all — one of
-them a card this app had never written — and neither frame has ever been accepted by anything. On all
-three gen1 chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim
-lets the sweep reach them: the reach rule, not the card's history. Which matters, because a user
-cannot know a card's history and nothing can detect it. The notes and the screens say so now, and I
-will put the same correction on #255, which still carries the older wording.
+**A second correction, smaller but user-facing.** The release notes scoped the wipe's identity hazard to
+a gen1 card "left armed by an earlier UID write". There is nothing under that qualifier. Five gen1 cards
+here take a write to block 56 with no "unlock" or "commit" in front of it at all — one of them a card
+this app had never written — and neither frame has ever been accepted by anything. On all three gen1
+chips here blocks 56/57 simply take a write, so the hazard is any such card whose claim lets the sweep
+reach them: the reach rule, not the card's history. Which matters, because a user cannot know a card's
+history and nothing can detect it. The notes and the screens say so now, and I will put the same
+correction on #255, which still carries the older wording.
 
 ## What went in
 
@@ -69,12 +71,14 @@ is no fallback keyed on API version — naming a symbol the firmware lacks fails
 read-back ships, and if that call ever lands in the minimum firmware supported here it replaces it
 outright.
 
-**Addressed data-block writes**, which is what #251 asks for. Every card here accepts them and every
-one enforces the address — a UID one byte wrong gets nothing at all, on all five. The wipe retakes
-its address after writing 56 or 57, because on a gen1 card those two blocks are the UID and it moves
-immediately — measured on three chips. Without that, every later frame carries an address the card
-no longer answers to, the sweep's absent run trips, and it reports a card shorter than the one in
-the field.
+**Addressed data-block writes**, which is what #251 asks for. All seven cards here accept them, and all
+seven filter the address: a write carrying a UID one byte wrong is unanswered, and the block it aimed at
+— holding something else at the time — is unchanged when read back afterwards. Silence alone would not
+have shown that; a write can land without acknowledging, which is exactly what the OPTION flag does
+above. The wipe retakes its address after writing 56 or 57, because on a gen1 card those two blocks are
+the UID and it moves immediately — measured on three chips. Without that, every later frame carries an
+address the card no longer answers to, the sweep's absent run trips, and it reports a card shorter than
+the one in the field.
 
 **The clone's identity writes are addressed too.** WRITE AFI and WRITE DSFID are standard commands,
 so an unaddressed one lands on a tag of any size. The AFI is the worse of the two: a reader can
@@ -104,7 +108,7 @@ the seam.
 
 Unlock and commit are addressed on the safety argument alone, and I cannot validate the addressed
 form of either: no card here has ever accepted one, in any form, including a card this app had never
-written. The same evidence says they are not needed — five cards take the write to 56 without an
+written. The same evidence says they are not needed — five gen1 cards take the write to 56 without an
 unlock or commit in front of it at all, and neither has ever been observed changing the behaviour of
 any card here. They stay anyway: proxmark sends them, and the cards that would prove them necessary
 are ones neither of us has.
@@ -229,15 +233,31 @@ on someone's other card is the kind of inadvertent damage this PR has been caref
 **It does not close #251.** The 1-slot INVENTORY_T5 and the missing STAY QUIET are untouched, and the
 issue's worst consequence cannot be fixed this way at all: the post-wipe UID re-read can still be
 answered by a bystander, and that check exists to discover whether the UID changed, so it cannot be
-aimed at a UID already in doubt. The one frame set left unaddressed is the **gen2** backdoor, and
-usefully so — its command is `0xE0` and proprietary, so a tag that is not a gen2 magic card rejects
-it on the command rather than on the address.
+aimed at a UID already in doubt.
+
+**And one frame set cannot be addressed at all.** The gen2 backdoor is `0xE0`, proprietary, so a tag
+that is not a gen2 magic card rejects it on the command and there is no standard frame for a
+bystander to take. That covers conforming tags. Another gen2 magic card parses `0xE0 09` exactly as
+the target does, and the sequence programs the configuration register as well as the UID, so a
+bystander of that kind comes away with a different block count, block size and IC reference on top of
+a different identity.
+
+Measured on all four gen2 cards here: each takes the unaddressed form and refuses the addressed one —
+with the correct UID, with and without the OPTION flag, and with the address bit set but no UID in
+the frame. All four also accept an addressed ordinary WRITE BLOCK and go silent on a one-byte-wrong
+address, so the frames are well formed and the cards' addressing works. The backdoor is not reachable
+that way, and there is no addressed form of it to send.
+
+So those frames stay as they are, and the limit is worth stating rather than arguing away: another
+gen2 magic card in the field takes them and nothing in the app can stop it. Narrower than the gen1
+hazard, not zero.
 
 ## The bench
 
-Seven cards, covering four identified chips plus one whose silicon cannot be named: `gen-2-card` has
-only ever worn a cloned UID, so the type line a reader prints for it describes what was copied onto
-it rather than the chip underneath. The runs that decide it:
+Seven cards, covering four identified chips plus two whose silicon cannot be named. Both of those
+have only ever worn a written UID, so the type line a reader prints for them describes what was put
+on rather than the chip underneath — one of them arrived that way, from the developer who wrote
+proxmark's ISO15693 V3 magic support. The runs that decide it:
 
 - a **TI Tag-it** wipe and clone — the card that could not be written at all before this
 - a **gen1 ST LRi2K** wipe, where the UID moves under the sweep: 58/58 and the identity change
@@ -255,6 +275,11 @@ it rather than the chip underneath. The runs that decide it:
   the frames alone run separately on the SLIX-S
 - unaddressed-write controls, to show nothing regressed: a full 64/64 wipe on the gen2 card and 28/28
   on a gen1 NXP SLIX
+- **the address filter on each of the seven**, read back rather than inferred: a write aimed one byte
+  wrong at a block holding something else, the block unchanged afterwards, and then the same frame
+  with the right address changing it — so the silence is the address and not a malformed frame
+- **the gen2 backdoor in four flag and address combinations on each of the four gen2 cards**, which
+  is what settles that it cannot be addressed
 
 ## Where this stands
 

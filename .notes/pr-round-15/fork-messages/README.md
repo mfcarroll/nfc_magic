@@ -13,7 +13,7 @@ started stating a measurement.
 | 05 | `e64c0b2` | a clone that lands in a gen1 card's UID repairs it |
 | 06 | `a6a5e9a` | what a clone leaves behind, and what it says about it |
 | 07 | `dcee20c` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `252b00c` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 08 | `c3e4192` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to

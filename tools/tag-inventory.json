@@ -714,6 +714,37 @@
         "unreadable_blocks": []
       }
     },
+    "v2-sticker-50x28": {
+      "classification": {
+        "campaign": "manual-2026-09-26",
+        "gen2_write": true,
+        "gen3_signature": false,
+        "verdict": "gen2 magic"
+      },
+      "form_factor": "50x28mm sticker",
+      "note": "From the developer who wrote proxmark's ISO15693 V3 magic support, in the shipment that also brought v1-coin-green18 and several KNOWN gen3 stickers. Read, classified and benched 2026-09-26; nothing had ever been written to it by this project before that day. || THE UID IS A PLACEHOLDER, NOT A FACTORY IDENTITY. E0 11 22 33 44 55 66 99 sits one nibble from v1-coin-green18's E0 11 22 33 44 55 66 91, so both came from the same hand. The type line a reader prints -- Emosyn-EM Microelectronics USA -- decodes uid[1] = 0x11 from that placeholder and says nothing about the silicon, which is the same costume gen-2-card wears. Its chip is UNKNOWN and this record exists partly to say so. || IT ARRIVED IN PROXMARK'S DEFAULT MAGIC CFG STATE: sysinfo ends 3F 03 8B, which is maxblock/blocksize/ic_ref exactly as the gen2 CFG frame writes them, the same way black-tag and white-coin arrived. So the 64 is a programmed claim, not a capacity. || THE CLAIM IS HONEST ANYWAY, and it is the first gen2 card here where it is. A full read sweep of the 8-bit space answered on 0-63 and refused on 64-255, a hard edge with 192 consecutive refusals -- so 64 physical, no phantom tail, and no aliasing of the kind slix2-gold-30mm has. It therefore SUPPORTS the clone-residue survey's premise that a block past physical capacity refuses reads. || NO GEN3 SIGNATURE, checked both ways: 0x14/0x15 and 0x10/0x11 read 00 00 00 00 in a plain dump AND with the OPTION flag set, which is how proxmark identifies a V3. It is the first card here where those two reads were compared, which is what made the same check on slix2-gold-30mm worth running. || BENCHED: takes an addressed WRITE BLOCK, filters a one-byte-wrong address with the block read back and unchanged, does NOT want the OPTION flag for ordinary writes, and its gen2 backdoor refuses every addressed form while taking the unaddressed one. Write-ups in .notes/pr-round-15/v2-sticker-bench.md and gen2-addressed-bench.md. || Restored: UID back to E0 11 22 33 44 55 66 99, all 64 blocks zero, geometry untouched.",
+      "original": {
+        "advertised_blocks": 64,
+        "afi": 0,
+        "block_size": 4,
+        "captured": "2026-09-26",
+        "dsfid": 0,
+        "from_baseline_probe": false,
+        "ic_ref": 139,
+        "locked_blocks": [],
+        "nonzero_blocks": [],
+        "sysinfo": "00 0F 99 66 55 44 33 22 11 E0 00 00 3F 03 8B",
+        "type": "MATCH Emosyn-EM Microelectronics USA -- decoded from a placeholder UID, NOT the silicon",
+        "uid": "E0 11 22 33 44 55 66 99",
+        "unreadable_blocks": []
+      },
+      "physical": {
+        "blocks": 64,
+        "method": "full read sweep of blocks 0-255 on 2026-09-26: 0-63 answer, 64-255 refuse",
+        "note": "Measured, unlike the advertised count, which is a CFG register value that happens to agree."
+      },
+      "source": "Gift from 0x6r1an0y (Brian), proxmark ISO15693 V3 magic author. No listing or bag label."
+    },
     "white-card": {
       "classification": {
         "campaign": "20260913_005922",
