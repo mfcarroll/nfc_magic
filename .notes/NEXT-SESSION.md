@@ -19,6 +19,20 @@ two-card Retry.
 **⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
 Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
 
+## ⚠️ SAFETY BRANCH FOR THE ROUND-15 FIXES — `wip-pre-round15-fixes`
+
+Created before folding the final review's shipped-text fixes into the round-15 commits that wrote
+them: the block-57 boundary (six sites), the addressing define's seven-card read-back, the repair's
+"ARMS", the gen2 builder's comparison, and the 2.3 release notes. The name is authoritative and
+includes the commit recording it. Round 14's eight commits sit below the rewrite and do not move.
+
+    git diff wip-pre-round15-fixes HEAD -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+    git diff wip-pre-round15-fixes HEAD -- .notes tools
+
+The first must be ONLY those fixes, the .c/.h part comment-only; the second EMPTY until notes are
+edited. Otherwise `git reset --hard wip-pre-round15-fixes`.
+
 ## ⚠️ ROUND 14 WAS PUSHED FROM ORPHANED ANCHORS, AND IS BEING CORRECTED — `wip-pre-round14-correction`
 
 Found by the final review, [pr-round-15/final-review.md](pr-round-15/final-review.md) F1. The PR holds
