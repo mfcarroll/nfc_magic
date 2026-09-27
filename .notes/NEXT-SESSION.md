@@ -16,8 +16,9 @@ conclusions independently. We added seven on top.
 settled against the firmware source. Our own `dbc11980` consent fix is confirmed end to end by the
 two-card Retry.
 
-**⚠️ gen-2-card is left advertising 256 blocks against 64 physical**, from the CFG clamp fixture.
-Re-clone any normal 64-block source to restore it -- the CFG frame sets the geometry either way.
+**gen-2-card geometry is RESOLVED (2026-09-26):** re-cloned/wiped to 64 physical blocks, all-zero UID,
+blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
+under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
 ## ⚠️ SAFETY BRANCH FOR THE ROUND-15 FIXES — `wip-pre-round15-fixes`
 
@@ -467,14 +468,17 @@ scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how thi
 
 **As of 2026-09-26 late:** the fresh-context review is DONE ([pr-round-15/final-review.md](pr-round-15/final-review.md));
 round 14 is corrected ON THE PR (see the section at the head); every round-15 finding is folded in
-(safety branch `wip-pre-round15-fixes`) and **round 15 is BUILT, signed 8 of 8, in the fork: head
-`2085648a`, a fast-forward from `1d411dec`**, every sync point checked for markers, its own tests,
-`-Werror` compile and imports, fork 01 now exactly its own change. Nothing of round 15 is pushed.
+(safety branch `wip-pre-round15-fixes`), AND the loose-ends-2 bench results are folded in too (dev commit
+`8595031`, dev-only: reply, fork msg 07, the measurement record, the inventory -- no shipped code, so the
+eight trees did not move). **Round 15 is BUILT, signed 8 of 8, in the fork: head `f61285bc`, a
+fast-forward from `1d411dec`** (rebuilt 2026-09-26 to carry the final message 07 -- the block-56 register
+filter and the "changes it" fix; the prior build was `2085648a`), every sync point checked for markers,
+its own tests, `-Werror` compile and imports, fork 01 exactly its own change. Nothing of round 15 is pushed.
 
 1. **mfcarroll reads [pr-round-15/reply.md](pr-round-15/reply.md)** -- eight paragraphs changed today,
    no `[👤]` one -- and [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md), new.
 2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
-   fast-forward. Re-run the replay first if anything in dev changed since `2085648a` was built.
+   fast-forward. Re-run the replay first if any shipped file changed in dev since `f61285bc` was built.
 3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
 
 The older plan below is kept for its record; the order above supersedes it.
