@@ -262,6 +262,62 @@ Enforcement, with **different data** so the read can tell whether a wrong addres
 Then the six backdoor frames already generated, and the four phase-0 OPTION reads at
 `0x10`/`0x11`/`0x14`/`0x15`.
 
+### ENFORCEMENT — measured, not inferred. The best control on this shelf.
+
+    hf 15 rdbl -b 8                                     -> A1 B2 C3 D4        before
+    hf 15 raw -ackw -d 222099665544332211E008           -> 00 A1 B2 C3 D4 60 3E
+    hf 15 raw -ckw  -d 222199665544332211E10855667788   -> command failed     WRONG address
+    hf 15 rdbl -b 8                                     -> A1 B2 C3 D4        UNCHANGED
+    hf 15 raw -ackw -d 222099665544332211E008           -> 00 A1 B2 C3 D4 60 3E
+
+**Read before AND after the wrong-address frame, with data that differs from what the block held.**
+Every other enforcement control here rests on silence, and `white-coin`'s read-back -- the one this
+sheet called the strongest -- came after the RIGHT address wrote and used the SAME data in both
+frames, so a landed wrong-address write would have been invisible to it. **This is the first direct
+measurement on the project that a mis-addressed write changes nothing.** Six cards accept an
+addressed write; this is the one where the refusal is proved rather than inferred.
+
+### THE BACKDOOR — gen2 confirmed, and it matches the other three on every frame
+
+    hf 15 reader                                        -> E0 11 22 33 44 55 66 99
+    hf 15 raw -ackw -d 02E0094011223344                 -> (3) 00 78 F0    unaddressed
+    hf 15 reader                                        -> E0 11 22 33 44 33 22 11   MOVED
+    hf 15 raw -ackw -d 02E0094099665544                 -> (3) 00 78 F0    restore
+    hf 15 reader                                        -> E0 11 22 33 44 55 66 99   back
+    hf 15 raw -ackw -d 22E099665544332211E0094011223344 -> command failed  ADDRESSED, correct UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ckw  -d 22E099665544332211E1094011223344 -> command failed  ADDRESSED, wrong UID
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 62E099665544332211E0094011223344 -> command failed  ADDRESSED + OPTION
+    hf 15 reader                                        -> unchanged
+    hf 15 raw -ackw -d 42E0094011223344                 -> command failed  unaddressed + OPTION
+    hf 15 reader                                        -> E0 11 22 33 44 33 22 11   *** MOVED ***
+    hf 15 raw -ackw -d 02E0094099665544                 -> (3) 00 78 F0    restore
+    hf 15 reader                                        -> E0 11 22 33 44 55 66 99   restored
+
+Probe `11223344` rather than the sheet's `A1B2C3D4`; the restore value `99665544` is unique to this
+card so the transcript stays separable. `E0 11 22 33 44 33 22 11` is exactly what `11 22 33 44` into
+`uid[7..4]` implies, so the mapping holds on a fourth card.
+
+**gen2 magic, confirmed by a write.** Fourth gen2 card, first in this form factor.
+
+### AND THE OPTION FINDING IS NOT ABOUT TI AT ALL
+
+`42E0...` reported failure and moved the UID here too -- four cards for four. But **this card does
+not want the OPTION flag**: it took the standard write with the bit clear. So the acknowledgement
+being swallowed is not a property of TI silicon, and not of cards that need the flag. It is what the
+OPTION bit does to THIS COMMAND, on every card that has been asked.
+
+Earlier drafts of the gen2 sheet framed it as "on a card that is not TI", which was true and
+under-stated. The population is now two cards that require the flag and two that do not, all four
+behaving identically when it is set.
+
+### What was NOT touched, on purpose
+
+`0x14`/`0x15` never written, so the gen3 brick hazard was never in play. `0x47`/`0x52` never written,
+so the CFG geometry is as received -- the card still claims 64 against a measured 64. Block 8 back
+to zeros, confirmed by a read and a dump line.
+
 ### STILL OWED IN PHASE 0
 
     hf 15 raw -ackw -d 422010     READ 0x10, OPTION set
