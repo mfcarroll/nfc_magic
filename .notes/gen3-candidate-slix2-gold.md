@@ -155,6 +155,35 @@ reversed) + cfinalize (0x14/0x15)"*.
 `21` and on `00` -- and `00` is the most common byte on this card by a wide margin, so it carries
 close to nothing. One block is suggestive; two are not corroborating each other here.
 
+## THE OPTION READ — 2026-09-26. No difference. The near-miss stands as measured.
+
+The four values above came from `hf 15 dump`, a PLAIN read. **proxmark's V3 detection reads those
+blocks WITH the OPTION flag** (`cmdhf15.c:3362-3373`), so until now the comparison used bytes
+obtained by a different method from the constants they were being compared against. Raised while
+benching `v2-sticker-50x28`, the first card here where both reads were run side by side.
+
+    hf 15 raw -ackw -d 422014   -> (8) 00 00 A5 3B 44 2C 85 5E
+    hf 15 raw -ackw -d 422015   -> (8) 00 00 21 0F 50 00 57 FD
+    hf 15 raw -ackw -d 422010   -> (8) 00 00 36 F1 CD 01 54 4D
+    hf 15 raw -ackw -d 422011   -> (8) 00 00 00 03 48 E0 43 77
+
+Eight bytes because OPTION adds the block security byte; it is `00` on all four.
+
+| block | plain `hf 15 dump` | with OPTION | |
+|---|---|---|---|
+| `0x10` | `36 F1 CD 01` | `36 F1 CD 01` | same |
+| `0x11` | `00 03 48 E0` | `00 03 48 E0` | same |
+| `0x14` | `A5 3B 44 2C` | `A5 3B 44 2C` | same |
+| `0x15` | `21 0F 50 00` | `21 0F 50 00` | same |
+
+**Byte for byte identical.** The read method was not the explanation, so nothing above changes: the
+one-bit miss at `0x14` is a real near-miss and `0x15` is a real distant one. A doubt is closed rather
+than a finding opened, and `v2-sticker-50x28` supplies the other half of the control -- an ordinary
+card where the two reads also agree, so agreement here is not an artefact of asking wrongly.
+
+**It neither makes this a gen3 variant nor rules one out.** It removes one alternative explanation
+and leaves the reasoning below as it stood.
+
 **And the constants have no recorded provenance.** `V3_SIG_A`/`V3_SIG_B` sit in the probe under a
 bare comment with no citation. Whether a near-miss means "a variant" or "not this at all" depends on
 whether that value is spec-defined or was observed from one card, and nothing here says which.
