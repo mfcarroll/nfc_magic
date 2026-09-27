@@ -1,6 +1,8 @@
 # Final review of round 15, driven by REVIEW-PROMPT.md — 2026-09-26, at `f43802a`
 
 Single-threaded, fresh context, nothing fixed except two Pass 1 lines in the instrument itself.
+**The SHAs below are as of `f43802a`.** The round-14 correction and the round-15 fixes that followed
+rewrote dev history under them, so read them by subject; the anchor tables are current.
 Every number below was re-derived at the time of reading. Findings are ordered by severity; each
 names the site, the class, and what it should say instead. **Nothing here is decided** — the
 remedies are proposals.

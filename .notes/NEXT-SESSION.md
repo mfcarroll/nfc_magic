@@ -242,23 +242,23 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 |---|---|---|
 | `8b8f310` | 01 | data-block writes carry the card's address |
 | `08e58ac` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `f8ceaf7` | 03 | the gen1 loss claim is made only where there was a loss |
-| `17dfde2` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `550dd9c` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `2321d12` |  | a clone reports what it left on the card |
-| `f0c787d` |  | name the halves that differ, and do not read a register as capacity |
-| `381db1b` |  | the notes page says what the user can act on |
-| `238a996` |  | why the clone reacts to the registers instead of predicting them |
-| `1566dab` |  | the size note says what the card reports before what it is |
-| `d5f711b` | 06 | the size note names the file where the two counts agree |
-| `901ea13` |  | the gen1 backdoor sequence carries the card's address |
-| `fa74acb` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `c5fac91` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `7b666aa` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `2dd5320` |  | the wipe's open question points at the evidence instead of repeating it |
-| `dba1a2a` |  | TI enforces the address too, and the gold tag has gen3's UID register |
-| `9eca7e6` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `c0c3af4` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `3be2248` | 03 | the gen1 loss claim is made only where there was a loss |
+| `0b8acb2` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `29b77e8` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `d2e3b5f` |  | a clone reports what it left on the card |
+| `5974741` |  | name the halves that differ, and do not read a register as capacity |
+| `8ce2f4a` |  | the notes page says what the user can act on |
+| `484414d` |  | why the clone reacts to the registers instead of predicting them |
+| `b92e0f2` |  | the size note says what the card reports before what it is |
+| `35dfab2` | 06 | the size note names the file where the two counts agree |
+| `fd47ede` |  | the gen1 backdoor sequence carries the card's address |
+| `2d4eeff` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `4b5fc50` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `c92da72` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `726b792` |  | the wipe's open question points at the evidence instead of repeating it |
+| `8c5096a` |  | TI enforces the address too, and the gold tag has gen3's UID register |
+| `829dc47` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `15201d2` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -403,8 +403,8 @@ before asking this would be spending it under a restriction that might not exist
 
 **SHIPPED as `b312653`, fork sync point 07**, with the fake-tag control fix `757fa5a` beside it.
 Write-up: [pr-round-15/gen1-backdoor-addressed.md](pr-round-15/gen1-backdoor-addressed.md). Four
-mutants killed, 168 host tests, the FAP builds warning-free against API 87.47. **It has NOT been on
-hardware** -- the three gen1 cards are the run it still needs.
+mutants killed, 168 host tests, the FAP builds warning-free against API 87.47. **It has since passed on
+hardware** -- see the bench list below, item 1.
 
 The section below is the argument that decided it, kept because the fork message and the reply both
 rest on it.
@@ -609,7 +609,8 @@ reachable from the safety branches, so `git show` works, but they are not on thi
    `[👤]` marks mfcarroll's own paragraphs and is POSTED as-is -- checked against round 10's
    comment 5652071967, which carries one.
 
-4. ~~**The fork messages**~~ -- **DONE 2026-09-26.** Seven sync points for thirteen shipped commits;
+4. ~~**The fork messages**~~ -- **DONE 2026-09-26**, and the counts in this item are that morning's -- the
+   tables above are current. Seven sync points for thirteen shipped commits;
    [pr-round-15/fork-messages/](pr-round-15/fork-messages/) has all six and the README's table.
    Gate clean. **06 deliberately collapses seven dev commits** -- the survey, the repair,
    the register-as-capacity fix, the notes-page wording, the comment explaining the repair, and the

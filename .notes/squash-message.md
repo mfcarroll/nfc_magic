@@ -15,7 +15,7 @@ an override is near-certain — which means the only lever we have is to **hand 
 person clicking merge; a PR comment is how he gets it.
 
 **TIMING: not yet.** Post it when merge nears — an approval, or him asking whether it is done. The
-message has to describe the final state, and the gen1 B-round plus the C/D passes will change it.
+message has to describe the final state, so re-read it against the tree before posting.
 
 **House style, measured not assumed:** `<PR title> (#NNN)` as the first line, body wrapped at **~79-80
 columns** (#258's longest line is 79; our own dev messages run to 80), short paragraphs, trailers last.
@@ -71,8 +71,9 @@ chips measured, but to read from a cleanly re-activated card.
 WRITES CARRY THE CARD'S ADDRESS (#251). Every data block, every identity field
 and the gen1 backdoor sequence go out as addressed frames, so a second tag in
 the field is not written by them; on ISO15693 a bystander need only be in a
-wallet, not on the antenna. Measured on five cards over four identified chips:
-all five accept an addressed WRITE BLOCK and all five enforce it. On
+wallet, not on the antenna. Measured on seven cards over four identified chips,
+two of the cards of unknown silicon: all seven accept an addressed WRITE BLOCK,
+and a write to a UID one byte wrong leaves its block unchanged on every one. On
 NXP silicon the addressed form is also the only one the backdoor registers
 answer at all. Writing block 56 moves a gen1 card's UID at once, so anything
 that writes there re-takes the address before continuing, and accepts only the
@@ -120,7 +121,9 @@ KNOWN LIMITS, in the order they matter:
 - #251 is NOT closed. The inventory is still the SDK's 1-slot INVENTORY_T5 with
   no STAY QUIET, so a second tag can answer it -- including the post-wipe UID
   re-read, which addressing cannot fix by construction, since that read exists
-  to discover whether the UID changed.
+  to discover whether the UID changed. And the gen2 backdoor cannot be
+  addressed at all: four gen2 cards take it only unaddressed, so another gen2
+  magic card in the field takes those frames too.
 - A source much larger than the target can lose its "Card too small" verdict to
   the pass clock, since that pass is dominated by failing blocks and a
   genuinely-too-small card presents one long run of them. Left as under-claiming

@@ -1,5 +1,8 @@
 # Addressed WRITE BLOCK, measured on ONE chip — 2026-09-24
 
+**The head of this record is where it STARTED.** It grew to seven cards over four identified chips,
+all of them filtering the address by read-back -- see the running total and the enforcement table.
+
 **Scope: NXP ICODE SLIX, IC ref 0x01, one card.** Not gen1 silicon, not the other four chips this
 project writes. The remaining ones are listed at the foot and are not yet run.
 
@@ -160,7 +163,8 @@ frame -- so a silence is shown to be the address rather than a malformed frame.
 | `white-coin` | `62` | silent | unchanged | `00 78 F0` | `55667788` | ENFORCED |
 | `v2-sticker-50x28` | `22` | silent | unchanged | `00 78 F0` | -- | ENFORCED |
 
-Transcripts in `enforce-<card>.txt`. Every card restored to what it held and confirmed by a read.
+Transcripts in `enforce-<card>.txt`, except the v2 sticker's, which is in
+[v2-sticker-bench.md](v2-sticker-bench.md). Every card restored to what it held and confirmed by a read.
 
 **The flags column is measured too.** The script probes it by writing the block's OWN current value
 back with OPTION clear -- a no-op whether accepted or refused -- and reads the answer. It returned

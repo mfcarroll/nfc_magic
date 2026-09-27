@@ -30,13 +30,16 @@ done. The wipe's sweep zeroes 56/57/62/63 through the addressed path, and the
 clone's conversion path writes 56/57 addressed and watches the UID follow,
 which is how a gen1 card on the gen2 path is detected at all.
 
-TWO FIGURES AT THE WRITE HELPER WIDEN HERE, both because the bench ran again
-and not because either was wrong. The UID moving immediately on a write to 56
-was two chips when the data-block writes were addressed and the SLIX-S run above
-is the third. And the address enforcement was four of five cards, the blank
-being TI Tag-it, which had never been sent a mis-addressed frame; sent one now,
-with the OPTION flag set in both so the address was the only variable, it
-answers silence to the wrong UID and 00 78 F0 to the right one. Five of five.
+TWO FIGURES ON THE ADDRESSED WRITE WIDEN HERE, both because the bench ran
+again and not because either was wrong. The UID moving immediately on a write
+to 56 was two chips when the data-block writes were addressed, and the SLIX-S
+run above is the third. And the address enforcement was four of five cards,
+resting on silence; it is now read back on seven. A write to a UID one byte
+wrong, carrying data the block does not hold, leaves the block unchanged, and
+the same frame at the right address is accepted -- so the silence is the address
+being filtered, not a write that landed without answering. TI Tag-it, the one
+card never sent a mis-addressed frame before, is among them, with the OPTION
+flag set in both frames so the address was the only variable.
 
 THE ONE THING THE SEQUENCE COSTS is a re-address in the middle. Block 56 carries
 uid[7..4] and takes effect immediately -- no power-cycle. So by the time block

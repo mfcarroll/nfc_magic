@@ -8,12 +8,12 @@ started stating a measurement.
 |---|---|---|
 | 01 | `8b8f310` | data-block writes carry the card's address |
 | 02 | `08e58ac` | the OPTION flag, and the read-back it costs |
-| 03 | `f8ceaf7` | the gen1 loss claim is gated on there being a loss |
-| 04 | `17dfde2` | the identity writes are addressed and take the flag |
-| 05 | `550dd9c` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `d5f711b` | what a clone leaves behind, and what it says about it |
-| 07 | `9eca7e6` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `c0c3af4` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 03 | `3be2248` | the gen1 loss claim is gated on there being a loss |
+| 04 | `0b8acb2` | the identity writes are addressed and take the flag |
+| 05 | `29b77e8` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `35dfab2` | what a clone leaves behind, and what it says about it |
+| 07 | `829dc47` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `15201d2` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
@@ -21,7 +21,7 @@ a user and then merged, a bullet reworded twice as the bench widened. A release 
 artifact, not a running log, and he reads the delta between rounds. The old CHANGELOG-only sync point
 folded into 08 with the rest.
 
-**Dev history WAS reordered, twice and deliberately**: the repair moved ahead of the survey so it
+**Dev history WAS reordered, deliberately**: the repair moved ahead of the survey so it
 could be its own sync point. See below. 06 collapses six dev commits and 07 collapses seven, and
 those are the two places this round does not get one decision per commit; the reason is churn.
 
@@ -44,7 +44,8 @@ correct it to three -- a wrong number and its fix, one sync point apart, which i
 06 were both shaped to avoid. Zero churn won again, and the message is split under `==` headings so
 the two decisions stay separable by a reader.
 
-The arm correction is comment and release notes only; nothing about it changes behaviour. **Verify
+The arm correction is comment-only here, its release-notes line being in 08; nothing about it
+changes behaviour. **Verify
 before replaying** that no shipped commit sits after 08's anchor -- `replay-to-fork.sh` checks this
 up front now, and the end-state diff catches it too. It is what would have caught the sync points
 once reaching only as far as the addressing commit while six shipped commits sat above them.
