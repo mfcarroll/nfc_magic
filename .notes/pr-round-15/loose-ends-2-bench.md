@@ -296,6 +296,20 @@ Note: I thought that was because black-tag required the option set, which is wha
 [+] TYPE MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products)
 ```
 
+Additional run to check the unaddressed+option frame, black-tag:
+
+```
+hf 15 reader                          confirm E0 07 81 B8 AF 14 42 07
+hf 15 rdbl -b 8                       expect 00 00 00 00
+hf 15 wrbl --ua -o -b 8 -d AABBCCDD   unaddressed + OPTION
+hf 15 rdbl -b 8                       PREDICTION: AA BB CC DD
+hf 15 wrbl --ua -o -b 8 -d 00000000   restore
+hf 15 rdbl -b 8                       expect 00 00 00 00
+hf 15 reader                          brackets: card present throughout
+```
+
+
+
 ### v2-sticker-50x28 — TRANSCRIPT
 
 ```
