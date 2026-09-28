@@ -71,9 +71,10 @@ fi
 # the branch ends up holding. Each earlier one is gated on what it ADDS over the tree before it: an
 # intermediate tree can carry a finding already on the branch that a later sync point removes, and
 # that is a correction working, not a new fault.
-# The path set is the one sync-to-fork.sh overlays from, filtered to source files: a gate whose file
-# set is narrower than the thing it gates reports clean for the files it never opened.
-SRC_PATHS=(magic scenes views helpers nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h)
+# The path set is the one sync-to-fork.sh overlays from, filtered to source files and the release
+# notes: a gate whose file set is narrower than the thing it gates reports clean for the files it
+# never opened. The notes were exactly that until 2026-09-28 -- the gate had never read them.
+SRC_PATHS=(magic scenes views helpers nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md)
 GATE_TMP="$(mktemp -d)"
 trap 'rm -rf "$GATE_TMP"' EXIT
 tree_of() { mkdir -p "$GATE_TMP/$2"; git -C "$DEV" archive "$1" -- "${SRC_PATHS[@]}" | tar -x -C "$GATE_TMP/$2"; }
@@ -85,7 +86,7 @@ for i in "${!ANCHORS[@]}"; do
   tree_of "$sha" "t$i"
   if [ "$i" -eq $((${#ANCHORS[@]} - 1)) ]; then
     files=()
-    while IFS= read -r f; do files+=("$f"); done < <(find "$GATE_TMP/t$i" -name '*.[ch]' | sort)
+    while IFS= read -r f; do files+=("$f"); done < <(find "$GATE_TMP/t$i" \( -name '*.[ch]' -o -name CHANGELOG.md \) | sort)
     out="$(python3 "$DEV/tools/check-writing.py" comments "${files[@]}")" || gate_failed=1
     echo "$out" | { grep -v ' warn ' || true; } | sed "s|$GATE_TMP/t$i/||; s|^|  $sha (last, in full): |"
   else
