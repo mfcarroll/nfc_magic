@@ -20,6 +20,32 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
+## ⚠️ SAFETY BRANCH FOR THE REVIEW-2 FOLD — `wip-pre-review2-fold`
+
+Created 2026-09-27, on mfcarroll's go-ahead, before folding
+[pr-round-15/final-review-2.md](pr-round-15/final-review-2.md) into the round-15 commits. The fold
+covers:
+
+- every comment and release-note fix in that file
+- both code simplifications
+- the #251 paragraph, dropped
+- churn cut from 69 lines to 2, by writing each line in its final form at the first sync point
+  that has it
+
+The name is authoritative and includes the commit recording it. Nothing at or below `8b8f310^` moves,
+so round 14 and the PR head `1d411dec` stay as they are.
+
+    git diff wip-pre-review2-fold HEAD -- magic scenes views helpers assets \
+        CHANGELOG.md application.fam nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h
+    git diff wip-pre-review2-fold HEAD -- .notes tools
+
+- **The first** must be ONLY review 2's changes: comment and release-note text, plus the two
+  simplifications in `iso15693_poller.c`.
+- **The second** must be EMPTY until notes are edited. `tools/hosttest/test_write_fail_scene.c` changes
+  only at the intermediate commits `3be2248`..`8ce2f4a^`, not at the tip.
+
+If either check fails, `git reset --hard wip-pre-review2-fold`.
+
 ## ⚠️ SAFETY BRANCH FOR THE ROUND-15 FIXES — `wip-pre-round15-fixes`
 
 Created before folding the final review's shipped-text fixes into the round-15 commits that wrote
