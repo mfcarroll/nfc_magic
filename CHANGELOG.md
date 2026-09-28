@@ -151,8 +151,8 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   card keeps its UID in blocks 0x10/0x11 with a configuration signature in 0x14/0x15, well inside any
   claim, so the sweep zeroes both. Per 0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support,
   zeroing those on an un-finalized card **bricks it permanently**: the cost is the card, not just its
-  identity. The bricking is their report, not observed in testing. One tested tag does keep a
-  writable UID register at `0x10`, inside any claim, where a sweep would zero it. Tracked as #255.
+  identity. The bricking is their report, not tried in testing. One tested tag does keep a writable
+  UID register at `0x10`, inside any claim, where a sweep would zero it. Tracked as #255.
 - **The gen2 backdoor's frames cannot be addressed, and stay unaddressed.** On all four gen2 cards
   tested the backdoor takes the unaddressed form and refuses the addressed one, while the same card
   accepts an addressed ordinary write and filters a wrong address — so the frames are well formed and
