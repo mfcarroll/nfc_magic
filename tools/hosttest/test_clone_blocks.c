@@ -228,7 +228,7 @@ static void test_card_lifted_mid_clone(void) {
     end();
 }
 
-// The gen1 path leaves blocks 56/57/62/63 alone -- they carry the UID/unlock/commit, not source data --
+// The gen1 path leaves blocks 56/57/62/63 alone -- they are the UID and backdoor registers, not source data --
 // and excludes them from the reported total, so "Cloned X/Y" counts only what gen1 can carry.
 static void test_gen1_skips_the_backdoor_blocks(void) {
     begin("gen1 excludes the four backdoor blocks from the total");

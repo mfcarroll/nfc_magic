@@ -242,6 +242,17 @@ static void fake_apply_uid_half_now(bool is_7654, const uint8_t* d) {
 // Every data-block write the app sends is this frame -- the clone's payload and the wipe's zeros alike.
 static Iso15693_3Error fake_addressed_write(const BitBuffer* tx, BitBuffer* rx) {
     fake_tag.writes_attempted++;
+    if(fake_tag.write_log_len < FAKE_WRITE_LOG_SIZE) {
+        FakeWrite* w = &fake_tag.write_log[fake_tag.write_log_len++];
+        memset(w, 0, sizeof(*w));
+        w->block = tx->data[2 + ISO15693_3_UID_SIZE];
+        const size_t header = 3 + ISO15693_3_UID_SIZE; // flags, command, UID, block
+        const size_t n = tx->size > header ? tx->size - header : 0;
+        memcpy(w->data, tx->data + header, n < sizeof(w->data) ? n : sizeof(w->data));
+        for(size_t i = 0; i < ISO15693_3_UID_SIZE; i++) {
+            w->addressed_to[i] = tx->data[2 + ISO15693_3_UID_SIZE - 1 - i]; // the wire is LSB first
+        }
+    }
     // A lifted card answers nothing at all -> the radio layer times out.
     if(fake_tag.ops_until_lifted && fake_tag.ops > fake_tag.ops_until_lifted) {
         return Iso15693_3ErrorTimeout;

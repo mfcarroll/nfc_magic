@@ -28,6 +28,15 @@ typedef enum {
     FakeBlockSilentlyRefuses,
 } FakeBlockKind;
 
+// One addressed WRITE BLOCK as the tag received it.
+typedef struct {
+    uint8_t block;
+    uint8_t data[4]; // the first four data bytes; zero past a shorter block
+    uint8_t addressed_to[ISO15693_3_UID_SIZE]; // MSB first, the way the app holds a UID
+} FakeWrite;
+
+#define FAKE_WRITE_LOG_SIZE (16U)
+
 typedef struct {
     // What the card ADVERTISES via Get System Info. Deliberately independent of which blocks are
     // actually present -- that gap is the whole subject of the sweep.
@@ -105,7 +114,7 @@ typedef struct {
     uint8_t bystander_uid[ISO15693_3_UID_SIZE];
 
     // Refuse any WRITE BLOCK whose OPTION flag is clear, with error 0x03 -- the tag naming the bit
-    // rather than failing generically. Measured on TI Tag-it HF-I Plus (`white-coin`): flags 0x22 is
+    // rather than failing generically. Measured on a TI Tag-it HF-I Plus card: flags 0x22 is
     // answered `01 03`, and the identical frame at 0x62 is taken.
     bool requires_option;
 
@@ -136,6 +145,10 @@ typedef struct {
     uint32_t writes_accepted;
     uint32_t reads_attempted;
     uint32_t inventories;
+    // Every addressed WRITE BLOCK the tag was sent, in order, whatever it made of it -- refused and
+    // mis-addressed frames included, so a test can pin a sequence frame by frame.
+    FakeWrite write_log[FAKE_WRITE_LOG_SIZE];
+    uint32_t write_log_len;
 } FakeTag;
 
 extern FakeTag fake_tag;

@@ -145,8 +145,10 @@ its response itself, because the SDK hardcodes unaddressed flags and keeps its p
 are the app's to get right and neither shows up in the counters the other poller tests assert on: a
 frame addressed to the wrong card and a card that refuses everything look the same from there. The frame
 is pinned byte for byte against one a real card accepted, the decode against the SDK's own mapping, and
-the sweep's re-address against the measured hazard -- zeroing blocks 56/57 on an armed gen1 card moves
-its UID mid-pass, so an address taken once goes stale and everything above 56 would go unanswered.
+the sweep's re-address against the measured hazard -- zeroing blocks 56/57 on a gen1 card moves its UID
+mid-pass, so an address taken once goes stale and everything above 56 would go unanswered. The gen1
+backdoor sequence is pinned frame by frame through the fake's write log, because no card tested needs
+its first two frames and so no outcome-level test can see whether they are sent.
 
 **`test_write_scene.c` — the write scene's ROUTING.** Which screen each worker event sends
 the user to, and which of the five magic protocols swallows Back. A routing table expressed as nested

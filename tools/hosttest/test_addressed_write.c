@@ -73,7 +73,7 @@ static void driver_init(Iso15693Poller* inst) {
 
 // ---- the wire format ------------------------------------------------------------------------------
 
-// Byte for byte against the frame measured on hardware. `slix-1k-50mm` answered UID
+// Byte for byte against the frame measured on hardware. An NXP ICODE SLIX answered UID
 // E0 04 01 50 20 26 08 63, and the frame it accepted a write from was
 // 22 21 63 08 26 20 50 01 04 E0 08 11 22 33 44 -- so the UID is REVERSED on the wire and the 0xE0 that
 // every screen prints first goes out last. The wrong order does not fail loudly: it addresses a card
@@ -329,7 +329,7 @@ static void test_only_the_option_refusal_sets_the_flag(void) {
 // The whole TI Tag-it failure, end to end. With OPTION set the card owes its answer only after a
 // standalone EOF, which this SDK cannot send, so the block is programmed and nothing is said. Before
 // the rescue this reported "Wipe failed / No blocks could be cleared" over a card that had in fact
-// been entirely zeroed -- measured on `white-coin`, whose block 8 went from AA BB CC DD to zeros
+// been entirely zeroed -- measured on a TI Tag-it HF-I Plus, whose block 8 went from AA BB CC DD to zeros
 // across a wipe the app called a total failure.
 //
 // Asserted on the CARD as well as on the count, because the count alone cannot tell "cleared and
@@ -455,7 +455,7 @@ static void test_a_uid_our_write_does_not_account_for_is_refused(void) {
 // ---- the gen1 backdoor sequence -------------------------------------------------------------------
 
 // The magic sequence is four ordinary WRITE BLOCKs at four unusual addresses, and this is what it now
-// puts on the wire. Byte for byte against the frame measured on `lri2k-keychain`, which answered UID
+// puts on the wire. Byte for byte against the frame measured on the ST LRi2K, which answered UID
 // E0 02 22 24 50 00 83 03 and returned an in-band refusal (01 10, block unavailable) to
 // 22 21 03 83 00 50 24 22 02 E0 3E 00 00 00 00 while a UID one byte wrong got silence.
 //
@@ -515,9 +515,47 @@ static void test_the_gen1_sequence_readdresses_between_the_two_halves(void) {
     CHECK(memcmp(inst.address_uid, half_moved, ISO15693_3_UID_SIZE) == 0);
     CHECK(inst.uid_moved_by_write);
     // Only the two UID registers took anything. unlock and commit are refused in band -- `0x10` on the
-    // ST LRi2K, `0x0F` on both NXP parts, never once accepted on any card here -- and the sequence
+    // ST LRi2K, `0x0F` on both NXP parts, never once accepted on any card tested -- and the sequence
     // carries on regardless, which is why its per-frame results are ignored.
     CHECK_EQ(fake_tag.writes_accepted, 2);
+    end();
+}
+
+// THE SEQUENCE ITSELF, frame by frame. Nothing else pins the first two frames: no card tested needs
+// them, so a run without unlock or commit ends in exactly the same state and every outcome-level test
+// passes. This pins all four -- block, data and the UID each was addressed to, in order -- with block
+// 57 sent to the UID that block 56 produced.
+static void test_the_gen1_sequence_sends_its_four_frames_in_order(void) {
+    begin("the gen1 sequence sends unlock, commit, then both UID halves, each to the right address");
+    fake_tag_init(28, 28, 4);
+    fake_tag.is_gen1_magic = true;
+    uint8_t original[ISO15693_3_UID_SIZE];
+    memcpy(original, fake_tag.uid, sizeof(original));
+    const uint8_t target[ISO15693_3_UID_SIZE] = {0xE0, 0x04, 0x01, 0x50, 0x11, 0x22, 0x33, 0x44};
+    uint8_t half_moved[ISO15693_3_UID_SIZE];
+    memcpy(half_moved, original, sizeof(half_moved));
+    memcpy(&half_moved[4], &target[4], 4); // what block 56 alone implies
+
+    Iso15693Poller inst;
+    driver_init(&inst);
+    iso15693_poller_send_backdoor_uid_gen1(&inst, NULL, target);
+
+    const struct {
+        uint8_t block;
+        uint8_t data[4];
+        const uint8_t* to;
+    } want[] = {
+        {0x3E, {0x00, 0x00, 0x00, 0x00}, original}, // unlock
+        {0x3F, {0x69, 0x96, 0x00, 0x00}, original}, // commit
+        {0x38, {0x44, 0x33, 0x22, 0x11}, original}, // uid[7..4]
+        {0x39, {0x50, 0x01, 0x04, 0xE0}, half_moved}, // uid[3..0], to the UID block 56 produced
+    };
+    CHECK_EQ(fake_tag.write_log_len, COUNT_OF(want));
+    for(size_t i = 0; i < COUNT_OF(want) && i < fake_tag.write_log_len; i++) {
+        CHECK_EQ(fake_tag.write_log[i].block, want[i].block);
+        CHECK(memcmp(fake_tag.write_log[i].data, want[i].data, sizeof(want[i].data)) == 0);
+        CHECK(memcmp(fake_tag.write_log[i].addressed_to, want[i].to, ISO15693_3_UID_SIZE) == 0);
+    }
     end();
 }
 
@@ -566,6 +604,7 @@ int main(void) {
     test_the_read_back_is_compared_not_just_attempted();
     test_the_gen1_backdoor_frame_is_addressed();
     test_the_gen1_sequence_readdresses_between_the_two_halves();
+    test_the_gen1_sequence_sends_its_four_frames_in_order();
     test_the_gen1_sequence_addressed_elsewhere_moves_nothing();
     printf("\n%d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
