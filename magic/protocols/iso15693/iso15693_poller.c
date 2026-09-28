@@ -23,7 +23,7 @@
 //
 // Used only by the gen2 sequence (see iso15693_poller_build_gen2_frame), and LITERALLY rather than
 // through iso15693_poller_write_flags(): with OPTION set a gen2 card applies the write and answers
-// nothing -- on all four measured, including two that do not want the flag for ordinary writes.
+// nothing -- on all four cards measured, two of which do not want the flag for ordinary writes.
 #define ISO15693_MAGIC_FLAGS (0x02U) // high data rate, unaddressed (ISO15_REQ_DATARATE_HIGH)
 
 // Data blocks are written ADDRESSED: the card's UID travels in the frame and only that card answers.

@@ -26,7 +26,8 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   report the absence of one.
 - **Write UID** — manual backdoor UID write. Tries gen2 first and, only if that leaves the UID
   unchanged, offers the same opt-in gen1 attempt the clone does.
-- **Live "Writing X / N" progress** during a clone or wipe, as the USCUID-UL clone already had.
+- **Live progress** during a clone or wipe — "Writing X / N" or "Wiping X / N" — as the USCUID-UL
+  clone already had.
 
 ### Behaviour
 
@@ -45,8 +46,9 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   the cut is still named in Details.
 - **The clone attempts every source block and reports only real data loss.** A non-empty block that
   won't write is **Partial**, naming the blocks. An empty block past the card's real capacity loses
-  nothing, so the clone is a **Success** carrying a note that the card advertises more blocks than it
-  physically holds — every block that fits is written and acknowledged.
+  nothing, so the clone is a **Success** carrying a note that the file is larger than the card — on
+  gen2 the card then advertises more blocks than it physically holds. Every block that fits is
+  written and acknowledged, or read back on a card that acknowledges none.
 - **No data is written until the card takes the magic UID.** Data blocks and identity fields follow
   only once the UID reads back as the target, so a card that doesn't take it is left untouched — which
   is why cloning has no up-front prompt. A wipe does prompt, since destruction is a wipe's only product.
@@ -74,13 +76,12 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
 - **A wipe re-reads the UID when it finishes.** It sends no UID command, but on a gen1 card blocks
   56/57 *are* the UID registers. A UID that differs from the one the card presented gets a **"UID
   changed"** screen printing the UID the card now answers to — without which the card would be
-  unreachable. Observed on a gen1 card whose sweep reached those blocks: it went to **all zeros**,
-  which is not a valid ISO15693 identity at all. Where the check cannot run the screen says **"UID not
-  re-checked"** rather than implying the identity was confirmed. **Limit:** a wipe that clears
-  *nothing* reports "Wipe failed" and does not attempt the check at all, yet on a gen1 card the UID
-  may still have moved. How far the sweep reaches depends on both where the card stops answering
-  *reads* and what it claims, and the closed form is stated in the poller beside that branch: a card
-  that answers a read at every address walks past 56/57 whatever it claims, and a card that answers
+  unreachable. The new UID can be **all zeros**, which is not a valid ISO15693 identity at all.
+  Where the check cannot run the screen says **"UID not re-checked"** rather than implying the
+  identity was confirmed. **Limit:** a wipe that clears *nothing* reports "Wipe failed" and does not
+  attempt the check at all, yet on a gen1 card the UID may still have moved. How far the sweep
+  reaches depends on both where the card stops answering *reads* and what it claims: a card that
+  answers a read at every address walks past 56/57 whatever it claims, and a card that answers
   nothing still reaches them if its claim is high enough. Staying short of 56/57 takes a low claim
   *and* early silence together. Tracked in #255.
 - **A card lifted mid-write says so** rather than being reported as a card too small: losing the card
@@ -95,8 +96,8 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   UID was written but not one data block took — which would otherwise look right to a UID-only reader
   while holding none of the data.
 - **A UID that moves somewhere unasked-for is reported as magic, not as a dud.** A UID changing to
-  neither the original nor the one requested is the one result that *proves* the card is magic — an
-  inert tag cannot change its UID — so the screen says so and prints the UID the card now answers to.
+  neither the original nor the one requested *proves* the card is magic — an inert tag cannot change
+  its UID — so the screen says so and prints the UID the card now answers to.
 - **Back is ignored during an ISO15693 write**, from the moment a card is found until the write reports
   an outcome. It cannot abort a write in any case, and on a clone pressing it between the UID write and
   the data pass could leave the card carrying a new UID with none of the source's data. Other magic
@@ -105,16 +106,17 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   is passed by any tag at all, magic or not, so it would report Success having proved nothing.
 - **Every write that can carry the card's address does**, so a second tag in the field is not
   written by one: the data blocks, the **WRITE AFI** / **WRITE DSFID** identity fields, and the gen1
-  backdoor sequence alike. The gen2 backdoor is the exception and cannot be addressed at all — see the
-  gen2 bullet under Validation. The identity writes are the ones that matter most to a bystander —
-  **AFI** is what a reader uses to inventory selectively, so changing another tag's AFI can make it stop
-  answering the system that owns it while still reading fine to anything generic.
+  backdoor sequence alike. The gen2 backdoor is the exception: on every gen2 card tested it refuses
+  the addressed form — see the gen2 bullet under Validation. The identity writes matter to a
+  bystander too — **AFI** is what a reader uses to inventory selectively, so changing another tag's
+  AFI can make it stop answering the system that owns it while still reading fine to anything
+  generic.
 - **A card that needs the OPTION flag on writes gets it.** Some silicon refuses a write whose OPTION
   bit is clear and says so with its own error code, which the app reads and acts on. Such a card then
   owes its acknowledgement only after a signal the firmware's ISO15693 API has no call to send, so the
   write lands and nothing comes back — the block is read back to settle it rather than counted as a
-  refusal. **TI Tag-it HF-I Plus** is such a card: it takes no data block without the flag and
-  acknowledges none with it.
+  refusal. **TI Tag-it HF-I Plus** is such a card: the two measured, identified by this behaviour
+  rather than by their UIDs, took no data block without the flag and acknowledged none with it.
 - **A clone onto a gen1 card keeps the card's identity, whichever path it took** — including a card
   that already carries the file's UID, which the gen2 check cannot tell from a gen2 card. It ends with
   the intended UID in place, the file's data everywhere it fits, and a **gen1** result screen — the
@@ -138,10 +140,10 @@ Adds magic **ISO15693 / NfcV** support. Detect an ISO15693 tag, show its Info, a
   and had changed nothing — so the address is filtered rather than merely unanswered.
 - **gen1** was validated on hardware across three chips: ST LRi2K (56 blocks), NXP SLIX (28) and NXP
   SLIX-S (40). On every one the four-frame UID sequence sets the UID, it reads back, and the original
-  restores byte-identically. On every one, blocks 56/57 took a write with nothing sent before it, and
-  a card's history cannot be known — so treat the wipe hazard above as applying to any gen1 card whose
-  sweep reaches those blocks. It was reproduced on the LRi2K, the one card tested whose claim takes
-  the sweep that far.
+  restores byte-identically. On every one, blocks 56/57 took a write with no unlock or commit sent
+  before it, and a card's history cannot be known — so treat the wipe hazard above as applying to any
+  gen1 card whose sweep reaches those blocks. It was reproduced on the LRi2K, the one card tested whose
+  sweep reaches them.
 - **gen2** was validated end-to-end: byte-identical clones across 28 / 56 / 64 / 70-block geometries,
   plus wipe and the over-capacity reporting.
 - **gen3 is not supported, and a wipe can destroy one.** A gen3 card ignores the gen2 backdoor, so a
