@@ -8,12 +8,12 @@ started stating a measurement.
 |---|---|---|
 | 01 | `eff0c62` | data-block writes carry the card's address |
 | 02 | `ccc01b0` | the OPTION flag, and the read-back it costs |
-| 03 | `876ea61` | the gen1 loss claim is gated on there being a loss |
-| 04 | `11be814` | the identity writes are addressed and take the flag |
-| 05 | `069c9d0` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `fc98389` | what a clone leaves behind, and what it says about it |
-| 07 | `854a652` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `9938b6c` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 03 | `4678561` | the gen1 loss claim is gated on there being a loss |
+| 04 | `1b8cea0` | the identity writes are addressed and take the flag |
+| 05 | `ba3b2d5` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `8e358a1` | what a clone leaves behind, and what it says about it |
+| 07 | `be51ffe` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `a89dd91` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round

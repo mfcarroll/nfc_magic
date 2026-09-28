@@ -17,7 +17,7 @@ because an earlier note asserts it. The recurring failure is a sentence that was
 
 ## Pass 1 — mechanical, and they are cheap
 
-    (cd tools/hosttest && make clean && make)            168 tests, 0 failed
+    (cd tools/hosttest && make clean && make)            169 tests, 0 failed
     clang-format --dry-run --Werror on every shipped .c/.h    95 files, 0 need formatting
       NOT the bare command -- it is not on PATH and this repo has no .clang-format, so the
       bare form reports ALL 95 as dirty. Use the toolchain's, with the firmware's style file:

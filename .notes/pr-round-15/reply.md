@@ -214,7 +214,7 @@ answer no read at all, so they are registers outside the memory map rather than 
 to displace. The claim is now made only where the source actually reached them, from the same
 expression that produces the block count, so the count and the wording cannot drift apart. And a
 gen1 clone that lost nothing is no longer Partial: the counts said "28/28, not written 0" under a
-Partial banner with a note saying nothing had been skipped. That reaches a plain Success.
+Partial banner with a note saying nothing had been skipped. That case is no longer Partial.
 
 The screens also stopped reading a **register write as evidence about memory**. "Card too small" is
 withheld unless no block wrote above the failures, since a success up there means they were not the
@@ -274,9 +274,9 @@ proxmark's ISO15693 V3 magic support. The runs that decide it:
   UID in BOTH halves, so half a UID could not pass as a whole one: plain Success on all three, and
   the frames alone run separately on the SLIX-S
 - the unaddressed writes behind "nothing measured here requires an addressed write", on all seven:
-  full wipes on `gen-2-card` (64/64) and a gen1 NXP SLIX (28/28), the backdoor's own unaddressed frames
-  on the LRi2K and SLIX-S, and an unaddressed WRITE BLOCK on the v2 sticker and — with the OPTION flag
-  — on both TI cards
+  full wipes on the 64-block gen2 card (64/64) and a gen1 NXP SLIX (28/28), the backdoor's own
+  unaddressed frames on the LRi2K and SLIX-S, and an unaddressed WRITE BLOCK on the gen2 sticker and —
+  with the OPTION flag — on both TI cards
 - **the address filter on each of the seven**, read back rather than inferred: a write aimed one byte
   wrong at a block holding something else, the block unchanged afterwards, and then the same frame
   with the right address changing it — so the silence is the address and not a malformed frame

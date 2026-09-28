@@ -46,7 +46,7 @@ the destructive paths are gated behind explicit consent instead.
 THE TWO GENERATIONS ARE NOT SYMMETRICAL, and that shapes the rest. A gen2 UID
 lives in a separate backdoor register space, so data-block writes cannot disturb
 it and the clone writes the UID first, then the blocks. A gen1 UID lives INSIDE
-the data-block space, at 56/57 with unlock/commit at 62/63, written with four
+the data-block space, at 56/57 with two more backdoor registers at 62/63, written with four
 ordinary WRITE BLOCKs -- which any writable tag accepts. So gen1 is destructive
 on a non-magic card and is offered only as an opt-in after the gen2 attempt
 leaves the UID unchanged. A gen1 clone skips those four addresses, and reports

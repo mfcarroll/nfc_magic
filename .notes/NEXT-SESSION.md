@@ -35,6 +35,21 @@ The name is authoritative and includes the commit recording it. Nothing at or be
 The invariant is the same as the review-2 fold's, below: the shipped diff must be only these changes,
 and `.notes`/`tools` must be EMPTY until notes are edited.
 
+**DONE AND VERIFIED 2026-09-28**, by the same method as the review-2 fold:
+
+- the tip diff is byte-identical to the reviewed scratch result
+- 189 commits, messages byte-identical
+- all 18 shipped commits: no markers, own tests pass, 71 units under `-Werror`
+- churn still 2 lines
+- 01 and 02 keep their SHAs; everything from 03 on is new
+
+**On top, dev-only:** `tools: pin the gen1 sequence frame by frame`. The fake logs every addressed
+write, and one test pins the four gen1 frames in order. It kills the dropped-unlock mutant that
+survived review 2, plus four more. 169 tests.
+
+The whole-PR prose review mfcarroll asked about is scoped in [APP-REVIEW-PROMPT.md](APP-REVIEW-PROMPT.md),
+for a fresh session.
+
 ## ⚠️ SAFETY BRANCH FOR THE REVIEW-2 FOLD — `wip-pre-review2-fold`
 
 Created 2026-09-27, on mfcarroll's go-ahead, before folding
@@ -281,7 +296,7 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**19 shipped commits on `iso15693-dev`**, EIGHT fork sync points. 168 host tests, the writing
+**18 shipped commits on `iso15693-dev`**, EIGHT fork sync points. 169 host tests, the writing
 gate clean, both firmwares warning-free, clang-format clean.
 
 ⚠️ **DEV HISTORY WAS REORDERED 2026-09-26**, so every SHA from `bbf3b77` onward is new; safety branch
@@ -312,24 +327,24 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 |---|---|---|
 | `eff0c62` | 01 | data-block writes carry the card's address |
 | `ccc01b0` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `876ea61` | 03 | the gen1 loss claim is made only where there was a loss |
-| `11be814` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `069c9d0` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `5c5c50e` |  | a clone reports what it left on the card |
-| `bb06d00` |  | name the halves that differ, and do not read a register as capacity |
-| `29cdd6c` |  | the notes page says what the user can act on |
-| `605c70d` |  | why the clone reacts to the registers instead of predicting them |
-| `931de78` |  | the size note says what the card reports before what it is |
-| `fc98389` | 06 | the size note names the file where the two counts agree |
-| `252bde6` |  | the gen1 backdoor sequence carries the card's address |
-| `2da8e9e` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `e767115` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `dec328a` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `7e571fa` |  | the wipe's open question points at the evidence instead of repeating it |
-| `854a652` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `9938b6c` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `4678561` | 03 | the gen1 loss claim is made only where there was a loss |
+| `1b8cea0` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `ba3b2d5` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `e4ee3a3` |  | a clone reports what it left on the card |
+| `a690b41` |  | name the halves that differ, and do not read a register as capacity |
+| `4e4fdfb` |  | the notes page says what the user can act on |
+| `fa8dd25` |  | why the clone reacts to the registers instead of predicting them |
+| `857f723` |  | the size note says what the card reports before what it is |
+| `8e358a1` | 06 | the size note names the file where the two counts agree |
+| `45f82aa` |  | the gen1 backdoor sequence carries the card's address |
+| `c577d13` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `13191c4` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `cde100b` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `c47a670` |  | the wipe's open question points at the evidence instead of repeating it |
+| `be51ffe` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `a89dd91` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
-(SHAs after the review-2 fold. "TI enforces the address too" now touches notes only; 07 carries
+(SHAs after the follow-up fold of 2026-09-28. "TI enforces the address too" now touches notes only; 07 carries
 review 2's fixes to its range, and 06 to its.)
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each

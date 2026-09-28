@@ -43,17 +43,20 @@ Every user-facing change in the round, written once, at the end.
 WHAT IS NEW in the notes: every write that can carry the card's address now
 does; a card that needs the OPTION flag gets it; a clone onto a gen1 card keeps
 the card's identity whichever path it took; a clone says what it left behind; a
-gen1 clone that lost nothing reports plain success; and the addressed-write
-validation, seven cards over four identified chips.
+gen1 clone whose file stops below block 56 is not Partial on that account;
+and the addressed-write validation, seven cards over four identified chips.
 
 WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same chip
-without qualification, which is the gen2 path only; the Partial claim for a gen1
+without qualification, which is the gen2 path only; the wipe bullet named
+62/63 the unlock and commit registers, and calls the four the UID / backdoor
+registers, since what 62/63 do is inferred; the Partial claim for a gen1
 clone is now conditional; "block contents are not compared" now carries its
 exception, the OPTION read-back, which compares exactly that on a card whose
 acknowledgement it cannot collect; the wipe hazard is no longer scoped to a card
 someone previously armed, since five cards took a write to block 56 with nothing
 in front of it and a card's history cannot be known; the gen3 note says which
-half of its warning is observed here; and the bullet saying every write reaches
+half of its warning is observed in testing, and the wipe-confirm comment on the
+same cost matches it; and the bullet saying every write reaches
 every tag in the field becomes the gen2 limit plus its own bullet for keeping
 one tag in the field, since every other write is now addressed and what remains
 is the reads and the inventories.

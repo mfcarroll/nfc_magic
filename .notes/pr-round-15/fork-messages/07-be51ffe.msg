@@ -92,6 +92,13 @@ and nothing can detect it, so a warning aimed at that condition asks them to
 worry only if they know something unknowable -- while every gen1 card measured
 behaves the same way.
 
+THE REGISTER NAMES ARE LABELS, and now say so. UNLOCK and COMMIT read a
+purpose into the order proxmark sends 62 and 63 in, and nothing tested has seen
+either accept a write. The define says the names are speculation, the comments
+that stated what 62/63 hold describe the gen1 sequence's bytes instead, and the
+one screen that named them -- the gen1 note in Details -- now reads "56/57/62/63
+are the UID / backdoor registers, not file data".
+
 Nothing is claimed in the other direction. There may well be a lock state;
 an acceptance of unlock or commit would have proved one, and a refusal proves
 nothing, since a card locked or unlocked before it arrived is indistinguishable
