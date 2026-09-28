@@ -560,11 +560,13 @@ scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how thi
 
 **As of 2026-09-28:** review 2 and mfcarroll's follow-up to it are both FOLDED into dev (safety
 branches `wip-pre-review2-fold` and `wip-pre-followup-fold`, verification in their sections at the
-head). **Round 15 is BUILT in the fork: head `4168c5e0`, signed 8 of 8, a fast-forward from
-`1d411dec`**, the previous build `fe8dc732` kept as `backup-pre-followup-replay`. mfcarroll benched
+head). **Round 15 is BUILT in the fork: head `1e79f1e6`, signed 8 of 8, a fast-forward from
+`1d411dec`**, the previous build `4168c5e0` kept as `backup-pre-gen3-wording-replay`. mfcarroll benched
 the review-2 build on `lri2k-keychain` 2026-09-28: Write UID, a gen1 clone of a 28-block SLIX file
 with its geometry notes, and the re-clone that converts -- all correct. The follow-up changed only
-comments, release notes and one Details string.
+comments, release notes and one Details string. After it, `91e2810` swapped one word in two places:
+the gen3 brick is "not tried in testing", since "not observed" said a test had run. 08 re-anchors
+at it; 01-07 rebuilt with identical trees and messages, and 08 differs by those lines and its clause.
 
 - **Tested before building:** the replay was first run into a throwaway `--shared` clone, whose tree
   is identical to the real fork's.
@@ -572,21 +574,22 @@ comments, release notes and one Details string.
   and anchor coverage.
 - **Intra-push churn is 2 lines.**
 - **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
-  (`f61285bc`) and `backup-pre-followup-replay` (`fe8dc732`). Nothing of round 15 is pushed.
+  (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`) and `backup-pre-gen3-wording-replay`
+  (`4168c5e0`). Nothing of round 15 is pushed.
 
 0. **The whole-PR prose review runs first**, in a fresh session, from
    [APP-REVIEW-PROMPT.md](APP-REVIEW-PROMPT.md). mfcarroll's call 2026-09-28: the push waits on it, in
-   case it finds something in round 15's own text. Findings go in `pr-round-15/app-review.md`. He has
-   read messages 03, 07 and 08's follow-up changes, and approved the new Details string.
+   case it finds something in round 15's own text. Findings go in `pr-round-15/app-review.md`.
+   mfcarroll has read messages 03, 07 and 08's follow-up changes and approved the new Details
+   string; the 08 clause and the gen3 wording mfcarroll flagged after that are fixed at `91e2810`.
 1. **mfcarroll reads** the eight fork messages (`git -C ../all-the-plugins log 1d411dec..HEAD`), then
    [pr-round-15/reply.md](pr-round-15/reply.md) and
    [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md). The reply's second
    correction was rewritten to agree with his `[👤]` paragraph; his five `[👤]` paragraphs are
    byte-identical.
-2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
-   fast-forward. **Re-run the replay first, whatever the review finds:** message 08's text changed
-   after `4168c5e0` was built (a clarified clause about the wipe-confirm comment), so the built
-   commit 08 is stale until then.
+2. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
+   a fast-forward. The build is current with dev's anchors and messages at `89dd24a`; re-run the
+   replay after any fold the review brings, or any change to a `.msg`.
 3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
 
 The older plan below is kept for its record; the order above supersedes it.
