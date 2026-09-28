@@ -524,21 +524,28 @@ now). Two clusters are worth removing and one is not:
 byte-identical afterwards. And check every sync point for conflict markers before trusting a
 scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how this is caught cheaply.
 
-## WHAT IS LEFT — his read of the reply, then the push, then the posts
+## WHAT IS LEFT — mfcarroll's read, then the push, then the posts
 
-**As of 2026-09-26 late:** the fresh-context review is DONE ([pr-round-15/final-review.md](pr-round-15/final-review.md));
-round 14 is corrected ON THE PR (see the section at the head); every round-15 finding is folded in
-(safety branch `wip-pre-round15-fixes`), AND the loose-ends-2 bench results are folded in too (dev commit
-`8595031`, dev-only: reply, fork msg 07, the measurement record, the inventory -- no shipped code, so the
-eight trees did not move). **Round 15 is BUILT, signed 8 of 8, in the fork: head `f61285bc`, a
-fast-forward from `1d411dec`** (rebuilt 2026-09-26 to carry the final message 07 -- the block-56 register
-filter and the "changes it" fix; the prior build was `2085648a`), every sync point checked for markers,
-its own tests, `-Werror` compile and imports, fork 01 exactly its own change. Nothing of round 15 is pushed.
+**As of 2026-09-27:** review 2 ([pr-round-15/final-review-2.md](pr-round-15/final-review-2.md)) is
+FOLDED into dev (safety branch `wip-pre-review2-fold`, verification in its section at the head).
+**Round 15 is BUILT in the fork: head `fe8dc732`, signed 8 of 8, a fast-forward from `1d411dec`.**
 
-1. **mfcarroll reads [pr-round-15/reply.md](pr-round-15/reply.md)** -- eight paragraphs changed today,
-   no `[👤]` one -- and [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md), new.
+- **Tested before building:** the replay was first run into a throwaway `--shared` clone, whose tree
+  is identical to the real fork's.
+- **Every gate passed:** fork messages, each sync point's added comments, the last in full, markers,
+  and anchor coverage.
+- **Intra-push churn is 2 lines.**
+- **Backups:** the previous build `f61285bc` is kept in the fork as `backup-pre-review2-replay`, and
+  `fold-test` in dev is the tested rewrite (equal to HEAD's shipped tree). Nothing of round 15 is
+  pushed.
+
+1. **mfcarroll reads** the eight fork messages (`git -C ../all-the-plugins log 1d411dec..HEAD`), then
+   [pr-round-15/reply.md](pr-round-15/reply.md) and
+   [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md). The reply's second
+   correction was rewritten to agree with his `[👤]` paragraph; his five `[👤]` paragraphs are
+   byte-identical.
 2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
-   fast-forward. Re-run the replay first if any shipped file changed in dev since `f61285bc` was built.
+   fast-forward. Re-run the replay first if any shipped file changes in dev after `fe8dc732`.
 3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
 
 The older plan below is kept for its record; the order above supersedes it.
