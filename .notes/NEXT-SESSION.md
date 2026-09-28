@@ -572,6 +572,10 @@ comments, release notes and one Details string.
 - **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
   (`f61285bc`) and `backup-pre-followup-replay` (`fe8dc732`). Nothing of round 15 is pushed.
 
+0. **The whole-PR prose review runs first**, in a fresh session, from
+   [APP-REVIEW-PROMPT.md](APP-REVIEW-PROMPT.md). mfcarroll's call 2026-09-28: the push waits on it, in
+   case it finds something in round 15's own text. Findings go in `pr-round-15/app-review.md`. He has
+   read messages 03, 07 and 08's follow-up changes, and approved the new Details string.
 1. **mfcarroll reads** the eight fork messages (`git -C ../all-the-plugins log 1d411dec..HEAD`), then
    [pr-round-15/reply.md](pr-round-15/reply.md) and
    [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md). The reply's second

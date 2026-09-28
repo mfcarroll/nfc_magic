@@ -106,7 +106,8 @@ too.
 
 ## Output
 
-`.notes/pr-round-16/app-review.md`, findings only. For each finding:
+`.notes/pr-round-15/app-review.md`, findings only. Round 15 is not posted yet, and a finding in its
+own text may fold into it before the push. For each finding:
 
 - the site (`file:line` at the reviewed SHA — record it at the top)
 - the class
