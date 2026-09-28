@@ -55,12 +55,12 @@ exception, the OPTION read-back, which compares exactly that on a card whose
 acknowledgement it cannot collect; the wipe hazard is no longer scoped to a card
 someone previously armed, since five cards took a write to block 56 with nothing
 in front of it and a card's history cannot be known; the gen3 note said nothing
-had been observed, when one tested tag has a writable UID register at 0x10, and
-now says so; it also says the bricking was not tried in testing, and so does the
-code comment behind the wipe confirmation's gen3 line; and the bullet saying
-every write reaches every tag in the field becomes the gen2 limit plus its own
-bullet for keeping one tag in the field, since every other write is now
-addressed and what remains is the reads and the inventories.
+had been observed, when one tested tag has a writable UID register at 0x10; it
+now says the bricking was not tried in testing, and so does the code comment
+behind the wipe confirmation's gen3 line; and the bullet saying every write
+reaches every tag in the field becomes the gen2 limit plus its own bullet for
+keeping one tag in the field, since every other write is now addressed and what
+remains is the reads and the inventories.
 
 ONLY THIS COMMIT TOUCHES THE RELEASE NOTES. Each note describes the end state,
 so it belongs to the last commit that changes the behaviour it describes, and no

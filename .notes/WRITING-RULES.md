@@ -39,6 +39,13 @@ mechanised and are marked ⚖.
 - **No dev SHAs.** They resolve here and nowhere he can see. *Checked.*
 - **Blocks over 20 lines want a reason.** Not a failure; a prompt. *Warned.*
 
+## Release notes
+
+- ⚖ **Only what a user can act on:** what the app does, what it costs, what to avoid, and how sure
+  the claim is. The evidence behind a note -- which tag, what was measured -- goes in the commit
+  message. "One tested tag does keep a writable UID register at `0x10`" told a user nothing; cut
+  2026-09-28.
+
 ## Commit messages (dev)
 
 - **Classify shipped vs dev-only, up front.** `tools/` and `.notes/` never reach the fork.

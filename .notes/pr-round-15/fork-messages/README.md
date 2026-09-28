@@ -13,7 +13,7 @@ started stating a measurement.
 | 05 | `ba3b2d5` | a clone that lands in a gen1 card's UID repairs it |
 | 06 | `8e358a1` | what a clone leaves behind, and what it says about it |
 | 07 | `be51ffe` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `91e2810` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 08 | `3cbc00d` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
@@ -31,8 +31,9 @@ folded into 08 with the rest.
 could be its own sync point. See below. 06 collapses six dev commits and 07 collapses six, and
 those are the two places this round does not get one decision per commit; the reason is churn.
 (07's range holds a seventh dev commit, "TI enforces the address too", whose shipped change moved
-to 01 and 02 in the review-2 fold, so it now touches notes only. 08's range holds two: the release
-notes, then a one-word fix to the gen3 note and to the comment behind the same warning.)
+to 01 and 02 in the review-2 fold, so it now touches notes only. 08's range holds three: the release
+notes, then two small fixes to its gen3 note, one of which also touches the comment behind the same
+warning.)
 
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.

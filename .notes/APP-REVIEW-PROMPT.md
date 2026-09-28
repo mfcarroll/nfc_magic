@@ -17,7 +17,7 @@ Round 15's two review passes found these in text older than the round:
 - title comments left stale when the title logic changed
 - history in a comment — "the screens no longer promise"
 
-The PR adds about **4,900 lines of C, 2,000 of them comment-bearing, plus 158 lines of release
+The PR adds about **4,900 lines of C, 2,000 of them comment-bearing, plus 157 lines of release
 notes**, across 27 files. That surface has never been read as a whole.
 
 ## Scope
@@ -75,7 +75,9 @@ the ones that bit hardest.
 11. **Does a sentence carry a constraint, or just a flourish?** "a claim is a costume", "a guess
     wearing the clothes of a measurement".
 12. **Release notes: is this the end state, for a user?** Scoped, true of every path — not "a plain
-    success" where a survey note can appear — and consistent with the code and the screens.
+    success" where a survey note can appear — and consistent with the code and the screens. **Can
+    the user act on every sentence?** Evidence behind a note — which tag, what was measured —
+    belongs in the commit message.
 13. **User-facing strings: are they accurate and consistent with the notes?** No internal vocabulary,
     no speculative names.
 14. **Chip or family? Cards or chips?** Name the chip; count cards and chips separately; never count an
