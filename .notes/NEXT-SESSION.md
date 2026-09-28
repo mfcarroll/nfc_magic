@@ -582,7 +582,9 @@ comments, release notes and one Details string.
    correction was rewritten to agree with his `[👤]` paragraph; his five `[👤]` paragraphs are
    byte-identical.
 2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
-   fast-forward. Re-run the replay first if any shipped file changes in dev after `4168c5e0`.
+   fast-forward. **Re-run the replay first, whatever the review finds:** message 08's text changed
+   after `4168c5e0` was built (a clarified clause about the wipe-confirm comment), so the built
+   commit 08 is stale until then.
 3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
 
 The older plan below is kept for its record; the order above supersedes it.

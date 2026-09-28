@@ -55,8 +55,8 @@ exception, the OPTION read-back, which compares exactly that on a card whose
 acknowledgement it cannot collect; the wipe hazard is no longer scoped to a card
 someone previously armed, since five cards took a write to block 56 with nothing
 in front of it and a card's history cannot be known; the gen3 note says which
-half of its warning is observed in testing, and the wipe-confirm comment on the
-same cost matches it; and the bullet saying every write reaches
+half of its warning is observed in testing, and so does the code comment behind
+the wipe confirmation's gen3 line; and the bullet saying every write reaches
 every tag in the field becomes the gen2 limit plus its own bullet for keeping
 one tag in the field, since every other write is now addressed and what remains
 is the reads and the inventories.
