@@ -733,6 +733,25 @@ static void test_wipe_stopped_prints_the_cut_not_the_total(void) {
     end();
 }
 
+// "All data written." is a success that carries notes, so it gets what over-capacity gets: the success
+// tone and "Finish". The reason arrived with the survey and was left out of both expressions, so it
+// played the error tone under a body saying every block was written.
+static void test_a_clone_with_notes_is_a_success(void) {
+    begin("a clone that completed with notes plays the success tone and offers Finish");
+    Iso15693PollerResult r = {0};
+    r.residue_found = true;
+    r.residue_first = 28;
+    r.residue_last = 63;
+    render_write_fail_with(
+        NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
+    CHECK(fake_scene.played_success);
+    CHECK(!fake_scene.played_error);
+    CHECK_STR(fake_scene_button(GuiButtonTypeLeft), "Finish");
+    CHECK(route_of(GuiButtonTypeLeft).kind == FakeNavSearchPrevious);
+    CHECK_STR(fake_scene_button(GuiButtonTypeRight), "Details");
+    end();
+}
+
 // A cut sweep is a partial outcome, so it must carry the error tone rather than the success chime.
 static void test_cut_sweep_plays_the_error_tone(void) {
     begin("a cut sweep plays the error tone, a clean wipe the success tone");
@@ -999,6 +1018,7 @@ int main(void) {
     test_wipe_card_lost_details_lists_no_blocks();
     test_wipe_stopped_says_it_timed_out();
     test_wipe_stopped_prints_the_cut_not_the_total();
+    test_a_clone_with_notes_is_a_success();
     test_cut_sweep_plays_the_error_tone();
     test_unverified_uid_is_stated_on_wipe_complete();
     test_cut_at_the_claim_reads_as_past_it();
