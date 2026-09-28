@@ -63,7 +63,8 @@ the ones that bit hardest.
    does. State the property instead.
 7. **Does shipped text know where the bench is?** "here" meaning the test bench, card nicknames from
    `tools/tag-inventory.json`, "this shelf". A reader of the code has no bench. "Here" meaning "in
-   this code" is fine.
+   this code" is fine. **The replacement can overclaim:** "not observed in testing" says a test ran
+   and saw nothing. If none ran, the phrase is "not tried".
 8. **Is the comment telling the code's history?** "now", "no longer", "was right when", "for as long
    as", "in the first place", "used to" — where they describe the code's past rather than runtime
    order. The reader is deciding whether they may change the line in front of them.

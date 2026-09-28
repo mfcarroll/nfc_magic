@@ -342,10 +342,12 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 | `cde100b` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
 | `c47a670` |  | the wipe's open question points at the evidence instead of repeating it |
 | `be51ffe` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `a89dd91` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `a89dd91` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `91e2810` | 08 | the gen3 brick was not tried in testing, which "not observed" misstated |
 
 (SHAs after the follow-up fold of 2026-09-28. "TI enforces the address too" now touches notes only; 07 carries
-review 2's fixes to its range, and 06 to its.)
+review 2's fixes to its range, and 06 to its. `91e2810` sits on top rather than being folded: it
+changes only files 08 already changes, so 08 re-anchors at it.)
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the

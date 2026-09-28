@@ -33,6 +33,9 @@ mechanised and are marked ⚖.
 - ⚖ **Say it once.** A rule stated in two places drifts. If two sites need it, one states it and the
   other points. A see-also to a sibling site means it wants one home.
 - ⚖ **Scope every measurement.** "on the three chips tested", not "on gen1 silicon".
+- ⚖ **Say whether the test ran.** "Not observed in testing" reports a test that saw nothing. If none
+  ran, it is "not tried". The gen3 note got this wrong in the same fold that fixed its "not observed
+  here".
 - **No dev SHAs.** They resolve here and nowhere he can see. *Checked.*
 - **Blocks over 20 lines want a reason.** Not a failure; a prompt. *Warned.*
 
