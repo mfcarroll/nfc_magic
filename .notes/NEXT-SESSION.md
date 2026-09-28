@@ -569,9 +569,8 @@ comments, release notes and one Details string.
 - **Every gate passed:** fork messages, each sync point's added comments, the last in full, markers,
   and anchor coverage.
 - **Intra-push churn is 2 lines.**
-- **Backups:** the previous build `f61285bc` is kept in the fork as `backup-pre-review2-replay`, and
-  `fold-test` in dev is the tested rewrite (equal to HEAD's shipped tree). Nothing of round 15 is
-  pushed.
+- **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
+  (`f61285bc`) and `backup-pre-followup-replay` (`fe8dc732`). Nothing of round 15 is pushed.
 
 1. **mfcarroll reads** the eight fork messages (`git -C ../all-the-plugins log 1d411dec..HEAD`), then
    [pr-round-15/reply.md](pr-round-15/reply.md) and
