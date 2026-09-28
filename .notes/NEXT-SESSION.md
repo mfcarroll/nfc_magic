@@ -556,9 +556,13 @@ scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how thi
 
 ## WHAT IS LEFT — mfcarroll's read, then the push, then the posts
 
-**As of 2026-09-27:** review 2 ([pr-round-15/final-review-2.md](pr-round-15/final-review-2.md)) is
-FOLDED into dev (safety branch `wip-pre-review2-fold`, verification in its section at the head).
-**Round 15 is BUILT in the fork: head `fe8dc732`, signed 8 of 8, a fast-forward from `1d411dec`.**
+**As of 2026-09-28:** review 2 and mfcarroll's follow-up to it are both FOLDED into dev (safety
+branches `wip-pre-review2-fold` and `wip-pre-followup-fold`, verification in their sections at the
+head). **Round 15 is BUILT in the fork: head `4168c5e0`, signed 8 of 8, a fast-forward from
+`1d411dec`**, the previous build `fe8dc732` kept as `backup-pre-followup-replay`. mfcarroll benched
+the review-2 build on `lri2k-keychain` 2026-09-28: Write UID, a gen1 clone of a 28-block SLIX file
+with its geometry notes, and the re-clone that converts -- all correct. The follow-up changed only
+comments, release notes and one Details string.
 
 - **Tested before building:** the replay was first run into a throwaway `--shared` clone, whose tree
   is identical to the real fork's.
@@ -575,7 +579,7 @@ FOLDED into dev (safety branch `wip-pre-review2-fold`, verification in its secti
    correction was rewritten to agree with his `[👤]` paragraph; his five `[👤]` paragraphs are
    byte-identical.
 2. **The push**, on his go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`, a
-   fast-forward. Re-run the replay first if any shipped file changes in dev after `fe8dc732`.
+   fast-forward. Re-run the replay first if any shipped file changes in dev after `4168c5e0`.
 3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
 
 The older plan below is kept for its record; the order above supersedes it.
