@@ -20,6 +20,21 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
+## ⚠️ SAFETY BRANCH FOR THE FOLLOW-UP FOLD — `wip-pre-followup-fold`
+
+Created 2026-09-28, on mfcarroll's go-ahead, before folding his follow-up to review 2 into the round-15
+commits:
+
+- **naming:** UNLOCK/COMMIT disclaimed once at their defines; shipped text stops stating what 62/63
+  do, and the details screen calls them the "UID / backdoor registers"
+- **scope:** "here" meaning the bench becomes "tested" in comments and release notes
+- **accuracy:** "plain success" qualified where the survey notes can contradict it
+- **06's comments:** reduced to one home per fact
+
+The name is authoritative and includes the commit recording it. Nothing at or below `8b8f310^` moves.
+The invariant is the same as the review-2 fold's, below: the shipped diff must be only these changes,
+and `.notes`/`tools` must be EMPTY until notes are edited.
+
 ## ⚠️ SAFETY BRANCH FOR THE REVIEW-2 FOLD — `wip-pre-review2-fold`
 
 Created 2026-09-27, on mfcarroll's go-ahead, before folding
