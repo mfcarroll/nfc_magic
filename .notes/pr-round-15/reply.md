@@ -40,6 +40,15 @@ reach them: the reach rule, not the card's history. Which matters, because a use
 history and nothing can detect it. The notes and the screens say so now, and I will put the same
 correction on #255, which still carries the older wording.
 
+[👤] I would add, it is still totally possible that gen1 cards do in fact require those frames. I assume
+those went into proxmark for a reason, even if the lack of any comments or documentation in there makes
+it feel like a black box. I've just never _seen_ a card in a state where those frames were required
+before a block 56/57 write would take. That said, I only have a handful of gen1 cards, and no duplicates,
+so my focus was on categorizing and ensuring they worked with this app initially - it's possible some
+arrived in that state and I "armed" them early on without realising. Worth checking carefully on factory
+fresh gen1 if either of us get any more. That requires sending carefully crafted frames and intentionally
+not using the standard pm write commands.
+
 ## What went in
 
 **The OPTION flag, decided by what the card says.** The first write of a run goes out without it; a
