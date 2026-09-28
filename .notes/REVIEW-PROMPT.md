@@ -129,6 +129,25 @@ Each one shipped into a draft this round.
     when one of the three demonstrably differs from the other two. **Unidentified is not absent.**
     Count what is identified, say the rest separately, and never imply the rest is not there.
 
+16. **"EVERY", "ONLY" AND "ALL", checked against the code rather than the sentence they answer.**
+    Review 2 found three at one tip:
+    - "Every other frame this app sends carries a UID": the SDK's reads, GET SYSTEM INFO and
+      inventories go out unaddressed.
+    - "Every write this app sends takes its flags from here": two lines under a comment saying the
+      gen2 byte does not.
+    - "the only chip that refuses anything here": every gen1 chip refuses 62/63.
+
+17. **A MEASUREMENT GENERALIZED PAST ITS SAMPLE -- class 6's mirror.** Correcting "a card left
+    armed" (too narrow) produced "those registers take a write with nothing in front of them", a law
+    about gen1 silicon drawn from five cards of unknown history. State the sample ("every gen1 card
+    measured took..."), then the conclusion a user needs ("a card's history cannot be known, so treat
+    any gen1 card the sweep reaches as exposed").
+
+18. **A PATTERN THE RULES NAME, STILL AT THE TIP.** WRITING-RULES named the running "what remains
+    unaddressed" list as churn's cause and said nothing should hold it. The tip held it three times,
+    and 07 re-added it in words that 08 retracted. When a rule names a pattern, grep the tip for that
+    pattern's own words.
+
 ## Pass 3 — the read-through, which no checker replaces
 
 The eight questions in `.notes/WRITING-RULES.md`, against every paragraph of the reply. The ones that

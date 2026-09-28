@@ -106,7 +106,11 @@ def comments_new(args):
 
 def forkmsg(d):
     bad = []
-    for f in sorted(Path(d).glob("[0-9][0-9]-*.msg")):
+    files = sorted(Path(d).glob("[0-9][0-9]-*.msg"))
+    # A directory with no NN-*.msg in it scanned nothing, and "0 findings" would read as clean.
+    if not files:
+        bad.append((str(d), 0, "no-files", "no NN-*.msg here -- nothing was scanned"))
+    for f in files:
         for i, line in enumerate(f.read_text().split("\n"), 1):
             if re.search(r"\btools/|hosttest|\btests? (?:pass|pin|cover)\b|\bmutation-check", line, re.I):
                 bad.append((f.name, i, "unsyncable", line.strip()[:70]))

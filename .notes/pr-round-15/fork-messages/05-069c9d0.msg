@@ -18,8 +18,10 @@ that write implies can only mean those addresses are registers, so the card is
 gen1 whatever path the run took. The write that does the damage is the same
 event that identifies the card, so the run switches: it stops feeding the file
 into the registers, keeps going with everything above them, and afterwards
-writes the target UID back through the gen1 sequence. The end state is the one
-an ordinary gen1 clone produces -- a shape already tested and already reported
+writes the target UID back through the gen1 sequence. The switch is made as
+soon as the UID moves, before the write's own result is read -- the move is
+what shows the write landed, acknowledged or not. The end state is the one an
+ordinary gen1 clone produces -- a shape already tested and already reported
 correctly -- rather than a new one.
 
 NOT BY SKIPPING those blocks whenever the UID already matches, which is the
@@ -43,13 +45,7 @@ by moving its UID to the value our write implied, so those addresses are
 registers rather than anyone's data. Leaving the card answering to bytes
 lifted out of the file is the worse outcome by a distance.
 
-THE RE-ADDRESS CHECKS ITS ANSWER NOW. It took whatever the inventory returned,
-and that inventory is the SDK's 1-slot unaddressed one, so a second tag in the
-field can answer it (#251), and re-addressing to a stranger points every later
-frame at the wrong card. Because we know what we wrote -- 56 carries uid[7..4],
-57 carries uid[3..0] -- there are exactly two honest replies: unchanged, or what
-the write implies. A third is refused and the address held. Not airtight, and
-unfixably so: a bystander holding the predicted UID would pass, because magic
-cards make UIDs non-unique and a 1-slot inventory cannot tell two cards apart.
+It rests on the re-address the data-block addressing introduced, which accepts
+only the UID a write implies; this adds the flag that records the move.
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

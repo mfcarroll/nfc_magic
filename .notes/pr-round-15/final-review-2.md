@@ -1,5 +1,15 @@
 # Review 2 of round 15 — comments, fork messages, reply (2026-09-27)
 
+**FOLDED 2026-09-27, on mfcarroll's go-ahead** -- every item below, both simplifications and the
+#251 paragraph's removal. The fold also cut churn from 69 lines to 2. Verification is in
+NEXT-SESSION's review-2 safety-branch section. **The line numbers below are from before the fold.**
+
+Not done, deliberately:
+- the HISTORY-pattern candidates in section 2: dev-only, and each is a guess at wording nobody has
+  written yet
+- the dropped-unlock mutant: it survives on the old code too, so it is a harness gap, not a fold
+  regression
+
 Single-threaded, no fan-out. **Nothing edited**; every proposal is mfcarroll's to take or leave.
 Line numbers are dev HEAD `233f01c`. They match fork `f61285bc` line for line. **NN** is the fork
 sync point that wrote the text, from `git blame` on the fork.

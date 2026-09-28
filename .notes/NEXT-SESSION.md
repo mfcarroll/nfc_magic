@@ -41,10 +41,38 @@ so round 14 and the PR head `1d411dec` stay as they are.
 
 - **The first** must be ONLY review 2's changes: comment and release-note text, plus the two
   simplifications in `iso15693_poller.c`.
-- **The second** must be EMPTY until notes are edited. `tools/hosttest/test_write_fail_scene.c` changes
-  only at the intermediate commits `3be2248`..`8ce2f4a^`, not at the tip.
+- **The second** must show ONLY `tools/hosttest/test_addressed_write.c`, whose frame test calls
+  `write_block_addressed` now that `send_gen1_frame` is gone. Notes edits come after that.
+  `test_write_fail_scene.c` changes too, but only at intermediate commits (the 03 range), never at
+  the tip.
 
 If either check fails, `git reset --hard wip-pre-review2-fold`.
+
+**DONE AND VERIFIED 2026-09-27.** Method:
+
+- **The rewrite.** An `--index-filter` replayed precomputed blobs: every shipped commit's seven files,
+  as built in a scratch series that re-applied the 19 shipped changes by hand, with each conflict
+  resolved and checked for markers.
+- **186 commits**, messages byte-identical, and nothing at or below `8b8f310^` moved.
+- **The tip diff** is byte-identical to the reviewed scratch result.
+- **All 18 shipped commits**: no markers, their own host tests pass (132 to 168), and all 71 units
+  compile under `-Werror` with the firmware's own compile commands.
+- **The tip**: the FAP builds from a clean object dir (71 CC, zero app warnings, APPCHK), and 95 files
+  are clang-format clean.
+- **Churn is 2 lines**, down from 69.
+
+**18 shipped commits now, not 19.** `8c5096a`'s shipped change (the seven-card measurement) moved
+to 01 and 02, so its rewrite touches notes only. **Every SHA from `8b8f310` onward is new**; the
+`.msg` filenames and the fork README table are the anchors.
+
+**Three test fixes rode along, dev-only**, each the test half of a shipped change that moved:
+
+- 01's frame test passes the flags byte (from 02)
+- 03 to 07's gen1-caveat tests assert the final wording (from 06)
+- the gen1 frame test calls `write_block_addressed` (07 onward)
+
+**Mutants on the two simplifications**: five of six killed. The dropped-unlock mutant survives, and
+it survives on the old code too -- a gap in the harness, not something the fold opened.
 
 ## ⚠️ SAFETY BRANCH FOR THE ROUND-15 FIXES — `wip-pre-round15-fixes`
 
@@ -267,25 +295,27 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 
 | dev | sync | |
 |---|---|---|
-| `8b8f310` | 01 | data-block writes carry the card's address |
-| `08e58ac` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `3be2248` | 03 | the gen1 loss claim is made only where there was a loss |
-| `0b8acb2` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `29b77e8` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `d2e3b5f` |  | a clone reports what it left on the card |
-| `5974741` |  | name the halves that differ, and do not read a register as capacity |
-| `8ce2f4a` |  | the notes page says what the user can act on |
-| `484414d` |  | why the clone reacts to the registers instead of predicting them |
-| `b92e0f2` |  | the size note says what the card reports before what it is |
-| `35dfab2` | 06 | the size note names the file where the two counts agree |
-| `fd47ede` |  | the gen1 backdoor sequence carries the card's address |
-| `2d4eeff` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `4b5fc50` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `c92da72` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `726b792` |  | the wipe's open question points at the evidence instead of repeating it |
-| `8c5096a` |  | TI enforces the address too, and the gold tag has gen3's UID register |
-| `829dc47` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `15201d2` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `eff0c62` | 01 | data-block writes carry the card's address |
+| `ccc01b0` | 02 | the OPTION flag, and the acknowledgement it costs |
+| `876ea61` | 03 | the gen1 loss claim is made only where there was a loss |
+| `11be814` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `069c9d0` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `5c5c50e` |  | a clone reports what it left on the card |
+| `bb06d00` |  | name the halves that differ, and do not read a register as capacity |
+| `29cdd6c` |  | the notes page says what the user can act on |
+| `605c70d` |  | why the clone reacts to the registers instead of predicting them |
+| `931de78` |  | the size note says what the card reports before what it is |
+| `fc98389` | 06 | the size note names the file where the two counts agree |
+| `252bde6` |  | the gen1 backdoor sequence carries the card's address |
+| `2da8e9e` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `e767115` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `dec328a` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `7e571fa` |  | the wipe's open question points at the evidence instead of repeating it |
+| `854a652` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `9938b6c` | 08 | the gen2 frames cannot be addressed, and the 2.3 release notes |
+
+(SHAs after the review-2 fold. "TI enforces the address too" now touches notes only; 07 carries
+review 2's fixes to its range, and 06 to its.)
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -468,7 +498,11 @@ after 56 lands, then 57.
 
 Needs bench time on gen1 silicon before it ships — three armed cards are available.
 
-## KNOWN REMAINING WORK — 67 lines of intra-push churn, ~40 of it avoidable
+## ~~KNOWN REMAINING WORK — 67 lines of intra-push churn~~ DONE: 2 lines, after the review-2 fold
+
+Both helpers are defined at 02, 03 writes the caveat's final strings, the measurements are final
+from 01, and no comment keeps a running list. What remains is in the fork README's residual
+section. The section below is the record from before.
 
 Measured on the fork after the release-notes move (110 at the start, 91 after the first pass, 67
 now). Two clusters are worth removing and one is not:

@@ -22,18 +22,14 @@ same helper. Which command drew the refusal does not matter -- the card is
 objecting to the flag, not to the request -- and this pass runs BEFORE the first
 data block, so on such a clone it is where the refusal first arrives.
 
-ADDRESSED as well. These had the strongest claim to it of anything left: WRITE
-AFI and WRITE DSFID are STANDARD commands, so a bystander of any size takes
-them, and a changed AFI can drop that tag out of a selective inventory -- a card
-that then looks absent to the reader that uses it.
-
-The file's own list of what remains unaddressed is corrected with them: it had
-counted these two among the unaddressed frames, twenty lines from the code that
-addresses them, and named them the strongest case for addressing -- which this
-commit is.
+ADDRESSED as well: WRITE AFI and WRITE DSFID are STANDARD commands, so a
+bystander of any size takes them, and a changed AFI can drop that tag out of a
+selective inventory -- a card that then looks absent to the reader that uses
+it. The pass's header comment, which still gave the unaddressed frame layout,
+points at the sender instead.
 
 Nothing was needed here for the missing acknowledgement. write_identity never
 trusted the send's return, because the SDK has no response parser for these two
 commands, so it was already built around a GET SYSTEM INFO read-back.
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

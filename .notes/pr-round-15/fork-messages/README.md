@@ -6,14 +6,20 @@ started stating a measurement.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `8b8f310` | data-block writes carry the card's address |
-| 02 | `08e58ac` | the OPTION flag, and the read-back it costs |
-| 03 | `3be2248` | the gen1 loss claim is gated on there being a loss |
-| 04 | `0b8acb2` | the identity writes are addressed and take the flag |
-| 05 | `29b77e8` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `35dfab2` | what a clone leaves behind, and what it says about it |
-| 07 | `829dc47` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `15201d2` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 01 | `eff0c62` | data-block writes carry the card's address |
+| 02 | `ccc01b0` | the OPTION flag, and the read-back it costs |
+| 03 | `876ea61` | the gen1 loss claim is gated on there being a loss |
+| 04 | `11be814` | the identity writes are addressed and take the flag |
+| 05 | `069c9d0` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `fc98389` | what a clone leaves behind, and what it says about it |
+| 07 | `854a652` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `9938b6c` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+
+**EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
+2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
+is stated at its widest from the commit that first cites it, a helper a later commit shares is
+defined where its first caller is, and no comment keeps a list of what other code does not yet do.
+Intra-push churn is 2 lines (it was 69); see the residual section below.
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
@@ -22,8 +28,10 @@ artifact, not a running log, and he reads the delta between rounds. The old CHAN
 folded into 08 with the rest.
 
 **Dev history WAS reordered, deliberately**: the repair moved ahead of the survey so it
-could be its own sync point. See below. 06 collapses six dev commits and 07 collapses seven, and
+could be its own sync point. See below. 06 collapses six dev commits and 07 collapses six, and
 those are the two places this round does not get one decision per commit; the reason is churn.
+(07's range holds a seventh dev commit, "TI enforces the address too", whose shipped change moved
+to 01 and 02 in the review-2 fold, so it now touches notes only.)
 
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.
@@ -37,12 +45,10 @@ data blocks, and would hide the re-address seam -- the one thing addressing this
 inside a commit that already explains a different re-address for a different reason.
 
 **It ANCHORS ABOVE THE SELF-REVIEW, not at the commit that introduced the addressing**, and that is
-what makes it carry the arm-model correction as well. Six shipped dev commits land after the
+what makes it carry the arm-model correction as well. Five shipped dev commits land after the
 addressing: the correction itself, and then this round's own self-review fixing text the round had
-written. Anchored earlier, 07 would ship "measured on two chips" and a later sync point would
-correct it to three -- a wrong number and its fix, one sync point apart, which is the churn 02 and
-06 were both shaped to avoid. Zero churn won again, and the message is split under `==` headings so
-the two decisions stay separable by a reader.
+written, the last of them carrying review 2's fixes to the range. The message is split under `==`
+headings so the two decisions stay separable by a reader.
 
 The arm correction is comment-only here, its release-notes line being in 08; nothing about it
 changes behaviour. **Verify
@@ -89,7 +95,7 @@ explaining the repair, and the two size-note corrections. Published one per sync
 the survey introduce a geometry note reading "The card reports 28 blocks and IC ref 01, not the
 file's" -- which leads with a number that matched -- and then see it corrected twice. **19 of the 30
 lines the survey adds to the details scene are gone or rewritten by the last of the six** --
-re-derived 2026-09-26 by matching every line the survey adds to
+re-derived 2026-09-26 and again after the review-2 fold, by matching every line the survey adds to
 `nfc_magic_scene_iso15693_partial_details.c` against that file at 06's anchor, counting a duplicated
 line once for each time it was added. It read 16 when the range was five commits; the figure moves
 whenever the range does, so re-derive it rather than quote it -- and match multiset, not membership,
@@ -98,28 +104,20 @@ won**, on the same grounds as 02: a sync point must not show him an error we the
 
 **07 collapses seven**, for the reason in its own section above.
 
-One line of the repair is restructured at 06 -- `if(!skipping && instance->uid_moved_by_write)`
-hoisted into a named variable by the register-as-capacity fix. That is a readability change, not a
-correction, which is the benign kind.
 
-## Residual churn — the release-notes line is GONE, and one helper remains
+## Residual churn — two lines, and both are a later commit needing what an earlier one lacked
 
-**The release-notes churn this section used to describe no longer exists.** 03 changes when a gen1
-clone reports Partial; the notes line describing that behaviour was written at 03 and corrected at
-05, so it stood stale in the fork tree at 03 and 04 -- the twin-site defect from round 12, at two
-commits' width. Moving every release note into 08 closed it outright: only 08 touches `CHANGELOG.md`,
-so no sync point before it can carry a notes line for a later one to rewrite. **Check that rather
-than believing it** -- `git log <round base>..<tip> -- CHANGELOG.md` must name exactly one commit.
+Measured by multiset against the tip: every line a sync point adds that is gone at 08. **2 lines**:
 
-What remains is legitimate: 01 introduces `iso15693_poller_readdress` taking whatever the inventory
-returns, and **05** tightens it to accept only the UID the write implies. Not error-then-fix -- 01's
-version is correct for what 01 does, and the check needs `predict_uid`, which arrives with the repair
-at 05 that motivated it. A reader comparing 01 against 05 will see it, which is why it is written
-down. The other is `send_backdoor_uid_gen1`'s signature changing at 07, for the same kind of reason.
+- **01's frame builder call passes `ISO15693_POLLER_WRITE_FLAGS`; 02 passes
+  `iso15693_poller_write_flags(instance)`.** The builder takes its flags byte from 01 so 02 changes
+  only what the caller passes, and the helper cannot exist before the OPTION flag it reads.
+- **05's repair calls `iso15693_poller_send_backdoor_uid_gen1(iso_poller, ...)`; 07 adds `instance`
+  to that signature**, because the sequence then needs the card's address and flags.
 
-The two clusters that COULD be removed are measured and deliberately left; they are in
-[NEXT-SESSION.md](../../NEXT-SESSION.md) under KNOWN REMAINING WORK, at 28 lines (02 -> 04) and 13
-(03 -> 06). Round 11 recorded its 11 residual lines the same way rather than hiding them.
+Neither is error-then-fix. **Check it rather than believing it** -- the measurement is a few lines of
+Python over `git diff -U0` between consecutive anchors, and `git log <round base>..<tip> --
+CHANGELOG.md` must still name exactly one commit.
 
 ## What these messages must NOT claim
 

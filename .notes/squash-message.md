@@ -113,9 +113,9 @@ KNOWN LIMITS, in the order they matter:
   is not called a gen3 card; the brick stays attributed. The wipe confirm
   screen carries it; a pre-flight probe is #255.
 - A WIPE CAN MOVE A GEN1 CARD'S UID and cannot prevent it. Blocks 56/57 are the
-  UID registers and they take a write with nothing sent in front of them, on all
-  five gen1 cards measured, so this needs no prior gen1 write on the card --
-  only a claim high enough for the sweep to reach them. The wipe re-reads the
+  UID registers, and all five gen1 cards measured took a write there with
+  nothing sent before it. A card's history cannot be known, so treat any gen1
+  card whose claim lets the sweep reach them as exposed. The wipe re-reads the
   UID afterwards and reports a move; it cannot report the absence of one, and a
   wipe that clears nothing does not run the check at all. Tracked in #255.
 - #251 is NOT closed. The inventory is still the SDK's 1-slot INVENTORY_T5 with

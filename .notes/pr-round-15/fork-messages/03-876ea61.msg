@@ -19,7 +19,10 @@ deduction gates on whether each backdoor block is below the source count, which
 is why "Cloned 28/28" was right: nothing was deducted. Both result screens asked
 whether gen1 had been used instead, and one carried a comment asserting the
 opposite -- "Unconditional: those four blocks differ from the source whatever
-the write results above say."
+the write results above say." The comment above the deduction had the boundary
+wrong too, saying two of the three chips measured sit below it; all three do,
+and it now states the boundary instead: nothing is deducted from a source that
+ends before block 56.
 
 One fact, two derivations, disagreeing. So gen1_blocks_skipped is set from the
 SAME expression that produces blocks_total, and the caveat and the outcome both
@@ -30,12 +33,13 @@ so blocks_total looks identical either way.
 
 What the user sees: a gen1 clone that lost nothing reaches the plain success
 screen, with no counts and no mention of 56/57/62/63. They opted into gen1 and
-gen1 worked; the registers are not their problem. Where blocks WERE skipped
-nothing changes -- still Partial, still the "differ" wording, and Details still
-names what is missing.
+gen1 worked; the registers are not their problem. A run that skipped nothing
+but is Partial for some other reason does not mention them either. Where blocks
+WERE skipped nothing changes -- still Partial, still the "differ" wording, and
+Details still names what is missing.
 
 The Write-UID asymmetry is unchanged: a bare Write-UID has no source data to
 disturb, so gen1 there is a clean success either way, and the clone-only guard
 that holds that is untouched.
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

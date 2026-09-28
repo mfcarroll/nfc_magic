@@ -6,11 +6,11 @@ comment it rests on has to be in the same tree as it.
 
 == THE GEN2 BACKDOOR CANNOT BE ADDRESSED ==
 
-Every other frame set in this feature now carries the card's UID. This one does
-not, and the reason given for that has been replaced.
+Every other write in this feature now carries the card's UID. This one does
+not, and the reason is now a measurement rather than an argument.
 
-It said 0xE0 is proprietary, so a conforming tag rejects it on the command and
-there is no standard frame for a bystander to take. That is an argument about
+The argument was that 0xE0 is proprietary, so a conforming tag rejects it on
+the command and there is no standard frame for a bystander to take. That covers
 CONFORMING tags. The population at risk is other magic cards, which parse
 0xE0 09 exactly as the target does -- and the sequence programs the
 configuration register as well as the UID, so a bystander gen2 card would come
@@ -27,8 +27,8 @@ no addressed form of this command to send.
 
 The frames therefore stay as they are, and the limit is stated rather than
 argued away: another gen2 magic card in the field takes them and nothing here
-can prevent it. Narrower than an unaddressed standard write, which every tag in
-the field takes. Not zero.
+can prevent it. Narrower than an unaddressed standard write, which any writable
+tag in the field takes. Not zero.
 
 THE FLAGS BYTE IS A LITERAL rather than the shared helper, and the same run is
 why. With OPTION set the card applies the write and answers nothing -- on all
@@ -48,15 +48,18 @@ validation, seven cards over four identified chips.
 
 WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same chip
 without qualification, which is the gen2 path only; the Partial claim for a gen1
-clone is now conditional; the wipe hazard is no longer scoped to a card someone
-previously armed, because five cards take a write to block 56 with no unlock or
-commit in front of it at all; the gen3 note says which half of its warning is
-observed here; and the bullet saying every write reaches every tag in the field
-becomes the gen2 limit plus its own bullet for keeping one tag in the field,
-since every other write is now addressed.
+clone is now conditional; "block contents are not compared" now carries its
+exception, the OPTION read-back, which compares exactly that on a card whose
+acknowledgement it cannot collect; the wipe hazard is no longer scoped to a card
+someone previously armed, since five cards took a write to block 56 with nothing
+in front of it and a card's history cannot be known; the gen3 note says which
+half of its warning is observed here; and the bullet saying every write reaches
+every tag in the field becomes the gen2 limit plus its own bullet for keeping
+one tag in the field, since every other write is now addressed and what remains
+is the reads and the inventories.
 
-ONLY THIS COMMIT TOUCHES THE RELEASE NOTES. Each note describes where the
-round ends up, so it belongs to the last commit that changes the behaviour it
-describes, and no earlier commit here carries one.
+ONLY THIS COMMIT TOUCHES THE RELEASE NOTES. Each note describes the end state,
+so it belongs to the last commit that changes the behaviour it describes, and no
+earlier commit here carries one.
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

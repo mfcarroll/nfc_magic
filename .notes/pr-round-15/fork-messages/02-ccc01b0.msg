@@ -13,7 +13,8 @@ MEASURED on one such card, all four combinations, each read back from it:
     62 addressed,   OPTION      accepted
 
 So the flag is necessary and sufficient there, and the addressing is orthogonal
-to it.
+to it. The address filter the previous commit states was measured on this card
+with the flag set in both frames, so the address was the only variable.
 
 NOT DECIDED FROM THE UID, although proxmark decides it that way -- it sets the
 flag when the manufacturer byte is TI's. A UID is not a statement about silicon
@@ -29,6 +30,8 @@ the flag; a 0x03 refusal sets it for the rest of the run. The write already
 retries, so the attempt that would have been a retry is the one that lands, and
 the recovery costs no frames the budget had not already allowed for. Sticky, and
 never re-asked inside a run, for the same reason it is not read off the UID.
+The flags and the 0x03 check are two small helpers rather than inline code,
+because the clone's identity writes need the same answer two commits on.
 
 AND THE FLAG COSTS THE ACKNOWLEDGEMENT, which is why it does not ship alone.
 ISO15693-3 10.3.1: with OPTION set, the card answers a write only after the
@@ -63,4 +66,4 @@ Scoped three ways, and each is deliberate:
     and says nothing about it is indistinguishable from one that took the write
     until someone looks at what it holds.
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
