@@ -300,12 +300,23 @@ requires.
 [👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
 changes still, then post it as its own comment.
 
+**One thing tested since, out of scope on purpose.** A genuine gen3 card turned up in the same batch
+— un-finalized, its configuration signature an exact match to proxmark's V3 config mode. I put the
+app's paths to it. The gen2 backdoor left its UID untouched, so a clone or Write UID lands on the
+gen1 opt-in exactly as the release note says; accepting that wrote 56/57/62/63 as ordinary data and
+moved no identity, since a gen3 card keeps its UID in a separate register. The configuration blocks
+were never touched, and it restored byte-identical. So the note's account of what those paths cost
+on a gen3 card is measured now rather than reasoned. I left the brick itself untested — it is
+irreversible, and a warning does not need it confirmed. Recorded on #255, and gen3 support stays out
+of scope.
+
 Three things are deliberately not in this PR, so they are not waiting on me:
 
 - **#251 is not closed**, for the reasons above — the inventory is a different change.
 - **#255 stays open.** The gen3 pre-flight probe it asks for is not in this PR and is not part of
-  this work. I will put the wipe-hazard correction above onto that issue, since its wording has the
-  same problem the release notes did.
+  this work. I will put the gen1 wipe-hazard correction above onto that issue, and what the gen3 card
+  showed under these paths, since the issue tracks both and its wording has the same problem the
+  release notes did.
 - **The host-test harness** stays out, as its own PR, for the size reason I gave before.
 
 I think it is ready.
