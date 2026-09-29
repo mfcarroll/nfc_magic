@@ -656,7 +656,11 @@ The older plan below is kept for its record; the order above supersedes it.
   armed scoping and the latch. Posted with the round, on a go-ahead.
 - **`slix2-gold-30mm` and the unmarked tags** -- the reversible UID-register probe on
   `slix-black-38x25` and `ti-2k-silver-1/2` is still unrun, and cheap.
-- **Brian's gen3 stickers are untouched** and out of scope for this PR.
+- **gen3-a is benched, 2026-09-29** ([pr-round-15/gen3-a-bench.md](pr-round-15/gen3-a-bench.md),
+  inventory + baseline committed): the first confirmed gen3 card, un-finalized config mode. It
+  confirmed the gen3 bullet's mechanism -- gen2 backdoor ignored, gen1 opt-in writes 56/57/62/63 as
+  ordinary data, no UID move, config signature untouched. The brick stays untested by choice. The
+  shipped wording was validated, not changed. `gen3-b..e` stay in the packet and out of scope.
 
 ## The round-15 measurement records cite pre-rebuild SHAs
 
