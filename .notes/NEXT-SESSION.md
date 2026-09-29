@@ -592,14 +592,19 @@ dead buffers removed in 04; the writing gate extended.
   by claim and asked for gen4 in it (its "four protocols" and five engines agree -- USCUID-UL has
   two). Nothing else the maintainer endorsed moved.
 - **Verified:** all 23 shipped commits -- no markers, host tests pass, all 71 units compile under the
-  firmware's -Werror flags. Host tests at the tip: 170, the new one pinning CloneComplete's tone and
-  Finish, which fails on the pre-fold scene. The writing gate reads the tip at 0 findings.
+  firmware's -Werror flags. Host tests at the tip: 171 -- one pinning CloneComplete's tone and Finish,
+  which fails on the pre-fold scene, and one pinning that over-capacity with a survey note lands on
+  "Clone finished" (every gen1 clone of a larger file does: gen1 keeps reporting its own count, so the
+  geometry note fires), which fails if over-capacity is checked first. The writing gate reads the
+  tip at 0 findings.
 - **The reply** gains a paragraph on 09 and 10 for mfcarroll to check, two claims scoped as the code
   now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
   recounted: 117 lines to 157, both counted as the section's body.
 
-**As of 2026-09-29: Round 15 is BUILT in the fork: head `a4abc966`, ten commits, signed 10 of 10, a
-fast-forward from `1d411dec`**, the previous build `7de7ce82` kept as `backup-pre-app-review-replay`.
+**As of 2026-09-29: Round 15 is BUILT in the fork: head `06812361`, ten commits, signed 10 of 10, a
+fast-forward from `1d411dec`**, the previous build `a4abc966` kept as `backup-pre-msg-format-replay`.
+Its messages are wrapped at 80 throughout, the width the PR's pushed messages use -- mfcarroll found
+03's mixed, and edits had left lines broken short in most of them; only whitespace moved.
 Everything reviewed so far is folded: review 2, mfcarroll's follow-up, the gen3 wording and cut, and
 the whole-PR review above. mfcarroll benched the review-2 build on `lri2k-keychain` 2026-09-28 (Write
 UID, a gen1 clone with its geometry notes, the re-clone that converts) and this build's clone
@@ -612,8 +617,8 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
 - **Intra-push churn is 2 lines.**
 - **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
   (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`), `backup-pre-gen3-wording-replay`
-  (`4168c5e0`), `backup-pre-gen3-cut-replay` (`1e79f1e6`) and `backup-pre-app-review-replay`
-  (`7de7ce82`). Nothing of round 15 is pushed.
+  (`4168c5e0`), `backup-pre-gen3-cut-replay` (`1e79f1e6`), `backup-pre-app-review-replay`
+  (`7de7ce82`) and `backup-pre-msg-format-replay` (`a4abc966`). Nothing of round 15 is pushed.
 
 0. ~~The whole-PR prose review~~ -- run and folded, above.
 1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
@@ -624,8 +629,8 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
 3. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
    a fast-forward. Re-run the replay after any change to a sync point or a `.msg`.
 4. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
-5. **The dev remote** needs a force-push with lease once more: mfcarroll pushed it 2026-09-29, and the
-   move of "predates this feature" into 07 then rewrote dev from `211c048` on -- mfcarroll's call.
+5. ~~The dev remote's force-push~~ -- done by mfcarroll 2026-09-29, after the move into 07. What has
+   landed since is ordinary commits on top, so a plain push carries it.
 
 The older plan below is kept for its record; the order above supersedes it.
 
