@@ -37,6 +37,10 @@ mechanised and are marked ⚖.
   ran, it is "not tried". The gen3 note got this wrong in the same fold that fixed its "not observed
   here".
 - **No dev SHAs.** They resolve here and nowhere he can see. *Checked.*
+- ⚖ **Read what the maintainer said about a comment before cutting or rewording it.** Round 15's
+  whole-PR review proposed cutting two comments the maintainer had asked to keep, and a "plausible"
+  fix deleted a sentence the maintainer had called "the correct version". Every comment received is
+  in `.notes/pr-round-*/received/`: grep it for keep, checks out, is right.
 - **Blocks over 20 lines want a reason.** Not a failure; a prompt. *Warned.*
 
 ## Release notes

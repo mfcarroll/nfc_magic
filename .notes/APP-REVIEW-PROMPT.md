@@ -103,6 +103,9 @@ plus release notes and strings, with one verification pass. Then wait for a yes.
    `.notes/gen1-hardware-findings.md`, `tools/tag-inventory.json`). The poller alone is about 2,400
    lines with a comment on nearly every other line, so plan two sittings if needed.
 3. **Cross-file last.** For each fact found in more than one place, pick its home.
+4. **Before proposing a cut or a rewording, read what the maintainer said about that text** in
+   `.notes/pr-round-*/received/`. Round 15's review proposed two cuts the maintainer had asked
+   against, and one fix that removed a sentence the maintainer had endorsed.
 
 **Re-derive everything at the moment of reading.** A number, a chip count or a SHA in a note is a claim
 too.
@@ -118,7 +121,9 @@ own text may fold into it before the push. For each finding:
 - the evidence: the code line, the measurement record, or the contradicting site
 - proposed text
 - whether the line is from round 15 or earlier, since that decides whether a fix folds into round 15's
-  commits or goes in a new one
+  commits or goes in a new one. Decide it by `git blame` -- the commit that last wrote the LINE -- not by
+  when its words were first written: a line an in-round commit rewrapped belongs to that commit, and
+  fixing it in a later one changes the line twice in one push.
 
 End with a table of findings by class and by file, and a short list of the ones that matter most.
 

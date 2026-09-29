@@ -79,5 +79,3 @@ Magic -> ISO15693 -> clone `iso15693_lri2k_56` onto `slix-1k-50x28`. Sound on.
 So the release-note wording is confirmed on hardware: a gen1 clone of a file larger than the card is
 a Success that says the file is larger than the card, and the card goes on reporting its own count.
 Nothing in sync points 06/08/09 about this path needs changing.
-
-(to fill in)
