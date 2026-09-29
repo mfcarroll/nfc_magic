@@ -1,4 +1,4 @@
-NFC Magic ISO15693: the clone's identity writes are addressed, and take the OPTION flag
+NFC Magic ISO15693: the identity writes are addressed, and take the OPTION flag
 
 A clone onto a TI Tag-it wrote all 64 data blocks and then reported Partial,
 "AFI/DSFID not set".
