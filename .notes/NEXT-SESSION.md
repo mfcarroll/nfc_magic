@@ -686,11 +686,14 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
    fork message 01's copy of it, the OPTION and Validation bullets), fork messages 11 and 12 (new),
    the wrap-only edits in 01, 04 and 07, and [pr-round-15/reply.md](pr-round-15/reply.md)'s paragraph
    on the closing commits, which now covers 11 and 12. mfcarroll's `[👤]` paragraphs are byte-identical.
-2. **A short bench check of the result screens**, sound on: 12 moved every write-fail reason up by one
-   (Unset is 0 now). Every entry sets its reason on the line before it navigates and the host tests
-   pin each title and route, so this confirms the build rather than hunts: a wipe ("Wipe complete"),
-   a card lifted mid-write ("Write failed" / "Card removed"), and a clone that ends on "Clone
-   finished" -- each with its Details where it has them.
+2. ~~A short bench check of the result screens~~ -- PASSED 2026-09-29, mfcarroll, sound on, on the
+   post-fold build (12 moved every write-fail reason up by one; Unset is 0 now). A wipe of
+   `lri2k-keychain`, whose sweep reaches 56/57, reported "UID changed / Wiped 58/58 / UID moved. Now
+   reads: / 00000000 00000000" -- the armed-gen1 behaviour the release notes describe -- and a second
+   wipe, with the UID already zero, reported Success. A card lifted mid-write gave "Write failed" /
+   "Card removed before the write could finish". A clean clone ended on Success, and one with
+   configuration notes on "Clone finished". Tones correct throughout. mfcarroll restored
+   `lri2k-keychain` afterwards.
 3. ~~The replay~~ -- done 2026-09-29: `846a82eb`, twelve commits, 12 of 12 signed, test-replayed first.
 4. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
    a fast-forward from `1d411dec`.
