@@ -598,16 +598,12 @@ dead buffers removed in 04; the writing gate extended.
   now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
   recounted: 117 lines to 157, both counted as the section's body.
 
-**As of 2026-09-28:** review 2 and mfcarroll's follow-up to it are both FOLDED into dev (safety
-branches `wip-pre-review2-fold` and `wip-pre-followup-fold`, verification in their sections at the
-head). **Round 15 is BUILT in the fork: head `7de7ce82`, signed 8 of 8, a fast-forward from
-`1d411dec`**, the previous build `1e79f1e6` kept as `backup-pre-gen3-cut-replay`. mfcarroll benched
-the review-2 build on `lri2k-keychain` 2026-09-28: Write UID, a gen1 clone of a 28-block SLIX file
-with its geometry notes, and the re-clone that converts -- all correct. The follow-up changed only
-comments, release notes and one Details string. After it, `91e2810` swapped one word in two places --
-the gen3 brick is "not tried in testing", since "not observed" said a test had run -- and `3cbc00d`
-cut the gen3 note's sentence about the 0x10 tag, which a user cannot act on. 08 re-anchors at
-`3cbc00d`; each rebuild left 01-07's trees and messages identical.
+**As of 2026-09-29: Round 15 is BUILT in the fork: head `a4abc966`, ten commits, signed 10 of 10, a
+fast-forward from `1d411dec`**, the previous build `7de7ce82` kept as `backup-pre-app-review-replay`.
+Everything reviewed so far is folded: review 2, mfcarroll's follow-up, the gen3 wording and cut, and
+the whole-PR review above. mfcarroll benched the review-2 build on `lri2k-keychain` 2026-09-28 (Write
+UID, a gen1 clone with its geometry notes, the re-clone that converts) and this build's clone
+2026-09-29 (success tone, the new gen1 opt-in text) -- all correct.
 
 - **Tested before building:** the replay was first run into a throwaway `--shared` clone, whose tree
   is identical to the real fork's.
@@ -616,7 +612,8 @@ cut the gen3 note's sentence about the 0x10 tag, which a user cannot act on. 08 
 - **Intra-push churn is 2 lines.**
 - **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
   (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`), `backup-pre-gen3-wording-replay`
-  (`4168c5e0`) and `backup-pre-gen3-cut-replay` (`1e79f1e6`). Nothing of round 15 is pushed.
+  (`4168c5e0`), `backup-pre-gen3-cut-replay` (`1e79f1e6`) and `backup-pre-app-review-replay`
+  (`7de7ce82`). Nothing of round 15 is pushed.
 
 0. ~~The whole-PR prose review~~ -- run and folded, above.
 1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
