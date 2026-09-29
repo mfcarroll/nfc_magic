@@ -120,6 +120,33 @@ Initial read, `hf 15 info`:
 advertises **80 blocks** — a setting, not necessarily its capacity, so the full sweep below is the
 test of what actually answers past 80.
 
+## PASSED, 2026-09-29 — every step as predicted, nothing near the brick blocks
+
+- **Step 3, the UID register at the bench, reversible both halves.** Wrote block 16 `AABBCCDD` ->
+  UID `...DD CC BB AA` (the tail, byte-reversed); restored. Wrote block 17 `11223344` -> UID
+  `44 33 22 11 ...` (the head); restored. So 16/17 DRIVE the UID, not merely hold a copy -- the
+  gold-tag increment, now measured on a card whose signature is documented.
+- **Step 4, the app's gen2 backdoor: UID unchanged.** Write UID to a target; `hf 15 info` before
+  and after both `E0 48 03 00 12 85 5F 76`, so the app reported "Not gen2 magic card" and offered
+  the gen1 opt-in (declined). 16/17, 20/21 and 56/57/62/63 all unchanged -- the gen2 sequence
+  reached nothing. **First time "a gen3 card ignores the gen2 backdoor" has been put to a gen3 card.**
+- **Step 5, the app's gen1 opt-in accepted.** Screen: "gen1 failed / UID didn't take, so not a gen1
+  card. 56/57/62/63 may be overwritten." After: 56 `FF 5F 85 12`, 57 `00 03 48 E0`, 62 `00 00 00 00`,
+  63 `69 96 00 00` -- the gen1 sequence written as ORDINARY DATA (target = the card's own UID with
+  the last byte 76->FF, so the write was attempted). The UID did NOT move (16/17 unchanged), and
+  **0x14/0x15 were untouched** (`A5 2B 44 2C` / `21 AE 93 00`, as at baseline). So on a gen3 card the
+  gen1 path costs exactly those four data blocks, moves no identity, and reaches no brick block.
+- **Step 6, restore.** 56/57/62/63 back to zero; UID `E0 48 03 00 12 85 5F 76`; full dump 0-79
+  byte-identical to the baseline (only 16/17, 20/21 non-zero). Card left un-finalized, config intact.
+
+**What it settles for the PR.** The gen3 bullet's mechanism -- gen2 ignored -> lands on the opt-in ->
+accepting writes four ordinary blocks, and that is the whole cost -- is now MEASURED on a genuine
+gen3 card, not reasoned. The brick claim is untouched by this run (no wipe, no write to 0x14/0x15, no
+finalize), so it stays exactly as attributed. Only the app's Wipe reaches the brick blocks, which is
+why the release notes single it out.
+
+---
+
 Full sweep (reads only), `tools/baselines/gen3-a_2026-09-29_full-sweep-0-255.txt`, 256 blocks:
 
 - **Every address 0–255 answers a read**, contiguous, no gaps. So 80 is a setting, not a capacity.
