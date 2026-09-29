@@ -1,8 +1,8 @@
 NFC Magic ISO15693: what a clone leaves behind, and what it says about it
 
 The survey that reads above the source, and the result screens it feeds. They
-are one change: the notes have nothing to say without the survey, and the
-survey has nowhere to say it without them.
+are one change: the notes have nothing to say without the survey, and the survey
+has nowhere to say it without them.
 
 == WHAT THE CLONE LEAVES BEHIND ==
 
@@ -22,8 +22,8 @@ clone onto a wiped card or says nothing about the case above:
   - blocks above the source still holding NON-ZERO data -- about the user's
     data. Zeros up there are space, not residue, and raise nothing.
   - a card ANSWERING READS above the count it now reports -- about its size,
-    true whether or not anything is left up there, and the same phantom tail
-    the wipe's sweep exists for.
+    true whether or not anything is left up there, and the same phantom tail the
+    wipe's sweep exists for.
   - a card still reporting a GEOMETRY OR IC REF the source did not -- about how
     the copy presents. Claims on both sides, because a reader shows claims.
 
@@ -64,9 +64,9 @@ moved, both when both did. The note says "configuration register" rather than
 IC reference through one CFG register, which is why gen1 can reproduce none of
 the three.
 
-ONE TITLE FOR THE NOTES PAGE, "Clone notes" / "Wipe notes". The page now
-carries notes about residue, size and configuration beside the block list, so
-the title no longer names the list, and the list opens with its own label.
+ONE TITLE FOR THE NOTES PAGE, "Clone notes" / "Wipe notes". The page now carries
+notes about residue, size and configuration beside the block list, so the title
+no longer names the list, and the list opens with its own label.
 
 PARAGRAPHS ARE SEPARATED AND MARKED -- a blank line between each and a leading
 "- ", because they stack and three or four run together as one wall otherwise.

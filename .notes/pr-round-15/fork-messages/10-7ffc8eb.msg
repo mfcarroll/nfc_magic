@@ -1,4 +1,4 @@
-NFC Magic ISO15693: comments from earlier rounds that told their history or repeated a home
+NFC Magic ISO15693: comments from earlier rounds that told their history
 
 Nothing here is false, which is what separates it from the commit before. Each
 comment keeps its constraint and loses the account of how it got there, which a

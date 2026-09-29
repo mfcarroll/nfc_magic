@@ -18,9 +18,9 @@ that write implies can only mean those addresses are registers, so the card is
 gen1 whatever path the run took. The write that does the damage is the same
 event that identifies the card, so the run switches: it stops feeding the file
 into the registers, keeps going with everything above them, and afterwards
-writes the target UID back through the gen1 sequence. The switch is made as
-soon as the UID moves, before the write's own result is read -- the move is
-what shows the write landed, acknowledged or not. The end state is the one an
+writes the target UID back through the gen1 sequence. The switch is made as soon
+as the UID moves, before the write's own result is read -- the move is what
+shows the write landed, acknowledged or not. The end state is the one an
 ordinary gen1 clone produces -- a shape already tested and already reported
 correctly -- rather than a new one.
 
@@ -38,12 +38,12 @@ identity being disturbed and put back would be the app narrating its own
 process.
 
 THE CONSENT CALL, named because it is one. The repair sends the whole gen1
-sequence, unlock and commit included, and the gen1 opt-in screen is not shown
-on this path. That screen exists to warn that gen1 writes destroy four blocks
-of user data on a tag that is NOT gen1; this card has just proved that it is,
-by moving its UID to the value our write implied, so those addresses are
-registers rather than anyone's data. Leaving the card answering to bytes
-lifted out of the file is the worse outcome by a distance.
+sequence, unlock and commit included, and the gen1 opt-in screen is not shown on
+this path. That screen exists to warn that gen1 writes destroy four blocks of
+user data on a tag that is NOT gen1; this card has just proved that it is, by
+moving its UID to the value our write implied, so those addresses are registers
+rather than anyone's data. Leaving the card answering to bytes lifted out of the
+file is the worse outcome by a distance.
 
 It rests on the re-address the data-block addressing introduced, which accepts
 only the UID a write implies; this adds the flag that records the move.

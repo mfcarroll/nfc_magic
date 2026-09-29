@@ -6,16 +6,16 @@ comment it rests on has to be in the same tree as it.
 
 == THE GEN2 BACKDOOR CANNOT BE ADDRESSED ==
 
-Every other write in this feature now carries the card's UID. This one does
-not, and the reason is now a measurement rather than an argument.
+Every other write in this feature now carries the card's UID. This one does not,
+and the reason is now a measurement rather than an argument.
 
-The argument was that 0xE0 is proprietary, so a conforming tag rejects it on
-the command and there is no standard frame for a bystander to take. That covers
-CONFORMING tags. The population at risk is other magic cards, which parse
-0xE0 09 exactly as the target does -- and the sequence programs the
-configuration register as well as the UID, so a bystander gen2 card would come
-away with a different block count, block size and IC reference on top of a
-different identity.
+The argument was that 0xE0 is proprietary, so a conforming tag rejects it on the
+command and there is no standard frame for a bystander to take. That covers
+CONFORMING tags. The population at risk is other magic cards, which parse 0xE0
+09 exactly as the target does -- and the sequence programs the configuration
+register as well as the UID, so a bystander gen2 card would come away with a
+different block count, block size and IC reference on top of a different
+identity.
 
 MEASURED on all four gen2 cards here, and the answer is that it is not a choice.
 Each takes the unaddressed form and refuses the addressed one -- with the
@@ -43,8 +43,8 @@ Every user-facing change in the round, written once, at the end.
 WHAT IS NEW in the notes: every write that can carry the card's address now
 does; a card that needs the OPTION flag gets it; a clone onto a gen1 card keeps
 the card's identity whichever path it took; a clone says what it left behind; a
-gen1 clone whose file stops below block 56 is not Partial on that account;
-and the addressed-write validation, seven cards over four identified chips.
+gen1 clone whose file stops below block 56 is not Partial on that account; and
+the addressed-write validation, seven cards over four identified chips.
 
 WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same chip
 without qualification, which is the gen2 path only; the wipe bullet named 62/63

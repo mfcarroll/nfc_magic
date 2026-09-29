@@ -1,8 +1,7 @@
 NFC Magic ISO15693: the gen1 registers, addressed and no longer mis-scoped
 
-Two changes to the same four addresses -- who a write there can reach, and
-who a wipe there can hurt. They are one region of the card and they arrive
-together.
+Two changes to the same four addresses -- who a write there can reach, and who a
+wipe there can hurt. They are one region of the card and they arrive together.
 
 == THE SEQUENCE CARRIES THE CARD'S ADDRESS ==
 
@@ -12,8 +11,8 @@ with the UID in the frame, sent through the same helper as the data blocks.
 These were the last standard writes in the feature to go out unaddressed, and
 the worst to leave open. They are ordinary WRITE BLOCKs aimed at blocks
 56/57/62/63 -- on any tag large enough to have them, that is user data -- and
-they go out behind an opt-in whose warning is about the card in the user's
-hand, not a second one in the field. #251 asks for exactly this.
+they go out behind an opt-in whose warning is about the card in the user's hand,
+not a second one in the field. #251 asks for exactly this.
 
 ADDRESSING THEM IS ALSO WHAT MAKES THE CARD ANSWER. At block 62, an unaddressed
 write gets silence from NXP ICODE SLIX and SLIX-S, while the identical addressed
@@ -25,8 +24,8 @@ going out in the one form the card ignores.
 
 That is also the answer to "is addressing these safe" -- it was already being
 done. The wipe's sweep zeroes 56/57/62/63 through the addressed path, and the
-clone's conversion path writes 56/57 addressed and watches the UID follow,
-which is how a gen1 card on the gen2 path is detected at all.
+clone's conversion path writes 56/57 addressed and watches the UID follow, which
+is how a gen1 card on the gen2 path is detected at all.
 
 THE UID REGISTER ITSELF FILTERS ON THE ADDRESS. A write to block 56 with the
 address one byte wrong, carrying data the register does not hold, is refused and
@@ -42,22 +41,22 @@ the run ends with half a UID written: neither the identity the card had nor the
 one asked for. The unaddressed form had no such seam.
 
 It is not new machinery. iso15693_poller_predict_uid and
-iso15693_poller_readdress are the sweep's, and the prediction is the check:
-the only UID accepted as the new address is the one this write implies. A card
+iso15693_poller_readdress are the sweep's, and the prediction is the check: the
+only UID accepted as the new address is the one this write implies. A card
 answering anything else keeps the old address and the sequence carries on --
-which on a card that is not gen1 is the ordinary case, since there the UID
-never moves.
+which on a card that is not gen1 is the ordinary case, since there the UID never
+moves.
 
 UNLOCK AND COMMIT ARE ADDRESSED TOO, and their addressed behaviour cannot be
 validated. No card here has ever accepted either frame, in any form, including
 one this app had never written -- so there is no acceptance to observe and no
 way to show the addressed form fares differently. They are addressed on the
 safety argument alone. What the same evidence shows is that none of the five
-cards here needed them: each took the write to block 56 with no unlock or
-commit in front of it. Their histories are unknown, so that is a statement
-about these cards and not about gen1. They stay -- proxmark sends them, and the
-cards that would need them are ones nobody here has -- but the comment at their
-definition no longer claims a locked state before them.
+cards here needed them: each took the write to block 56 with no unlock or commit
+in front of it. Their histories are unknown, so that is a statement about these
+cards and not about gen1. They stay -- proxmark sends them, and the cards that
+would need them are ones nobody here has -- but the comment at their definition
+no longer claims a locked state before them.
 
 BENCHED on all three gen1 chips. A Write UID to a target differing from each
 card's own UID in BOTH HALVES, plain Success on each and the whole UID read back
@@ -79,9 +78,9 @@ reachable because it still answered inventory, and the note says that.
 
 == THE WIPE HAZARD IS NOT LIMITED TO A CARD SOMEONE ARMED ==
 
-The comments scoped the wipe's identity risk to "a card left ARMED by an
-earlier gen1 UID write": in the wipe's own notes, at the UID-changed reason and
-at its screen. The release notes carry the same correction in the last commit.
+The comments scoped the wipe's identity risk to "a card left ARMED by an earlier
+gen1 UID write": in the wipe's own notes, at the UID-changed reason and at its
+screen. The release notes carry the same correction in the last commit.
 
 Five cards here take a write to block 56 with NO unlock or commit in front of it
 at all, one of them a card this app had never written, and neither frame has
@@ -90,21 +89,21 @@ so the condition a warning can use is not the card's history but gen1 plus a
 claim high enough for the sweep to reach 56/57 -- the reach rule, already stated
 once in the poller.
 
-It matters because it UNDERSTATED the hazard, and in the direction that costs
-a user a card: nobody can know whether a tag was written before they got it,
-and nothing can detect it, so a warning aimed at that condition asks them to
-worry only if they know something unknowable -- while every gen1 card measured
-behaves the same way.
+It matters because it UNDERSTATED the hazard, and in the direction that costs a
+user a card: nobody can know whether a tag was written before they got it, and
+nothing can detect it, so a warning aimed at that condition asks them to worry
+only if they know something unknowable -- while every gen1 card measured behaves
+the same way.
 
-THE REGISTER NAMES ARE LABELS, and now say so. UNLOCK and COMMIT read a
-purpose into the order proxmark sends 62 and 63 in, and nothing tested has seen
-either accept a write. The define says the names are speculation, the comments
-that stated what 62/63 hold describe the gen1 sequence's bytes instead, and the
-one screen that named them -- the gen1 note in Details -- now reads "56/57/62/63
-are the UID / backdoor registers, not file data".
+THE REGISTER NAMES ARE LABELS, and now say so. UNLOCK and COMMIT read a purpose
+into the order proxmark sends 62 and 63 in, and nothing tested has seen either
+accept a write. The define says the names are speculation, the comments that
+stated what 62/63 hold describe the gen1 sequence's bytes instead, and the one
+screen that named them -- the gen1 note in Details -- now reads "56/57/62/63 are
+the UID / backdoor registers, not file data".
 
-Nothing is claimed in the other direction. There may well be a lock state;
-an acceptance of unlock or commit would have proved one, and a refusal proves
+Nothing is claimed in the other direction. There may well be a lock state; an
+acceptance of unlock or commit would have proved one, and a refusal proves
 nothing, since a card locked or unlocked before it arrived is indistinguishable
 from one that never was. The frames stay. What comes out is a precondition
 asserted on the hazard. The measurements keep what they measured; only the

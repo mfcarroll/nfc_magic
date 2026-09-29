@@ -24,9 +24,9 @@ data block, so on such a clone it is where the refusal first arrives.
 
 ADDRESSED as well: WRITE AFI and WRITE DSFID are STANDARD commands, so a
 bystander of any size takes them, and a changed AFI can drop that tag out of a
-selective inventory -- a card that then looks absent to the reader that uses
-it. The pass's header comment, which still gave the unaddressed frame layout,
-points at the sender instead.
+selective inventory -- a card that then looks absent to the reader that uses it.
+The pass's header comment, which still gave the unaddressed frame layout, points
+at the sender instead.
 
 Nothing was needed here for the missing acknowledgement. write_identity never
 trusted the send's return, because the SDK has no response parser for these two

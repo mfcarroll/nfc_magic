@@ -29,9 +29,9 @@ Decided by what the TAG SAYS instead. The first write of a run goes out without
 the flag; a 0x03 refusal sets it for the rest of the run. The write already
 retries, so the attempt that would have been a retry is the one that lands, and
 the recovery costs no frames the budget had not already allowed for. Sticky, and
-never re-asked inside a run, for the same reason it is not read off the UID.
-The flags and the 0x03 check are two small helpers rather than inline code,
-because the clone's identity writes need the same answer two commits on.
+never re-asked inside a run, for the same reason it is not read off the UID. The
+flags and the 0x03 check are two small helpers rather than inline code, because
+the clone's identity writes need the same answer two commits on.
 
 AND THE FLAG COSTS THE ACKNOWLEDGEMENT, which is why it does not ship alone.
 ISO15693-3 10.3.1: with OPTION set, the card answers a write only after the

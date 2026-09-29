@@ -12,12 +12,14 @@ WHAT THE CODE DOES, where a comment said otherwise:
   the field docs and the release notes already say. Its emit list gains Success,
   and the Partial event scopes "fell back to gen1" to a source that reaches
   those blocks.
-- the Fail event's causes leave out the clone whose UID took and whose every
-  data block was refused.
+- the Fail event's list of causes missed one: a clone whose UID took but whose
+  every data block was refused, which reports Fail too.
 - the partial-details bound said a wipe's total excludes the backdoor blocks.
   Only a gen1 clone's does; a wipe's stops at the highest block proven present.
-- the cut-index example put the header's own card on the wrong side of the
-  claim, with 170 blocks where the header has 140.
+- a worked example in the partial-details scene -- a card claiming 200 blocks
+  and holding 10, stopped by the time limit -- counted 170 blocks attempted and
+  filed it as a cut above the claim. The header takes the same card to a cut at
+  block 150: below the claim, with 140 blocks attempted that answered nothing.
 - the reach rule said TWO gates and listed three.
 - a pointer sent the reader to the header for a worst case stated beside
   ISO15693_POLLER_PASS_MAX_MS.

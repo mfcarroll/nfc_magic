@@ -17,7 +17,7 @@ telling their history (10). Round 15's own lines were fixed in the sync points t
 | 07 | `76ec764` | the gen1 registers, addressed and no longer mis-scoped |
 | 08 | `68659cb` | the gen2 frames cannot be addressed, and the 2.3 release notes |
 | 09 | `a4d510a` | comments from earlier rounds that said something false |
-| 10 | `7ffc8eb` | comments from earlier rounds that told their history or repeated a home |
+| 10 | `7ffc8eb` | comments from earlier rounds that told their history |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
