@@ -1,4 +1,4 @@
-NFC Magic ISO15693: the gen2 frames stay unaddressed, and the 2.3 release notes
+NFC Magic ISO15693: gen2 frames cannot be addressed, and the 2.3 release notes
 
 Two decisions, and they arrive together because the first rewrites one of the
 notes: a release note that argued a case now states a measurement, and the

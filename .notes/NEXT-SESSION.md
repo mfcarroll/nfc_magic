@@ -603,7 +603,9 @@ dead buffers removed in 04; the writing gate extended.
 
 **As of 2026-09-29: Round 15 is BUILT in the fork: head `2ccc1afe`, ten commits, signed 10 of 10, a
 fast-forward from `1d411dec`**, the previous build `06812361` kept as `backup-pre-subject-replay`.
-04's and 08's subjects were shortened to fit 80 on mfcarroll's call, 08's to "stay unaddressed".
+04's and 08's subjects were shortened to fit 80 on mfcarroll's call. 08 keeps "cannot be addressed":
+on all four gen2 cards the backdoor refused every addressed form while the cards took addressed
+ordinary writes, so it is the measured result, not an absolute to scope.
 Its messages are wrapped at 80 throughout, the width the PR's pushed messages use -- mfcarroll found
 03's mixed, and edits had left lines broken short in most of them; only whitespace moved.
 Everything reviewed so far is folded: review 2, mfcarroll's follow-up, the gen3 wording and cut, and
