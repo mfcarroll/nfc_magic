@@ -198,6 +198,80 @@ static void test_over_capacity_with_a_survey_note_goes_to_clone_complete(void) {
     end();
 }
 
+// ---- the Fail ladder ------------------------------------------------------------------------------
+
+// Which reason a Fail becomes is decided in order, and the order is the point: a Write UID with nothing to
+// prove first, then a UID that moved somewhere unasked-for, then a spent gen1 attempt -- each ahead of
+// every mode-specific reason -- and "not a magic tag" only as the fallback.
+typedef struct {
+    const char* what;
+    NfcMagicIso15693Mode mode;
+    Iso15693PollerResult result;
+    NfcMagicIso15693WriteFailReason want;
+} FailCase;
+
+static void test_the_fail_ladder_picks_each_reason_in_order(void) {
+    begin("a Fail becomes the reason its result earns, in the ladder's order");
+    const FailCase cases[] = {
+        {"Write UID asked for the card's own UID, even with a moved UID beside it",
+         NfcMagicIso15693ModeWriteUid,
+         {.uid_unverifiable = true, .uid_unexpected = true},
+         NfcMagicIso15693WriteFailReasonUidUnverifiable},
+        {"a UID that moved somewhere unasked-for outranks an empty source",
+         NfcMagicIso15693ModeClone,
+         {.uid_unexpected = true, .blocks_total = 0},
+         NfcMagicIso15693WriteFailReasonUidUnexpected},
+        {"a spent gen1 attempt whose UID never took outranks every block figure",
+         NfcMagicIso15693ModeClone,
+         {.gen1_attempted = true, .blocks_total = 28, .failed_count = 28},
+         NfcMagicIso15693WriteFailReasonGen1Failed},
+        {"a gen1 clone whose UID took but no block did is the UID-only failure",
+         NfcMagicIso15693ModeClone,
+         {.gen1_attempted = true, .used_gen1 = true, .blocks_total = 28, .failed_count = 28},
+         NfcMagicIso15693WriteFailReasonNothingCloned},
+        {"a Write UID that did not take has no blocks to count",
+         NfcMagicIso15693ModeWriteUid,
+         {.blocks_total = 0},
+         NfcMagicIso15693WriteFailReasonNotMagic},
+        {"a wipe that cleared nothing",
+         NfcMagicIso15693ModeWipe,
+         {.blocks_total = 0},
+         NfcMagicIso15693WriteFailReasonNothingWiped},
+        {"a clone of a source with no data blocks",
+         NfcMagicIso15693ModeClone,
+         {.blocks_total = 0},
+         NfcMagicIso15693WriteFailReasonEmptySource},
+        {"a clone whose every data block was refused",
+         NfcMagicIso15693ModeClone,
+         {.blocks_total = 28, .failed_count = 28},
+         NfcMagicIso15693WriteFailReasonNothingCloned},
+        {"anything else falls back to not-magic",
+         NfcMagicIso15693ModeClone,
+         {.blocks_total = 28, .failed_count = 3},
+         NfcMagicIso15693WriteFailReasonNotMagic},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        setup(NfcMagicProtocolIso15693, cases[i].mode);
+        app.iso15693_result = cases[i].result;
+        send(NfcMagicCustomEventWorkerFail);
+        if(routed_to() != NfcMagicSceneIso15693WriteFail || reason_set() != cases[i].want) {
+            printf("  FAIL %s: reason %u, expected %u\n", cases[i].what, (unsigned)reason_set(),
+                   (unsigned)cases[i].want);
+            current_failed = true;
+        }
+    }
+    end();
+}
+
+// The ladder is ISO15693's; every other protocol fails to the shared screen.
+static void test_other_protocols_fail_to_the_shared_screen(void) {
+    begin("a Fail on another protocol goes to the shared write-fail screen");
+    setup(NfcMagicProtocolGen2, NfcMagicIso15693ModeClone);
+    send(NfcMagicCustomEventWorkerFail);
+    CHECK(routed_to() == NfcMagicSceneWriteFail);
+    end();
+}
+
 // A gen1 clone whose file reached 56/57/62/63 with nothing there lost nothing, but the copy differs
 // from the file in one way a reader can see, so it ends on the notes screen rather than the bare popup.
 // A gen1 clone whose file stopped below 56 has nothing to say, and stays on the popup.
@@ -382,6 +456,8 @@ int main(void) {
     test_over_capacity_with_a_survey_note_goes_to_clone_complete();
     test_a_gen1_clone_that_reached_the_registers_ends_with_a_note();
     test_clean_clone_gets_the_success_popup();
+    test_the_fail_ladder_picks_each_reason_in_order();
+    test_other_protocols_fail_to_the_shared_screen();
     test_write_uid_success_refreshes_the_stored_uid();
     test_iso15693_card_lost_is_terminal();
     test_other_protocols_resume_the_search();

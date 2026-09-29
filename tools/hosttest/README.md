@@ -161,6 +161,15 @@ that a moved UID outranks a cut sweep, that ISO15693 treats a lost card as termi
 searching, and that Back is swallowed ONLY for ISO15693 and only after a card is found — swallowing it for
 the other four would be a trap, since their pollers can stop advancing with the card gone.
 
+The Fail ladder is pinned as a table, because its order is the point: a Write UID with nothing to prove,
+then a UID that moved somewhere unasked-for, then a spent gen1 attempt, each ahead of every mode-specific
+reason, with "not a magic tag" only as the fallback.
+
+**`test_gen1_optin_scene.c` — the gen1 consent screen**, the one screen where a wrong button destroys a
+card. Buttons are pressed through the callbacks the scene registered: only "Try gen1" grants the gen1 run,
+"Back" and the Back key both leave the card alone, and each flow's body names the four blocks and what
+else would be written. Whether a file uses 56/57/62/63 is a switch the test sets; the poller's tests own it.
+
 `fake_write.c` holds link-only stubs for that scene: poller lifecycle, popup text, blink, icons. Every one
 is reachable only from `on_enter`/`on_exit`, never from the routing, which reads plain fields off
 `NfcMagicApp`. That boundary is deliberate — these tests assert which screen an event routes to, not what a

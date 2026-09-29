@@ -15,7 +15,7 @@ BUILD := build
 # touch the radio at all, so they link a different fake.
 POLLER_TESTS := test_wipe_sweep test_clone_blocks test_outcome test_write_step test_write_identity \
                 test_addressed_write
-SCENE_TESTS  := test_write_fail_scene test_write_scene
+SCENE_TESTS  := test_write_fail_scene test_write_scene test_gen1_optin_scene
 # File select stubs the loaded device itself -- its protocol is what each case varies -- so it links
 # the GUI recorders but not fake_write.o, which answers every device query with an ISO15693-3 dump.
 SELECT_TESTS := test_file_select_scene
