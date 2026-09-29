@@ -290,12 +290,15 @@ release-notes trim, the addressed writes and the re-test on hardware are all in 
 condition I put on the sixth item, the squash message, since it has to describe the final state. The
 2.3 notes grow again with this round, from 117 lines to 157.
 
-Two commits at the end change comments only. 09 corrects ones from earlier rounds that had gone
-false — among them the gen1 clone contract, which said such a clone never gets a clean Success when
-a file ending before block 56 does, and a capacity rule stated as a law that one tested tag breaks —
-plus one string: the gen1 opt-in said gen1 "writes the UID to blocks 56/57/62/63", when the UID goes
-to 56/57. 10 takes the history out of comments that told it, without changing what any of them
-requires.
+Four commits close the round. 09 and 10 change comments only: 09 corrects ones from earlier rounds
+that had gone false — among them the gen1 clone contract, which said such a clone never gets a clean
+Success when a file ending before block 56 does, and a capacity rule stated as a law that one tested
+tag breaks — plus one string: the gen1 opt-in said gen1 "writes the UID to blocks 56/57/62/63", when
+the UID goes to 56/57. 10 takes the history out of comments that told it, without changing what any
+of them requires. 11 and 12 are small hardening fixes. The failure bitmap checks the index it is
+given, and the two switches on the write-fail reason list every reason with no default — the shape
+you gave the poller's write-state switch — so a reason added without an answer is a build error, and
+a screen entered without a reason crashes instead of saying "Not a magic tag".
 
 [👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
 changes still, then post it as its own comment.

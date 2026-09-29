@@ -20,6 +20,57 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
+## ⚠️ SAFETY BRANCH FOR THE HARDENING AND J1 — `wip-pre-j1-fold` = `cd23a47`
+
+mfcarroll's call, 2026-09-29: "go ahead with 1-4, leave y3". The round-10 hardening moved INTO THIS
+PR rather than after merge -- this is the component's first release -- as two new sync points, and
+J1 folded into the commits that wrote its lines:
+
+- **11** (`ea40479`): Y1 + X1. mark_failed/unmark_failed furi_check the index against
+  ISO15693_POLLER_MAX_BLOCKS, as the SDK's own block accessor checks its index; the two
+  iso15693_3_get_block_data calls cast their uint16_t block number, as the third already did.
+- **12** (`26da484`): Y2. Both write-fail reason switches switch on the enum with every reason
+  listed and no default, so -Wswitch under the firmware's -Werror catches a missing one, then
+  furi_crash -- the shape mishamyte's own commit gave the write-state switch. The enum opens with
+  Unset = 0, so a screen entered without a reason crashes instead of saying "Not a magic tag". Every
+  entry into the scene sets its reason on the line before it navigates, so nothing reachable does.
+- **T3**, dev-only: the Fail ladder's eight branches in order, other protocols' shared screen, the
+  gen1 consent screen's buttons and bodies, the Unset crash (a forked child, `aborts.h`), the
+  bitmap bound. Every new test was mutation-checked. **Y3 is left, by mfcarroll's call.**
+- **J1**: the TI chip is named by what identified it. "(by its behaviour, not its UID)" in the
+  poller's chip list (01), in fork message 01's copy of it, and in the Validation bullet (08's
+  range); the OPTION release note says the one measured was "identified by this behaviour rather than
+  by its UID" (08's anchor). The name comes from the type line both cards' first UIDs decoded to;
+  what confirms it is the 0x03 OPTION refusal, which `black-tag` gave while WEARING AN NXP UID. Both
+  are gen2 magic, so their UID, IC ref and geometry are all settings. Later mentions (02's comments
+  and message, 04's AFI comment, the squash message, the reply) stay as names: each says what the
+  chip does, not how it was identified.
+- **The latch passage at the data-block re-address STAYS -- it is not a duplicate.** It records a
+  write to block 56 ALONE, re-read in the same field session, on all three gen1 chips -- the fact the
+  re-address after a single UID-block write depends on. The home at ISO15693_MAGIC_BLK_UNLOCK records
+  the four-frame sequence and then an inventory. They overlap in four words, "with no power-cycle".
+- **The 13 long comment blocks were read against the maintainer's received comments: none cut.**
+  No history and no repetition; every past tense in them is card state or a measurement. The
+  maintainer asked to keep, or endorsed, the write scene's Back-swallowing block ("worth keeping the
+  rest of this comment as it stands", round 6), the 36-of-64 bench (round 2), the tail-drop's
+  prefix/pvPortMalloc reconciliation (rounds 5-6), PASS_MAX_MS's "defensible for the more expensive of
+  the two" (round 6), and the wipe verify's positive-observation rule (round 3). J1 makes the
+  addressing block 21 lines -- any wording does, even fully rewrapped -- so the gate warns 14 times.
+
+**How.** One `filter-branch --index-filter` pass, three exact rules applied from their owners
+(`e5227c1`, `6ca0d62`, `68659cb`, pre-fold names) to HEAD, each matching exactly once in every
+commit: 232 commits paired with identical authors, dates and messages, 332 mapped blobs and nothing
+else changed. Every SHA from 01 on is new.
+
+**Verified 2026-09-29:** all 25 shipped commits -- no markers, host tests pass, 71 units under the
+firmware's -Werror; clean FAP build, 71 CC and APPCHK; clang-format clean on 95 files; 180 host tests
+at the tip; churn still 2 lines; every writing gate at 0 findings. A test replay into a `--shared`
+clone made 12 fork commits, its tree identical to a full sync of 12, a fast-forward from `1d411dec`;
+its range-diff against `feed76cf` shows only J1, the message edits and context shifts.
+
+**Fork messages:** 11 and 12 written fresh from the diffs; 01, 04 and 07 rewrapped so no line opens
+with "--" and 04's table line fits 80.
+
 ## ⚠️ SAFETY BRANCH FOR THE FOLLOW-UP FOLD — `wip-pre-followup-fold`
 
 Created 2026-09-28, on mfcarroll's go-ahead, before folding his follow-up to review 2 into the round-15
@@ -296,7 +347,7 @@ Delete this section only after the fold is verified and the branch is deliberate
 
 ## IN FLIGHT: round 15 — BUILT AND BENCHED, nothing pushed, nothing replayed
 
-**18 shipped commits on `iso15693-dev`**, EIGHT fork sync points. 169 host tests, the writing
+**25 shipped commits on `iso15693-dev`**, TWELVE fork sync points. 180 host tests, the writing
 gate clean, both firmwares warning-free, clang-format clean.
 
 ⚠️ **DEV HISTORY WAS REORDERED 2026-09-26**, so every SHA from `bbf3b77` onward is new; safety branch
@@ -305,9 +356,9 @@ own -- it is the round's most consequential fix and it had no visible existence 
 what a clone leaves behind. Verified content-preserving: `git diff` between the old tip and the new
 is EMPTY across every shipped path AND across `tools/` and `.notes/`, so the hardware bench stands.
 
-⚠️ **08 ANCHORS AT THE ROUND TIP**, so it carries the addressing AND the arm-model correction AND the
-self-review's text fixes. Anchor it earlier and the round ships a wrong chip count with its fix one
-sync point behind. **If any shipped commit is added after 08's anchor, that anchor MOVES** -- the
+⚠️ **THE LAST ANCHOR IS THE ROUND TIP** -- 12 since the hardening landed as 11 and 12; before that it
+was 08, carrying the addressing AND the arm-model correction AND the self-review's text fixes.
+**If any shipped commit is added after the last anchor, it needs a sync point** -- the
 sync points once reached only as far as the addressing commit while six shipped commits sat above
 them, and nothing but `replay-to-fork.sh`'s own final diff would have caught it.
 
@@ -325,33 +376,34 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 
 | dev | sync | |
 |---|---|---|
-| `e5227c1` | 01 | data-block writes carry the card's address |
-| `8653685` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `af83939` | 03 | the gen1 loss claim is made only where there was a loss |
-| `2cd2f75` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `71d0e7f` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `0ef9b08` |  | a clone reports what it left on the card |
-| `dd8fa86` |  | name the halves that differ, and do not read a register as capacity |
-| `d9491b6` |  | the notes page says what the user can act on |
-| `99e446a` |  | why the clone reacts to the registers instead of predicting them |
-| `67d4fa1` |  | the size note says what the card reports before what it is |
-| `f44151f` | 06 | the size note names the file where the two counts agree |
-| `ce433a4` |  | the gen1 backdoor sequence carries the card's address |
-| `25eab2d` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `211c048` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `687324f` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `eee801e` |  | the wipe's open question points at the evidence instead of repeating it |
-| `76ec764` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `6ca0d62` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
-| `52d08b2` |  | the gen3 brick was not tried in testing, which "not observed" misstated |
-| `64d3914` |  | the gen3 note drops a tag the reader cannot act on |
-| `68659cb` | 08 | the release notes claim no more than Validation measured, or a user can act on |
-| `a4d510a` | 09 | comments from earlier rounds that said something false |
-| `7ffc8eb` | 10 | comments from earlier rounds that told their history or repeated a home |
+| `6ae0978` | 01 | data-block writes carry the card's address |
+| `13d1b37` | 02 | the OPTION flag, and the acknowledgement it costs |
+| `d835048` | 03 | the gen1 loss claim is made only where there was a loss |
+| `ca5c125` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `d7edeb1` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `3dc3e32` |  | a clone reports what it left on the card |
+| `6695e7a` |  | name the halves that differ, and do not read a register as capacity |
+| `33af4db` |  | the notes page says what the user can act on |
+| `96fc6fb` |  | why the clone reacts to the registers instead of predicting them |
+| `50b99ab` |  | the size note says what the card reports before what it is |
+| `bbe08e0` | 06 | the size note names the file where the two counts agree |
+| `fd12e75` |  | the gen1 backdoor sequence carries the card's address |
+| `2925686` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `361c5d2` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `54dceb8` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `88d3099` |  | the wipe's open question points at the evidence instead of repeating it |
+| `3765571` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `319ebf6` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `d04445b` |  | say the gen3 brick was not tried, not that testing missed it |
+| `6ac1dcd` |  | the gen3 note drops a tag the reader cannot act on |
+| `8ae795c` | 08 | the release notes claim no more than Validation measured, or a user can act on |
+| `d2c197e` | 09 | comments from earlier rounds that said something false |
+| `b0e8dd2` | 10 | comments from earlier rounds that told their history or repeated a home |
+| `ea40479` | 11 | block indices fit what holds them -- the failure bitmap is bounds-checked |
+| `26da484` | 12 | -Wswitch sees the write-fail reason switches, and 0 is no longer a reason |
 
-(SHAs after the whole-PR review's fold, 2026-09-29 -- see "THE WHOLE-PR REVIEW, FOLDED" under WHAT IS
-LEFT. "TI enforces the address too" still touches notes only. 08's range holds four commits, 09 and 10
-one each.)
+(SHAs after the J1 fold, 2026-09-29 -- see the `wip-pre-j1-fold` section at the top. "TI enforces the
+address too" still touches notes only. 08's range holds four commits; 09, 10, 11 and 12 one each.)
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -371,7 +423,7 @@ that needed a fix changed patch-id -- two of those only by context shift. What t
 Measurements in [pr-round-15/](pr-round-15/): `addressed-writes-measured.md`,
 `addressed-writes-implemented.md`, `residue-and-geometry.md`, `controls-2026-09-24.md`.
 **Everything measured before the fold passed on hardware** across seven cards covering FOUR identified chips -- TI
-Tag-it (x2), NXP SLIX (x2), NXP SLIX-S, ST LRi2K -- plus `gen-2-card`, whose silicon is unknown.
+Tag-it (x2, by its behaviour), NXP SLIX (x2), NXP SLIX-S, ST LRi2K -- plus `gen-2-card`, whose silicon is unknown.
 
 ⚠️ **`gen-2-card` IS NOT "EM-Marin" AND IS NOT A FIFTH CHIP.** That type line belongs to the expired
 access credential cloned onto it before the project's first instrumented read;
@@ -601,6 +653,9 @@ dead buffers removed in 04; the writing gate extended.
   now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
   recounted: 117 lines to 157, both counted as the section's body.
 
+⚠️ **THAT BUILD IS STALE since the J1 fold (2026-09-29)**: `feed76cf` holds ten sync points built from
+pre-fold anchors, and the round now has twelve. Rebuild before any push -- see the list below.
+
 **As of 2026-09-29: Round 15 is BUILT in the fork: head `feed76cf`, ten commits, signed 10 of 10, a
 fast-forward from `1d411dec`**, the previous build `2ccc1afe` kept as `backup-pre-subject-fix-replay`.
 04's and 08's subjects were shortened to fit 80 on mfcarroll's call. 08 keeps "cannot be addressed":
@@ -624,17 +679,23 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
   (`7de7ce82`), `backup-pre-msg-format-replay` (`a4abc966`), `backup-pre-subject-replay`
   (`06812361`) and `backup-pre-subject-fix-replay` (`2ccc1afe`). Nothing of round 15 is pushed.
 
-0. ~~The whole-PR prose review~~ -- run and folded, above.
-1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
-   then [pr-round-15/reply.md](pr-round-15/reply.md)'s new paragraph and two scoped sentences.
-   mfcarroll's `[👤]` paragraphs are byte-identical.
-2. ~~A bench check with sound on~~ -- done 2026-09-29: mfcarroll re-ran the clone on `lri2k-keychain`;
-   it ends on the success tone, and the new gen1 opt-in body reads right.
-3. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
-   a fast-forward. Re-run the replay after any change to a sync point or a `.msg`.
-4. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
-5. ~~The dev remote's force-push~~ -- done by mfcarroll 2026-09-29, after the move into 07. What has
-   landed since is ordinary commits on top, so a plain push carries it.
+0. ~~The whole-PR prose review~~ -- run and folded, above. ~~J1, the hardening (11, 12) and T3~~ --
+   done 2026-09-29, see the `wip-pre-j1-fold` section at the top.
+1. **mfcarroll reads** what changed since `feed76cf`: J1 at its four sites (the poller's chip list and
+   fork message 01's copy of it, the OPTION and Validation bullets), fork messages 11 and 12 (new),
+   the wrap-only edits in 01, 04 and 07, and [pr-round-15/reply.md](pr-round-15/reply.md)'s paragraph
+   on the closing commits, which now covers 11 and 12. mfcarroll's `[👤]` paragraphs are byte-identical.
+2. **A short bench check of the result screens**, sound on: 12 moved every write-fail reason up by one
+   (Unset is 0 now). Every entry sets its reason on the line before it navigates and the host tests
+   pin each title and route, so this confirms the build rather than hunts: a wipe ("Wipe complete"),
+   a card lifted mid-write ("Write failed" / "Card removed"), and a clone that ends on "Clone
+   finished" -- each with its Details where it has them.
+3. **The replay**, rebuilding the fork with all twelve, 1Password unlocked; test replay first into a
+   `--shared` clone. Keep `feed76cf` as a backup branch.
+4. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
+   a fast-forward from `1d411dec`.
+5. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
+6. **The dev remote needs a force-push again** -- the J1 fold rewrote history from 01. mfcarroll's.
 
 The older plan below is kept for its record; the order above supersedes it.
 
@@ -659,8 +720,8 @@ The older plan below is kept for its record; the order above supersedes it.
 4. **After merge, each its own PR or its own call:**
    - **The host-test harness** -- promised in the replies; the maintainer's `-Wswitch` commit broke it
      once, which is the argument for releasing it.
-   - **A small hardening pass, from round 10's self-review** -- never put to the maintainer, ours to
-     propose or drop. Still open against the current code: **Y1** `mark_failed`/`unmark_failed` have
+   - ~~**A small hardening pass, from round 10's self-review**~~ -- MOVED INTO THIS PR 2026-09-29 as
+     11 (Y1 + X1) and 12 (Y2), with T3's tests; **Y3 left, by mfcarroll's call**. As it stood: **Y1** `mark_failed`/`unmark_failed` have
      no bound (a `furi_check` makes it structural); **Y2** the reason enum starts at `NotMagic` = 0,
      the scene manager's default state, and `write_fail.c` keeps two silent `default:` cases (the
      maintainer's `e32e6242` covered the poller's write-state switch, not this); **Y3**
@@ -674,9 +735,9 @@ The older plan below is kept for its record; the order above supersedes it.
    - **#251** (the reads and inventories), **#252/#253** (the other protocols' Back trap), and the
      firmware's standalone EOF ([firmware-gaps.md](firmware-gaps.md)), which would let the app collect
      OPTION acknowledgements instead of reading back.
-5. **Housekeeping, any time:** the 13 comment blocks the gate still flags as over 20 lines; J1 (the
-   TI chip named by its behaviour, left by decision); the one latch duplicate left at the data-block
-   re-address, which could point at its home now that the round is in one piece.
+5. ~~**Housekeeping**~~ -- done 2026-09-29: the long comment blocks read against the maintainer's
+   comments and none cut; J1 folded; the latch passage kept, because it is not a duplicate (see the
+   `wip-pre-j1-fold` section).
 
 **STILL OPEN, none of it blocking:**
 
