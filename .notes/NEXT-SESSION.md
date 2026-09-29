@@ -651,9 +651,35 @@ The older plan below is kept for its record; the order above supersedes it.
    from anchors that have since moved three times, so it must be rebuilt before anything is pushed.
 4. **Then the push**, which needs an explicit go-ahead every time. Then posting, same rule.
 
+### AFTER THIS ROUND -- the path forward, as of 2026-09-29
+
+1. **Now:** push round 15, then the reply on #250, then the comment on #255.
+2. **The maintainer's review of round 15** -- a round 16 only if it asks for changes.
+3. **At merge:** post [squash-message.md](squash-message.md) as its own comment, not with a round.
+4. **After merge, each its own PR or its own call:**
+   - **The host-test harness** -- promised in the replies; the maintainer's `-Wswitch` commit broke it
+     once, which is the argument for releasing it.
+   - **A small hardening pass, from round 10's self-review** -- never put to the maintainer, ours to
+     propose or drop. Still open against the current code: **Y1** `mark_failed`/`unmark_failed` have
+     no bound (a `furi_check` makes it structural); **Y2** the reason enum starts at `NotMagic` = 0,
+     the scene manager's default state, and `write_fail.c` keeps two silent `default:` cases (the
+     maintainer's `e32e6242` covered the poller's write-state switch, not this); **Y3**
+     `Iso15693PollerResult` has no mode field; **X1** two implicit `uint16_t -> uint8_t` narrowings,
+     the `iso15693_3_get_block_data(source, block)` calls in the clone's data pass and its survey;
+     **T3** no test sends a Fail event through the write scene's reason ladder, and the gen1 consent
+     screen has none. **P1-P3 shipped in round 13; P4 was declined on diff cost** (the maintainer was
+     told); **Y4 is moot.** There is no code-simplification round left -- the whole-PR review's
+     comment simplification went into this round as 10.
+   - **#255**'s gen3 pre-flight probe, now buildable against a real card (gen3-a).
+   - **#251** (the reads and inventories), **#252/#253** (the other protocols' Back trap), and the
+     firmware's standalone EOF ([firmware-gaps.md](firmware-gaps.md)), which would let the app collect
+     OPTION acknowledgements instead of reading back.
+5. **Housekeeping, any time:** the 13 comment blocks the gate still flags as over 20 lines; J1 (the
+   TI chip named by its behaviour, left by decision); the one latch duplicate left at the data-block
+   re-address, which could point at its home now that the round is in one piece.
+
 **STILL OPEN, none of it blocking:**
 
-- **~40 lines of removable intra-push churn**, under KNOWN REMAINING WORK below. Measured and left.
 - **`lri2k-keychain` block 8** is the one card whose old probe residue was not cleared; `slix-1k-50mm`
   was cleared 2026-09-26 and the rest were already blank.
 - **The #255 comment** is drafted: [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md), both errors, the
