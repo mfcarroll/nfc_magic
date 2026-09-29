@@ -32,4 +32,7 @@ Nothing was needed here for the missing acknowledgement. write_identity never
 trusted the send's return, because the SDK has no response parser for these two
 commands, so it was already built around a GET SYSTEM INFO read-back.
 
+The two frame buffers write_identity allocated go too: only the unaddressed
+frames used them.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

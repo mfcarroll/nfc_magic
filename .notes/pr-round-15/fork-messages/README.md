@@ -1,19 +1,23 @@
-# Round 15 — seven behavioural sync points, then the gen2 measurement and the release notes
+# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, then two comment passes
 
 The addressing round. 01-07 each change behaviour. 08 changes none: it is the whole round's release
 notes plus the one comment that had to move with them, because a note stopped arguing a case and
-started stating a measurement.
+started stating a measurement. 09 and 10 change no behaviour either: they correct comments from earlier
+rounds that the whole-PR review of 2026-09-28 ([app-review.md](../app-review.md)) found false (09) or
+telling their history (10). Round 15's own lines were fixed in the sync points that wrote them.
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `eff0c62` | data-block writes carry the card's address |
-| 02 | `ccc01b0` | the OPTION flag, and the read-back it costs |
-| 03 | `4678561` | the gen1 loss claim is gated on there being a loss |
-| 04 | `1b8cea0` | the identity writes are addressed and take the flag |
-| 05 | `ba3b2d5` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `8e358a1` | what a clone leaves behind, and what it says about it |
-| 07 | `be51ffe` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `3cbc00d` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 01 | `e5227c1` | data-block writes carry the card's address |
+| 02 | `8653685` | the OPTION flag, and the read-back it costs |
+| 03 | `af83939` | the gen1 loss claim is gated on there being a loss |
+| 04 | `2cd2f75` | the identity writes are addressed and take the flag |
+| 05 | `71d0e7f` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `f44151f` | what a clone leaves behind, and what it says about it |
+| 07 | `487e0b3` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `a4a1684` | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| 09 | `89d2a70` | comments from earlier rounds that said something false |
+| 10 | `0c5cc94` | comments from earlier rounds that told their history or repeated a home |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
@@ -31,9 +35,9 @@ folded into 08 with the rest.
 could be its own sync point. See below. 06 collapses six dev commits and 07 collapses six, and
 those are the two places this round does not get one decision per commit; the reason is churn.
 (07's range holds a seventh dev commit, "TI enforces the address too", whose shipped change moved
-to 01 and 02 in the review-2 fold, so it now touches notes only. 08's range holds three: the release
-notes, then two small fixes to its gen3 note, one of which also touches the comment behind the same
-warning.)
+to 01 and 02 in the review-2 fold, so it now touches notes only. 08's range holds four: the release
+notes, two small fixes to its gen3 note, one of which also touches the comment behind the same
+warning, and the whole-PR review's release-note fixes.)
 
 The notes commits and the host-test fake are dev-only and are not sync points -- which is why 07's
 message cites the cards rather than a test.

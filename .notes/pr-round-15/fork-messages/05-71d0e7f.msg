@@ -48,4 +48,10 @@ lifted out of the file is the worse outcome by a distance.
 It rests on the re-address the data-block addressing introduced, which accepts
 only the UID a write implies; this adds the flag that records the move.
 
+THREE COMMENTS THIS WOULD LEAVE FALSE change with it. The branch's own note took
+a card already wearing the target UID to be the one the source was read from; it
+now names the two that reach it. The COUNT_OF note counted three loops over the
+backdoor list, and this adds a fourth. The mark/unmark note called every clear
+the else-arm of a two-way decision, and the repair's clear is not.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -177,9 +177,9 @@ card or says nothing about the case above:
 **The advertised count cannot be the test.** On a magic card a count is a claim, and deriving "these
 blocks hold residue" from a number the card chose would be a guess wearing the clothes of a
 measurement. So the survey reads upward from the source count and stops on an absent run or the
-budget — past physical capacity a block refuses reads outright, which is the same discriminator the
-data pass already uses when it asks whether a refused block is even there. Non-destructive, unlike
-the wipe's sweep, which writes because it is wiping.
+budget — on the cards measured a block past physical capacity refuses reads outright, which is the
+same discriminator the data pass already uses when it asks whether a refused block is even there.
+Non-destructive, unlike the wipe's sweep, which writes because it is wiping.
 
 None of this is a failure and none of it makes the clone Partial. They are notes on a success.
 
@@ -236,7 +236,7 @@ issue's worst consequence cannot be fixed this way at all: the post-wipe UID re-
 answered by a bystander, and that check exists to discover whether the UID changed, so it cannot be
 aimed at a UID already in doubt.
 
-**And one frame set cannot be addressed at all.** The gen2 backdoor is `0xE0`, proprietary, so a
+**And one frame set could not be addressed on any card tested.** The gen2 backdoor is `0xE0`, proprietary, so a
 conforming tag rejects it on the command and there is no standard frame for a bystander to take.
 That covers conforming tags. Another gen2 magic card parses `0xE0 09` exactly as the target does,
 and the sequence programs the configuration register as well as the UID, so a bystander of that kind
@@ -288,7 +288,14 @@ proxmark's ISO15693 V3 magic support. The runs that decide it:
 That closes the list I gave you in the comment-cut round. The cut, the simplification pass, the
 release-notes trim, the addressed writes and the re-test on hardware are all in — which was the
 condition I put on the sixth item, the squash message, since it has to describe the final state. The
-2.3 notes grow again with this round, from 120 lines to 158.
+2.3 notes grow again with this round, from 117 lines to 157.
+
+Two commits at the end change comments only. 09 corrects ones from earlier rounds that had gone
+false — among them the gen1 clone contract, which said such a clone never gets a clean Success when
+a file ending before block 56 does, and a capacity rule stated as a law that one tested tag breaks —
+plus one string: the gen1 opt-in said gen1 "writes the UID to blocks 56/57/62/63", when the UID goes
+to 56/57. 10 takes the history out of comments that told it, without changing what any of them
+requires.
 
 [👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
 changes still, then post it as its own comment.

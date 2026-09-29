@@ -325,30 +325,33 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 
 | dev | sync | |
 |---|---|---|
-| `eff0c62` | 01 | data-block writes carry the card's address |
-| `ccc01b0` | 02 | the OPTION flag, and the acknowledgement it costs |
-| `4678561` | 03 | the gen1 loss claim is made only where there was a loss |
-| `1b8cea0` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
-| `ba3b2d5` | 05 | a clone that lands in a gen1 card's UID repairs it |
-| `e4ee3a3` |  | a clone reports what it left on the card |
-| `a690b41` |  | name the halves that differ, and do not read a register as capacity |
-| `4e4fdfb` |  | the notes page says what the user can act on |
-| `fa8dd25` |  | why the clone reacts to the registers instead of predicting them |
-| `857f723` |  | the size note says what the card reports before what it is |
-| `8e358a1` | 06 | the size note names the file where the two counts agree |
-| `45f82aa` |  | the gen1 backdoor sequence carries the card's address |
-| `c577d13` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `13191c4` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `cde100b` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `c47a670` |  | the wipe's open question points at the evidence instead of repeating it |
-| `be51ffe` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `a89dd91` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
-| `91e2810` |  | the gen3 brick was not tried in testing, which "not observed" misstated |
-| `3cbc00d` | 08 | the gen3 note drops a tag the reader cannot act on |
+| `e5227c1` | 01 | data-block writes carry the card's address |
+| `8653685` | 02 | the OPTION flag, and the acknowledgement it costs |
+| `af83939` | 03 | the gen1 loss claim is made only where there was a loss |
+| `2cd2f75` | 04 | the clone's identity writes are addressed, and take the OPTION flag |
+| `71d0e7f` | 05 | a clone that lands in a gen1 card's UID repairs it |
+| `0ef9b08` |  | a clone reports what it left on the card |
+| `dd8fa86` |  | name the halves that differ, and do not read a register as capacity |
+| `d9491b6` |  | the notes page says what the user can act on |
+| `99e446a` |  | why the clone reacts to the registers instead of predicting them |
+| `67d4fa1` |  | the size note says what the card reports before what it is |
+| `f44151f` | 06 | the size note names the file where the two counts agree |
+| `ce433a4` |  | the gen1 backdoor sequence carries the card's address |
+| `25eab2d` |  | the self-review's first pass -- five stale claims the addressing left behind |
+| `748c7df` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `c349f7e` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `79a439e` |  | the wipe's open question points at the evidence instead of repeating it |
+| `487e0b3` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `b820e16` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `9c198a2` |  | the gen3 brick was not tried in testing, which "not observed" misstated |
+| `1316b4a` |  | the gen3 note drops a tag the reader cannot act on |
+| `a4a1684` | 08 | the release notes claim no more than Validation measured, or a user can act on |
+| `89d2a70` | 09 | comments from earlier rounds that said something false |
+| `0c5cc94` | 10 | comments from earlier rounds that told their history or repeated a home |
 
-(SHAs after the follow-up fold of 2026-09-28. "TI enforces the address too" now touches notes only; 07 carries
-review 2's fixes to its range, and 06 to its. `91e2810` and `3cbc00d` sit on top rather than being
-folded: they change only files 08 already changes, so 08 re-anchors at the newest.)
+(SHAs after the whole-PR review's fold, 2026-09-29 -- see "THE WHOLE-PR REVIEW, FOLDED" under WHAT IS
+LEFT. "TI enforces the address too" still touches notes only. 08's range holds four commits, 09 and 10
+one each.)
 
 ⚠️ **THE ROUND WAS REBUILT 2026-09-26** to fold a review pass into the commits that introduced each
 fault, so every SHA above is new and the safety branch holds the pre-fold history. Verified: the
@@ -559,6 +562,41 @@ scripted resolution -- `replay-to-fork.sh` now refuses on them, which is how thi
 
 ## WHAT IS LEFT — mfcarroll's read, then the push, then the posts
 
+### THE WHOLE-PR REVIEW, FOLDED -- 2026-09-29
+
+The review is [pr-round-15/app-review.md](pr-round-15/app-review.md). mfcarroll's calls: all three
+buckets this round -- round 15's own lines folded into the sync points that wrote them, earlier-round
+lines that said something false as a new **09**, and earlier-round history and repetition as a new
+**10**; CloneComplete fixed in 06 (success tone and Finish, like over-capacity); `write_identity`'s two
+dead buffers removed in 04; the writing gate extended.
+
+- **Safety branch `wip-pre-app-review-fold`** holds the pre-fold history.
+- **How.** Round-15 lines went in by `filter-branch --index-filter` in two passes, each rule applied
+  from its owning commit to HEAD and required to match exactly once in every one of them; each pass
+  verified commit by commit -- identical authors, dates and messages, and only the mapped blobs
+  changed. A third pass (amend + cherry-pick) restored one sentence at 08, below. The release-note
+  fixes are a new commit in 08's range (`a4a1684`, now 08's anchor), since only 08 touches the notes.
+- **Where the fold departs from the review, on the record:** "The short-circuit predates this
+  feature" is earlier-round text, so it is in 10, not 07. Two round-15 defects the review missed are
+  fixed where they began -- `poller.h`'s "gen1's frames carry no UID" (false since 07 addressed the
+  sequence) and the write scene's "Two ISO15693 successes ... Both" (06 added a third). E1's sample was
+  wrong: the four-run capacity probe was the gen2 card alone, and the plain tag's chip is not
+  established as SLI. B3 is scoped to what round 15's bench shows: no card tested has accepted 62 or 63.
+- **The maintainer's own words decide four sites.** Every received comment, rounds 2-14, was read
+  for keep / checks-out language. **B8 is reverted**: round 14 called "It cannot report the absence
+  of a move" "the correct version", and the release note's copy of it stays byte-identical. **B9
+  keeps the maintainer's round-14 word** "acknowledged" and adds the OPTION card that acknowledges
+  none. **F1 and F2 are left as they are**: round 6 said "worth keeping the rest of this comment as
+  it stands" of the file-select routing, and round 5 checked the Back-swallowing engine list claim
+  by claim and asked for gen4 in it (its "four protocols" and five engines agree -- USCUID-UL has
+  two). Nothing else the maintainer endorsed moved.
+- **Verified:** all 23 shipped commits -- no markers, host tests pass, all 71 units compile under the
+  firmware's -Werror flags. Host tests at the tip: 170, the new one pinning CloneComplete's tone and
+  Finish, which fails on the pre-fold scene. The writing gate reads the tip at 0 findings.
+- **The reply** gains a paragraph on 09 and 10 for mfcarroll to check, two claims scoped as the code
+  now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
+  recounted: 117 lines to 157, both counted as the section's body.
+
 **As of 2026-09-28:** review 2 and mfcarroll's follow-up to it are both FOLDED into dev (safety
 branches `wip-pre-review2-fold` and `wip-pre-followup-fold`, verification in their sections at the
 head). **Round 15 is BUILT in the fork: head `7de7ce82`, signed 8 of 8, a fast-forward from
@@ -579,21 +617,17 @@ cut the gen3 note's sentence about the 0x10 tag, which a user cannot act on. 08 
   (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`), `backup-pre-gen3-wording-replay`
   (`4168c5e0`) and `backup-pre-gen3-cut-replay` (`1e79f1e6`). Nothing of round 15 is pushed.
 
-0. **The whole-PR prose review runs first**, in a fresh session, from
-   [APP-REVIEW-PROMPT.md](APP-REVIEW-PROMPT.md). mfcarroll's call 2026-09-28: the push waits on it, in
-   case it finds something in round 15's own text. Findings go in `pr-round-15/app-review.md`.
-   mfcarroll has read messages 03, 07 and 08's follow-up changes and approved the new Details
-   string; the 08 clause and the gen3 note mfcarroll flagged after that are fixed at `91e2810` and
-   `3cbc00d`.
-1. **mfcarroll reads** the eight fork messages (`git -C ../all-the-plugins log 1d411dec..HEAD`), then
-   [pr-round-15/reply.md](pr-round-15/reply.md) and
-   [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md). The reply's second
-   correction was rewritten to agree with his `[👤]` paragraph; his five `[👤]` paragraphs are
-   byte-identical.
-2. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
-   a fast-forward. The build is current with dev's anchors and messages at `bd5154d`; re-run the
-   replay after any fold the review brings, or any change to a `.msg`.
-3. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
+0. ~~The whole-PR prose review~~ -- run and folded, above.
+1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
+   then [pr-round-15/reply.md](pr-round-15/reply.md)'s new paragraph and two scoped sentences.
+   mfcarroll's `[👤]` paragraphs are byte-identical.
+2. **A bench check with sound on**: the clone mfcarroll ran on `lri2k-keychain` should now end on the
+   success tone with "Finish"; and the gen1 opt-in body reads "writes blocks 56/57/62/63 first to set
+   the UID".
+3. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
+   a fast-forward. Re-run the replay after any change to a sync point or a `.msg`.
+4. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
+5. **The dev remote** needs a force-push with lease again, since 01-10 were rewritten -- mfcarroll's call.
 
 The older plan below is kept for its record; the order above supersedes it.
 

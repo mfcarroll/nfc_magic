@@ -73,6 +73,10 @@ asked for the OPTION flag, and the result stays discarded -- the 62/63 refusals
 are expected and the UID moves regardless, so acting on them would abort a run
 that worked.
 
+ONE HEADER NOTE THIS MAKES FALSE. The all-zeros UID note said the card stayed
+reachable because gen1's frames carry no UID. They carry it now; the card stayed
+reachable because it still answered inventory, and the note says that.
+
 == THE WIPE HAZARD IS NOT LIMITED TO A CARD SOMEONE ARMED ==
 
 The comments scoped the wipe's identity risk to "a card left ARMED by an

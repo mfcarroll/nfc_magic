@@ -29,10 +29,10 @@ clone onto a wiped card or says nothing about the case above:
 
 THE ADVERTISED COUNT CANNOT BE THE TEST, before or after: on a magic card it is
 whatever was last programmed. So the survey READS upward from the source count
-and stops on an absent run or the budget. Past physical capacity a block
-refuses reads outright, which is the same discriminator the data pass already
-uses when it asks whether a refused block is even there. Non-destructive,
-unlike the wipe's sweep, which writes because it is wiping.
+and stops on an absent run or the budget. On the cards measured a block past
+physical capacity refuses reads outright, which is the same discriminator the
+data pass already uses when it asks whether a refused block is even there.
+Non-destructive, unlike the wipe's sweep, which writes because it is wiping.
 
 It runs whatever path the clone took: that gen1 cannot misstate its count is
 known only for the cards here, and the check costs one absent run of reads past
@@ -40,7 +40,8 @@ the card's top.
 
 None of this is a failure and none of it makes the clone Partial, which is for a
 run where something went wrong. They are notes on a success, routed to the
-counted result screen the way an over-capacity clone already is.
+counted result screen the way an over-capacity clone already is, with the same
+success tone and Finish.
 
 == WHAT THE SCREENS SAY ==
 
@@ -92,5 +93,10 @@ card", not "this gen1 card": it fires whenever the two disagree, and gen1 is the
 usual cause but not the only one, since a card that is not magic at all, whose
 UID already matched the file's, reaches the same place with no configuration
 write ever attempted.
+
+FOUR COMMENTS THAT COUNTED WHAT THIS ADDS TO now count it: the block-size clamp
+gains the survey as a fourth caller, the write-fail screen a thirteenth body and
+a third at (4, 20), and the write scene a third success the bare popup cannot
+hold.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
