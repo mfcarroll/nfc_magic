@@ -63,4 +63,21 @@ Magic -> ISO15693 -> clone `iso15693_lri2k_56` onto `slix-1k-50x28`. Sound on.
 
 # RESULTS
 
+**PASSED, 2026-09-29, mfcarroll on `slix-1k-50x28`.** Every prediction held:
+
+- the gen1 opt-in appeared, accepted;
+- **"Clone finished"** with the **success tone**, body "All data written. / Card still reports / 28
+  blocks, IC ref 01.";
+- Finish left, Details right;
+- Details "Clone notes": the leftover blocks under "Didn't fit on the card", and the configuration
+  note naming both sides;
+- none of the excluded screens (no Partial, no "Card too small", no over-capacity "Holds ...", no
+  56/57/62/63 caveat);
+- restored: wiped (UID did not move, as the reach rule predicts for a claim of 28), Write UID back
+  to `E0 04 01 50 20 26 06 8C` via the gen1 opt-in, read back byte-identical.
+
+So the release-note wording is confirmed on hardware: a gen1 clone of a file larger than the card is
+a Success that says the file is larger than the card, and the card goes on reporting its own count.
+Nothing in sync points 06/08/09 about this path needs changing.
+
 (to fill in)
