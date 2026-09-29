@@ -653,11 +653,11 @@ dead buffers removed in 04; the writing gate extended.
   now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
   recounted: 117 lines to 157, both counted as the section's body.
 
-⚠️ **THAT BUILD IS STALE since the J1 fold (2026-09-29)**: `feed76cf` holds ten sync points built from
-pre-fold anchors, and the round now has twelve. Rebuild before any push -- see the list below.
-
-**As of 2026-09-29: Round 15 is BUILT in the fork: head `feed76cf`, ten commits, signed 10 of 10, a
-fast-forward from `1d411dec`**, the previous build `2ccc1afe` kept as `backup-pre-subject-fix-replay`.
+**As of 2026-09-29, after the J1 fold: Round 15 is BUILT in the fork: head `846a82eb`, twelve commits,
+signed 12 of 12 (all `G`), a fast-forward from `1d411dec`**, the previous build `feed76cf` kept as
+`backup-pre-j1-replay`. Trees and messages are identical, commit for commit, to the test replay into
+a throwaway clone, and its range-diff against `feed76cf` shows only J1, the message edits and context
+shifts. Before it, `feed76cf` was built the same way from `2ccc1afe` (`backup-pre-subject-fix-replay`).
 04's and 08's subjects were shortened to fit 80 on mfcarroll's call. 08 keeps "cannot be addressed":
 on all four gen2 cards the backdoor refused every addressed form while the cards took addressed
 ordinary writes, so it is the measured result, not an absolute to scope.
@@ -677,7 +677,8 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
   (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`), `backup-pre-gen3-wording-replay`
   (`4168c5e0`), `backup-pre-gen3-cut-replay` (`1e79f1e6`), `backup-pre-app-review-replay`
   (`7de7ce82`), `backup-pre-msg-format-replay` (`a4abc966`), `backup-pre-subject-replay`
-  (`06812361`) and `backup-pre-subject-fix-replay` (`2ccc1afe`). Nothing of round 15 is pushed.
+  (`06812361`), `backup-pre-subject-fix-replay` (`2ccc1afe`) and `backup-pre-j1-replay` (`feed76cf`).
+  Nothing of round 15 is pushed.
 
 0. ~~The whole-PR prose review~~ -- run and folded, above. ~~J1, the hardening (11, 12) and T3~~ --
    done 2026-09-29, see the `wip-pre-j1-fold` section at the top.
@@ -690,12 +691,13 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
    pin each title and route, so this confirms the build rather than hunts: a wipe ("Wipe complete"),
    a card lifted mid-write ("Write failed" / "Card removed"), and a clone that ends on "Clone
    finished" -- each with its Details where it has them.
-3. **The replay**, rebuilding the fork with all twelve, 1Password unlocked; test replay first into a
-   `--shared` clone. Keep `feed76cf` as a backup branch.
+3. ~~The replay~~ -- done 2026-09-29: `846a82eb`, twelve commits, 12 of 12 signed, test-replayed first.
 4. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
    a fast-forward from `1d411dec`.
 5. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
-6. **The dev remote needs a force-push again** -- the J1 fold rewrote history from 01. mfcarroll's.
+6. ~~The dev remote's force-push~~ -- on mfcarroll's go-ahead 2026-09-29, with a lease on the old remote
+   head `6575718` (an ancestor of the pre-fold tip, so nothing on the remote was dropped). What lands
+   after it is ordinary commits on top, so a plain push carries it.
 
 The older plan below is kept for its record; the order above supersedes it.
 
