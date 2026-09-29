@@ -8,9 +8,8 @@ reader deciding whether to change the line has no use for:
   loop", "the only raw bit arithmetic that had leaked into the scene layer",
   "now structural rather than a promise in a comment", "was wrong to phrase as a
   clone-specific promise", "Both once ended", "Both of us have had this
-  backwards once", "The clone_ prefix is historical", "The short-circuit
-  predates this feature", "It never aborted a write in the first place", and "It
-  exists because the two were byte-identical".
+  backwards once", "The clone_ prefix is historical", "It never aborted a write
+  in the first place", and "It exists because the two were byte-identical".
 - the Exit/Details account, at both sites that state the rule it produced. The
   rule and its instruction stay.
 - "they have disagreed", where the tail-drop's keep branch and the total can

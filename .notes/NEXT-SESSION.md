@@ -338,16 +338,16 @@ before, and because the `experiment-eof-frame` build was on it earlier the same 
 | `f44151f` | 06 | the size note names the file where the two counts agree |
 | `ce433a4` |  | the gen1 backdoor sequence carries the card's address |
 | `25eab2d` |  | the self-review's first pass -- five stale claims the addressing left behind |
-| `748c7df` |  | the wipe hazard is every gen1 card, not one someone armed |
-| `c349f7e` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
-| `79a439e` |  | the wipe's open question points at the evidence instead of repeating it |
-| `487e0b3` | 07 | a boundary comment that named two of three chips, and a release note that grew |
-| `b820e16` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
-| `9c198a2` |  | the gen3 brick was not tried in testing, which "not observed" misstated |
-| `1316b4a` |  | the gen3 note drops a tag the reader cannot act on |
-| `a4a1684` | 08 | the release notes claim no more than Validation measured, or a user can act on |
-| `89d2a70` | 09 | comments from earlier rounds that said something false |
-| `0c5cc94` | 10 | comments from earlier rounds that told their history or repeated a home |
+| `211c048` |  | the wipe hazard is every gen1 card, not one someone armed |
+| `687324f` |  | pass 2 -- two numbers that moved, and four paragraphs that were two |
+| `eee801e` |  | the wipe's open question points at the evidence instead of repeating it |
+| `76ec764` | 07 | a boundary comment that named two of three chips, and a release note that grew |
+| `6ca0d62` |  | the gen2 frames cannot be addressed, and the 2.3 release notes |
+| `52d08b2` |  | the gen3 brick was not tried in testing, which "not observed" misstated |
+| `64d3914` |  | the gen3 note drops a tag the reader cannot act on |
+| `68659cb` | 08 | the release notes claim no more than Validation measured, or a user can act on |
+| `a4d510a` | 09 | comments from earlier rounds that said something false |
+| `7ffc8eb` | 10 | comments from earlier rounds that told their history or repeated a home |
 
 (SHAs after the whole-PR review's fold, 2026-09-29 -- see "THE WHOLE-PR REVIEW, FOLDED" under WHAT IS
 LEFT. "TI enforces the address too" still touches notes only. 08's range holds four commits, 09 and 10
@@ -575,9 +575,10 @@ dead buffers removed in 04; the writing gate extended.
   from its owning commit to HEAD and required to match exactly once in every one of them; each pass
   verified commit by commit -- identical authors, dates and messages, and only the mapped blobs
   changed. A third pass (amend + cherry-pick) restored one sentence at 08, below. The release-note
-  fixes are a new commit in 08's range (`a4a1684`, now 08's anchor), since only 08 touches the notes.
+  fixes are a new commit in 08's range (`68659cb`, now 08's anchor), since only 08 touches the notes.
 - **Where the fold departs from the review, on the record:** "The short-circuit predates this
-  feature" is earlier-round text, so it is in 10, not 07. Two round-15 defects the review missed are
+  feature" is earlier-round text, but 07 rewraps the line it sits on (dropping "ARMED"), so it is
+  fixed there: in 10 it changed that line a second time in one push. mfcarroll's call, 2026-09-29. Two round-15 defects the review missed are
   fixed where they began -- `poller.h`'s "gen1's frames carry no UID" (false since 07 addressed the
   sequence) and the write scene's "Two ISO15693 successes ... Both" (06 added a third). E1's sample was
   wrong: the four-run capacity probe was the gen2 card alone, and the plain tag's chip is not
@@ -621,13 +622,13 @@ cut the gen3 note's sentence about the 0x10 tag, which a user cannot act on. 08 
 1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
    then [pr-round-15/reply.md](pr-round-15/reply.md)'s new paragraph and two scoped sentences.
    mfcarroll's `[👤]` paragraphs are byte-identical.
-2. **A bench check with sound on**: the clone mfcarroll ran on `lri2k-keychain` should now end on the
-   success tone with "Finish"; and the gen1 opt-in body reads "writes blocks 56/57/62/63 first to set
-   the UID".
+2. ~~A bench check with sound on~~ -- done 2026-09-29: mfcarroll re-ran the clone on `lri2k-keychain`;
+   it ends on the success tone, and the new gen1 opt-in body reads right.
 3. **The push**, on mfcarroll's go-ahead: `git -C ../all-the-plugins push origin nfc-magic-iso15693`,
    a fast-forward. Re-run the replay after any change to a sync point or a `.msg`.
 4. **Then the posts**, each on a go-ahead: the reply on #250, then the #255 comment on #255.
-5. **The dev remote** needs a force-push with lease again, since 01-10 were rewritten -- mfcarroll's call.
+5. **The dev remote** needs a force-push with lease once more: mfcarroll pushed it 2026-09-29, and the
+   move of "predates this feature" into 07 then rewrote dev from `211c048` on -- mfcarroll's call.
 
 The older plan below is kept for its record; the order above supersedes it.
 
