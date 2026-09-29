@@ -312,7 +312,7 @@ general notes on the gen1, gen2 and gen3 magic types. If you want it, it can go 
 [👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
 changes still, then post it as its own comment.
 
-**One thing tested since, out of scope on purpose.** A genuine gen3 card kindly sent by 0x6r1an0y
+**One thing tested since, out of scope on purpose.** A genuine gen3 card kindly sent by @0x6r1an0y
 — un-finalized, its configuration signature an exact match to proxmark's V3 config mode. I put the
 app's paths to it. The gen2 backdoor left its UID untouched, so a clone or Write UID lands on the
 gen1 opt-in exactly as the release note says; accepting that wrote 56/57/62/63 as ordinary data and
