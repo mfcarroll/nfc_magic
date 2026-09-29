@@ -25,6 +25,8 @@
 #include "../../scenes/nfc_magic_scene_iso15693_partial_details.c" // NOLINT
 #include "../../scenes/nfc_magic_scene_iso15693_write_fail.c" // NOLINT
 
+#include "aborts.h"
+
 #include <stdio.h>
 
 static int tests_run;
@@ -198,7 +200,7 @@ static void test_every_reason_renders_its_own_screen(void) {
         {NfcMagicIso15693WriteFailReasonGen1Failed, "gen1 failed"},
         {NfcMagicIso15693WriteFailReasonUidUnverifiable, "UID unchanged"},
         {NfcMagicIso15693WriteFailReasonEmptySource, "Nothing to clone"},
-        // Both of these are the default arm, deliberately: it has to tell them apart in its body.
+        // These two share a title, deliberately: the body tells them apart.
         {NfcMagicIso15693WriteFailReasonCardLost, "Write failed"},
         {NfcMagicIso15693WriteFailReasonNotMagic, "Write failed"},
     };
@@ -752,6 +754,18 @@ static void test_a_clone_with_notes_is_a_success(void) {
     end();
 }
 
+// Unset is the scene manager's starting state: a screen entered without a reason. Both reason switches
+// crash on it rather than show it as a real outcome -- with NotMagic at 0, a forgotten reason said "not
+// a magic tag".
+static void render_unset(void) {
+    render_write_fail(NfcMagicIso15693WriteFailReasonUnset, NfcMagicIso15693ModeClone);
+}
+static void test_a_screen_entered_without_a_reason_crashes(void) {
+    begin("the write-fail screen crashes on an unset reason rather than showing one");
+    CHECK(aborts(render_unset));
+    end();
+}
+
 // A cut sweep is a partial outcome, so it must carry the error tone rather than the success chime.
 static void test_cut_sweep_plays_the_error_tone(void) {
     begin("a cut sweep plays the error tone, a clean wipe the success tone");
@@ -1019,6 +1033,7 @@ int main(void) {
     test_wipe_stopped_says_it_timed_out();
     test_wipe_stopped_prints_the_cut_not_the_total();
     test_a_clone_with_notes_is_a_success();
+    test_a_screen_entered_without_a_reason_crashes();
     test_cut_sweep_plays_the_error_tone();
     test_unverified_uid_is_stated_on_wipe_complete();
     test_cut_at_the_claim_reads_as_past_it();

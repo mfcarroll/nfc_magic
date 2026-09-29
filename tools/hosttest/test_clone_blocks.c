@@ -12,10 +12,9 @@
 
 #include "../../magic/protocols/iso15693/iso15693_poller.c" // NOLINT -- deliberate, see above
 
-#include <signal.h>
+#include "aborts.h"
+
 #include <stdio.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 static int tests_run;
 static int tests_failed;
@@ -367,8 +366,7 @@ static void test_source_count_clamped_to_bitmap(void) {
     end();
 }
 
-// mark_failed and unmark_failed check their index, since one past the bitmap would write past it. The
-// check aborts, so each out-of-range call runs in a child process and the test reads how it ended.
+// mark_failed and unmark_failed check their index, since one past the bitmap would write past it.
 static Iso15693Poller bound_inst;
 static void mark_past_end(void) {
     iso15693_poller_mark_failed(&bound_inst, ISO15693_POLLER_MAX_BLOCKS);
@@ -379,19 +377,6 @@ static void unmark_past_end(void) {
 static void mark_last(void) {
     iso15693_poller_mark_failed(&bound_inst, ISO15693_POLLER_MAX_BLOCKS - 1);
 }
-static bool aborts(void (*call)(void)) {
-    fflush(NULL);
-    const pid_t pid = fork();
-    if(pid == 0) {
-        if(!freopen("/dev/null", "w", stderr)) _exit(2); // the fake reports the check; keep the run clean
-        call();
-        _exit(0);
-    }
-    int status = 0;
-    waitpid(pid, &status, 0);
-    return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT;
-}
-
 static void test_the_failure_bitmap_refuses_an_index_past_its_end(void) {
     begin("marking or unmarking a block past the failure bitmap aborts; the last block does not");
     CHECK(aborts(mark_past_end));
