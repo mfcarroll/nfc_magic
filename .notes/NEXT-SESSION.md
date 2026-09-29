@@ -601,8 +601,8 @@ dead buffers removed in 04; the writing gate extended.
   now is (the capacity rule; "could not be addressed on any card tested"), and the notes' growth
   recounted: 117 lines to 157, both counted as the section's body.
 
-**As of 2026-09-29: Round 15 is BUILT in the fork: head `2ccc1afe`, ten commits, signed 10 of 10, a
-fast-forward from `1d411dec`**, the previous build `06812361` kept as `backup-pre-subject-replay`.
+**As of 2026-09-29: Round 15 is BUILT in the fork: head `feed76cf`, ten commits, signed 10 of 10, a
+fast-forward from `1d411dec`**, the previous build `2ccc1afe` kept as `backup-pre-subject-fix-replay`.
 04's and 08's subjects were shortened to fit 80 on mfcarroll's call. 08 keeps "cannot be addressed":
 on all four gen2 cards the backdoor refused every addressed form while the cards took addressed
 ordinary writes, so it is the measured result, not an absolute to scope.
@@ -621,8 +621,8 @@ UID, a gen1 clone with its geometry notes, the re-clone that converts) and this 
 - **Backups:** the builds before each fold are kept in the fork as `backup-pre-review2-replay`
   (`f61285bc`), `backup-pre-followup-replay` (`fe8dc732`), `backup-pre-gen3-wording-replay`
   (`4168c5e0`), `backup-pre-gen3-cut-replay` (`1e79f1e6`), `backup-pre-app-review-replay`
-  (`7de7ce82`), `backup-pre-msg-format-replay` (`a4abc966`) and `backup-pre-subject-replay`
-  (`06812361`). Nothing of round 15 is pushed.
+  (`7de7ce82`), `backup-pre-msg-format-replay` (`a4abc966`), `backup-pre-subject-replay`
+  (`06812361`) and `backup-pre-subject-fix-replay` (`2ccc1afe`). Nothing of round 15 is pushed.
 
 0. ~~The whole-PR prose review~~ -- run and folded, above.
 1. **mfcarroll reads** what changed: fork messages 04-08 and the new 09 and 10 (01-03 are unchanged),
