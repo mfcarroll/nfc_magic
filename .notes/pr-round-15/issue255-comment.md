@@ -19,7 +19,7 @@ What stands: no pre-flight check is possible for gen1, and the post-wipe UID re-
 
 ## The gen3 half: a card is now in hand
 
-Since this issue was filed, a genuine gen3 card came in the same batch — un-finalized, its 0x14/0x15 configuration signature an exact match to proxmark's V3 config mode. Put to #250's paths: the gen2 backdoor leaves its UID unchanged (the UID lives at 0x10/0x11), so a clone or Write UID lands on the gen1 opt-in, and accepting that writes 56/57/62/63 as ordinary data — no identity move, the configuration signature untouched, restored byte-identical. That is the cost the release notes describe, now measured rather than reasoned.
+Since this issue was filed, a genuine gen3 tag was kindly provided by @0x6r1an0y — un-finalized, its 0x14/0x15 configuration signature an exact match to proxmark's V3 config mode. Put to #250's paths on the flipper: as expected, the gen2 backdoor leaves its UID unchanged (the UID lives at 0x10/0x11), so a clone or Write UID lands on the gen1 opt-in, and accepting that writes 56/57/62/63 as ordinary data — no identity move, the configuration signature untouched, restored byte-identical. That is the cost the release notes describe, now measured rather than reasoned.
 
 The brick is deliberately not tested. Zeroing 0x14/0x15 on an un-finalized card is irreversible, and the pre-flight probe this issue asks for is the fix, not something to confirm by destroying a card. proxmark would accept cfinalize on this one, so the signature mismatch that makes the earlier variant safe does not protect it. The wipe hazard and the probe both stand.
 ~~~~
