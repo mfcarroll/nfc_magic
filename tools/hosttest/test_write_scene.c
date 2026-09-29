@@ -181,6 +181,23 @@ static void test_over_capacity_clone_goes_to_the_result_screen(void) {
     end();
 }
 
+// Over-capacity AND a survey note: the note wins. This is every gen1 clone of a file larger than the
+// card, because gen1 has no configuration register to program -- the card goes on reporting its own
+// count, so the survey's geometry note always fires beside the empty tail. It lands on "Clone
+// finished", whose Details carries both counts; the over-capacity screen is gen2's.
+static void test_over_capacity_with_a_survey_note_goes_to_clone_complete(void) {
+    begin("over-capacity with a survey note routes to the clone-notes screen, not over-capacity");
+    setup(NfcMagicProtocolIso15693, NfcMagicIso15693ModeClone);
+    app.iso15693_result.over_capacity = 12;
+    app.iso15693_result.memory_differs = true;
+    app.iso15693_result.card_blocks = 28;
+    send(NfcMagicCustomEventWorkerSuccess);
+
+    CHECK(routed_to() == NfcMagicSceneIso15693WriteFail);
+    CHECK(reason_set() == NfcMagicIso15693WriteFailReasonCloneComplete);
+    end();
+}
+
 // A gen1 clone whose file reached 56/57/62/63 with nothing there lost nothing, but the copy differs
 // from the file in one way a reader can see, so it ends on the notes screen rather than the bare popup.
 // A gen1 clone whose file stopped below 56 has nothing to say, and stays on the popup.
@@ -362,6 +379,7 @@ int main(void) {
     test_other_protocols_route_to_uscuid_partial();
     test_wipe_success_goes_to_the_result_screen();
     test_over_capacity_clone_goes_to_the_result_screen();
+    test_over_capacity_with_a_survey_note_goes_to_clone_complete();
     test_a_gen1_clone_that_reached_the_registers_ends_with_a_note();
     test_clean_clone_gets_the_success_popup();
     test_write_uid_success_refreshes_the_stored_uid();
