@@ -19,7 +19,7 @@ message has to describe the final state, so re-read it against the tree before p
 
 **House style, measured not assumed:** `<PR title> (#NNN)` as the first line, body wrapped at **~79-80
 columns** (#258's longest line is 79; our own dev messages run to 80), short paragraphs, trailers last.
-#258 runs ~20 lines. This feature is much larger, so the ~95 below is defensible; the 190 an earlier
+#258 runs ~20 lines. This feature is much larger, so the ~105 below is defensible; the 190 an earlier
 version of this file had was not.
 
 **What belongs in it:** what the feature is, the design fact that shapes everything (the two
@@ -46,27 +46,32 @@ the destructive paths are gated behind explicit consent instead.
 THE TWO GENERATIONS ARE NOT SYMMETRICAL, and that shapes the rest. A gen2 UID
 lives in a separate backdoor register space, so data-block writes cannot disturb
 it and the clone writes the UID first, then the blocks. A gen1 UID lives INSIDE
-the data-block space, at 56/57 with two more backdoor registers at 62/63, written with four
-ordinary WRITE BLOCKs -- which any writable tag accepts. So gen1 is destructive
-on a non-magic card and is offered only as an opt-in after the gen2 attempt
-leaves the UID unchanged. A gen1 clone skips those four addresses, and reports
-Partial only where the source actually had blocks that high.
+the data-block space, at 56/57 with two more backdoor registers at 62/63,
+written with four ordinary WRITE BLOCKs -- which any writable tag accepts. So
+gen1 is destructive on a non-magic card and is offered only as an opt-in after
+the gen2 attempt leaves the UID unchanged. A gen1 clone skips those four
+addresses, and reports Partial only where the source actually had blocks that
+high.
 
 THE WIPE SWEEPS PAST THE ADVERTISED BLOCK COUNT, because that count is
 programmable rather than physical. Measured on a gen2 card: seed all 64 blocks
 with per-block markers, clone a 28-block source over it, wipe -- the screen said
 Success -- then read with a proxmark. Blocks 28, 40 and 63 still returned their
 markers. 36 of 64 blocks survived a wipe that reported unqualified success. The
-sweep now runs upward until a run of blocks answers neither a write nor a read,
-and only a write settles whether a block exists: past physical capacity reads
-fail too, which is what lets a refused write be classified rather than guessed.
+sweep runs upward until a run of blocks answers neither a write nor a read. Only
+a write settles whether a block exists, and on the cards measured a read past
+physical capacity fails too, which is what lets a refused write be classified
+rather than guessed.
 
-WRITES ARE VERIFIED BY READ-BACK rather than by return value, across the board.
-A tag can refuse in-band with a well-formed, CRC-valid error response, so the
-send returns success; and it can apply a write without answering at all. Both
-directions are wrong to trust. The UID is re-read after an RF field power-cycle
--- not because a written UID latches, which it does not on any of the three gen1
-chips measured, but to read from a cleanly re-activated card.
+THE UID AND IDENTITY FIELDS ARE VERIFIED BY READ-BACK, not by return value. A
+tag can refuse in-band with a well-formed, CRC-valid error response, so the send
+returns success; and it can apply a write without answering at all. Both
+directions are wrong to trust. The UID is re-read after an RF field
+power-cycle -- not because a written UID latches, which it does not on any of
+the three gen1 chips measured, but to read from a cleanly re-activated card --
+and AFI/DSFID are re-read and compared. A data block counts as written when the
+card acknowledges it, except on a card that cannot acknowledge a write (below),
+where it is read back.
 
 WRITES CARRY THE CARD'S ADDRESS (#251). Every data block, every identity field
 and the gen1 backdoor sequence go out as addressed frames, so a second tag in
@@ -74,19 +79,19 @@ the field is not written by them; on ISO15693 a bystander need only be in a
 wallet, not on the antenna. Measured on seven cards over four identified chips,
 two of the cards of unknown silicon: all seven accept an addressed WRITE BLOCK,
 and a write to a UID one byte wrong leaves its block unchanged on every one. On
-NXP silicon the addressed form is also the only one the backdoor registers
-answer at all. Writing block 56 moves a gen1 card's UID at once, so anything
-that writes there re-takes the address before continuing, and accepts only the
-UID that write implies.
+NXP silicon, blocks 62/63 refuse the addressed form in band and are silent to
+the unaddressed one. Writing block 56 moves a gen1 card's UID at once, so
+anything that writes there re-takes the address before continuing, and accepts
+only the UID that write implies.
 
 SOME SILICON REQUIRES THE OPTION FLAG on writes and says so with its own error
-code. TI Tag-it HF-I Plus refuses a WRITE BLOCK whose OPTION bit is clear,
-addressed or not; without the flag no data block could be written to that chip
-at all. The flag is set from the tag's answer rather than from its UID, because
-this app is in the business of changing UIDs. It costs the acknowledgement --
-ISO15693-3 10.3.1 has the card answer only after a standalone EOF, which this
-SDK cannot send -- so on such a card the block is read back and compared instead
-of being counted as refused.
+code. TI Tag-it HF-I Plus, identified by that behaviour rather than by its UID,
+refuses a WRITE BLOCK whose OPTION bit is clear, addressed or not; without the
+flag no data block could be written to that chip at all. The flag is set from
+the tag's answer rather than from its UID, because this app is in the business
+of changing UIDs. It costs the acknowledgement -- ISO15693-3 10.3.1 has the card
+answer only after a standalone EOF, which this SDK cannot send -- so on such a
+card the block is read back and compared instead of being counted as refused.
 
 A CLONE THAT LANDS IN A GEN1 CARD'S UID REPAIRS IT. The gen2 verify passes
 whenever the card already carries the UID being written, which proves the UID
@@ -95,29 +100,30 @@ that state. The write that moves the UID is also what identifies the card, so
 the run converts to a gen1 clone from that point and puts the intended UID back.
 
 A CLONE ALSO REPORTS WHAT IT LEFT BEHIND. It writes the file's blocks and
-nothing else, so on a larger card everything above keeps the previous contents
--- and a gen2 clone reprograms the advertised count down to the file's, so an
-ordinary dump shows a clean copy over data that is still readable. The clone
-reads above the file's last block and reports data left up there, a card
+nothing else, so on a larger card everything above keeps the previous
+contents -- and a gen2 clone reprograms the advertised count down to the file's,
+so an ordinary dump shows a clean copy over data that is still readable. The
+clone reads above the file's last block and reports data left up there, a card
 answering past the count it reports, and a geometry the file did not ask for.
 None is a failure; they are notes on a success.
 
 KNOWN LIMITS, in the order they matter:
 
-- gen3 is NOT supported, and a wipe can destroy one. @0x6r1an0y, who wrote
-  proxmark's ISO15693 V3 magic support, reports that zeroing blocks 0x14/0x15 on
-  an un-finalized V3 card does not merely clear the signature but bricks the
-  card permanently. One tag here carries gen3's UID MECHANISM -- writing block
-  0x10 moves its UID to the value that write implies -- so the hazard's premise
-  is measured. Its configuration area matches neither documented state, so it
-  is not called a gen3 card; the brick stays attributed. The wipe confirm
-  screen carries it; a pre-flight probe is #255.
+- gen3 is NOT supported, and a wipe can destroy one. A gen3 card keeps its UID
+  in blocks 0x10/0x11 and a configuration signature in 0x14/0x15, well inside
+  any claim, and the wipe checks nothing first, so the sweep zeroes both.
+  @0x6r1an0y, who wrote proxmark's ISO15693 V3 magic support, reports that on an
+  un-finalized card this bricks it permanently; that is their report, not tried
+  in testing. The other paths were measured on a genuine un-finalized gen3 card:
+  it ignores the gen2 backdoor, so a clone or Write UID reaches the gen1 opt-in,
+  and accepting that writes 56/57/62/63 as ordinary data without moving its UID.
+  The wipe confirm screen carries the warning; a pre-flight probe is #255.
 - A WIPE CAN MOVE A GEN1 CARD'S UID and cannot prevent it. Blocks 56/57 are the
   UID registers, and all five gen1 cards measured took a write there with
   nothing sent before it. A card's history cannot be known, so treat any gen1
-  card whose claim lets the sweep reach them as exposed. The wipe re-reads the
-  UID afterwards and reports a move; it cannot report the absence of one, and a
-  wipe that clears nothing does not run the check at all. Tracked in #255.
+  card whose sweep reaches them as exposed. The wipe re-reads the UID afterwards
+  and reports a move; it cannot report the absence of one, and a wipe that
+  clears nothing does not run the check at all. Tracked in #255.
 - #251 is NOT closed. The inventory is still the SDK's 1-slot INVENTORY_T5 with
   no STAY QUIET, so a second tag can answer it -- including the post-wipe UID
   re-read, which addressing cannot fix by construction, since that read exists
