@@ -720,7 +720,17 @@ The older plan below is kept for its record; the order above supersedes it.
 ### AFTER THIS ROUND -- the path forward, as of 2026-09-29
 
 1. **Now:** push round 15, then the reply on #250, then the comment on #255.
-2. **The maintainer's review of round 15** -- a round 16 only if it asks for changes.
+2. **The maintainer's review of round 15** -- a round 16 only if it asks for changes, or if he takes
+   up **the release-notes question the reply asks** (added 2026-09-29, mfcarroll's idea): a short
+   2.3 entry in the style of his 2.0, keeping what a user must know before a wipe (a wipe can brick
+   gen3, on 0x6r1an0y's report; it can move a gen1 card's UID; one tag in the field at a time), with
+   the rest in an `ISO15693.md` beside the changelog, kept current as fixes and gen3 land. **Not a
+   straight transfer**: laid out as a reference, not as release notes ("Added" is no heading for a
+   standing reference), with room for general gen1/gen2/gen3 notes. His call first; if yes, before
+   merge, so nothing released is rewritten. Repo precedent: `SUPPORTED_CHIPS.md`
+   (fake_chip_detector), `docs/DESIGN.md` (pocketlab), `.catalog/README.md` beside a changelog in
+   three apps. The new file would need adding to `sync-to-fork.sh`, the replay's `SRC_PATHS` and the
+   writing gate.
 3. **At merge:** post [squash-message.md](squash-message.md) as its own comment, not with a round.
 4. **After merge, each its own PR or its own call:**
    - **The host-test harness** -- promised in the replies; the maintainer's `-Wswitch` commit broke it

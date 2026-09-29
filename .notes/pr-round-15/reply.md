@@ -300,6 +300,15 @@ given, and the two switches on the write-fail reason list every reason with no d
 you gave the poller's write-state switch — so a reason added without an answer is a build error, and
 a screen entered without a reason crashes instead of saying "Not a magic tag".
 
+**A question about the release notes.** The 2.3 entry is now 157 lines, about half the file, and
+most of it describes how the ISO15693 support behaves and what it was tested on, rather than what
+changed. As fixes and gen3 support land, later entries would have to correct it. Would you rather
+have a short 2.3 entry in the style of 2.0, keeping the limits a user needs before a wipe, with the
+rest in an `ISO15693.md` beside the changelog that is kept current? A few apps here keep a reference
+like that, such as `SUPPORTED_CHIPS.md` in fake_chip_detector and `docs/DESIGN.md` in pocketlab. It
+would be much the same material, laid out as a reference rather than as release notes, with room for
+general notes on the gen1, gen2 and gen3 magic types. If you want it, it can go in before merge.
+
 [👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
 changes still, then post it as its own comment.
 
