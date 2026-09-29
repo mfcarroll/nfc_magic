@@ -6,7 +6,7 @@ A clone onto a TI Tag-it wrote all 64 data blocks and then reported Partial,
 MEASURED on that card, each result read back through GET SYSTEM INFO:
 
     hf 15 info                     system info flags 0x0F -- DSFID and AFI both
-                                   advertised, so the verify had something to read
+                                   advertised, so there was something to verify
     22 29 <uid> 05    addressed, no option   refused, error 0x03, no change
     42 29 05          unaddressed, OPTION    accepted, DSFID reads back 05
     62 27 <uid> 27    addressed, OPTION      accepted, AFI reads back 27

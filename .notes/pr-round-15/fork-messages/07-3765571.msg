@@ -59,11 +59,11 @@ would need them are ones nobody here has -- but the comment at their definition
 no longer claims a locked state before them.
 
 BENCHED on all three gen1 chips. A Write UID to a target differing from each
-card's own UID in BOTH HALVES, plain Success on each and the whole UID read back
--- not the half that a broken re-address leaves, which is why the target was
-chosen that way: block 56 carries the printed tail and 57 the printed head, so a
-run that wrote 56 and lost 57 would have left the card's own head behind. DSFID
-survived per card, so nothing was written outside the UID registers.
+card's own UID in BOTH HALVES, plain Success on each and the whole UID read
+back -- not the half that a broken re-address leaves, which is why the target
+was chosen that way: block 56 carries the printed tail and 57 the printed head,
+so a run that wrote 56 and lost 57 would have left the card's own head behind.
+DSFID survived per card, so nothing was written outside the UID registers.
 
 The frames go through write_block_addressed, the data blocks' own sender,
 because a gen1 backdoor write IS a WRITE BLOCK: the block number is what makes

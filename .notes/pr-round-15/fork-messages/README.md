@@ -1,23 +1,29 @@
-# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, then two comment passes
+# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, two comment passes, then two hardening fixes
 
 The addressing round. 01-07 each change behaviour. 08 changes none: it is the whole round's release
 notes plus the one comment that had to move with them, because a note stopped arguing a case and
 started stating a measurement. 09 and 10 change no behaviour either: they correct comments from earlier
 rounds that the whole-PR review of 2026-09-28 ([app-review.md](../app-review.md)) found false (09) or
-telling their history (10). Round 15's own lines were fixed in the sync points that wrote them.
+telling their history (10). Round 15's own lines were fixed in the sync points that wrote them. 11
+and 12 are hardening from round 10's self-review, never put to him until now: the failure bitmap
+checks its index (11), and the write-fail reason switches list every reason so -Wswitch sees them
+(12). Neither changes what a card sees. 12 changes one behaviour: a write-fail screen entered
+without a reason now crashes instead of saying "Not a magic tag".
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `e5227c1` | data-block writes carry the card's address |
-| 02 | `8653685` | the OPTION flag, and the read-back it costs |
-| 03 | `af83939` | the gen1 loss claim is gated on there being a loss |
-| 04 | `2cd2f75` | the identity writes are addressed and take the flag |
-| 05 | `71d0e7f` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `f44151f` | what a clone leaves behind, and what it says about it |
-| 07 | `76ec764` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `68659cb` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 09 | `a4d510a` | comments from earlier rounds that said something false |
-| 10 | `7ffc8eb` | comments from earlier rounds that told their history |
+| 01 | `6ae0978` | data-block writes carry the card's address |
+| 02 | `13d1b37` | the OPTION flag, and the read-back it costs |
+| 03 | `d835048` | the gen1 loss claim is gated on there being a loss |
+| 04 | `ca5c125` | the identity writes are addressed and take the flag |
+| 05 | `d7edeb1` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `bbe08e0` | what a clone leaves behind, and what it says about it |
+| 07 | `3765571` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `8ae795c` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 09 | `d2c197e` | comments from earlier rounds that said something false |
+| 10 | `b0e8dd2` | comments from earlier rounds that told their history |
+| 11 | `ea40479` | the failure bitmap checks the index it is given |
+| 12 | `26da484` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
@@ -58,7 +64,7 @@ headings so the two decisions stay separable by a reader.
 
 The arm correction is comment-only here, its release-notes line being in 08; nothing about it
 changes behaviour. **Verify
-before replaying** that no shipped commit sits after 08's anchor -- `replay-to-fork.sh` checks this
+before replaying** that no shipped commit sits after the last anchor -- `replay-to-fork.sh` checks this
 up front now, and the end-state diff catches it too. It is what would have caught the sync points
 once reaching only as far as the addressing commit while six shipped commits sat above them.
 
@@ -113,7 +119,7 @@ won**, on the same grounds as 02: a sync point must not show him an error we the
 
 ## Residual churn — two lines, and both are a later commit needing what an earlier one lacked
 
-Measured by multiset against the tip: every line a sync point adds that is gone at 08. **2 lines**:
+Measured by multiset against the tip: every line a sync point adds that is gone at 12. **2 lines**:
 
 - **01's frame builder call passes `ISO15693_POLLER_WRITE_FLAGS`; 02 passes
   `iso15693_poller_write_flags(instance)`.** The builder takes its flags byte from 01 so 02 changes
@@ -135,4 +141,7 @@ CHANGELOG.md` must still name exactly one commit.
   them — several of them corrected an earlier reading during this round, and he reads the delta,
   not the search.
 - **`gen-2-card` has no known chip.** Do not call it an EM-Marin; that type line belongs to a
-  credential cloned onto it. Four identified chips, plus one card whose silicon was never captured.
+  credential cloned onto it. Four identified chips, plus two cards whose silicon was never captured.
+- **The TI chip is identified by its behaviour, not its UID.** Both TI cards are gen2 magic, so their
+  UID, IC ref and geometry are all settings; what identifies them is the OPTION refusal, which one
+  gave while wearing an NXP UID. Where a message first counts it as identified, say so -- 01 does.
