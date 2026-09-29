@@ -107,4 +107,43 @@ The app's Wipe is never the restore tool here.
 
 # RESULTS
 
-(to fill in)
+## Baseline (step 2), in progress — 2026-09-29
+
+Initial read, `hf 15 info`:
+
+    UID....... E0 48 03 00 12 85 5F 76
+    SYSINFO... 00 0F 76 5F 85 12 00 03 48 E0 00 00 4F 03 01
+    DSFID..... 0x00      AFI....... 0x00      IC ref.... 0x01
+    memory.... 4 (or 3) bytes/block x 80 blocks, 320 total
+
+`E0 48 03` is the same manufacturer/family prefix the gold tag reads (`E0 48 03 00 ...`). It
+advertises **80 blocks** — a setting, not necessarily its capacity, so the full sweep below is the
+test of what actually answers past 80.
+
+Full sweep (reads only), `tools/baselines/gen3-a_2026-09-29_full-sweep-0-255.txt`, 256 blocks:
+
+- **Every address 0–255 answers a read**, contiguous, no gaps. So 80 is a setting, not a capacity.
+- **128 cells mirrored across the 8-bit space**: block `0xNN` reads identical to `0xNN+0x80` at all
+  four registers (16≡144, 17≡145, 20≡148, 21≡149). Same shape as `slix2-gold-30mm`.
+- **UID register at 0x10/0x11, confirmed by READ alone.** Block 16 = `76 5F 85 12`, block 17 =
+  `00 03 48 E0` — the UID `E0 48 03 00 12 85 5F 76` in the gen3 mapping, each half reversed (tail
+  `12 85 5F 76` → `76 5F 85 12`, head `E0 48 03 00` → `00 03 48 E0`). This is the mechanism; the
+  read shows the register HOLDS the UID, a write (step 3) would show it DRIVES it.
+- **Config signature at 0x14/0x15 = an EXACT match to V3 config mode**: block 20 = `A5 2B 44 2C`,
+  block 21 = `21 AE 93 00`, against config-mode `A5 2B 44 2C` / `21 AE 93 00`. Not the gold tag's
+  unrecognised pair, and not the finalized pair.
+- Non-zero blocks: only 16/17, 20/21, and their mirrors 144/145, 148/149. Everything else zero. No
+  lock bits set anywhere.
+
+**What the baseline settles, and how it sharpens the guards.** gen3-a is a genuine V3 card in
+**config mode — un-finalized** — the first the project has placed by its documented signature. Two
+consequences, both making the guards stricter than for the gold tag:
+
+- the brick risk is no longer "might be un-finalized": it IS the un-finalized state the attributed
+  report is about, so zeroing 0x14/0x15 would brick it, not maybe.
+- proxmark's `hf15_magic_v3_is_config_mode()` returns TRUE here (both signature blocks match), so
+  `cfinalize` would be ACCEPTED on this card — the guard that refused the gold tag does not protect
+  it. Never send it.
+
+Step 3's UID write stays reversible (config mode = the repeatable half), and the restore value is
+captured: block 16 = `76 5F 85 12`, block 17 = `00 03 48 E0`.
