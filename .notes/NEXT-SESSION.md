@@ -1,4 +1,4 @@
-# Next session — ROUND 15: THE DELTA REVIEW IS FOLDED IN (fold 10). A fresh replay comes next, then the push.
+# Next session — ROUND 15 IS REPLAYED AND SIGNED WITH FOLD 10, NOT PUSHED. The push waits on mfcarroll.
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -20,7 +20,7 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## NEXT: A FRESH REPLAY OF THE THIRTEEN, THEN THE PUSH — each step on mfcarroll's go-ahead
+## NEXT: THE PUSH AND THE POSTS — each on mfcarroll's go-ahead; the replay is done
 
 **The delta review is done and folded in** ([pr-round-15/delta-review.md](pr-round-15/delta-review.md)).
 A fresh session read everything since the pushed build and found six things, none blocking; all six
@@ -40,13 +40,14 @@ pushed base; churn 6 lines, each in the README's residual section; clean FAPs on
 Unleashed, 71 units each. **Benched** by mfcarroll: a clone lifted near its end gets the lost-card
 screen with Details, and the new note reads as intended.
 
-**Still to do, in order:**
+**The real replay is done**, 2026-09-29: the fork's `nfc-magic-iso15693` is at `bd807e5b`, 13 commits
+on `1d411dec`, 13 of 13 signed and verifying, each commit's tree identical to the test replay's. It
+replaced `390a6621`, built before fold 10, never pushed, and kept as `backup-pre-fold10-replay`.
+mfcarroll: "Don't push the PR yet."
 
-1. The real replay, which needs 1Password unlocked. It replaces the fork's `390a6621`, built before
-   fold 10, never pushed, and kept as `backup-pre-fold10-replay`.
-2. Then, each on its own go-ahead: the PR push, a fast-forward of 13 on `1d411dec`; the #255 title and
-   body edit and comment, before the #250 reply; the dev force-push of iso15693-dev, with a lease; and
-   the squash message at merge.
+**Still to do, each on its own go-ahead:** the PR push, a fast-forward of 13 on `1d411dec`; the #255
+title and body edit and comment, before the #250 reply; the dev force-push of iso15693-dev, with a
+lease; and the squash message at merge.
 
 ## THE THIRTEEN SYNC POINTS, AND FOLDS 7-9. Safety branches `wip-pre-fold10`, `wip-pre-fold9`, `wip-pre-fold8`, `wip-pre-fold7`, `wip-pre-review3-fold`
 
