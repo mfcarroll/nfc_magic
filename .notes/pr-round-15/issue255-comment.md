@@ -19,7 +19,7 @@ NFC Magic: an ISO15693 wipe silently overwrites gen3 magic registers — detecta
 ## Body
 
 ~~~~
-> **Updated 2026-09-29**, after the latest round of #250. The gen1 half is corrected: its hazard is any
+> **Updated 2026-09-30**, after the latest round of #250. The gen1 half is corrected: its hazard is any
 > gen1 card the wipe's sweep reaches, not one left armed, and a written gen1 UID takes effect at once
 > rather than on the next power-up. The gen1 case has been reproduced on hardware, and a genuine gen3 card
 > has since been put to the app's paths; see the comments.

@@ -34,6 +34,8 @@ byte-identical; the lost-card bench's fixture, `tools/test_nfc/iso15693_lift_256
    nfc-magic-iso15693`. mfcarroll, 2026-09-29: "Don't push the PR yet."
 2. **The #255 title and body edit and comment**, before **the #250 reply**.
 3. **The dev force-push** of iso15693-dev, with a lease; and **the squash message** at merge.
+4. **Then round 16, before merge: S4** (below, under the path forward), which the reply tells him is
+   coming, with the release-notes move if he takes up the question.
 
 ## DONE: THE SECOND DELTA REVIEW, FOLDED IN AS FOLD 11
 
@@ -889,9 +891,16 @@ The older plan below is kept for its record; the order above supersedes it.
 
 ### AFTER THIS ROUND -- the path forward, as of 2026-09-29
 
-1. **Now:** push round 15, then the reply on #250, then the comment on #255.
-2. **The maintainer's review of round 15** -- a round 16 only if it asks for changes, or if he takes
-   up **the release-notes question the reply asks** (added 2026-09-29, mfcarroll's idea): a short
+1. **Now:** push round 15, then the #255 title and body edit and its comment, then the reply on #250,
+   which points at #255.
+2. **Round 16, before merge**, carrying **S4**: the survey's eleven result fields are kept in four
+   places -- the poller's state, its per-run reset, the result struct and the copy into it -- and
+   become one struct ([final-review-3.md](pr-round-15/final-review-3.md)). mfcarroll's call,
+   2026-09-30: in this PR, as its own commit after round 15's push, and the reply's closing list says
+   it is coming. No behaviour changes; about 100 shipped lines in five files and 70 test lines move.
+   Folded into round 15 it would have had to be written at 06 to add no churn -- a fold of fold 10's
+   size -- which is why it waits for its own round. Round 16 also carries whatever his review of
+   round 15 asks for, and **the release-notes question the reply asks** (added 2026-09-29, mfcarroll's idea): a short
    2.3 entry in the style of his 2.0, keeping what a user must know before a wipe (a wipe can brick
    gen3, on 0x6r1an0y's report; it can move a gen1 card's UID; one tag in the field at a time), with
    the rest in an `ISO15693.md` beside the changelog, kept current as fixes and gen3 land. **Not a
@@ -915,12 +924,6 @@ The older plan below is kept for its record; the order above supersedes it.
      **T3** no test sends a Fail event through the write scene's reason ladder, and the gen1 consent
      screen has none. **P1-P3 shipped in round 13; P4 was declined on diff cost** (the maintainer was
      told); **Y4 is moot.** The whole-PR review's comment simplification went into this round as 10.
-   - **S4**, from review 3 ([final-review-3.md](pr-round-15/final-review-3.md)): the survey's eleven
-     result fields are kept in four places -- the poller's state, its per-run reset, the result struct
-     and the copy into it -- and become one struct. **Left for after merge by mfcarroll's call,
-     2026-09-30.** No behaviour changes, but about 100 shipped lines in five files and 70 test lines
-     move, and inside this PR it would have to be written at 06, where the survey starts, to add no
-     churn: a fold of fold 10's size, then the full verification again.
    - **#255**'s gen3 pre-flight probe, now buildable against a real card (gen3-a).
    - **#251** (the reads and inventories), **#252/#253** (the other protocols' Back trap), and the
      firmware's standalone EOF ([firmware-gaps.md](firmware-gaps.md)), which would let the app collect

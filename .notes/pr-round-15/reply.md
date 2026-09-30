@@ -188,7 +188,12 @@ Three things are deliberately not in this PR, so they are not waiting on me:
 - **#255 stays open.** The gen3 pre-flight probe it asks for is not part of this work.
 - **The host-test harness** stays out, as its own PR, for the size reason I gave before.
 
-I think it is ready.
+Still to come in this PR, before merge:
 
-[👤] Or at least close. Claude may be slightly more confident than me. :)
+- **One more simplification**, found after the simplification pass: the clone's survey keeps its
+  eleven result fields in four places, and they become one struct. It changes no behaviour, but it
+  touches about a hundred lines across five files, so it comes as its own commit rather than inside
+  these.
+- **The release notes**, moved to the reference file described above, depending on your answer.
+- **The squash message**, as its own comment once you are ready to merge.
 ~~~~
