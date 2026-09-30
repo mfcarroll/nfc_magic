@@ -1,4 +1,4 @@
-# #255 — the corrected title and body, and a comment saying what changed (DRAFT, NOT POSTED)
+# #255 — the corrected title and body, and a comment saying what changed (POSTED 2026-09-30: title and body edited, comment [issuecomment-5907878298](https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5907878298))
 
 #255 is mfcarroll's issue, so it is corrected IN PLACE: the title and body are edited to the current
 state (a dated "Updated" note at the top says what changed), and a short comment says the same, because

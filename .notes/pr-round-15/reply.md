@@ -1,4 +1,4 @@
-# Round 15 — main reply (DRAFT, NOT POSTED)
+# Round 15 — main reply (POSTED 2026-09-30 as [issuecomment-5907884704](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5907884704))
 
 Post between the `~~~~` markers. **No internal process in the payload.** `[👤]` marks a paragraph
 written by mfcarroll; it is POSTED as-is, so mishamyte can see which words are his.

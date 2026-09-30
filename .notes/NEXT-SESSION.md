@@ -1,4 +1,4 @@
-# Next session — ROUND 15 IS REPLAYED AND SIGNED WITH FOLD 11, NOT PUSHED. The push and the posts wait on his go-ahead (below).
+# Next session — ROUND 15 IS PUSHED AND POSTED, 2026-09-30. Round 16, S4, comes next, before merge (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -20,7 +20,23 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## NEXT: THE PUSH AND THE POSTS — each on mfcarroll's go-ahead
+## DONE: ROUND 15 IS PUSHED AND POSTED — 2026-09-30, on mfcarroll's go-ahead
+
+- **Pushed** `1d411dec..c8eeaade` to `mfcarroll:nfc-magic-iso15693`, a fast-forward of 13 signed
+  commits; origin fetched first and still at `1d411dec`; the PR head read back as `c8eeaade`. CI on
+  the PR passes (`category`, `pack`).
+- **#255** title and body edited to the drafts in
+  [pr-round-15/issue255-comment.md](pr-round-15/issue255-comment.md) -- the live body was the
+  2026-09-11 original, untouched since -- and its comment posted as
+  [issuecomment-5907878298](https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5907878298).
+- **The #250 reply** posted as [issuecomment-5907884704](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5907884704).
+- Each post was read back from the API and is byte-identical to its draft.
+
+## NEXT: ROUND 16 AND WHAT FOLLOWS — each on mfcarroll's go-ahead
+
+Waiting on the maintainer's answer to round 15 -- the reply's closing list tells him S4, the
+release-notes move (his call) and the squash message are still to come.
+
 
 **The real replay is done**, 2026-09-30: the fork's `nfc-magic-iso15693` is at `c8eeaade`, 13 commits
 on `1d411dec`, 13 of 13 signed and verifying, each commit's tree and message identical to the test
@@ -30,12 +46,10 @@ build, never pushed, kept as `backup-pre-fold11-replay`. The FAP on the device i
 byte-identical; the lost-card bench's fixture, `tools/test_nfc/iso15693_lift_256.nfc`, is at
 `/ext/nfc/`, also read back.
 
-1. **The PR push**, a fast-forward of 13 on `1d411dec`: `git -C ../all-the-plugins push origin
-   nfc-magic-iso15693`. mfcarroll, 2026-09-29: "Don't push the PR yet."
-2. **The #255 title and body edit and comment**, before **the #250 reply**.
-3. **The dev force-push** of iso15693-dev, with a lease; and **the squash message** at merge.
-4. **Then round 16, before merge: S4** (below, under the path forward), which the reply tells him is
-   coming, with the release-notes move if he takes up the question.
+1. **The dev force-push** of iso15693-dev, with a lease.
+2. **Round 16, before merge: S4** (below, under the path forward), with whatever his review of round
+   15 asks for, and the release-notes move if he takes up the question.
+3. **The squash message** at merge, as its own comment.
 
 ## DONE: THE SECOND DELTA REVIEW, FOLDED IN AS FOLD 11
 
@@ -891,8 +905,8 @@ The older plan below is kept for its record; the order above supersedes it.
 
 ### AFTER THIS ROUND -- the path forward, as of 2026-09-29
 
-1. **Now:** push round 15, then the #255 title and body edit and its comment, then the reply on #250,
-   which points at #255.
+1. ~~**Now:** push round 15, then the #255 title and body edit and its comment, then the reply on
+   #250, which points at #255.~~ **DONE 2026-09-30**, in that order (above).
 2. **Round 16, before merge**, carrying **S4**: the survey's eleven result fields are kept in four
    places -- the poller's state, its per-run reset, the result struct and the copy into it -- and
    become one struct ([final-review-3.md](pr-round-15/final-review-3.md)). mfcarroll's call,
