@@ -1,4 +1,4 @@
-# Next session — ROUND 15 IS PUSHED AND POSTED, 2026-09-30. Round 16, S4, comes next, before merge (below).
+# Next session — ROUND 15 IS PUSHED AND POSTED. ROUND 16 (S4) IS PREPARED, NOT PUSHED, and ISO15693.md is drafted (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -32,12 +32,6 @@ under `reset_2026_09_26` in `tools/tag-inventory.json`.
 - **The #250 reply** posted as [issuecomment-5907884704](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-5907884704).
 - Each post was read back from the API and is byte-identical to its draft.
 
-## NEXT: ROUND 16 AND WHAT FOLLOWS — each on mfcarroll's go-ahead
-
-Waiting on the maintainer's answer to round 15 -- the reply's closing list tells him S4, the
-release-notes move (his call) and the squash message are still to come.
-
-
 **The real replay is done**, 2026-09-30: the fork's `nfc-magic-iso15693` is at `c8eeaade`, 13 commits
 on `1d411dec`, 13 of 13 signed and verifying, each commit's tree and message identical to the test
 replay's. `origin` was fetched first and still held `1d411dec`. It replaced `bd807e5b`, fold 10's
@@ -46,10 +40,37 @@ build, never pushed, kept as `backup-pre-fold11-replay`. The FAP on the device i
 byte-identical; the lost-card bench's fixture, `tools/test_nfc/iso15693_lift_256.nfc`, is at
 `/ext/nfc/`, also read back.
 
-1. **The dev force-push** of iso15693-dev, with a lease.
-2. **Round 16, before merge: S4** (below, under the path forward), with whatever his review of round
-   15 asks for, and the release-notes move if he takes up the question.
-3. **The squash message** at merge, as its own comment.
+## NEXT: ROUND 16 IS PREPARED, AND WAITS FOR HIS ANSWER TO ROUND 15 — each step on mfcarroll's go-ahead
+
+**Round 16's S4 is prepared, not replayed signed or pushed** (2026-09-30, mfcarroll's call): `571e41f`,
+the survey's eleven result fields as one struct, `Iso15693PollerSurvey`
+([pr-round-16/fork-messages/](pr-round-16/fork-messages/README.md)). Verified: 207 host tests; the
+per-commit check clean (markers, tests, 71 units under -Werror); clang-format clean on the five shipped
+files; FAPs clean on Momentum and Unleashed, 52 bytes smaller; a test replay onto a clone pinned at
+`c8eeaade`, one commit, its tree equal to a full sync of the anchor, a fast-forward; the writing gate 0
+on the message and the anchor. It changes no behaviour, so no bench.
+
+**Also ready, each waiting on his answer or on mfcarroll's go-ahead:**
+
+- **`ISO15693.md`**, drafted at [pr-round-16/ISO15693.md](pr-round-16/ISO15693.md) for the
+  reference-file approach the reply offered; the writing gate and the drafts check find nothing in it.
+  If he takes it: move it beside `CHANGELOG.md`; add it to `sync-to-fork.sh`, the replay's `SRC_PATHS`
+  and the writing gate; cut the 2.3 entry to a short one and reword it (mfcarroll, 2026-09-30: keep the
+  changelog as it is until then); and add the squash message's line for it. Its own sync point.
+- **A correction to #255's body**, found while drafting the doc:
+  [pr-round-16/issue255-body-fix.md](pr-round-16/issue255-body-fix.md). The body posted today still
+  says a gen3 card's owner sees only the generic "Wipe card?" confirm, false since 2026-09-08: the
+  confirm is "Wipe? (gen1/gen2 only)" and ends "This can brick a gen3 card!". An edit, on go-ahead.
+- **The squash message**, re-read against round 16's tree: unchanged, with the line to add if
+  ISO15693.md goes in.
+
+**Then:** round 16's signed replay and push, a short reply, and the squash message at merge.
+
+**The dev push is done**, 2026-09-30: `4b848b7a..13120668`, a fast-forward. The rewrite had already
+reached the remote at 01:34 that morning, in a push from this machine that was not this session's.
+
+**The twin-repo setup** -- dev history replayed into the fork -- is mfcarroll's to revisit after the
+merge.
 
 ## DONE: THE SECOND DELTA REVIEW, FOLDED IN AS FOLD 11
 
@@ -913,8 +934,9 @@ The older plan below is kept for its record; the order above supersedes it.
    2026-09-30: in this PR, as its own commit after round 15's push, and the reply's closing list says
    it is coming. No behaviour changes; about 100 shipped lines in five files and 70 test lines move.
    Folded into round 15 it would have had to be written at 06 to add no churn -- a fold of fold 10's
-   size -- which is why it waits for its own round. Round 16 also carries whatever his review of
-   round 15 asks for, and **the release-notes question the reply asks** (added 2026-09-29, mfcarroll's idea): a short
+   size -- which is why it waits for its own round. **Prepared 2026-09-30 as `571e41f`** (above).
+   Round 16 also carries whatever his review of round 15 asks for, and **the release-notes question
+   the reply asks** (added 2026-09-29, mfcarroll's idea): a short
    2.3 entry in the style of his 2.0, keeping what a user must know before a wipe (a wipe can brick
    gen3, on 0x6r1an0y's report; it can move a gen1 card's UID; one tag in the field at a time), with
    the rest in an `ISO15693.md` beside the changelog, kept current as fixes and gen3 land. **Not a
