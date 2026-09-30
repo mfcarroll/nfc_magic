@@ -32,11 +32,14 @@ the card has just left -- it would make every later block look like memory
 written above a failure. Nor is it one of the blocks the progress figure counts:
 the conversion takes all four out of the total, so the write comes off the count
 as well, or a pass the clock cut above them would read one past its own total. A
-failure the pass recorded at one of the four before the UID moved is taken back
-from the count it went into: a register answers no read, so an empty one was
-counted as past the card's capacity, not as a failure. What that failure implied
-goes with it: a block written above it no longer counts as memory written above
-a failure, which alone would deny a real capacity edge further up.
+run that converts at 57 has counted 56 too, and that comes off when the pass
+ends: the figure already shown includes it, and taking it back sooner would send
+the next one backwards. A failure the pass recorded at one of the four before
+the UID moved is taken back from the count it went into: a register answers no
+read, so an empty one was counted as past the card's capacity, not as a failure.
+What that failure implied goes with it: a block written above it no longer
+counts as memory written above a failure, which alone would deny a real capacity
+edge further up.
 
 AND THE UID IS READ BACK BEFORE ANYTHING IS REPORTED. Whether the run noticed
 the move rests on an inventory that can miss, or be answered by a second tag in
@@ -47,10 +50,14 @@ like the other UID verifies. The target reports the run as it stands, any other
 UID is printed as unexpected, and no answer is a lost card, whose Details says
 the UID was not re-checked, as a wipe's does. So does a card lost mid-pass once
 the pass has sent 56/57 a frame: the re-read was due there too, and the pass
-learns the card has gone only at its end. On a gen2 card those blocks are
-memory, and the check costs a power-cycle and the activation after it. The
-popup's last progress frame comes after the check, so it does not read 100%
-while the card is still being asked something.
+learns the card has gone only at its end. A lost card's Details, a wipe's
+included, carries nothing the lift caused: not the time-limit note, since a
+lifted card makes every later block time out and on a long file the clock cuts
+the pass before the loss is found, and not the AFI/DSFID one, since a card
+lifted before the identity read-back fails it. On a gen2 card 56/57 are memory,
+and the check costs a power-cycle and the activation after it. The popup's last
+progress frame comes after the check, so it does not read 100% while the card is
+still being asked something.
 
 NOT BY SKIPPING those blocks whenever the UID already matches, which is the
 shorter fix and is wrong: on a real gen2 card re-cloned from a DIFFERENT image

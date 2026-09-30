@@ -51,12 +51,12 @@ did not come from these frames, most likely a second tag answering the 1-slot
 inventory, and it keeps the gen1-failed screen, which names the four blocks the
 user's consent has just cost.
 
-It is not new machinery. iso15693_poller_predict_uid and
+The re-address is not new machinery. iso15693_poller_predict_uid and
 iso15693_poller_readdress are the sweep's, and the prediction is the check: the
 only UID accepted as the new address is the one this write implies. A card
 answering anything else keeps the old address and the sequence carries on --
 which on a card that is not gen1 is the ordinary case, since there the UID never
-moves.
+moves. The verify's two UIDs are predicted the same way.
 
 UNLOCK AND COMMIT ARE ADDRESSED TOO, and their addressed behaviour cannot be
 validated. No gen1 card here has ever accepted either frame, in any form,

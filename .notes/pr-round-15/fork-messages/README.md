@@ -64,21 +64,37 @@ of everything that changed since the pushed build ([delta-review.md](../delta-re
 Each fix has a host test that fails without it. Before `6038831`, which introduced `begin_note`, the
 new note opens with a plain newline like every note there, and goes over to `begin_note` with them.
 
+**AND THE SECOND DELTA REVIEW'S FOLD** (fold 11, 2026-09-30), mfcarroll's calls on the fresh-session
+review of fold 10 ([delta-review-2.md](../delta-review-2.md)):
+
+- a lost card's Details, wipe or clone, carries neither the time-limit note nor the AFI/DSFID one:
+  a lifted card makes every later block time out, so on a long file the clock cuts the pass before
+  the loss is found, and a card lifted before the identity read-back fails it (05);
+- a clone that converts at 57 takes 56 off the progress figure too, once the pass ends, since the
+  figure already shown counts it (05);
+- two more comments name the reported block count and IC reference rather than "geometry" (06);
+- the release notes say "UID not re-checked" in the lifted-card bullet, where every clone that earns
+  the note can find it, rather than under gen1 alone (09);
+- 07's message says it is the re-address that is not new machinery.
+
+Each code fix has a host test that fails without it, and the in-loop take-back the review warned
+against is caught by one that checks the progress figure never goes backwards.
+
 | # | sync at | one decision |
 |---|---|---|
 | 01 | `d09f499` | data-block writes carry the card's address |
 | 02 | `4a3e382` | the OPTION flag, and the read-back it costs |
 | 03 | `e7663ff` | the gen1 loss claim is gated on there being a loss |
 | 04 | `53faffb` | the identity writes are addressed and take the flag |
-| 05 | `2a8de82` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `d44fe7b` | what a clone leaves behind, and what it says about it |
-| 07 | `15733bf` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `764ce9f` | a SLIX save from the stock NFC app is a clone source |
-| 09 | `7a74e86` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 10 | `d0510a7` | comments from earlier rounds that said something false |
-| 11 | `0b8e7ef` | comments from earlier rounds that told their history |
-| 12 | `ade66cd` | the failure bitmap checks the index it is given |
-| 13 | `eced38d` | the write-fail reason switches name every reason |
+| 05 | `13c937c` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `670527d` | what a clone leaves behind, and what it says about it |
+| 07 | `1fb3378` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `3be9d8a` | a SLIX save from the stock NFC app is a clone source |
+| 09 | `3c34e0c` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 10 | `bdc4bdd` | comments from earlier rounds that said something false |
+| 11 | `211f525` | comments from earlier rounds that told their history |
+| 12 | `7b7d487` | the failure bitmap checks the index it is given |
+| 13 | `133656f` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round

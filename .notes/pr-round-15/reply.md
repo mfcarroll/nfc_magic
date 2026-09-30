@@ -142,13 +142,14 @@ more gen1 cards:
 - a **64-block file cloned through gen1 onto a 28-block SLIX**, once with nothing at 56/57/62/63,
   which finishes with its notes, and once with data at 62/63, which is Partial
 - a **file of 8-byte blocks onto a gen2 card and a gen1 SLIX**: the gen2 card took the geometry and
-  then refused every write, the SLIX refused them outright, so the geometry note compares the block
-  count alone
+  then refused every write, the SLIX refused them outright, so the note on what the card reports
+  compares its block count, not its block size
 - a **SLIX save from the stock NFC app**, which this app refused before: cloned back onto its own tag,
   a plain success that proxmark reads back matching the save, and onto a gen2 card, the notes that
   card earns
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, for the
-  residue, and a **40-block SLIX-S** for the geometry
+  residue, and a **40-block SLIX-S** for the block count and IC reference a gen1 card goes on
+  reporting
 - **a gen1 Write UID on each of the three gen1 chips**, to a target differing from each card's own UID
   in BOTH halves, so half a UID could not pass as a whole one
 - **the address filter on each of the seven**, read back rather than inferred: a write aimed a byte
