@@ -1,4 +1,4 @@
-# #255 — the corrected title and body, and a comment saying what changed (POSTED 2026-09-30: title and body edited, comment [issuecomment-5907878298](https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5907878298))
+# #255 — the corrected title and body, and a comment saying what changed (POSTED 2026-09-30: title and body edited, one sentence corrected at 09:34 UTC, comment [issuecomment-5907878298](https://github.com/xMasterX/all-the-plugins/issues/255#issuecomment-5907878298))
 
 #255 is mfcarroll's issue, so it is corrected IN PLACE: the title and body are edited to the current
 state (a dated "Updated" note at the top says what changed), and a short comment says the same, because
@@ -60,9 +60,10 @@ mean a third generation in the opt-in ladder. This is only about not destroying 
 ### Where this comes from
 
 Raised during review of #250 (ISO15693 / NfcV support). That PR declares gen3 unsupported in its
-CHANGELOG, including that a wipe overwrites those blocks — which warns someone who reads release notes,
-but not someone who picks Wipe with a gen3 card on the reader. They see only the generic "Wipe card?"
-confirm.
+CHANGELOG, including that a wipe overwrites those blocks, and the wipe's confirm screen carries the
+same warning: "Wipe? (gen1/gen2 only)", over "This can brick a gen3 card!". A warning is all it can
+be, though. The wipe performs no magic detection, so the screen reads the same whatever card is on
+the reader and cannot say whether this one is gen3.
 
 The wipe's post-power-cycle UID re-check does surface `uid_changed` afterwards, so the identity half is
 *reported* — but incidentally, exactly as it would be for any card whose UID shifts. Nothing speaks for

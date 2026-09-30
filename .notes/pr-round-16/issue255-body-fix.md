@@ -1,4 +1,4 @@
-# #255 — a correction to the body posted 2026-09-30 (DRAFT, NOT POSTED)
+# #255 — a correction to the body posted 2026-09-30 (POSTED: body edited 2026-09-30 09:34 UTC)
 
 Found while writing the ISO15693.md draft, after #255's title and body were edited and its comment
 posted. The body's "Where this comes from" paragraph says a gen3 card's owner sees "only the generic
