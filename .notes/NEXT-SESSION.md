@@ -1,4 +1,4 @@
-# Next session — ROUND 15 IS FOLDED WITH THE SECOND DELTA REVIEW (FOLD 11) AND TEST-REPLAYED, NOT PUSHED. The signed replay, then the push, each on his go-ahead (below).
+# Next session — ROUND 15 IS REPLAYED AND SIGNED WITH FOLD 11, NOT PUSHED. The push and the posts wait on his go-ahead (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -20,15 +20,20 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## NEXT: THE SIGNED REPLAY, THEN THE PUSH AND THE POSTS — each on mfcarroll's go-ahead
+## NEXT: THE PUSH AND THE POSTS — each on mfcarroll's go-ahead
 
-1. **The real replay** (1Password). Back up the fork's `nfc-magic-iso15693` -- `bd807e5b`, fold 10's
-   build, never pushed -- as `backup-pre-fold11-replay`, run `tools/replay-to-fork.sh
-   .notes/pr-round-15/fork-messages`, and check that each commit's tree is the test replay's.
-2. **The PR push**, a fast-forward of 13 on `1d411dec`: `git -C ../all-the-plugins push origin
+**The real replay is done**, 2026-09-30: the fork's `nfc-magic-iso15693` is at `c8eeaade`, 13 commits
+on `1d411dec`, 13 of 13 signed and verifying, each commit's tree and message identical to the test
+replay's. `origin` was fetched first and still held `1d411dec`. It replaced `bd807e5b`, fold 10's
+build, never pushed, kept as `backup-pre-fold11-replay`. The FAP on the device is this build,
+`/ext/apps/NFC/nfc_magic_dev.fap`, md5 `cd1ce4678e55bb68f3f88ad6a211d077`, read back and
+byte-identical; the lost-card bench's fixture, `tools/test_nfc/iso15693_lift_256.nfc`, is at
+`/ext/nfc/`, also read back.
+
+1. **The PR push**, a fast-forward of 13 on `1d411dec`: `git -C ../all-the-plugins push origin
    nfc-magic-iso15693`. mfcarroll, 2026-09-29: "Don't push the PR yet."
-3. **The #255 title and body edit and comment**, before **the #250 reply**.
-4. **The dev force-push** of iso15693-dev, with a lease; and **the squash message** at merge.
+2. **The #255 title and body edit and comment**, before **the #250 reply**.
+3. **The dev force-push** of iso15693-dev, with a lease; and **the squash message** at merge.
 
 ## DONE: THE SECOND DELTA REVIEW, FOLDED IN AS FOLD 11
 
