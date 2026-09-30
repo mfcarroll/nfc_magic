@@ -42,10 +42,14 @@ one asked for. The unaddressed form had no such seam.
 
 AND IF THE RE-ADDRESS MISSES, THE VERIFY SAYS WHERE THE CARD WENT. An inventory
 that misses, or that a second tag in the field answers, leaves the address where
-it was, and 57 then goes to a card that has left it: half a UID after all. The
-gen1 verify took any UID but the target as "not a gen1 card". A UID that moved,
-just not to the target, is now reported the way the gen2 verify reports one --
-the card is gen1, and the UID it answers to is the only way to find it again.
+it was, and 57 then goes to a card that has left it: half a UID after all. A 56
+frame lost outright leaves the other half. The gen1 verify took any UID but the
+target as "not a gen1 card". One of the two UIDs a half can leave is now
+reported the way the gen2 verify reports one: the card is gen1, and the UID it
+answers to is the only way to find it again. Only those two. Any other answer
+did not come from these frames, most likely a second tag answering the 1-slot
+inventory, and it keeps the gen1-failed screen, which names the four blocks the
+user's consent has just cost.
 
 It is not new machinery. iso15693_poller_predict_uid and
 iso15693_poller_readdress are the sweep's, and the prediction is the check: the
@@ -79,9 +83,11 @@ asked for the OPTION flag, and the result stays discarded -- the 62/63 refusals
 are expected and the UID moves regardless, so acting on them would abort a run
 that worked.
 
-ONE HEADER NOTE THIS MAKES FALSE. The all-zeros UID note said the card stayed
+HEADER NOTES THIS MAKES FALSE. The all-zeros UID note said the card stayed
 reachable because gen1's frames carry no UID. They carry it now; the card stayed
-reachable because it still answered inventory, and the note says that.
+reachable because it still answered inventory, and the note says that. And the
+unexpected-UID notes, at the result field, at the Fail event and at the reason,
+listed the routes to that report without this one; they list it now.
 
 == THE WIPE HAZARD IS NOT LIMITED TO A CARD SOMEONE ARMED ==
 

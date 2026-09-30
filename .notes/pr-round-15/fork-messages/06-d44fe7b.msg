@@ -24,8 +24,8 @@ clone onto a wiped card or says nothing about the case above:
   - a card ANSWERING READS above the count it now reports -- about its size,
     true whether or not anything is left up there, and the same phantom tail the
     wipe's sweep exists for.
-  - a card still reporting a GEOMETRY OR IC REF the source did not -- about how
-    the copy presents. Claims on both sides, because a reader shows claims.
+  - a card still reporting a BLOCK COUNT OR IC REF the source did not -- about
+    how the copy presents. Claims on both sides, because a reader shows claims.
 
 THE ADVERTISED COUNT CANNOT BE THE TEST, before or after: on a magic card it is
 whatever was last programmed. So the survey READS upward from the source count

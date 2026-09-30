@@ -42,12 +42,12 @@ Every user-facing change in the round, written once, at the end.
 
 WHAT IS NEW in the notes: every write that can carry the card's address now
 does; a card that needs the OPTION flag gets it; a clone onto a gen1 card keeps
-the card's identity whichever path it took, and reads it back before reporting;
-a clone says what it left behind; a gen1 clone that lost no data at 56/57/62/63
-is not Partial on that account, and one whose file reached them with nothing
-there finishes with a note; a SLIX save from the stock NFC app is a clone
-source; and the addressed-write validation, seven cards over four identified
-chips.
+the card's identity whichever path it took, and reads it back before reporting,
+or says under Details that a lifted card left it unread; a clone says what it
+left behind; a gen1 clone that lost no data at 56/57/62/63 is not Partial on
+that account, and one whose file reached them with nothing there finishes with a
+note; a SLIX save from the stock NFC app is a clone source; and the
+addressed-write validation, seven cards over four identified chips.
 
 WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same chip
 without qualification, when only a gen2 card is programmed with the source's IC
@@ -70,7 +70,7 @@ its pointer into the source, which a user cannot follow; the progress line names
 "Wiping" for a wipe; and the bullet saying every write reaches every tag in the
 field becomes the gen2 limit plus its own bullet for keeping one tag in the
 field, since every other write is now addressed and what remains is the reads
-and the inventories.
+and the inventories, the UID re-reads after a wipe and after a clone among them.
 
 ONLY THIS COMMIT TOUCHES THE RELEASE NOTES. Each note describes the end state,
 so it belongs to the last commit that changes the behaviour it describes, and no

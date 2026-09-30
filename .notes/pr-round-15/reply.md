@@ -77,9 +77,10 @@ upgrade, even if that means we aren't able to get the write acknowledgments back
   UID passes the gen2 verify, and the data pass then wrote the file into its UID registers. The write
   that moves the UID identifies the card, so the run converts, puts the UID back, and reads it back
   before reporting: a lost repair frame, or a re-address that missed, shows as the UID the card answers
-  to rather than as a clone.
+  to rather than as a clone, and a card lifted before the read-back says under Details that its UID
+  was not re-checked.
 - **06 — what a clone leaves behind, and what it says about it**: notes for data still above the file,
-  a card answering reads past the count it reports, and a geometry or IC reference it goes on
+  a card answering reads past the count it reports, and a block count or IC reference it goes on
   reporting. None makes the clone Partial.
 
   Two tags here defeat the survey's premise that a block which answers a read exists: both answer at
@@ -94,7 +95,9 @@ custom writer software, so it may be a proprietary variant. Not worth worrying a
 - **07 — the gen1 registers, addressed**, and the wipe hazard scoped to every gen1 card the sweep
   reaches rather than to an armed one. At block 62 addressing is what makes the NXP parts answer at
   all. Unlock and commit are addressed on the safety argument alone: no gen1 card here has accepted
-  either, in any form, and the cards that would show them necessary are ones I have never had.
+  either, in any form, and the cards that would show them necessary are ones I have never had. A run
+  that leaves half a UID reports the UID the card answers to, but only as one of the two a half can
+  leave, so a second tag answering the inventory keeps the screen that names the four blocks spent.
 - **08 — a SLIX save from the stock NFC app is a clone source.** The stock app saves NXP ICODE tags
   as SLIX, and file select took only plain ISO15693-3 dumps, so an ordinary save was refused as the
   wrong card. It now takes any protocol built on ISO15693-3; the clone already reads the ISO15693-3
@@ -116,9 +119,10 @@ The OPTION flag is what makes a TI Tag-it writable, and it is separable from eve
 The addressing is the safety fix #251 was filed as. I have kept both, for the range: a bystander does
 not have to be touching the antenna on ISO15693 — a wallet or a badge holder is enough.
 
-**It does not close #251.** The 1-slot inventory and the missing STAY QUIET are untouched, and the
-post-wipe UID re-read can still be answered by a bystander; that check exists to find out whether the
-UID changed, so it cannot be aimed at a UID already in doubt.
+**It does not close #251.** The 1-slot inventory and the missing STAY QUIET are untouched, and the UID
+re-reads, after a wipe and now after a clone that reached blocks 56/57, can still be answered by a
+bystander; they exist to find out whether the UID changed, so they cannot be aimed at a UID already
+in doubt.
 
 ## The bench
 
@@ -158,7 +162,7 @@ That closes the list at the end of my reply to your round 9: the cut, the simpli
 release-notes trim, the addressed writes and the re-test on hardware are all in, which was the
 condition I put on the squash message, since it has to describe the final state.
 
-**A question about the release notes.** The 2.3 entry is now 162 lines, about half the file, and
+**A question about the release notes.** The 2.3 entry is now 163 lines, about half the file, and
 most of it describes how the ISO15693 support behaves and what it was tested on, rather than what
 changed. As fixes and gen3 support land, later entries would have to correct it. Would you rather
 have a short 2.3 entry in the style of 2.0, keeping the limits a user needs before a wipe, with the

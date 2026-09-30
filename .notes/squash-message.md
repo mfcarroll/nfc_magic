@@ -98,15 +98,16 @@ matches and nothing more; re-cloning the same file is how a card comes to be in
 that state. The write that moves the UID is also what identifies the card, so
 the run converts to a gen1 clone from that point, puts the intended UID back,
 and reads it back before reporting: a repair frame that did not land shows as
-the UID the card answers to.
+the UID the card answers to, and a card lifted first says under Details that
+its UID was not re-checked.
 
 A CLONE ALSO REPORTS WHAT IT LEFT BEHIND. It writes the file's blocks and
 nothing else, so on a larger card everything above keeps the previous
 contents -- and a gen2 clone reprograms the advertised count down to the file's,
 so an ordinary dump shows a clean copy over data that is still readable. The
 clone reads above the file's last block and reports data left up there, a card
-answering past the count it reports, and a geometry or IC reference the file did
-not ask for; and a gen1 clone whose file reached 56/57/62/63 with nothing there
+answering past the count it reports, and a block count or IC reference the file
+did not ask for; and a gen1 clone whose file reached 56/57/62/63 with nothing there
 is noted as carrying registers where the file had blocks. None is a failure;
 they are notes on a success.
 
@@ -128,11 +129,12 @@ KNOWN LIMITS, in the order they matter:
   afterwards and reports a move; it cannot report the absence of one, and a wipe
   that clears nothing does not run the check at all. Tracked in #255.
 - #251 is NOT closed. The inventory is still the SDK's 1-slot INVENTORY_T5 with
-  no STAY QUIET, so a second tag can answer it -- including the post-wipe UID
-  re-read, which addressing cannot fix by construction, since that read exists
-  to discover whether the UID changed. And the gen2 backdoor cannot be
-  addressed at all: four gen2 cards take it only unaddressed, so another gen2
-  magic card in the field takes those frames too.
+  no STAY QUIET, so a second tag can answer it -- including the UID re-reads
+  after a wipe and after a clone that reached blocks 56/57, which addressing
+  cannot fix by construction, since those reads exist to discover whether the
+  UID changed. And the gen2 backdoor cannot be addressed at all: four gen2
+  cards take it only unaddressed, so another gen2 magic card in the field takes
+  those frames too.
 - A source much larger than the target can lose its "Card too small" verdict to
   the pass clock, since that pass is dominated by failing blocks and a
   genuinely-too-small card presents one long run of them. Left as under-claiming

@@ -29,9 +29,14 @@ to memory. Counted as a success it would stop a card smaller than the file being
 reported too small, since a register answers whatever the card's size. Counted
 as a failure -- its acknowledgement lost, and its retries sent to the address
 the card has just left -- it would make every later block look like memory
-written above a failure. A failure the pass recorded at one of the four before
-the UID moved is taken back from the count it went into: a register answers no
-read, so an empty one was counted as past the card's capacity, not as a failure.
+written above a failure. Nor is it one of the blocks the progress figure counts:
+the conversion takes all four out of the total, so the write comes off the count
+as well, or a pass the clock cut above them would read one past its own total. A
+failure the pass recorded at one of the four before the UID moved is taken back
+from the count it went into: a register answers no read, so an empty one was
+counted as past the card's capacity, not as a failure. What that failure implied
+goes with it: a block written above it no longer counts as memory written above
+a failure, which alone would deny a real capacity edge further up.
 
 AND THE UID IS READ BACK BEFORE ANYTHING IS REPORTED. Whether the run noticed
 the move rests on an inventory that can miss, or be answered by a second tag in
@@ -39,10 +44,13 @@ the field, and the repair's frames each go out once, so one lost frame leaves
 the card answering to the file's bytes after all. So a gen2-path clone that sent
 a frame to 56/57 ends in a verify state of its own, behind a field power-cycle
 like the other UID verifies. The target reports the run as it stands, any other
-UID is printed as unexpected, and no answer is a lost card. On a gen2 card those
-blocks are memory, and the check costs a power-cycle and the activation after
-it. The popup's last progress frame comes after the check, so it does not read
-100% while the card is still being asked something.
+UID is printed as unexpected, and no answer is a lost card, whose Details says
+the UID was not re-checked, as a wipe's does. So does a card lost mid-pass once
+the pass has sent 56/57 a frame: the re-read was due there too, and the pass
+learns the card has gone only at its end. On a gen2 card those blocks are
+memory, and the check costs a power-cycle and the activation after it. The
+popup's last progress frame comes after the check, so it does not read 100%
+while the card is still being asked something.
 
 NOT BY SKIPPING those blocks whenever the UID already matches, which is the
 shorter fix and is wrong: on a real gen2 card re-cloned from a DIFFERENT image
@@ -75,8 +83,11 @@ backdoor list, and this adds a fourth. The note on that list counted the places
 that ask it, and this adds one, so it names them without a count. The
 mark/unmark note called every clear the else-arm of a two-way decision, and the
 repair's clear is not. The note on the reporting state counted the fields
-get_result leaves out, and this adds two, so each says so where it is declared.
-And the write-state switch's note named the worst of four states to land in by
-accident; there are five.
+get_result leaves out, and this adds one, so it says so where it is declared.
+The write-fail scene said a clone has no identity check to skip, and it has one
+now. The unexpected-UID notes -- at the result field, at the Fail event and at
+the reason -- named the gen2 backdoor as the only route there, and they name the
+re-read too. And the write-state switch's note named the worst of four states to
+land in by accident; there are five.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

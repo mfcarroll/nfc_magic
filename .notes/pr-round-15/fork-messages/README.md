@@ -46,27 +46,45 @@ sitting directly on 07's anchor, now carries the one-condition change and its ho
 release-notes sentence went in with the other release notes, at 09. 07's message no longer says the
 release notes are "in the next commit". The old 08-12 are 09-13.
 
+**AND THE DELTA REVIEW'S FOLD** (fold 10, 2026-09-29), mfcarroll's calls on the fresh-session review
+of everything that changed since the pushed build ([delta-review.md](../delta-review.md)):
+
+- a clone lost after its pass sent 56/57 a frame -- mid-pass or at the UID re-read -- gets Details
+  with a "UID not re-checked" note, as a card-lost wipe does, through a new result field,
+  `uid_recheck` (05);
+- the progress figure drops the register write that converted a run, and a success no longer counts
+  as memory above a failure the conversion takes back (05);
+- the unexpected-UID notes name every route there: the clone's re-read (05) and a half-written gen1
+  UID (07);
+- the gen1 verify reports a half-written UID only as one of the two a half can leave, so a second tag
+  answering the inventory keeps the gen1-failed screen and its warning (07);
+- "geometry" becomes "block count" where only the count is compared (06);
+- the release notes' one-tag bullet names the clone's re-read, and the clone bullet the new note (09).
+
+Each fix has a host test that fails without it. Before `6038831`, which introduced `begin_note`, the
+new note opens with a plain newline like every note there, and goes over to `begin_note` with them.
+
 | # | sync at | one decision |
 |---|---|---|
 | 01 | `d09f499` | data-block writes carry the card's address |
 | 02 | `4a3e382` | the OPTION flag, and the read-back it costs |
 | 03 | `e7663ff` | the gen1 loss claim is gated on there being a loss |
 | 04 | `53faffb` | the identity writes are addressed and take the flag |
-| 05 | `efa16d7` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `fb9c2fd` | what a clone leaves behind, and what it says about it |
-| 07 | `22b7101` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `62dc264` | a SLIX save from the stock NFC app is a clone source |
-| 09 | `9bf1e3e` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 10 | `376d67d` | comments from earlier rounds that said something false |
-| 11 | `c7826ed` | comments from earlier rounds that told their history |
-| 12 | `712bd06` | the failure bitmap checks the index it is given |
-| 13 | `0412314` | the write-fail reason switches name every reason |
+| 05 | `2a8de82` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `d44fe7b` | what a clone leaves behind, and what it says about it |
+| 07 | `15733bf` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `764ce9f` | a SLIX save from the stock NFC app is a clone source |
+| 09 | `7a74e86` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 10 | `d0510a7` | comments from earlier rounds that said something false |
+| 11 | `0b8e7ef` | comments from earlier rounds that told their history |
+| 12 | `ade66cd` | the failure bitmap checks the index it is given |
+| 13 | `eced38d` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
 is stated at its widest from the commit that first cites it, a helper a later commit shares is
 defined where its first caller is, and no comment keeps a list of what other code does not yet do.
-Intra-push churn is 5 lines (it was 69); see the residual section below.
+Intra-push churn is 6 lines (it was 69); see the residual section below.
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 09, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
@@ -154,9 +172,9 @@ won**, on the same grounds as 02: a sync point must not show him an error we the
 **07 collapses seven**, for the reason in its own section above.
 
 
-## Residual churn — five lines, each a later commit needing what an earlier one lacked
+## Residual churn — six lines, each a later commit needing what an earlier one lacked
 
-Measured by multiset against the tip: every line a sync point adds that is gone at 13. **5 lines**:
+Measured by multiset against the tip: every line a sync point adds that is gone at 13. **6 lines**:
 
 - **01's frame builder call passes `ISO15693_POLLER_WRITE_FLAGS`; 02 passes
   `iso15693_poller_write_flags(instance)`.** The builder takes its flags byte from 01 so 02 changes
@@ -168,6 +186,10 @@ Measured by multiset against the tip: every line a sync point adds that is gone 
   named code that did not exist yet.
 - **10 puts the OPTION sentence into the per-block cost paragraph; 11 drops "bench" from the line
   it shares**, one of 11's history items. Two changes to one line, neither correcting the other.
+- **05's clone note on a lost card opens with a newline test; 06 turns it into `begin_note`**, with
+  every other note on the page, in the commit that introduces the helper. Written with the helper at
+  05 it would call a function that does not exist yet. (Fold 10's twin comments add whole lines at 05
+  and at 07 rather than rewriting each other's, so they cost none.)
 
 None is error-then-fix. **Check it rather than believing it** -- the measurement is a few lines of
 Python over `git diff -U0` between consecutive anchors, and `git log <round base>..<tip> --
