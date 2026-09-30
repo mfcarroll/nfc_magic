@@ -20,6 +20,59 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
+## IN FLIGHT — THE REVIEW-3 FOLD. Safety branch `wip-pre-review3-fold` = `333eb8c`
+
+[pr-round-15/final-review-3.md](pr-round-15/final-review-3.md) found two behaviour bugs, about ten
+false claims in shipped text, and a set of draft errors. **mfcarroll's calls, 2026-09-29: all of it
+goes in THIS round**, to get as close to merge as possible without needing another review.
+
+- **The gen1 Partial becomes a question about data** (the Decided section there). A gen1 clone whose
+  file reaches 56/57/62/63 with nothing there ends as "Clone finished" with a note, not Partial.
+  - 03 takes the gate, and at 03 that case gets the plain success screen.
+  - 06 adds the note. The Details line stays; the summary line needs its own entry.
+  - 08 updates the notes.
+- **A:** a verify STATE after a gen2-path pass that reached 56, entered by NfcCommandReset. That is
+  the file's own rule at poller.c:312, and not an inline inventory. A mismatch reports UidUnexpected;
+  no answer reports CardLost.
+- **B and D:** fix.
+- **E:** both halves. A presence check when the survey stops, and the 100% frame moved after the
+  survey.
+- **S5:** drop the size term ONLY if the bench shows no card reaches the note on size alone;
+  otherwise print the size.
+  - UNTESTED so far.
+  - Fixture: `tools/test_nfc/iso15693_blocksize8_28.nfc` (`5a348e6`).
+  - Runs: a gen1 SLIX through the opt-in, and gen-2-card, on the current build.
+- **Text and messages:** every Important and Suggestion fix that holds, all re-checked 2026-09-29.
+  poller.c:279 goes back to the maintainer's round-6 wording.
+- **Simplifications:**
+  - S2, S3 and S6-S10 fold where they belong.
+  - S11 and S12 become a new closing commit, **13**, for earlier-round code.
+  - S4 is left.
+- **Counts that would change twice** drop the count in favour of per-field notes, so there is no
+  churn: T6 "three exceptions", T8 "four callers".
+- **The reply is rewritten shorter** (R9): disposition, correction and finding, pointing at the
+  commit messages for the arguments. R1-R8 are fixed in it.
+- **#255:** edit its title and body to the current state, with a dated "Updated" note, and post a
+  short comment saying what changed, plus the gen3-a result. Both on go-ahead.
+- **Verification as usual:**
+  - host tests for every new branch, mutation-checked
+  - every sync point: markers, tests, 71 units
+  - FAP, clang-format, gates, churn
+  - an in-context read of the whole fold diff against `846a82eb`
+  - the test replay, then the real one
+  - mfcarroll's bench
+
+**Order:**
+1. Code at the tip, with its tests.
+2. Map each change to its owner, with the engine as in earlier folds.
+3. Fold.
+4. Verify.
+5. Messages.
+6. Replay.
+7. Drafts.
+8. Bench.
+9. Push, on go-ahead.
+
 ## ⚠️ SAFETY BRANCH FOR THE HARDENING AND J1 — `wip-pre-j1-fold` = `cd23a47`
 
 mfcarroll's call, 2026-09-29: "go ahead with 1-4, leave y3". The round-10 hardening moved INTO THIS
