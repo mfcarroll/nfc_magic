@@ -45,11 +45,15 @@ say what it now carries. The release-notes sentence is in 09, from `82f9a84`. 12
 blobs, 0 problems. 07's message no longer says the notes are "in the next commit"; 09's WHAT IS NEW
 names SLIX saves; README, reply and squash message renumbered and updated.
 
-**Next:** mfcarroll benches S1 (his stock-app SLIX save onto `slix-1k-50x28`) and optionally S2 --
-predictions in the bench file; the FAP must be rebuilt and installed first. Then 08's message gains
-its MEASURED line, the test replay, churn and gates, the real replay into the fork (back up
-`846a82eb`; signing needs 1Password), dev force-push, PR push, #255 edit + comment, the #250 reply --
-each on its own go-ahead.
+**Benched and replayed, 2026-09-29 night.** S1 and S2 passed (his stock-app SLIX save back onto its
+tag, proxmark readback matching; and onto gen-2-card); 08's message carries the S1 measurement. The FAP
+built clean on both firmwares and the device copy was verified. **The real replay is done: the fork's
+`nfc-magic-iso15693` is at `390a6621`, 13 commits on `1d411dec`, 13 of 13 signed, every tree identical
+to the test replay's**, the old build backed up as `backup-pre-review3-replay` = `846a82eb`.
+
+**Waiting on mfcarroll's go-ahead, each separately:** the PR push (a fast-forward), then the #255
+title/body edit and comment, then the #250 reply; the dev force-push of iso15693-dev; and at merge the
+squash message.
 
 **FUTURE WORK, recorded by mfcarroll's call:** "Cloned 28/60" for a 64-block file through gen1 should
 read against the file's count, "Cloned 28/64 / Not written: 36" -- his case: "I tried to write a 64

@@ -140,6 +140,9 @@ more gen1 cards:
 - a **file of 8-byte blocks onto a gen2 card and a gen1 SLIX**: the gen2 card took the geometry and
   then refused every write, the SLIX refused them outright, so the geometry note compares the block
   count alone
+- a **SLIX save from the stock NFC app**, which this app refused before: cloned back onto its own tag,
+  a plain success that proxmark reads back matching the save, and onto a gen2 card, the notes that
+  card earns
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, for the
   residue, and a **40-block SLIX-S** for the geometry
 - **a gen1 Write UID on each of the three gen1 chips**, to a target differing from each card's own UID
