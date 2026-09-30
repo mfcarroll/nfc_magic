@@ -88,9 +88,8 @@ upgrade, even if that means we aren't able to get the write acknowledgments back
   256-block one. Neither is a card this PR supports, so the wording is left alone rather than hedged
   for them.
 
-[👤] That tag appears similar to gen3, but doesn't match the configuration patterns expected by the
-gen3 code in proxmark. The seller told me there is no support for it in proxmark and it requires
-custom writer software, so it may be a proprietary variant. Not worth worrying about for this PR.
+[👤] One of those, a gold sticker, appears similar to gen3, but doesn't match the configuration
+patterns expected by the gen3 code in proxmark. The other is the gen3 card below.
 
 - **07 — the gen1 registers, addressed**, and the wipe hazard scoped to every gen1 card the sweep
   reaches rather than to an armed one. At block 62 addressing is what makes the NXP parts answer at
