@@ -50,8 +50,7 @@ the data-block space, at 56/57 with two more backdoor registers at 62/63,
 written with four ordinary WRITE BLOCKs -- which any writable tag accepts. So
 gen1 is destructive on a non-magic card and is offered only as an opt-in after
 the gen2 attempt leaves the UID unchanged. A gen1 clone skips those four
-addresses, and reports Partial only where the source actually had blocks that
-high.
+addresses, and reports Partial only where the source held data in them.
 
 THE WIPE SWEEPS PAST THE ADVERTISED BLOCK COUNT, because that count is
 programmable rather than physical. Measured on a gen2 card: seed all 64 blocks
@@ -97,15 +96,19 @@ A CLONE THAT LANDS IN A GEN1 CARD'S UID REPAIRS IT. The gen2 verify passes
 whenever the card already carries the UID being written, which proves the UID
 matches and nothing more; re-cloning the same file is how a card comes to be in
 that state. The write that moves the UID is also what identifies the card, so
-the run converts to a gen1 clone from that point and puts the intended UID back.
+the run converts to a gen1 clone from that point, puts the intended UID back,
+and reads it back before reporting: a repair frame that did not land shows as
+the UID the card answers to.
 
 A CLONE ALSO REPORTS WHAT IT LEFT BEHIND. It writes the file's blocks and
 nothing else, so on a larger card everything above keeps the previous
 contents -- and a gen2 clone reprograms the advertised count down to the file's,
 so an ordinary dump shows a clean copy over data that is still readable. The
 clone reads above the file's last block and reports data left up there, a card
-answering past the count it reports, and a geometry the file did not ask for.
-None is a failure; they are notes on a success.
+answering past the count it reports, and a geometry or IC reference the file did
+not ask for; and a gen1 clone whose file reached 56/57/62/63 with nothing there
+is noted as carrying registers where the file had blocks. None is a failure;
+they are notes on a success.
 
 KNOWN LIMITS, in the order they matter:
 
@@ -119,11 +122,11 @@ KNOWN LIMITS, in the order they matter:
   and accepting that writes 56/57/62/63 as ordinary data without moving its UID.
   The wipe confirm screen carries the warning; a pre-flight probe is #255.
 - A WIPE CAN MOVE A GEN1 CARD'S UID and cannot prevent it. Blocks 56/57 are the
-  UID registers, and all five gen1 cards measured took a write there with
-  nothing sent before it. A card's history cannot be known, so treat any gen1
-  card whose sweep reaches them as exposed. The wipe re-reads the UID afterwards
-  and reports a move; it cannot report the absence of one, and a wipe that
-  clears nothing does not run the check at all. Tracked in #255.
+  UID registers, and all five gen1 cards measured took a write there with no
+  unlock or commit sent before it. A card's history cannot be known, so treat
+  any gen1 card whose sweep reaches them as exposed. The wipe re-reads the UID
+  afterwards and reports a move; it cannot report the absence of one, and a wipe
+  that clears nothing does not run the check at all. Tracked in #255.
 - #251 is NOT closed. The inventory is still the SDK's 1-slot INVENTORY_T5 with
   no STAY QUIET, so a second tag can answer it -- including the post-wipe UID
   re-read, which addressing cannot fix by construction, since that read exists

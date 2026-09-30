@@ -20,7 +20,43 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## IN FLIGHT — THE REVIEW-3 FOLD. Safety branch `wip-pre-review3-fold` = `333eb8c`
+## IN FLIGHT — THE REVIEW-3 FOLD IS ADOPTED; WAITING ON MFCARROLL. Safety branch `wip-pre-review3-fold` = `de66aa5`
+
+**State, 2026-09-29 evening.** The fold is adopted on iso15693-dev (`ab0117e`), plus closing commit 13
+(`325ae89`, S11 + S12). Anchors 01-13 in `pr-round-15/fork-messages/`. Dev has DIVERGED from
+origin/iso15693-dev (history rewritten) -- force-pushing it needs mfcarroll's go-ahead. Nothing pushed
+or posted.
+
+**Verified at the tip:** 194 host tests; 18/18 mutants killed; all 32 per-commit checks of the fold
+(markers, tests, 71 units under -Werror) plus 13's; clean FAP on Momentum (71 CC, APPCHK) and on
+Unleashed (warning-free, on its current branch `keri-decoder-skew`, not `unl092-base`); clang-format 0
+of 95; every writing gate 0 findings (14 long-block warnings, the same count as `846a82eb`);
+check-drafts 3 expected items in reply.md; 0 stale SHAs. A test replay into a `--shared` clone (origin
+pinned via a bare clone at `1d411dec`, since the script fetches) made 13 commits, tree == a full sync
+of 13, a fast-forward from `1d411dec`. The FAP on the Momentum build is the bench build.
+
+**The verification pass found, NOT YET FIXED (all shipped text or history, none behaviour):**
+
+- **F1** -- 05's `iso15693_poller_finish_progress` comment names "the survey" twice; the survey
+  arrives at 06. Proposed: 05 without it, 06 adds it (about 3 lines of residual churn), and one
+  sentence in 06's message.
+- **F2** -- the OPTION-silence sentence in the per-block cost comment (s6) landed at 10, whose message
+  says "Nothing here is false"; its twin in the data pass sits at 09, whose message lists neither.
+  Proposed: move it to 09 and list both there (1 line of churn: 10 drops "bench" from that line).
+- **Churn is 12 lines, not 2.** 10 of them are commit 13 rewriting lines THIS round wrote: 01's
+  address_uid copies (S12) and 06's label ternary and comment (S11). mfcarroll chose "a closing
+  commit" on my claim that the round never touched those lines, which was wrong. Proposed: fold S11
+  into 06 and S12 into 01 and drop 13 (both hold at their sync points; checked). Otherwise 13's subject
+  ("of earlier-round code") and the README's churn figure must be corrected. HIS CALL.
+- Optional nits: the VerifyClone enum comment says "wrote 56/57" where the field says "a frame went
+  to" (05); a comma splice in finish_conversion's comment (07).
+- FIXED already (message-only): 03 said a Partial for another reason "does not mention them" -- Details
+  does where the file reached them; 09 said the Partial event scopes gen1 to a source that "reaches"
+  those blocks -- it is now "holding data at".
+
+**S5 is still untested**, and decides the last possible code change. Bench plan and predictions are in
+[pr-round-15/review3-bench.md](pr-round-15/review3-bench.md). One more fold pass then covers F1, F2,
+S5 if needed, and S11/S12 if he agrees -- none of which changes the tip tree except S5.
 
 [pr-round-15/final-review-3.md](pr-round-15/final-review-3.md) found two behaviour bugs, about ten
 false claims in shipped text, and a set of draft errors. **mfcarroll's calls, 2026-09-29: all of it
@@ -46,7 +82,8 @@ goes in THIS round**, to get as close to merge as possible without needing anoth
   poller.c:279 goes back to the maintainer's round-6 wording.
 - **Simplifications:**
   - S2, S3 and S6-S10 fold where they belong.
-  - S11 and S12 become a new closing commit, **13**, for earlier-round code.
+  - S11 and S12 become a new closing commit, **13**, for earlier-round code. (That premise was wrong
+    in part -- see the state above.)
   - S4 is left.
 - **Counts that would change twice** drop the count in favour of per-field notes, so there is no
   churn: T6 "three exceptions", T8 "four callers".

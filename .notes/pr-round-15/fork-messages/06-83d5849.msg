@@ -32,7 +32,10 @@ whatever was last programmed. So the survey READS upward from the source count
 and stops on an absent run or the budget. On the cards measured a block past
 physical capacity refuses reads outright, which is the same discriminator the
 data pass already uses when it asks whether a refused block is even there.
-Non-destructive, unlike the wipe's sweep, which writes because it is wiping.
+Non-destructive, unlike the wipe's sweep, which writes because it is wiping. A
+run of absences is the card's top only while the card is still there, so when
+the survey stops on one it asks: a card that has left keeps the data it showed,
+but makes no claim about where it ends.
 
 It runs whatever path the clone took: that gen1 cannot misstate its count is
 known only for the cards here, and the check costs one absent run of reads past
@@ -41,19 +44,18 @@ the card's top.
 None of this is a failure and none of it makes the clone Partial, which is for a
 run where something went wrong. They are notes on a success, routed to the
 counted result screen the way an over-capacity clone already is, with the same
-success tone and Finish.
+success tone and Finish. Which outcomes are successes is written once, for the
+tone and the button both, so a success added later cannot get one without the
+other.
+
+A GEN1 CLONE THAT LOST NOTHING GETS A NOTE THERE TOO, where its file reached
+56/57/62/63 with nothing stored in them. Every block that held data was written,
+so it is complete, but the copy differs from the file in one way a reader can
+see: those four are the card's registers, so asking for them returns no block
+where the file had one. It is the same shape as an empty tail past the card's
+end, and it is reported the same way.
 
 == WHAT THE SCREENS SAY ==
-
-A REGISTER WRITE IS NOT EVIDENCE ABOUT MEMORY. "Card too small" is withheld
-unless no block wrote above the failures, since a success up there means they
-are not the card's top. On a converted run the failures reach the top and then
-block 56 answers -- because it is a UID register, not memory. Counting that as a
-success above the failures suppressed the capacity finding and left the weaker
-gen1 qualifier in its place, so the same card fed the same oversized file
-reported differently depending on which path the run took to reach it. The write
-that reveals the registers no longer counts, and both paths reach the same
-verdict.
 
 THE BLOCK COUNT AND THE IC REFERENCE ARE TWO FLAGS, not one. They move
 independently and can both move at once -- a 64-block file declaring IC ref 0F
@@ -71,7 +73,8 @@ no longer names the list, and the list opens with its own label.
 PARAGRAPHS ARE SEPARATED AND MARKED -- a blank line between each and a leading
 "- ", because they stack and three or four run together as one wall otherwise.
 The scroll element has no bullet primitive, so these are literal characters and
-a wrapped line does not hang-indent.
+a wrapped line does not hang-indent. One helper opens every entry, so the format
+is one rule.
 
 AND THEY SAY WHAT TO DO. The residue note names non-zero data and tells the user
 to Wipe and write again. The size note names what the card REPORTS before what
@@ -92,7 +95,7 @@ card reports -- and ends with the two ways to get a closer copy. It says "this
 card", not "this gen1 card": it fires whenever the two disagree, and gen1 is the
 usual cause but not the only one, since a card that is not magic at all, whose
 UID already matched the file's, reaches the same place with no configuration
-write ever attempted.
+write ever taking.
 
 FOUR COMMENTS THAT COUNTED WHAT THIS ADDS TO now count it: the block-size clamp
 gains the survey as a fourth caller, the write-fail screen a thirteenth body and

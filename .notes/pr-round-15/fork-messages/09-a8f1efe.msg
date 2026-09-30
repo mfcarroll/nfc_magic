@@ -8,10 +8,11 @@ changes behaviour except one string.
 WHAT THE CODE DOES, where a comment said otherwise:
 
 - the gen1 clone contract said such a clone is never a clean Success. A source
-  that ends before block 56 has nothing at 56/57/62/63 to lose, and gets one, as
-  the field docs and the release notes already say. Its emit list gains Success,
-  and the Partial event scopes "fell back to gen1" to a source that reaches
-  those blocks.
+  with no data at 56/57/62/63 loses nothing there, whether it ends before block
+  56 or reaches them with nothing stored, and can end in Success, as the field
+  docs and the release notes already say. Its emit list gains Success, and the
+  Partial event scopes "fell back to gen1" to a source holding data at those
+  blocks.
 - the Fail event's list of causes missed one: a clone whose UID took but whose
   every data block was refused, which reports Fail too.
 - the partial-details bound said a wipe's total excludes the backdoor blocks.
@@ -33,9 +34,9 @@ MEASUREMENTS STATED AS LAWS:
   not be. The read decides. "Writes succeed well past it" gets its sample, the
   gen2 cards.
 - "past capacity a read fails" is scoped where it is stated, with what each card
-  showed: the four-run probe was one gen2 card, a plain NXP ICODE tag took
-  writes past its end with its last block unchanged, full read sweeps of two
-  more cards stop at their top, and one tested tag mirrors its cells and serves
+  showed: the four-run probe was one gen2 card, a plain NXP ICODE tag was sent
+  writes past its end and its last block was unchanged, full read sweeps of two
+  more cards stop at their top, and two tested tags mirror their cells and serve
   a read at every address. The data pass and the success rule point there, and
   the note about where the probe lives goes, since nothing names it now.
 - "a ceiling, not a cost" was false for the two cards the next constants exist

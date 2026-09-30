@@ -13,7 +13,7 @@ MEASURED on that card, each result read back through GET SYSTEM INFO:
 
 The first rules out the other candidate -- that the card simply does not report
 those fields, in which case no flag would have helped and "AFI/DSFID not set"
-would have been the honest answer. The last rules out the remaining one:
+would have been the honest answer. The second rules out the remaining one:
 addressing alone is not enough either.
 
 So the identity writes now carry the same flags as a data block, from one

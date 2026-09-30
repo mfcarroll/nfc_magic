@@ -53,11 +53,13 @@ normally, which is what makes this available at all.
 
 Scoped three ways, and each is deliberate:
 
-  - only on silence. An in-band error frame is the card deciding, and the
-    dangerous shape is a refused block that ALREADY holds what is being written
-    -- a locked, already-empty block under a wipe reads back as a match, and a
-    write-protected blank card would then report "Wiped 64/64" when the truth is
-    that it accepted nothing.
+  - only on silence. An in-band error frame is the card deciding, and a
+    read-back would overrule it. That does not reach a card running with the
+    flag, which answered nothing in band even for blocks it does not have: there
+    a refused block that ALREADY holds what is being written reads back as a
+    match, so a write-protected blank card would report "Wiped 64/64" having
+    accepted nothing. Its blocks are clear, but no read-back can say who cleared
+    them.
   - only on cards that asked for the flag. Elsewhere silence means the card is
     gone or the coupling is bad, the retries are the right answer, and a read on
     every failed write would double the cost of the exact path the pass budget

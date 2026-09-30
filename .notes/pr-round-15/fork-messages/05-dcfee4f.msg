@@ -24,6 +24,26 @@ shows the write landed, acknowledged or not. The end state is the one an
 ordinary gen1 clone produces -- a shape already tested and already reported
 correctly -- rather than a new one.
 
+THAT WRITE IS NEITHER A BLOCK WRITTEN NOR A FAILURE. It went to a register, not
+to memory. Counted as a success it would stop a card smaller than the file being
+reported too small, since a register answers whatever the card's size. Counted
+as a failure -- its acknowledgement lost, and its retries sent to the address
+the card has just left -- it would make every later block look like memory
+written above a failure. A failure the pass recorded at one of the four before
+the UID moved is taken back from the count it went into: a register answers no
+read, so an empty one was counted as past the card's capacity, not as a failure.
+
+AND THE UID IS READ BACK BEFORE ANYTHING IS REPORTED. Whether the run noticed
+the move rests on an inventory that can miss, or be answered by a second tag in
+the field, and the repair's frames each go out once, so one lost frame leaves
+the card answering to the file's bytes after all. So a gen2-path clone that sent
+a frame to 56/57 ends in a verify state of its own, behind a field power-cycle
+like the other UID verifies. The target reports the run as it stands, any other
+UID is printed as unexpected, and no answer is a lost card. On a gen2 card those
+blocks are memory, and the check costs a power-cycle and the activation after
+it. The popup's last progress frame comes after the check, so it does not read
+100% while the card is still being asked something.
+
 NOT BY SKIPPING those blocks whenever the UID already matches, which is the
 shorter fix and is wrong: on a real gen2 card re-cloned from a DIFFERENT image
 that happens to share its UID, 56/57/62/63 are ordinary memory. The skip deducts
@@ -32,26 +52,31 @@ of the file it chose not to write -- trading a silent data loss for a rare
 identity one.
 
 NOTHING ON SCREEN SAYS ANY OF THAT, and that is deliberate. What the user needs
-is what the CARD is -- gen1, with the file's data absent from those four
-addresses -- and the existing gen1 caveat says exactly that. A note about the
-identity being disturbed and put back would be the app narrating its own
-process.
+is what the CARD is, and the run reports exactly as a gen1 clone of the same
+file would. A note about the identity being disturbed and put back would be the
+app narrating its own process.
 
 THE CONSENT CALL, named because it is one. The repair sends the whole gen1
 sequence, unlock and commit included, and the gen1 opt-in screen is not shown on
 this path. That screen exists to warn that gen1 writes destroy four blocks of
 user data on a tag that is NOT gen1; this card has just proved that it is, by
-moving its UID to the value our write implied, so those addresses are registers
-rather than anyone's data. Leaving the card answering to bytes lifted out of the
-file is the worse outcome by a distance.
+moving its UID to the value our write implied, so 56/57 are registers -- and on
+every gen1 chip measured 62/63 are too -- rather than anyone's data. Leaving the
+card answering to bytes lifted out of the file is the worse outcome by a
+distance.
 
 It rests on the re-address the data-block addressing introduced, which accepts
 only the UID a write implies; this adds the flag that records the move.
 
-THREE COMMENTS THIS WOULD LEAVE FALSE change with it. The branch's own note took
-a card already wearing the target UID to be the one the source was read from; it
+COMMENTS THIS WOULD LEAVE FALSE change with it. The branch's own note took a
+card already wearing the target UID to be the one the source was read from; it
 now names the two that reach it. The COUNT_OF note counted three loops over the
-backdoor list, and this adds a fourth. The mark/unmark note called every clear
-the else-arm of a two-way decision, and the repair's clear is not.
+backdoor list, and this adds a fourth. The note on that list counted the places
+that ask it, and this adds one, so it names them without a count. The
+mark/unmark note called every clear the else-arm of a two-way decision, and the
+repair's clear is not. The note on the reporting state counted the fields
+get_result leaves out, and this adds two, so each says so where it is declared.
+And the write-state switch's note named the worst of four states to land in by
+accident; there are five.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

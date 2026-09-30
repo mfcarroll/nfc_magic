@@ -7,7 +7,8 @@ A gen1 clone of a 28-block source onto a 28-block card reported:
 
 Every block took, nothing failed, and the screen still said four blocks differ
 from the source -- and called the run Partial for it. A 28-block file has no
-blocks 56/57/62/63, so there is nothing for them to differ FROM.
+blocks 56/57/62/63, so there is nothing for them to differ FROM. A file that
+reaches them with nothing stored there has lost nothing either.
 
 Nor can it be a claim about the CARD. Measured on all three gen1 chips here,
 those four addresses answer no read at any point, so they are registers outside
@@ -25,19 +26,23 @@ deduction had the boundary wrong too, saying two of the three chips measured sit
 below it; all three do, and it now states the boundary instead: nothing is
 deducted from a source that ends before block 56.
 
-One fact, two derivations, disagreeing. So gen1_blocks_skipped is set from the
-SAME expression that produces blocks_total, and the caveat and the outcome both
-gate on it: the count, the wording and the verdict cannot drift apart again. The
-scenes could not have derived it themselves, which is why this is a poller
+One fact, two derivations, disagreeing. So the poller records two flags, both
+from the SAME count that produces blocks_total: gen1_blocks_skipped, that the
+file reached those addresses, and gen1_data_lost, that it held data in one of
+them. The deduction and the Details note follow the first. The outcome, the
+"differ" wording and whether Details is offered for it follow the second. The
+scenes could not have derived either themselves, which is why this is a poller
 change rather than a comment fix -- on a small source the deduction is a no-op,
 so blocks_total looks identical either way.
 
-What the user sees: a gen1 clone that lost nothing, and has nothing else to
-report, reaches the plain success screen, with no counts and no mention of
+What the user sees: a gen1 clone that lost nothing -- its file ending before
+block 56, or reaching those blocks with nothing there -- and has nothing else to
+report reaches the plain success screen, with no counts and no mention of
 56/57/62/63. They opted into gen1 and gen1 worked; the registers are not their
-problem. A run that skipped nothing but is Partial for some other reason does
-not mention them either. Where blocks WERE skipped nothing changes -- still
-Partial, still the "differ" wording, and Details still names what is missing.
+problem. A run that is Partial for some other reason leaves them off its
+summary too, and its Details notes them only where the file reached them. Where
+the file DID hold data there nothing changes -- still Partial, still the
+"differ" wording, and Details still names what is missing.
 
 The Write-UID asymmetry is unchanged: a bare Write-UID has no source data to
 disturb, so gen1 there is a clean success either way, and the clone-only guard
