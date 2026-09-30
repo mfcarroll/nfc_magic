@@ -381,29 +381,20 @@ struct Iso15693Poller {
     // A frame went to 56/57 on the gen2 path, so the identity is re-read before the run reports -- see
     // Iso15693WriteStateVerifyClone.
     bool clone_uid_recheck;
-    // The survey's results, copied out by get_result; the result struct says what each one means.
-    bool clone_residue_found;
-    uint16_t clone_residue_first;
-    uint16_t clone_residue_last;
-    uint16_t clone_survey_top;
-    bool clone_holds_more;
-    bool clone_memory_differs;
-    bool clone_ic_ref_differs;
-    uint16_t clone_file_blocks;
-    uint8_t clone_file_ic_ref;
+    // The survey's results, handed over whole by get_result; Iso15693PollerSurvey in the header says
+    // what each one means.
+    Iso15693PollerSurvey survey;
     // A write to 56/57 moved the UID to exactly what that write implies, so those addresses are
     // registers and this is gen1 silicon -- whichever path the run took to get here. Run control:
     // get_result does not report it.
     bool uid_moved_by_write;
-    uint16_t clone_card_blocks;
-    // Whether clone_card_blocks holds a CLAIM at all. The size finding says the card is bigger than
+    // Whether survey.card_blocks holds a CLAIM at all. The size finding says the card is bigger than
     // it claims, so it needs one: a GET SYSTEM INFO that did not answer, or a card that does not
     // advertise memory, leaves the count at zero and every readable block above the source would
     // then look like memory the card does not claim. That would be a statement about the user's
     // hardware invented out of one absent frame, which is the inference this whole pass is built to
     // refuse. get_result does not report it; holds_more already carries the answer.
     bool clone_card_blocks_known;
-    uint8_t clone_card_ic_ref;
     bool clone_capacity_confirmed;
     // Two flags, one result field: get_result ORs them behind a mode gate. Both are decided by a GET
     // SYSTEM INFO read-back rather than by the write's return value -- see write_identity for why the
@@ -1039,7 +1030,7 @@ static void iso15693_poller_survey_above_source(
                 // residue it held is data that was read -- but the size finding is a claim about
                 // where the card ENDS, and a card that left says nothing about that.
                 if(!iso15693_poller_card_still_present(iso_poller)) {
-                    instance->clone_holds_more = false;
+                    instance->survey.holds_more = false;
                 }
                 break;
             }
@@ -1047,17 +1038,17 @@ static void iso15693_poller_survey_above_source(
         }
         absent_run = 0;
         // It answered, so it is there -- whatever it holds. That alone settles the size question.
-        instance->clone_survey_top = block;
-        if(instance->clone_card_blocks_known && block >= instance->clone_card_blocks) {
-            instance->clone_holds_more = true;
+        instance->survey.survey_top = block;
+        if(instance->clone_card_blocks_known && block >= instance->survey.card_blocks) {
+            instance->survey.holds_more = true;
         }
         if(iso15693_poller_block_is_empty(probe, size)) continue;
 
-        if(!instance->clone_residue_found) {
-            instance->clone_residue_found = true;
-            instance->clone_residue_first = block;
+        if(!instance->survey.residue_found) {
+            instance->survey.residue_found = true;
+            instance->survey.residue_first = block;
         }
-        instance->clone_residue_last = block;
+        instance->survey.residue_last = block;
     }
 }
 
@@ -1087,13 +1078,13 @@ static void iso15693_poller_compare_reported_geometry(
     const bool ic_ref_differs = (src->flags & ISO15693_3_SYSINFO_FLAG_IC_REF) &&
                                 (card.flags & ISO15693_3_SYSINFO_FLAG_IC_REF) &&
                                 card.ic_ref != src->ic_ref;
-    instance->clone_card_blocks = card.block_count;
+    instance->survey.card_blocks = card.block_count;
     instance->clone_card_blocks_known = (card.flags & ISO15693_3_SYSINFO_FLAG_MEMORY) != 0;
-    instance->clone_card_ic_ref = card.ic_ref;
-    instance->clone_memory_differs = memory_differs;
-    instance->clone_ic_ref_differs = ic_ref_differs;
-    instance->clone_file_blocks = src->block_count;
-    instance->clone_file_ic_ref = src->ic_ref;
+    instance->survey.card_ic_ref = card.ic_ref;
+    instance->survey.memory_differs = memory_differs;
+    instance->survey.ic_ref_differs = ic_ref_differs;
+    instance->survey.file_blocks = src->block_count;
+    instance->survey.file_ic_ref = src->ic_ref;
 }
 
 // The card turned out to be gen1 after the pass had already fed the file into its UID registers. Put
@@ -2334,19 +2325,9 @@ static void iso15693_poller_start_internal(
     instance->clone_gen1_blocks_skipped = false;
     instance->clone_gen1_data_lost = false;
     instance->clone_uid_recheck = false;
-    instance->clone_residue_found = false;
-    instance->clone_residue_first = 0;
-    instance->clone_residue_last = 0;
-    instance->clone_survey_top = 0;
-    instance->clone_holds_more = false;
-    instance->clone_memory_differs = false;
-    instance->clone_ic_ref_differs = false;
-    instance->clone_file_blocks = 0;
-    instance->clone_file_ic_ref = 0;
+    memset(&instance->survey, 0, sizeof(instance->survey));
     instance->uid_moved_by_write = false;
-    instance->clone_card_blocks = 0;
     instance->clone_card_blocks_known = false;
-    instance->clone_card_ic_ref = 0;
     instance->clone_capacity_confirmed = false;
     instance->clone_blocks_done = 0;
     instance->progress_step = UINT8_MAX; // no band emitted yet, so the first call fires
@@ -2448,17 +2429,7 @@ void iso15693_poller_get_result(Iso15693Poller* instance, Iso15693PollerResult* 
     result->used_gen1 = instance->clone_used_gen1;
     result->gen1_blocks_skipped = instance->clone_gen1_blocks_skipped;
     result->gen1_data_lost = instance->clone_gen1_data_lost;
-    result->residue_found = instance->clone_residue_found;
-    result->residue_first = instance->clone_residue_first;
-    result->residue_last = instance->clone_residue_last;
-    result->holds_more = instance->clone_holds_more;
-    result->survey_top = instance->clone_survey_top;
-    result->memory_differs = instance->clone_memory_differs;
-    result->ic_ref_differs = instance->clone_ic_ref_differs;
-    result->file_blocks = instance->clone_file_blocks;
-    result->file_ic_ref = instance->clone_file_ic_ref;
-    result->card_blocks = instance->clone_card_blocks;
-    result->card_ic_ref = instance->clone_card_ic_ref;
+    result->survey = instance->survey;
     result->capacity_confirmed = instance->clone_capacity_confirmed;
     // Clone-mode only, mirroring success_or_partial: the flags are reset per run and written only in
     // the clone path, so this guard is future-proofing against them ever leaking cross-mode.

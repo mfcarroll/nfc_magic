@@ -465,12 +465,12 @@ static void test_the_survey_finds_data_left_above_the_source(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_residue_found);
-    CHECK_EQ(inst.clone_residue_first, 8); // the first block the clone did not write
-    CHECK_EQ(inst.clone_residue_last, 63); // ...through the card's real top
+    CHECK(inst.survey.residue_found);
+    CHECK_EQ(inst.survey.residue_first, 8); // the first block the clone did not write
+    CHECK_EQ(inst.survey.residue_last, 63); // ...through the card's real top
     // ...but this card's count is truthful, so there is nothing to say about its SIZE. The two
     // findings are independent and this is the case that proves it.
-    CHECK(!inst.clone_holds_more);
+    CHECK(!inst.survey.holds_more);
     end();
 }
 
@@ -484,9 +484,9 @@ static void test_a_card_reporting_less_than_it_holds_is_reported(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_holds_more);
-    CHECK_EQ(inst.clone_survey_top, 63);
-    CHECK(inst.clone_residue_found); // and in this case the space has data in it too
+    CHECK(inst.survey.holds_more);
+    CHECK_EQ(inst.survey.survey_top, 63);
+    CHECK(inst.survey.residue_found); // and in this case the space has data in it too
     end();
 }
 
@@ -501,9 +501,9 @@ static void test_an_empty_tail_is_size_without_residue(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(!inst.clone_residue_found);
-    CHECK(inst.clone_holds_more);
-    CHECK_EQ(inst.clone_survey_top, 63);
+    CHECK(!inst.survey.residue_found);
+    CHECK(inst.survey.holds_more);
+    CHECK_EQ(inst.survey.survey_top, 63);
     end();
 }
 
@@ -516,9 +516,9 @@ static void test_a_card_the_size_of_its_source_is_quiet(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(!inst.clone_residue_found);
-    CHECK(!inst.clone_holds_more);
-    CHECK(!inst.clone_memory_differs);
+    CHECK(!inst.survey.residue_found);
+    CHECK(!inst.survey.holds_more);
+    CHECK(!inst.survey.memory_differs);
     end();
 }
 
@@ -539,9 +539,9 @@ static void test_a_card_that_states_no_count_is_not_an_over_claim(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(!inst.clone_holds_more);
+    CHECK(!inst.survey.holds_more);
     CHECK(!inst.clone_card_blocks_known);
-    CHECK(inst.clone_residue_found);
+    CHECK(inst.survey.residue_found);
     end();
 }
 
@@ -553,10 +553,10 @@ static void test_an_unknown_card_count_is_not_an_over_claim(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(!inst.clone_holds_more); // no claim, so nothing to be larger than
+    CHECK(!inst.survey.holds_more); // no claim, so nothing to be larger than
     CHECK(!inst.clone_card_blocks_known);
-    CHECK(inst.clone_residue_found); // the reads still answered, so this still stands
-    CHECK_EQ(inst.clone_residue_last, 63);
+    CHECK(inst.survey.residue_found); // the reads still answered, so this still stands
+    CHECK_EQ(inst.survey.residue_last, 63);
     end();
 }
 
@@ -570,9 +570,9 @@ static void test_a_card_that_keeps_reporting_its_own_size_says_so(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_memory_differs);
-    CHECK_EQ(inst.clone_card_blocks, 40);
-    CHECK(inst.clone_memory_differs);
+    CHECK(inst.survey.memory_differs);
+    CHECK_EQ(inst.survey.card_blocks, 40);
+    CHECK(inst.survey.memory_differs);
     end();
 }
 
@@ -892,8 +892,8 @@ static void test_a_card_lifted_during_the_survey_claims_no_size(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_residue_found); // blocks above the file answered with data before the lift
-    CHECK(!inst.clone_holds_more); // but a card that has left says nothing about its size
+    CHECK(inst.survey.residue_found); // blocks above the file answered with data before the lift
+    CHECK(!inst.survey.holds_more); // but a card that has left says nothing about its size
     end();
 }
 
@@ -939,8 +939,8 @@ static void test_geometry_names_the_half_that_actually_differs(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK(inst.clone_ic_ref_differs);
-    CHECK(!inst.clone_memory_differs); // 28 == 28, so the screen must not name the size
+    CHECK(inst.survey.ic_ref_differs);
+    CHECK(!inst.survey.memory_differs); // 28 == 28, so the screen must not name the size
 
     // And a size that really does differ is reported as one.
     fake_tag_init(40, 40, 4);
@@ -951,8 +951,8 @@ static void test_geometry_names_the_half_that_actually_differs(void) {
     source.system_info.ic_ref = 0x03; // identical chip, so only the size is left
     run_clone(&inst, false);
 
-    CHECK(inst.clone_memory_differs);
-    CHECK(!inst.clone_ic_ref_differs); // identical chip, so only the size is named
+    CHECK(inst.survey.memory_differs);
+    CHECK(!inst.survey.ic_ref_differs); // identical chip, so only the size is named
     end();
 }
 
@@ -967,8 +967,8 @@ static void test_a_block_size_alone_is_not_a_geometry_finding(void) {
     Iso15693Poller inst;
     run_clone(&inst, false);
 
-    CHECK_EQ(inst.clone_card_blocks, 28);
-    CHECK(!inst.clone_memory_differs);
+    CHECK_EQ(inst.survey.card_blocks, 28);
+    CHECK(!inst.survey.memory_differs);
     end();
 }
 

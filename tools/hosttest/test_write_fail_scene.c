@@ -504,19 +504,19 @@ static void test_the_gen1_details_note_matches_the_source(void) {
 static void test_a_clean_clone_with_notes_says_the_most_important_one(void) {
     begin("a clone with notes leads with the data finding, not the presentation one");
     Iso15693PollerResult both = {0};
-    both.residue_found = true;
-    both.residue_first = 28;
-    both.residue_last = 63;
-    both.memory_differs = true;
-    both.card_blocks = 40;
+    both.survey.residue_found = true;
+    both.survey.residue_first = 28;
+    both.survey.residue_last = 63;
+    both.survey.memory_differs = true;
+    both.survey.card_blocks = 40;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &both);
     CHECK(fake_scene_text_contains("28-63"));
     CHECK(!fake_scene_text_contains("still reports"));
 
     Iso15693PollerResult geom = {0};
-    geom.memory_differs = true;
-    geom.card_blocks = 40;
+    geom.survey.memory_differs = true;
+    geom.survey.card_blocks = 40;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &geom);
     CHECK(fake_scene_text_contains("40 blocks"));
@@ -529,19 +529,19 @@ static void test_a_clean_clone_with_notes_says_the_most_important_one(void) {
 static void test_the_summary_names_only_the_half_that_moved(void) {
     begin("the summary names the IC ref alone when the size agrees, and both when both moved");
     Iso15693PollerResult ic = {0};
-    ic.ic_ref_differs = true;
-    ic.card_ic_ref = 0x01;
-    ic.card_blocks = 28;
+    ic.survey.ic_ref_differs = true;
+    ic.survey.card_ic_ref = 0x01;
+    ic.survey.card_blocks = 28;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &ic);
     CHECK(fake_scene_text_contains("IC ref 01"));
     CHECK(!fake_scene_text_contains("28 blocks")); // the size agreed; naming it is the defect
 
     Iso15693PollerResult both = {0};
-    both.memory_differs = true;
-    both.ic_ref_differs = true;
-    both.card_blocks = 28;
-    both.card_ic_ref = 0x01;
+    both.survey.memory_differs = true;
+    both.survey.ic_ref_differs = true;
+    both.survey.card_blocks = 28;
+    both.survey.card_ic_ref = 0x01;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &both);
     CHECK(fake_scene_text_contains("28 blocks"));
@@ -555,9 +555,9 @@ static void test_the_summary_names_only_the_half_that_moved(void) {
 static void test_a_clean_tail_still_reports_the_size(void) {
     begin("a card larger than it claims is reported even with nothing left in it");
     Iso15693PollerResult r = {0};
-    r.holds_more = true;
-    r.survey_top = 63;
-    r.card_blocks = 28;
+    r.survey.holds_more = true;
+    r.survey.survey_top = 63;
+    r.survey.card_blocks = 28;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
     // Pinned to which number goes with which WORD, not merely to both being present. The two are a
@@ -575,10 +575,10 @@ static void test_a_clean_tail_still_reports_the_size(void) {
 static void test_the_size_note_says_when_the_count_came_from_the_file(void) {
     begin("the size note names the file where the card reports the file's own count");
     Iso15693PollerResult r = {0};
-    r.holds_more = true;
-    r.survey_top = 63;
-    r.card_blocks = 28;
-    r.file_blocks = 28; // the same number, however it got there
+    r.survey.holds_more = true;
+    r.survey.survey_top = 63;
+    r.survey.card_blocks = 28;
+    r.survey.file_blocks = 28; // the same number, however it got there
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
@@ -594,11 +594,11 @@ static void test_the_size_note_says_when_the_count_came_from_the_file(void) {
 static void test_the_size_note_claims_no_agreement_where_there_is_none(void) {
     begin("the size note does not mention the file where the two counts differ");
     Iso15693PollerResult r = {0};
-    r.holds_more = true;
-    r.survey_top = 63;
-    r.card_blocks = 40; // the card's own, untouched -- a gen1 clone
-    r.file_blocks = 28;
-    r.memory_differs = true;
+    r.survey.holds_more = true;
+    r.survey.survey_top = 63;
+    r.survey.card_blocks = 40; // the card's own, untouched -- a gen1 clone
+    r.survey.file_blocks = 28;
+    r.survey.memory_differs = true;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
@@ -616,15 +616,15 @@ static void test_the_size_note_claims_no_agreement_where_there_is_none(void) {
 static void test_details_carries_every_survey_finding(void) {
     begin("Details names the residue, the size and the geometry together");
     Iso15693PollerResult r = {0};
-    r.residue_found = true;
-    r.residue_first = 28;
-    r.residue_last = 63;
-    r.holds_more = true;
-    r.survey_top = 63;
-    r.memory_differs = true;
-    r.ic_ref_differs = true;
-    r.card_blocks = 28;
-    r.card_ic_ref = 0x02;
+    r.survey.residue_found = true;
+    r.survey.residue_first = 28;
+    r.survey.residue_last = 63;
+    r.survey.holds_more = true;
+    r.survey.survey_top = 63;
+    r.survey.memory_differs = true;
+    r.survey.ic_ref_differs = true;
+    r.survey.card_blocks = 28;
+    r.survey.card_ic_ref = 0x02;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
     render_details(NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone);
@@ -741,9 +741,9 @@ static void test_wipe_stopped_prints_the_cut_not_the_total(void) {
 static void test_a_clone_with_notes_is_a_success(void) {
     begin("a clone that completed with notes plays the success tone and offers Finish");
     Iso15693PollerResult r = {0};
-    r.residue_found = true;
-    r.residue_first = 28;
-    r.residue_last = 63;
+    r.survey.residue_found = true;
+    r.survey.residue_first = 28;
+    r.survey.residue_last = 63;
     render_write_fail_with(
         NfcMagicIso15693WriteFailReasonCloneComplete, NfcMagicIso15693ModeClone, &r);
     CHECK(fake_scene.played_success);
