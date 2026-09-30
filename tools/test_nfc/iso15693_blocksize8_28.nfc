@@ -1,0 +1,23 @@
+Filetype: Flipper NFC device
+Version: 4
+# Device type can be ISO14443-3A, ISO14443-3B, ISO14443-4A, ISO14443-4B, ISO15693-3, FeliCa, NTAG/Ultralight, Mifare Classic, Mifare Plus, Mifare DESFire, SLIX, ST25TB, EMV
+Device type: ISO15693-3
+# UID is common for all formats
+UID: E0 04 01 10 B8 B8 B8 B8
+# ISO15693-3 specific data
+# Data Storage Format Identifier
+DSFID: 00
+# Application Family Identifier
+AFI: 00
+# IC Reference - Vendor specific meaning
+IC Reference: 01
+# Lock Bits
+Lock DSFID: false
+Lock AFI: false
+# Number of memory blocks, valid range = 1..256
+Block Count: 28
+# Size of a single memory block, valid range = 01...20 (hex)
+Block Size: 08
+Data Content: B8 00 5A 00 A5 00 3C 00 B8 01 5A 01 A5 01 3C 01 B8 02 5A 02 A5 02 3C 02 B8 03 5A 03 A5 03 3C 03 B8 04 5A 04 A5 04 3C 04 B8 05 5A 05 A5 05 3C 05 B8 06 5A 06 A5 06 3C 06 B8 07 5A 07 A5 07 3C 07 B8 08 5A 08 A5 08 3C 08 B8 09 5A 09 A5 09 3C 09 B8 0A 5A 0A A5 0A 3C 0A B8 0B 5A 0B A5 0B 3C 0B B8 0C 5A 0C A5 0C 3C 0C B8 0D 5A 0D A5 0D 3C 0D B8 0E 5A 0E A5 0E 3C 0E B8 0F 5A 0F A5 0F 3C 0F B8 10 5A 10 A5 10 3C 10 B8 11 5A 11 A5 11 3C 11 B8 12 5A 12 A5 12 3C 12 B8 13 5A 13 A5 13 3C 13 B8 14 5A 14 A5 14 3C 14 B8 15 5A 15 A5 15 3C 15 B8 16 5A 16 A5 16 3C 16 B8 17 5A 17 A5 17 3C 17 B8 18 5A 18 A5 18 3C 18 B8 19 5A 19 A5 19 3C 19 B8 1A 5A 1A A5 1A 3C 1A B8 1B 5A 1B A5 1B 3C 1B
+# Block Security Status: 01 = locked, 00 = not locked
+Security Status: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
