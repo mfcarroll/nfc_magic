@@ -66,7 +66,11 @@ under-reports or leads with a number that matched. Each screen names whichever
 moved, both when both did. The note says "configuration register" rather than
 "geometry": the gen2 backdoor programs the block count, the block size AND the
 IC reference through one CFG register, which is why gen1 can reproduce none of
-the three.
+the three. The block-count flag compares the count and not the block size: the
+notes print counts, so a size that alone disagreed would read as two equal
+numbers, and on the cards measured no clone that succeeds carries one -- a gen2
+magic card handed 8-byte blocks took that geometry through its CFG frame and
+then refused every write, and a gen1 SLIX refused them outright.
 
 ONE TITLE FOR THE NOTES PAGE, "Clone notes" / "Wipe notes". The page now carries
 notes about residue, size and configuration beside the block list, so the title

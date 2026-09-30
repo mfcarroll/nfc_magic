@@ -131,6 +131,11 @@ more gen1 cards:
   card first filled with a different pattern in every block
 - the **same source cloned twice onto a gen1 NXP SLIX**: the second run converts, the UID reads back
   intact, and it reports as the first did
+- a **64-block file cloned through gen1 onto a 28-block SLIX**, once with nothing at 56/57/62/63,
+  which finishes with its notes, and once with data at 62/63, which is Partial
+- a **file of 8-byte blocks onto a gen2 card and a gen1 SLIX**: the gen2 card took the geometry and
+  then refused every write, the SLIX refused them outright, so the geometry note compares the block
+  count alone
 - a **64-block card carrying a distinct per-block pattern**, cloned from a 28-block source, for the
   residue, and a **40-block SLIX-S** for the geometry
 - **a gen1 Write UID on each of the three gen1 chips**, to a target differing from each card's own UID

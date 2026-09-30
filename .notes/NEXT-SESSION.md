@@ -20,49 +20,52 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## IN FLIGHT — FOLD 7 ADOPTED; WAITING ON THE S5 BENCH. Safety branches `wip-pre-fold7` = `d050f03`, `wip-pre-review3-fold` = `de66aa5`
+## IN FLIGHT — THE BENCH IS IN, S5 FOLDED; TWO DECISIONS OPEN. Safety branches `wip-pre-fold8`, `wip-pre-fold7`, `wip-pre-review3-fold`
 
-**State, 2026-09-29 night.** Twelve sync points again. mfcarroll's calls on the verification pass:
-S11 into 06 and S12 into 01 (dropping closing commit 13, which rewrote ten lines this round wrote --
-the premise it was chosen on, mine, was wrong), F1 and F2, and both nits. Done as one index-filter
-pass (`$SP/fold7/rules7.py`, 12 exact rules, each matching once at every commit in its range), 13
-skipped by a commit filter rather than `--prune-empty`, because two commits in range (`937d885`,
-`9bbf9c0`, pre-fold names) were already empty and would have gone too. Dev has DIVERGED from
-origin/iso15693-dev -- force-pushing it needs mfcarroll's go-ahead. Nothing pushed or posted.
+**State, 2026-09-29 night.** Twelve sync points. mfcarroll's bench
+([pr-round-15/review3-bench.md](pr-round-15/review3-bench.md), with the reading at its end) came back
+as predicted, and decided S5: gen-2-card took an 8-byte geometry and refused every write, a gen1 SLIX
+refused them, so no success carries a size-only difference. **Fold 8** (`$SP/fold8/rules8.py`)
+dropped the size term from `compare_reported_geometry` at 06's first commit, with a host test,
+`test_a_block_size_alone_is_not_a_geometry_finding`, mutation-checked (the size term restored makes
+it fail). Dev has DIVERGED from origin/iso15693-dev; force-pushing it needs mfcarroll's go-ahead.
+Nothing pushed or posted.
 
 | # | anchor | # | anchor | # | anchor |
 |---|---|---|---|---|---|
-| 01 | `d09f499` | 05 | `efa16d7` | 09 | `61656a6` |
-| 02 | `4a3e382` | 06 | `686d827` | 10 | `11154c5` |
-| 03 | `e7663ff` | 07 | `599ad85` | 11 | `da890f0` |
-| 04 | `53faffb` | 08 | `33a32da` | 12 | `9cbecdd` |
+| 01 | `d09f499` | 05 | `efa16d7` | 09 | `5464a22` |
+| 02 | `4a3e382` | 06 | `fb9c2fd` | 10 | `6f5e522` |
+| 03 | `e7663ff` | 07 | `22b7101` | 11 | `c59dd92` |
+| 04 | `53faffb` | 08 | `dcfb40f` | 12 | `b199b94` |
 
-- **S12 at 01 is NOT 13's wording.** 13's comment said the gen1 verify compares against the presented
-  UID, which is true only from 07 (the half-moved-UID report). At 01 it names no verify: "the card's
-  identity before anything here was sent, which the later checks compare against".
-- **F1 is two-stage by design**: 05's progress comment names only the re-read; 06, which adds the
-  survey, adds it there. **F2**: the OPTION sentence is at 09 with its data-pass twin; 10 now only
-  drops "bench" from that line. Messages: 01 gains the S12 paragraph, 06 the S11 and survey-frame
-  sentences, 09 a bullet for both OPTION corrections; 13's message is deleted.
+**Verified after fold 8:** 232 pairs, 464 mapped blobs, 0 problems; 195 host tests at the tip; test
+replay of 12 commits, a fast-forward from `1d411dec`; range-diff against the pre-fold-8 build changes
+06 only (the size term, its comment, one message sentence); churn still 5; clang-format 0 of 95.
+Fold 7's verification (the S11/S12 move, F1, F2, the nits) stands as recorded in its commit.
 
-**Verified:** 243 commit pairs with identical metadata, 469 mapped blobs and nothing else, 13 the only
-commit dropped, the tree it produced reproduced one commit earlier; the tip differs from the 13-commit
-build only in the three comment edits. Test replay into a `--shared` clone (origin pinned through
-`$SP/review3/pin.git`, a bare clone with the branch at `1d411dec`): 12 commits, tree == a full sync
-of 12, a fast-forward. Every writing gate 0 findings. Churn 5 lines: the two residuals, F1's two, F2's
-one (README). Range-diff against the 13-commit build shows only the intended changes. All 32
-per-commit checks pass -- no markers, host tests 132 -> 194, 71 units under -Werror -- with every
-commit's test count identical to fold 6's run.
+**OPEN, for mfcarroll:**
 
-**Bench prep done:** the four fixtures sent with `storage.py send -f` and received back byte-identical;
-the device's FAP pulled back and identical to the 19:07 build (md5 `bc14459…`). mfcarroll is running
-[pr-round-15/review3-bench.md](pr-round-15/review3-bench.md). **S5 is the last open code decision**:
-drop the size term in 06's `compare_reported_geometry` unless gen-2-card ends a success with the note
-on size alone.
+- **"Cloned 28/60" for a 64-block file through gen1.** Pre-existing and deliberate, not this round:
+  the gen1 total has left out the four register blocks since `20649a5` (2026-07-30), and this round's
+  own bench called it correct on 2026-09-25. Changing it to the file's count is not a one-liner: the
+  screen derives "Cloned" as the total less "Not written", so the registers would have to be counted
+  as not written too ("Cloned 28/64 / Not written: 36"), which needs their count carried in the
+  result, and the deduction's rationale is written into comments and messages at 03, 05 and 09.
+  Recommended: keep it this round.
+- **The stock app's SLIX saves are refused ("This is wrong card").** A real gap, as old as the
+  feature (`d3a0a91`): file select accepts `NfcProtocolIso15693_3` only, the stock app saves NXP SLIX
+  tags as `NfcProtocolSlix`, and `nfc_protocol_has_parent` (exported in both SDKs) would admit them.
+  The clone already reads the source through `nfc_device_get_data(..., NfcProtocolIso15693_3)`, which
+  resolves a SLIX file to its ISO15693-3 data. A one-line check, a release-note line, and a bench run
+  with mfcarroll's saved SLIX file. He deferred it until this pass is done.
+- **Filed separately, by his call:** the tone replaying on Back from Details -- upstream's pattern in
+  the Gen2 wipe-partial and USCUID-UL partial screens too.
+- **Optional:** "The card has UID only." understates a gen2 card, which also takes the file's geometry
+  and IC ref (text from `6f85395`, 2026-08-04).
 
-**Next:** the S5 result (and a one-rule fold at 06 if it drops the term), then the real replay into
-the fork (back up `846a82eb` first; signing needs 1Password), FAP and clang-format at the final tip,
-dev force-push, PR push, #255 edit + comment, then the #250 reply -- each on its own go-ahead.
+**Then:** the real replay into the fork (back up `846a82eb` first; signing needs 1Password), FAP
+rebuild at the final tip on both firmwares, dev force-push, PR push, #255 edit + comment, then the #250
+reply -- each on its own go-ahead.
 
 [pr-round-15/final-review-3.md](pr-round-15/final-review-3.md) found two behaviour bugs, about ten
 false claims in shipped text, and a set of draft errors. **mfcarroll's calls, 2026-09-29: all of it

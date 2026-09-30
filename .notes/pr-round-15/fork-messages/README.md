@@ -30,6 +30,13 @@ OPTION sentence in the per-block cost comment moved from 10, whose message says 
 false, to 09 beside its twin in the data pass, and 09's message lists both. And two wording nits:
 05's verify-state comment, and a comma splice at 07. Commit 13 is gone.
 
+**AND S5, decided by the bench** ([review3-bench.md](../review3-bench.md)): the block-count flag compares
+the count, not the block size, from 06's first commit, where the size term was written. An 8-byte-block
+file onto a gen2 card that took the geometry and then refused every write, and onto a gen1 SLIX, never
+reached a success; and where the counts agree, the size term's only effect is a note printing two
+equal numbers.
+06's message says so; a host test pins it.
+
 | # | sync at | one decision |
 |---|---|---|
 | 01 | `d09f499` | data-block writes carry the card's address |
@@ -37,13 +44,13 @@ false, to 09 beside its twin in the data pass, and 09's message lists both. And 
 | 03 | `e7663ff` | the gen1 loss claim is gated on there being a loss |
 | 04 | `53faffb` | the identity writes are addressed and take the flag |
 | 05 | `efa16d7` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `686d827` | what a clone leaves behind, and what it says about it |
-| 07 | `599ad85` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `33a32da` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 09 | `61656a6` | comments from earlier rounds that said something false |
-| 10 | `11154c5` | comments from earlier rounds that told their history |
-| 11 | `da890f0` | the failure bitmap checks the index it is given |
-| 12 | `9cbecdd` | the write-fail reason switches name every reason |
+| 06 | `fb9c2fd` | what a clone leaves behind, and what it says about it |
+| 07 | `22b7101` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `dcfb40f` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 09 | `5464a22` | comments from earlier rounds that said something false |
+| 10 | `6f5e522` | comments from earlier rounds that told their history |
+| 11 | `c59dd92` | the failure bitmap checks the index it is given |
+| 12 | `b199b94` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
