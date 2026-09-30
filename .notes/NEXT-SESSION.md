@@ -20,43 +20,49 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## IN FLIGHT — THE REVIEW-3 FOLD IS ADOPTED; WAITING ON MFCARROLL. Safety branch `wip-pre-review3-fold` = `de66aa5`
+## IN FLIGHT — FOLD 7 ADOPTED; WAITING ON THE S5 BENCH. Safety branches `wip-pre-fold7` = `d050f03`, `wip-pre-review3-fold` = `de66aa5`
 
-**State, 2026-09-29 evening.** The fold is adopted on iso15693-dev (`ab0117e`), plus closing commit 13
-(`325ae89`, S11 + S12). Anchors 01-13 in `pr-round-15/fork-messages/`. Dev has DIVERGED from
-origin/iso15693-dev (history rewritten) -- force-pushing it needs mfcarroll's go-ahead. Nothing pushed
-or posted.
+**State, 2026-09-29 night.** Twelve sync points again. mfcarroll's calls on the verification pass:
+S11 into 06 and S12 into 01 (dropping closing commit 13, which rewrote ten lines this round wrote --
+the premise it was chosen on, mine, was wrong), F1 and F2, and both nits. Done as one index-filter
+pass (`$SP/fold7/rules7.py`, 12 exact rules, each matching once at every commit in its range), 13
+skipped by a commit filter rather than `--prune-empty`, because two commits in range (`937d885`,
+`9bbf9c0`, pre-fold names) were already empty and would have gone too. Dev has DIVERGED from
+origin/iso15693-dev -- force-pushing it needs mfcarroll's go-ahead. Nothing pushed or posted.
 
-**Verified at the tip:** 194 host tests; 18/18 mutants killed; all 32 per-commit checks of the fold
-(markers, tests, 71 units under -Werror) plus 13's; clean FAP on Momentum (71 CC, APPCHK) and on
-Unleashed (warning-free, on its current branch `keri-decoder-skew`, not `unl092-base`); clang-format 0
-of 95; every writing gate 0 findings (14 long-block warnings, the same count as `846a82eb`);
-check-drafts 3 expected items in reply.md; 0 stale SHAs. A test replay into a `--shared` clone (origin
-pinned via a bare clone at `1d411dec`, since the script fetches) made 13 commits, tree == a full sync
-of 13, a fast-forward from `1d411dec`. The FAP on the Momentum build is the bench build.
+| # | anchor | # | anchor | # | anchor |
+|---|---|---|---|---|---|
+| 01 | `d09f499` | 05 | `efa16d7` | 09 | `61656a6` |
+| 02 | `4a3e382` | 06 | `686d827` | 10 | `11154c5` |
+| 03 | `e7663ff` | 07 | `599ad85` | 11 | `da890f0` |
+| 04 | `53faffb` | 08 | `33a32da` | 12 | `9cbecdd` |
 
-**The verification pass found, NOT YET FIXED (all shipped text or history, none behaviour):**
+- **S12 at 01 is NOT 13's wording.** 13's comment said the gen1 verify compares against the presented
+  UID, which is true only from 07 (the half-moved-UID report). At 01 it names no verify: "the card's
+  identity before anything here was sent, which the later checks compare against".
+- **F1 is two-stage by design**: 05's progress comment names only the re-read; 06, which adds the
+  survey, adds it there. **F2**: the OPTION sentence is at 09 with its data-pass twin; 10 now only
+  drops "bench" from that line. Messages: 01 gains the S12 paragraph, 06 the S11 and survey-frame
+  sentences, 09 a bullet for both OPTION corrections; 13's message is deleted.
 
-- **F1** -- 05's `iso15693_poller_finish_progress` comment names "the survey" twice; the survey
-  arrives at 06. Proposed: 05 without it, 06 adds it (about 3 lines of residual churn), and one
-  sentence in 06's message.
-- **F2** -- the OPTION-silence sentence in the per-block cost comment (s6) landed at 10, whose message
-  says "Nothing here is false"; its twin in the data pass sits at 09, whose message lists neither.
-  Proposed: move it to 09 and list both there (1 line of churn: 10 drops "bench" from that line).
-- **Churn is 12 lines, not 2.** 10 of them are commit 13 rewriting lines THIS round wrote: 01's
-  address_uid copies (S12) and 06's label ternary and comment (S11). mfcarroll chose "a closing
-  commit" on my claim that the round never touched those lines, which was wrong. Proposed: fold S11
-  into 06 and S12 into 01 and drop 13 (both hold at their sync points; checked). Otherwise 13's subject
-  ("of earlier-round code") and the README's churn figure must be corrected. HIS CALL.
-- Optional nits: the VerifyClone enum comment says "wrote 56/57" where the field says "a frame went
-  to" (05); a comma splice in finish_conversion's comment (07).
-- FIXED already (message-only): 03 said a Partial for another reason "does not mention them" -- Details
-  does where the file reached them; 09 said the Partial event scopes gen1 to a source that "reaches"
-  those blocks -- it is now "holding data at".
+**Verified:** 243 commit pairs with identical metadata, 469 mapped blobs and nothing else, 13 the only
+commit dropped, the tree it produced reproduced one commit earlier; the tip differs from the 13-commit
+build only in the three comment edits. Test replay into a `--shared` clone (origin pinned through
+`$SP/review3/pin.git`, a bare clone with the branch at `1d411dec`): 12 commits, tree == a full sync
+of 12, a fast-forward. Every writing gate 0 findings. Churn 5 lines: the two residuals, F1's two, F2's
+one (README). Range-diff against the 13-commit build shows only the intended changes. All 32
+per-commit checks pass -- no markers, host tests 132 -> 194, 71 units under -Werror -- with every
+commit's test count identical to fold 6's run.
 
-**S5 is still untested**, and decides the last possible code change. Bench plan and predictions are in
-[pr-round-15/review3-bench.md](pr-round-15/review3-bench.md). One more fold pass then covers F1, F2,
-S5 if needed, and S11/S12 if he agrees -- none of which changes the tip tree except S5.
+**Bench prep done:** the four fixtures sent with `storage.py send -f` and received back byte-identical;
+the device's FAP pulled back and identical to the 19:07 build (md5 `bc14459…`). mfcarroll is running
+[pr-round-15/review3-bench.md](pr-round-15/review3-bench.md). **S5 is the last open code decision**:
+drop the size term in 06's `compare_reported_geometry` unless gen-2-card ends a success with the note
+on size alone.
+
+**Next:** the S5 result (and a one-rule fold at 06 if it drops the term), then the real replay into
+the fork (back up `846a82eb` first; signing needs 1Password), FAP and clang-format at the final tip,
+dev force-push, PR push, #255 edit + comment, then the #250 reply -- each on its own go-ahead.
 
 [pr-round-15/final-review-3.md](pr-round-15/final-review-3.md) found two behaviour bugs, about ten
 false claims in shipped text, and a set of draft errors. **mfcarroll's calls, 2026-09-29: all of it

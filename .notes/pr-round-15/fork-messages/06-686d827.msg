@@ -35,7 +35,9 @@ data pass already uses when it asks whether a refused block is even there.
 Non-destructive, unlike the wipe's sweep, which writes because it is wiping. A
 run of absences is the card's top only while the card is still there, so when
 the survey stops on one it asks: a card that has left keeps the data it showed,
-but makes no claim about where it ends.
+but makes no claim about where it ends. The popup's last progress frame now
+waits for the survey as well, so it does not read 100% while the card is still
+being asked something.
 
 It runs whatever path the clone took: that gen1 cannot misstate its count is
 known only for the cards here, and the check costs one absent run of reads past
@@ -68,7 +70,11 @@ the three.
 
 ONE TITLE FOR THE NOTES PAGE, "Clone notes" / "Wipe notes". The page now carries
 notes about residue, size and configuration beside the block list, so the title
-no longer names the list, and the list opens with its own label.
+no longer names the list, and the list opens with its own label. That label is
+decided from the capacity facts alone. The old title also asked the
+over-capacity reason code, which adds nothing: that reason comes only with a
+Success carrying an over-capacity count, which is exactly what the capacity
+facts test, so the term goes, with the two locals it needed.
 
 PARAGRAPHS ARE SEPARATED AND MARKED -- a blank line between each and a leading
 "- ", because they stack and three or four run together as one wall otherwise.

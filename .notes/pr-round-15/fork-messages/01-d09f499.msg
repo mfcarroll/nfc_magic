@@ -45,6 +45,11 @@ It lives in the write helper rather than in the sweep, so the rule is stated
 once and a clone whose source reaches block 56 on a card that is gen1 magic
 underneath is covered by the same line.
 
+Start takes the UID the card presented once, before the wipe's branch, into both
+fields: the identity the later checks compare against, which each branch used to
+take separately from the same activation data, and the address, which starts
+from the same bytes and diverges as the writes re-address themselves.
+
 The SDK cannot send any of this. iso15693_3_poller_write_block hardcodes
 SUBCARRIER_1 | DATA_RATE_HI with no flags parameter and no UID, and
 iso15693_3_write_block_response_parse is internal to lib/nfc. So the frame and

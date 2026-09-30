@@ -1,14 +1,15 @@
 # Review-3 bench — S5, the gen1 data rule, and the converted re-clone
 
-The build is the round-15 tip (`325ae89`, identical in shipped files to every proposed fold, which
-move lines between commits without changing the tip -- except S5, which this bench decides). FAP:
-`Momentum-Firmware/build/f7-firmware-C/.extapps/nfc_magic_dev.fap`, built clean 2026-09-29.
+The build on the device is `/ext/apps/NFC/nfc_magic_dev.fap`, md5 `bc1445910652b67016744d2d96104ab8`,
+pulled back and compared 2026-09-29: the FAP built clean at 19:07 from the tree before fold 7. Fold 7
+changed three comments and no code, so this is the tip's code; only S5, which this bench decides, could
+still change it.
 
-**Before starting** (BENCH-RULES 0 and "compare against the artifact the device used"): close any CLI
-or pm3 client holding the Flipper's port; install the FAP (`FBT_NO_SYNC=1 ./fbt launch
-APPSRC=applications_user/nfc_magic_dev` from `Momentum-Firmware`); push `iso15693_identity_64.nfc`,
-`iso15693_edgedata_64.nfc`, `iso15693_blocksize8_28.nfc` and `iso15693_wipeseed_64.nfc` from
-`tools/test_nfc/`, so the device holds the generator's current output.
+**Done before starting** (BENCH-RULES 0 and "compare against the artifact the device used"):
+`iso15693_identity_64.nfc`, `iso15693_edgedata_64.nfc`, `iso15693_blocksize8_28.nfc` and
+`iso15693_wipeseed_64.nfc` sent from `tools/test_nfc/` to `/ext/nfc/` with `scripts/storage.py send
+-f`, each received back and byte-identical to the repo's copy. The predictions below were made from
+those same files.
 
 Every prediction below is written before the run and says what would make it wrong.
 
@@ -69,7 +70,7 @@ behind a field reset. Predicted:
 
 - The same screen as 2a, exactly.
 - Afterwards the card answers to `E0 04 01 10 1D 1D 1D 1D` (Info, or `hf 15 reader`).
-- Wrong if the screen differs from 2a, or it shows "UID unexpected" / another UID.
+- Wrong if the screen differs from 2a, or it is "Unexpected UID" with another UID.
 - The run is about one field reset longer than 2a; there is nothing else to see.
 
 ## Restore

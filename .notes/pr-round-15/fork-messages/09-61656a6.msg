@@ -42,6 +42,10 @@ MEASUREMENTS STATED AS LAWS:
 - "a ceiling, not a cost" was false for the two cards the next constants exist
   for, and 40-70ms is an estimate wherever it appears.
 - a Retry after a cut clears only a transient.
+- a refused write "answers IN BAND", in the data pass and in what writing one
+  block off costs. A card running with the OPTION flag refuses in silence, so
+  there each attempt costs a frame timeout and a read-back, and both places now
+  say so.
 
 OVERCLAIMS:
 

@@ -1,4 +1,4 @@
-# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, two comment passes, two hardening fixes, and two simplifications
+# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, two comment passes, and two hardening fixes
 
 The addressing round. 01-07 each change behaviour. 08 changes none: it is the whole round's release
 notes plus the one comment that had to move with them, because a note stopped arguing a case and
@@ -8,8 +8,7 @@ telling their history (10). Round 15's own lines were fixed in the sync points t
 and 12 are hardening from round 10's self-review, never put to him until now: the failure bitmap
 checks its index (11), and the write-fail reason switches list every reason so -Wswitch sees them
 (12). Neither changes what a card sees. 12 changes one behaviour: a write-fail screen entered
-without a reason now crashes instead of saying "Not a magic tag". 13 changes none: two
-simplifications of earlier-round code (S11, S12 of [final-review-3.md](../final-review-3.md)).
+without a reason now crashes instead of saying "Not a magic tag".
 
 **THE REVIEW-3 FOLD, 2026-09-29**, mfcarroll's calls on final-review-3.md, went into the sync points
 that own each change, by the same index-filter method as the folds before it: the gen1 Partial rule
@@ -21,28 +20,36 @@ S6-S10 simplifications where their lines were written; every text fix at the com
 line. The host test for a repair that lost a frame sits at 07 rather than 05, because the fake can drop
 only an addressed frame and the repair's frames are addressed from 07.
 
+**AND ONE MORE FOLD, the same evening**, mfcarroll's calls on what the verification of the review-3
+fold found. S11 and S12, first a closing commit 13 on the premise that they touched only earlier-round
+code, went where their lines were written instead: that premise was wrong, since 13 rewrote ten lines
+01 and 06 wrote this round. S12 is at 01, with a comment that names no verify, because the gen1 one
+compares against the presented UID only from 07; S11 is at 06, where the label is written. 05's
+progress-frame comment no longer names the survey, which arrives at 06 and adds itself there. The
+OPTION sentence in the per-block cost comment moved from 10, whose message says nothing there is
+false, to 09 beside its twin in the data pass, and 09's message lists both. And two wording nits:
+05's verify-state comment, and a comma splice at 07. Commit 13 is gone.
+
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `cbe8c33` | data-block writes carry the card's address |
-| 02 | `e779a9e` | the OPTION flag, and the read-back it costs |
-| 03 | `13693c6` | the gen1 loss claim is gated on there being a loss |
-| 04 | `2f1dd25` | the identity writes are addressed and take the flag |
-| 05 | `dcfee4f` | a clone that lands in a gen1 card's UID repairs it |
-| 06 | `83d5849` | what a clone leaves behind, and what it says about it |
-| 07 | `5aafab6` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `d3bba43` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 09 | `a8f1efe` | comments from earlier rounds that said something false |
-| 10 | `f10996f` | comments from earlier rounds that told their history |
-| 11 | `e0f409d` | the failure bitmap checks the index it is given |
-| 12 | `b2c837c` | the write-fail reason switches name every reason |
-| 13 | `325ae89` | two simplifications of earlier-round code |
+| 01 | `d09f499` | data-block writes carry the card's address |
+| 02 | `4a3e382` | the OPTION flag, and the read-back it costs |
+| 03 | `e7663ff` | the gen1 loss claim is gated on there being a loss |
+| 04 | `53faffb` | the identity writes are addressed and take the flag |
+| 05 | `efa16d7` | a clone that lands in a gen1 card's UID repairs it |
+| 06 | `686d827` | what a clone leaves behind, and what it says about it |
+| 07 | `599ad85` | the gen1 registers, addressed and no longer mis-scoped |
+| 08 | `33a32da` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 09 | `61656a6` | comments from earlier rounds that said something false |
+| 10 | `11154c5` | comments from earlier rounds that told their history |
+| 11 | `da890f0` | the failure bitmap checks the index it is given |
+| 12 | `9cbecdd` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
 is stated at its widest from the commit that first cites it, a helper a later commit shares is
 defined where its first caller is, and no comment keeps a list of what other code does not yet do.
-Intra-push churn was 2 lines (it was 69) until commit 13, and is 12 with it: 13 rewrites ten lines
-01 and 06 wrote this round. PENDING mfcarroll's call -- see NEXT-SESSION.md.
+Intra-push churn is 5 lines (it was 69); see the residual section below.
 
 **ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
@@ -130,18 +137,22 @@ won**, on the same grounds as 02: a sync point must not show him an error we the
 **07 collapses seven**, for the reason in its own section above.
 
 
-## Residual churn — two lines, and both are a later commit needing what an earlier one lacked
+## Residual churn — five lines, each a later commit needing what an earlier one lacked
 
-Measured by multiset against the tip: every line a sync point adds that is gone at 12. **2 lines**,
-before commit 13 (which adds ten more, all its own -- see the note near the top):
+Measured by multiset against the tip: every line a sync point adds that is gone at 12. **5 lines**:
 
 - **01's frame builder call passes `ISO15693_POLLER_WRITE_FLAGS`; 02 passes
   `iso15693_poller_write_flags(instance)`.** The builder takes its flags byte from 01 so 02 changes
   only what the caller passes, and the helper cannot exist before the OPTION flag it reads.
 - **05's repair calls `iso15693_poller_send_backdoor_uid_gen1(iso_poller, ...)`; 07 adds `instance`
   to that signature**, because the sequence then needs the card's address and flags.
+- **05's progress-frame comment says the frame follows the re-read; 06 adds the survey, which it
+  follows too**, so two of its three lines gain the survey there. Written in its 06 form at 05 it
+  named code that did not exist yet.
+- **09 puts the OPTION sentence into the per-block cost paragraph; 10 drops "bench" from the line
+  it shares**, one of 10's history items. Two changes to one line, neither correcting the other.
 
-Neither is error-then-fix. **Check it rather than believing it** -- the measurement is a few lines of
+None is error-then-fix. **Check it rather than believing it** -- the measurement is a few lines of
 Python over `git diff -U0` between consecutive anchors, and `git log <round base>..<tip> --
 CHANGELOG.md` must still name exactly one commit.
 

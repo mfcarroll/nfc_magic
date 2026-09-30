@@ -105,8 +105,6 @@ custom writer software, so it may be a proprietary variant. Not worth worrying a
   write-fail reason list every reason with no default, the shape you gave the poller's write-state
   switch — so a reason added without an answer is a build error, and a screen entered before any
   reason is set crashes instead of saying "Not a magic tag".
-- **13 — two simplifications of earlier-round code**: a dead term on the Details page, and one copy of
-  the presented UID where Start took two.
 
 ## What this does to the scope
 
