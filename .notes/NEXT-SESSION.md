@@ -1,4 +1,4 @@
-# Next session — ROUND 15 IS REPLAYED AND SIGNED WITH FOLD 10, NOT PUSHED. The push waits on mfcarroll.
+# Next session — ROUND 15 IS REPLAYED AND SIGNED WITH FOLD 10, NOT PUSHED. A second delta review, of fold 10, comes first (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -20,7 +20,90 @@ two-card Retry.
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
 
-## NEXT: THE PUSH AND THE POSTS — each on mfcarroll's go-ahead; the replay is done
+## NEXT: A SECOND DELTA REVIEW, OF FOLD 10 — in a fresh session, before anything is pushed
+
+mfcarroll's call, 2026-09-30: fold 10 made more changes than a fix pass usually does, some of them
+behaviour -- a new result field and a new Details route on a failure screen, a new rule in the gen1
+verify, two accounting changes -- so it gets its own review, by exactly the process the first delta
+review used. **Scope, his pick: the newer delta, read in context, plus a twin hunt.** Not everything
+since review 3 again: the first delta review has just read that span, and fold 10 left most of it alone.
+
+**How.** Single-threaded and report-only, per [REVIEW-PROMPT.md](REVIEW-PROMPT.md): its Pass 2 classes
+and Pass 3 read-through, scoped to fold 10. Skip its Pass 1 -- every gate was run on the final tip
+(see "Already verified"). No agents by default; if one area seems to want a second pair of eyes, ONE
+agent on that alone, and ask mfcarroll first with the cost.
+
+**The material.** The fork holds both builds, so nothing needs building to read it.
+
+- the net code delta, 7 files, +96/-32:
+  `git -C ../all-the-plugins diff backup-pre-fold10-replay nfc-magic-iso15693`
+- per commit, messages included (560 lines):
+  `git -C ../all-the-plugins range-diff 1d411dec..backup-pre-fold10-replay 1d411dec..nfc-magic-iso15693`
+  -- 05, 06, 07 and 09 change; 10 and 13 differ in context lines only; the other seven are equal
+- the posts, +21/-15: `git diff wip-pre-fold10 HEAD -- .notes/pr-round-15/reply.md .notes/squash-message.md`
+  (the #255 comment is unchanged)
+- the seven new host tests, dev-only, +195/-4: `git diff wip-pre-fold10 HEAD -- tools/hosttest`
+- what was asked for and why: [pr-round-15/delta-review.md](pr-round-15/delta-review.md) -- the first
+  review's six findings, mfcarroll's calls, and **three places the fixes depart from what that review
+  suggested**, each with a reason. Judge those; do not take them as given.
+
+**What to look at, in priority order.** Read each against the code around it, not the diff alone: the
+fold-10 changes sit inside 05's conversion and Iso15693WriteStateVerifyClone and 07's VerifyGen1.
+
+1. **The clone's lost-card note** (05). `uid_recheck` is set on the ATTEMPT (`uid_block_sent`), so
+   every CardLost route with it set gets the note: the pass's own card-present check -- including a
+   card that left long before 56/57, since the pass still sends them their frames -- VerifyClone's
+   inventory miss, and the activation budget after VerifyClone's reset. Is the note true on each, and
+   is its wording fair on a gen2 card, where the UID cannot move? What ELSE does the Details page show
+   on a clone's lost card? The block list is suppressed; the truncation, gen1, survey and identity
+   notes are not -- is each still true there (a lifted card's timeouts can trip the clock, and the
+   truncation note then blames a time budget)? And `has_details`' new arm against `is_retryable` and
+   the three-way right-slot rule: label and destination, with and without `uid_recheck`, and for a
+   Write UID's CardLost.
+2. **The gen1 verify's two-UID rule** (07). `iso15693_poller_uid_is_half_written` against
+   `iso15693_poller_predict_uid` and the frames `send_backdoor_uid_gen1` sends; the `original_uid`
+   guard for a target that shares a half with the original; and whether any real outcome that got
+   `uid_unexpected` before now loses it. The only UID the rule rejects that is not a bystander's is
+   the fake's armed-latch fixture -- is there a real one?
+3. **The two accounting changes** (05). `done--` on the converting write, against report_progress's
+   "monotone, capped at STEPS" claim, the kept finished-pass special case, the conversion at 57 (a
+   pass cut at 62/63 there can still read 61 / 60), and the cut and back-fill. `taken_back` against
+   finish_conversion's take-back, on a gen2 run (never converts), a conversion at 56 and one at 57.
+4. **The twin hunt.** For each behaviour fold 10 changed -- a clone's lost card can have Details;
+   `uid_unexpected` has three routes; the gen1 verify accepts only two UIDs; the progress figure on a
+   converted run; the capacity edge after a conversion; "block count" where the note compares only the
+   count -- search every `.c`/`.h` in `base_pack/nfc_magic` at `bd807e5b`, the release notes, the
+   reply, #255 and the squash message for statements about it, **including ones fold 10 did not
+   touch**. This is the class the first review found (its finding 2).
+5. **The four changed messages** (05, 06, 07, 09) against their own diffs, and 10's and 13's against
+   patches that moved only in context.
+
+**The defects to expect**, from the first delta review and from fold 10's own two failed attempts: a
+claim fixed where the code changed and left standing in its twins; a comment naming code a later
+commit adds; an intermediate commit that does not build because a helper arrives later (the first
+attempt's note called `begin_note` at 05, which arrives in 06); a test fixture only the later fake
+honours; and churn from two commits rewriting one comment (the second attempt: 21 lines). Plus the
+standing one: a count or sentence true when it was written.
+
+**Already verified -- do not redo** (fork `bd807e5b`, dev `edd6a157`): 205 host tests, and eight
+mutations, each caught by its own test; all 29 rewritten dev commits that touch shipped files or tests
+pass markers, tests and 71 units under -Werror; the fold checked pair by pair, 246 pairs, 0 problems;
+13 of 13 fork commits signed, each tree identical to the test replay's; churn 6 lines, each in the
+README's residual section; clean FAPs on Momentum and Unleashed; every writing gate 0 findings;
+benched by mfcarroll: a clone lifted near its end shows the lost-card screen, Details and the note.
+
+**Out of scope, to keep it narrow:** everything the first delta review read that fold 10 left alone
+(the range-diff marks it); "Cloned 28/64" (future work, below) and the Back-tone replay (filed
+separately); style clang-format settles; the `[👤]` paragraphs, which are mfcarroll's own words;
+re-running the bench; the host-test harness beyond the seven new tests.
+
+**Output, then what follows.** Findings most-severe first: commit, file:line, what is wrong, the failure
+or misreading it causes, and the fix. mfcarroll picks. Comment and code fixes go in at their owners with
+[tools/fold/](../tools/fold/README.md); message-only fixes are `.msg` edits. Then the per-commit checks
+for what changed, a test replay, churn and the gates, a fresh real replay (1Password), and the push and
+posts, each on its own go-ahead.
+
+## DONE: THE FIRST DELTA REVIEW, FOLDED IN AS FOLD 10, AND REPLAYED
 
 **The delta review is done and folded in** ([pr-round-15/delta-review.md](pr-round-15/delta-review.md)).
 A fresh session read everything since the pushed build and found six things, none blocking; all six
@@ -45,9 +128,10 @@ on `1d411dec`, 13 of 13 signed and verifying, each commit's tree identical to th
 replaced `390a6621`, built before fold 10, never pushed, and kept as `backup-pre-fold10-replay`.
 mfcarroll: "Don't push the PR yet."
 
-**Still to do, each on its own go-ahead:** the PR push, a fast-forward of 13 on `1d411dec`; the #255
-title and body edit and comment, before the #250 reply; the dev force-push of iso15693-dev, with a
-lease; and the squash message at merge.
+**Still to do, after the second delta review (above) and whatever it folds in, each on its own
+go-ahead:** the PR push, a fast-forward of 13 on `1d411dec`; the #255 title and body edit and comment,
+before the #250 reply; the dev force-push of iso15693-dev, with a lease; and the squash message at
+merge.
 
 ## THE THIRTEEN SYNC POINTS, AND FOLDS 7-9. Safety branches `wip-pre-fold10`, `wip-pre-fold9`, `wip-pre-fold8`, `wip-pre-fold7`, `wip-pre-review3-fold`
 
