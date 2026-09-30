@@ -17,6 +17,18 @@ person clicking merge; a PR comment is how he gets it.
 **TIMING: not yet.** Post it when merge nears — an approval, or him asking whether it is done. The
 message has to describe the final state, so re-read it against the tree before posting.
 
+**Re-read 2026-09-30 against round 16's tree** (S4 at `571e41f`, on round 15 as pushed): nothing in
+it changes. Round 15's last two folds and S4 sit below its level of detail -- which notes a lost card's
+Details carries, the progress figure after a conversion at 57, and one struct for the survey's results
+change nothing it says. Its title matches the PR's, and its credits were checked against proxmark3's
+`armsrc/iso15693.c` (`SetTag15693Uid`, `SetTag15693Uid_v2`, GPLv3).
+
+**If `ISO15693.md` goes in** (draft: [pr-round-16/ISO15693.md](pr-round-16/ISO15693.md)), add after the
+payload's first paragraph:
+
+    How it behaves, the magic types it knows and what it was tested on are in
+    ISO15693.md, beside the changelog.
+
 **House style, measured not assumed:** `<PR title> (#NNN)` as the first line, body wrapped at **~79-80
 columns** (#258's longest line is 79; our own dev messages run to 80), short paragraphs, trailers last.
 #258 runs ~20 lines. This feature is much larger, so the ~105 below is defensible; the 190 an earlier
