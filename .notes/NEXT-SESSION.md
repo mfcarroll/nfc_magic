@@ -1,4 +1,4 @@
-# Next session — ROUND 14 IS PUSHED AND POSTED. The blocker is the addressing work, not him.
+# Next session — ROUND 15 IS REPLAYED AND SIGNED, NOT PUSHED. A delta review comes first (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
@@ -19,6 +19,70 @@ two-card Retry.
 **gen-2-card geometry is RESOLVED (2026-09-26):** re-cloned/wiped to 64 physical blocks, all-zero UID,
 blank. It had been advertising 256 (then 28 on a SLIX fixture) from earlier CFG/fixture runs. Recorded
 under `reset_2026_09_26` in `tools/tag-inventory.json`.
+
+## NEXT: THE DELTA REVIEW — in a fresh session, before anything is pushed
+
+mfcarroll's call, 2026-09-29: one more review, **worthwhile but not sprawling** -- cost matters. Review 3
+read the 12-commit build `846a82eb`. Everything since was written and checked by one author, whose own
+verification pass then found six defects in it (below); none of the delta has had an independent read.
+
+**How.** Single-threaded and report-only, per [REVIEW-PROMPT.md](REVIEW-PROMPT.md): its Pass 2 classes
+and Pass 3 read-through, scoped to the delta. Skip its Pass 1 -- every gate was run on the final tip
+(see "Already verified"). No agents by default; if the new write state seems to want a second pair of
+eyes, ONE agent on that alone, and ask mfcarroll first with the cost.
+
+**The material.** The fork holds both builds, so nothing needs building to read it.
+
+- the net code delta, 8 files, +378/-245:
+  `git -C ../all-the-plugins diff backup-pre-review3-replay nfc-magic-iso15693`
+- per commit, messages included (about 1800 lines; 08 is new, 13 unchanged):
+  `git -C ../all-the-plugins range-diff 1d411dec..backup-pre-review3-replay 1d411dec..nfc-magic-iso15693`
+- the posts: `pr-round-15/reply.md`, `pr-round-15/issue255-comment.md`, `squash-message.md`
+
+**What to look at, in priority order.**
+
+1. **`Iso15693WriteStateVerifyClone`** (05), the one new piece of control flow: `clone_uid_recheck` from
+   `uid_block_sent`; entry by `NfcCommandReset` from `finish_write`; three exits (no answer -> CardLost,
+   another UID -> Fail with `uid_unexpected`, the target -> `finish_progress` then
+   `success_or_partial`). Check the activation-error path after that reset (the callback special-cases
+   VerifyWipe -- does VerifyClone need it?), a second tag answering the re-read (#251), and that each
+   exit leaves the result struct saying what its docs claim.
+2. **The conversion's accounting** (05): the `continue` on the moving write, `backdoor_failed` /
+   `backdoor_over_capacity`, `finish_conversion`. **D** in VerifyGen1 (07). **E**, the survey's presence
+   check and the last progress frame (05, 06). **The gen1 data rule**, `gen1_data_lost` (03), through
+   to the screens and the routing (06).
+3. **S5** (06, geometry by count only) and **SLIX** (08, `nfc_protocol_has_parent` in file select).
+4. **Every claim in the 13 messages against its own diff**: counts, cross-references between commits
+   (08 was inserted and 08-12 renumbered tonight), MEASURED lines against the bench notes, and anything
+   measured on some cards but stated as a law.
+5. **The release notes (09) against the final code**, then the reply, #255 and the squash message
+   against both.
+
+**The defects this author's own pass found in the delta**, the pattern to hunt: a comment naming code a
+later commit adds (05's progress comment named the survey, which arrives at 06); a correction sitting
+in a commit whose message says it holds none (an OPTION sentence in 11, since moved to 10 beside its
+twin); two message sentences a fold made false (03, 10); a comment that would have claimed the gen1
+verify before 07 adds it; and a premise, "earlier-round code", that was wrong. Plus the standing one: a
+count or sentence true when it was written.
+
+**Already verified -- do not redo** (fork `390a6621`, dev `7a33c43`): 198 host tests, every new branch
+mutation-checked; all 13 sync points pass markers, tests and 71 units under -Werror; clean FAPs on
+Momentum and Unleashed, and `nfc_protocol_has_parent` is exported in `unl092-base` (API 88.4, symbols
+only, not a build there); clang-format 0 of 95; every writing gate 0 findings; every history rewrite
+verified pair by pair; the signed fork trees equal the test replay's; churn 5 lines, each explained;
+benched: S5, the gen1 rule, the converted re-clone, SLIX (S1, S2).
+
+**Out of scope, to keep it narrow:** code no commit in the round touches; anything the range-diff shows
+unchanged since review 3 (13 whole); "Cloned 28/64" (future work, below) and the Back-tone replay
+(filed separately); style clang-format settles; the `[👤]` paragraphs, which are mfcarroll's own words;
+re-running the bench.
+
+**Output, then what follows.** Findings most-severe first: commit, file:line, what is wrong, the failure
+or misreading it causes, and the fix. mfcarroll picks. Comment and code fixes go in at their owners with
+[tools/fold/](../tools/fold/README.md) (the engine, the index filter, the pair verifier, the per-commit
+check and the churn script, all committed); message-only fixes are `.msg` edits. Then the per-commit
+checks for what changed, a test replay, churn and the gates, a fresh real replay (1Password), and the
+push and posts, each on its own go-ahead.
 
 ## IN FLIGHT — SLIX SAVES FOLDED IN AS 08; ITS BENCH IS NEXT. Safety branches `wip-pre-fold9`, `wip-pre-fold8`, `wip-pre-fold7`, `wip-pre-review3-fold`
 
