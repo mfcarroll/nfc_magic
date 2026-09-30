@@ -407,12 +407,13 @@ bool nfc_magic_scene_write_on_event(void* context, SceneManagerEvent event) {
             // below has five terms for four findings, because the card's reported block count and
             // IC reference are recorded separately. It has no mode term: both places that read it
             // test for a wipe first, and a wipe never sets these fields.
-            const bool clone_notes = iso15693 && (instance->iso15693_result.residue_found ||
-                                                  instance->iso15693_result.holds_more ||
-                                                  instance->iso15693_result.memory_differs ||
-                                                  instance->iso15693_result.ic_ref_differs ||
-                                                  (instance->iso15693_result.used_gen1 &&
-                                                   instance->iso15693_result.gen1_blocks_skipped));
+            const bool clone_notes = iso15693 &&
+                                     (instance->iso15693_result.survey.residue_found ||
+                                      instance->iso15693_result.survey.holds_more ||
+                                      instance->iso15693_result.survey.memory_differs ||
+                                      instance->iso15693_result.survey.ic_ref_differs ||
+                                      (instance->iso15693_result.used_gen1 &&
+                                       instance->iso15693_result.gen1_blocks_skipped));
             if(iso15693_wipe || (iso15693 && instance->iso15693_result.over_capacity > 0) ||
                clone_notes) {
                 scene_manager_set_scene_state(

@@ -189,8 +189,8 @@ static void test_over_capacity_with_a_survey_note_goes_to_clone_complete(void) {
     begin("over-capacity with a survey note routes to the clone-notes screen, not over-capacity");
     setup(NfcMagicProtocolIso15693, NfcMagicIso15693ModeClone);
     app.iso15693_result.over_capacity = 12;
-    app.iso15693_result.memory_differs = true;
-    app.iso15693_result.card_blocks = 28;
+    app.iso15693_result.survey.memory_differs = true;
+    app.iso15693_result.survey.card_blocks = 28;
     send(NfcMagicCustomEventWorkerSuccess);
 
     CHECK(routed_to() == NfcMagicSceneIso15693WriteFail);

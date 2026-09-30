@@ -267,13 +267,13 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
         // addresses, where the file had nothing to lose. Details carries every one.
         FuriString* text = furi_string_alloc();
         furi_string_cat_str(text, "All data written.");
-        if(instance->iso15693_result.residue_found) {
+        if(instance->iso15693_result.survey.residue_found) {
             furi_string_cat_printf(
                 text,
                 "\nBlocks %u-%u hold\nolder data.",
-                instance->iso15693_result.residue_first,
-                instance->iso15693_result.residue_last);
-        } else if(instance->iso15693_result.holds_more) {
+                instance->iso15693_result.survey.residue_first,
+                instance->iso15693_result.survey.residue_last);
+        } else if(instance->iso15693_result.survey.holds_more) {
             // What the card SAYS first, then what it is: the reported count is what a tool prints.
             // Both are COUNTS, deliberately -- naming the reported count against a top BLOCK number
             // mixes a count with an index and invites an off-by-one. Neither says who set that count;
@@ -281,22 +281,25 @@ void nfc_magic_scene_iso15693_write_fail_on_enter(void* context) {
             furi_string_cat_printf(
                 text,
                 "\nCard reports %u blocks,\nbut holds %u.",
-                instance->iso15693_result.card_blocks,
-                (uint16_t)(instance->iso15693_result.survey_top + 1));
+                instance->iso15693_result.survey.card_blocks,
+                (uint16_t)(instance->iso15693_result.survey.survey_top + 1));
         } else if(
-            instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
+            instance->iso15693_result.survey.memory_differs ||
+            instance->iso15693_result.survey.ic_ref_differs) {
             // Neither the data nor the size: what is left is how the card describes itself. Name
             // whichever of the two moved -- both fit on the remaining two lines when both did.
             furi_string_cat_str(text, "\nCard still reports\n");
-            if(instance->iso15693_result.memory_differs) {
-                furi_string_cat_printf(text, "%u blocks", instance->iso15693_result.card_blocks);
+            if(instance->iso15693_result.survey.memory_differs) {
+                furi_string_cat_printf(
+                    text, "%u blocks", instance->iso15693_result.survey.card_blocks);
             }
-            if(instance->iso15693_result.memory_differs &&
-               instance->iso15693_result.ic_ref_differs) {
+            if(instance->iso15693_result.survey.memory_differs &&
+               instance->iso15693_result.survey.ic_ref_differs) {
                 furi_string_cat_str(text, ", ");
             }
-            if(instance->iso15693_result.ic_ref_differs) {
-                furi_string_cat_printf(text, "IC ref %02X", instance->iso15693_result.card_ic_ref);
+            if(instance->iso15693_result.survey.ic_ref_differs) {
+                furi_string_cat_printf(
+                    text, "IC ref %02X", instance->iso15693_result.survey.card_ic_ref);
             }
             furi_string_cat_str(text, ".");
         } else {

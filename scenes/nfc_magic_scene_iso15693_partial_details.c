@@ -173,34 +173,35 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         furi_string_cat_str(
             message, "gen1: 56/57/62/63 are the UID / backdoor registers, not file data.");
     }
-    if(instance->iso15693_result.residue_found) {
+    if(instance->iso15693_result.survey.residue_found) {
         nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_printf(
             message,
             "Blocks %u-%u are readable and still hold non-zero data that was on the card before. "
             "Only the blocks from the file were written. To clear the rest, use 'Wipe' first then "
             "'Write' again.",
-            instance->iso15693_result.residue_first,
-            instance->iso15693_result.residue_last);
+            instance->iso15693_result.survey.residue_first,
+            instance->iso15693_result.survey.residue_last);
     }
-    if(instance->iso15693_result.holds_more) {
+    if(instance->iso15693_result.survey.holds_more) {
         nfc_magic_scene_iso15693_partial_details_begin_note(message);
         // "The same as the file" only when the two numbers are equal. Not "configured to match": that
         // claims this app set the count, and only the gen2 CFG frame does, only on a magic card. A
         // non-magic tag already wearing the file's UID, and a gen1 clone, both reach here with a count
         // nothing here wrote.
-        const uint16_t held = (uint16_t)(instance->iso15693_result.survey_top + 1);
-        const bool same = instance->iso15693_result.card_blocks ==
-                          instance->iso15693_result.file_blocks;
+        const uint16_t held = (uint16_t)(instance->iso15693_result.survey.survey_top + 1);
+        const bool same = instance->iso15693_result.survey.card_blocks ==
+                          instance->iso15693_result.survey.file_blocks;
         furi_string_cat_printf(
             message,
             "The card reports %u blocks%s but holds %u, and still answers individual reads to those "
             "higher blocks. Some readers may detect this.",
-            instance->iso15693_result.card_blocks,
+            instance->iso15693_result.survey.card_blocks,
             same ? ", the same as the file," : "",
             held);
     }
-    if(instance->iso15693_result.memory_differs || instance->iso15693_result.ic_ref_differs) {
+    if(instance->iso15693_result.survey.memory_differs ||
+       instance->iso15693_result.survey.ic_ref_differs) {
         // Both sides, and only the halves that moved.
         //
         // "This card", not "this gen1 card": the note fires whenever the two disagree, and gen1 is the
@@ -208,7 +209,7 @@ void nfc_magic_scene_iso15693_partial_details_on_enter(void* context) {
         // matched the file's, reaches here too, with no configuration write ever taking. The gen1
         // sentence below is a general fact about why such a card cannot be made to match, which is
         // true wherever it is read.
-        const Iso15693PollerResult* r = &instance->iso15693_result;
+        const Iso15693PollerSurvey* r = &instance->iso15693_result.survey;
         const bool both = r->memory_differs && r->ic_ref_differs;
         nfc_magic_scene_iso15693_partial_details_begin_note(message);
         furi_string_cat_str(message, "The file says ");
