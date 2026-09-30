@@ -266,6 +266,9 @@ wrong card".
 - A plain success popup: 28 blocks against a card of 28, IC ref 01 on both sides, nothing above.
 - Wrong if the wrong-card screen appears, or the run ends anything but a success.
 
+**Result, 2026-09-29: PASSED.** File select took the save, the clone ended "Success", and a proxmark
+read of the tag afterwards matched the save. S2 was not run.
+
 **S2 (optional). The same save onto `gen-2-card`.** Predicted: the gen2 path programs 28 blocks and IC
 ref 01, the data pass writes all 28, and the survey finds the card answering reads up to its 64
 physical blocks: "Clone finished" with "Card reports 28 blocks, / but holds 64." Restore `gen-2-card`

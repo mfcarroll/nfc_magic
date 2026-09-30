@@ -164,8 +164,8 @@ like that, such as `SUPPORTED_CHIPS.md` in fake_chip_detector and `docs/DESIGN.m
 would be much the same material, laid out as a reference rather than as release notes, with room for
 general notes on the gen1, gen2 and gen3 magic types. If you want it, it can go in before merge.
 
-[👤] I have a squash message drafted. I'll wait until you're ready to merge in case there are further
-changes still, then post it as its own comment.
+[👤] I think moving all that to a separate .md makes sense. I also have a squash message drafted. I'll
+wait until you're ready to merge in case there are further changes, then post it as its own comment.
 
 **One thing tested since, out of scope on purpose.** A genuine gen3 card kindly sent by @0x6r1an0y
 — un-finalized, its configuration signature an exact match to proxmark's V3 config mode. The gen2

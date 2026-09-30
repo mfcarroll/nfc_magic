@@ -15,4 +15,8 @@ ISO15693-3, through nfc_protocol_has_parent, and nothing downstream changes.
 The SLIX-only settings the file carries -- its passwords, privacy mode,
 protection and EAS state -- are not written, by this path or any other here.
 
+MEASURED: a save the stock NFC app made of an NXP ICODE SLIX tag, which this app
+refused before, cloned back onto that tag ends in a plain success, and a
+proxmark read of the tag afterwards matches the save.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
