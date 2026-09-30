@@ -59,8 +59,10 @@ on the message and the anchor. It changes no behaviour, so no bench.
   changelog as it is until then); and add the squash message's line for it. Its own sync point.
 - **A correction to #255's body**, found while drafting the doc:
   [pr-round-16/issue255-body-fix.md](pr-round-16/issue255-body-fix.md). The body posted today still
-  says a gen3 card's owner sees only the generic "Wipe card?" confirm, false since 2026-09-08: the
-  confirm is "Wipe? (gen1/gen2 only)" and ends "This can brick a gen3 card!". An edit, on go-ahead.
+  said a gen3 card's owner sees only the generic "Wipe card?" confirm, false since 2026-09-08: the
+  confirm is "Wipe? (gen1/gen2 only)" and ends "This can brick a gen3 card!". **Corrected on
+  mfcarroll's go-ahead, 2026-09-30 09:34 UTC**, body only, read back identical; the optional tweak to
+  the comment's last line waits.
 - **The squash message**, re-read against round 16's tree: unchanged, with the line to add if
   ISO15693.md goes in.
 
