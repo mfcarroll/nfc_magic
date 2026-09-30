@@ -87,7 +87,8 @@ reachable because it still answered inventory, and the note says that.
 
 The comments scoped the wipe's identity risk to "a card left ARMED by an earlier
 gen1 UID write": in the wipe's own notes, at the UID-changed reason and at its
-screen. The release notes carry the same correction in the next commit.
+screen. The release notes carry the same correction, in the commit that holds
+all of them.
 
 Five cards here take a write to block 56 with NO unlock or commit in front of it
 at all, one of them a card this app had never written, and neither frame has

@@ -1,14 +1,15 @@
-# Round 15 — the behavioural sync points, the gen2 measurement and the release notes, two comment passes, and two hardening fixes
+# Round 15 — the behavioural sync points, SLIX saves as a source, the gen2 measurement and the release notes, two comment passes, and two hardening fixes
 
-The addressing round. 01-07 each change behaviour. 08 changes none: it is the whole round's release
-notes plus the one comment that had to move with them, because a note stopped arguing a case and
-started stating a measurement. 09 and 10 change no behaviour either: they correct comments from earlier
-rounds that the whole-PR review of 2026-09-28 ([app-review.md](../app-review.md)) found false (09) or
-telling their history (10). Round 15's own lines were fixed in the sync points that wrote them. 11
-and 12 are hardening from round 10's self-review, never put to him until now: the failure bitmap
-checks its index (11), and the write-fail reason switches list every reason so -Wswitch sees them
-(12). Neither changes what a card sees. 12 changes one behaviour: a write-fail screen entered
-without a reason now crashes instead of saying "Not a magic tag".
+The addressing round. 01-07 each change behaviour, and 08 makes a SLIX save from the stock NFC app a
+clone source. 09 changes none: it is the whole round's release notes plus the one comment that had to
+move with them, because a note stopped arguing a case and started stating a measurement. 10 and 11
+change no behaviour either: they correct comments from earlier rounds that the whole-PR review of
+2026-09-28 ([app-review.md](../app-review.md)) found false (10) or telling their history (11). Round
+15's own lines were fixed in the sync points that wrote them. 12 and 13 are hardening from round 10's
+self-review, never put to him until now: the failure bitmap checks its index (12), and the write-fail
+reason switches list every reason so -Wswitch sees them (13). Neither changes what a card sees. 13
+changes one behaviour: a write-fail screen entered without a reason now crashes instead of saying
+"Not a magic tag".
 
 **THE REVIEW-3 FOLD, 2026-09-29**, mfcarroll's calls on final-review-3.md, went into the sync points
 that own each change, by the same index-filter method as the folds before it: the gen1 Partial rule
@@ -21,14 +22,15 @@ line. The host test for a repair that lost a frame sits at 07 rather than 05, be
 only an addressed frame and the repair's frames are addressed from 07.
 
 **AND ONE MORE FOLD, the same evening**, mfcarroll's calls on what the verification of the review-3
-fold found. S11 and S12, first a closing commit 13 on the premise that they touched only earlier-round
-code, went where their lines were written instead: that premise was wrong, since 13 rewrote ten lines
+fold found. S11 and S12, first a closing commit on the premise that they touched only earlier-round
+code, went where their lines were written instead: that premise was wrong, since it rewrote ten lines
 01 and 06 wrote this round. S12 is at 01, with a comment that names no verify, because the gen1 one
 compares against the presented UID only from 07; S11 is at 06, where the label is written. 05's
 progress-frame comment no longer names the survey, which arrives at 06 and adds itself there. The
-OPTION sentence in the per-block cost comment moved from 10, whose message says nothing there is
-false, to 09 beside its twin in the data pass, and 09's message lists both. And two wording nits:
-05's verify-state comment, and a comma splice at 07. Commit 13 is gone.
+OPTION sentence in the per-block cost comment moved from 11, whose message says nothing there is
+false, to 10 beside its twin in the data pass, and 10's message lists both. And two wording nits:
+05's verify-state comment, and a comma splice at 07. The closing commit is gone. (Numbers here are
+today's; fold 9, below, inserted 08.)
 
 **AND S5, decided by the bench** ([review3-bench.md](../review3-bench.md)): the block-count flag compares
 the count, not the block size, from 06's first commit, where the size term was written. An 8-byte-block
@@ -36,6 +38,13 @@ file onto a gen2 card that took the geometry and then refused every write, and o
 reached a success; and where the counts agree, the size term's only effect is a note printing two
 equal numbers.
 06's message says so; a host test pins it.
+
+**AND 08, SLIX SAVES AS A SOURCE** (fold 9), mfcarroll's call after the bench: the stock NFC app saves
+NXP ICODE tags as SLIX, and file select refused them as the wrong card. `676842c`, a notes-only commit
+sitting directly on 07's anchor, now carries the one-condition change and its host test
+(`test_file_select_scene.c`, mutation-checked), so fork commit 08 is exactly that change; the
+release-notes sentence went in with the other release notes, at 09. 07's message no longer says the
+release notes are "in the next commit". The old 08-12 are 09-13.
 
 | # | sync at | one decision |
 |---|---|---|
@@ -46,11 +55,12 @@ equal numbers.
 | 05 | `efa16d7` | a clone that lands in a gen1 card's UID repairs it |
 | 06 | `fb9c2fd` | what a clone leaves behind, and what it says about it |
 | 07 | `22b7101` | the gen1 registers, addressed and no longer mis-scoped |
-| 08 | `dcfb40f` | gen2 frames cannot be addressed, and the 2.3 release notes |
-| 09 | `5464a22` | comments from earlier rounds that said something false |
-| 10 | `6f5e522` | comments from earlier rounds that told their history |
-| 11 | `c59dd92` | the failure bitmap checks the index it is given |
-| 12 | `b199b94` | the write-fail reason switches name every reason |
+| 08 | `62dc264` | a SLIX save from the stock NFC app is a clone source |
+| 09 | `9bf1e3e` | gen2 frames cannot be addressed, and the 2.3 release notes |
+| 10 | `376d67d` | comments from earlier rounds that said something false |
+| 11 | `c7826ed` | comments from earlier rounds that told their history |
+| 12 | `712bd06` | the failure bitmap checks the index it is given |
+| 13 | `0412314` | the write-fail reason switches name every reason |
 
 **EVERY LINE IS WRITTEN IN ITS FINAL FORM AT THE FIRST SYNC POINT THAT HAS IT** -- review 2's fold,
 2026-09-27, [final-review-2.md](../final-review-2.md). A measurement that widened during the round
@@ -58,17 +68,17 @@ is stated at its widest from the commit that first cites it, a helper a later co
 defined where its first caller is, and no comment keeps a list of what other code does not yet do.
 Intra-push churn is 5 lines (it was 69); see the residual section below.
 
-**ALL RELEASE NOTES ARE ONE COMMIT, 08, and nothing before it touches `CHANGELOG.md`.** Written per
+**ALL RELEASE NOTES ARE ONE COMMIT, 09, and nothing before it touches `CHANGELOG.md`.** Written per
 commit they get rewritten by later commits in the same push -- three bullets for what is one fact to
 a user and then merged, a bullet reworded twice as the bench widened. A release note is a release
 artifact, not a running log, and he reads the delta between rounds. The old CHANGELOG-only sync point
-folded into 08 with the rest.
+folded into 09 with the rest.
 
 **Dev history WAS reordered, deliberately**: the repair moved ahead of the survey so it
 could be its own sync point. See below. 06 collapses six dev commits and 07 collapses six, and
 those are the two places this round does not get one decision per commit; the reason is churn.
 (07's range holds a seventh dev commit, "TI enforces the address too", whose shipped change moved
-to 01 and 02 in the review-2 fold, so it now touches notes only. 08's range holds four: the release
+to 01 and 02 in the review-2 fold, so it now touches notes only. 09's range holds four: the release
 notes, two small fixes to its gen3 note, one of which also touches the comment behind the same
 warning, and the whole-PR review's release-note fixes.)
 
@@ -89,7 +99,7 @@ addressing: the correction itself, and then this round's own self-review fixing 
 written, the last of them carrying review 2's fixes to the range. The message is split under `==`
 headings so the two decisions stay separable by a reader.
 
-The arm correction is comment-only here, its release-notes line being in 08; nothing about it
+The arm correction is comment-only here, its release-notes line being in 09; nothing about it
 changes behaviour. **Verify
 before replaying** that no shipped commit sits after the last anchor -- `replay-to-fork.sh` checks this
 up front now, and the end-state diff catches it too. It is what would have caught the sync points
@@ -146,7 +156,7 @@ won**, on the same grounds as 02: a sync point must not show him an error we the
 
 ## Residual churn — five lines, each a later commit needing what an earlier one lacked
 
-Measured by multiset against the tip: every line a sync point adds that is gone at 12. **5 lines**:
+Measured by multiset against the tip: every line a sync point adds that is gone at 13. **5 lines**:
 
 - **01's frame builder call passes `ISO15693_POLLER_WRITE_FLAGS`; 02 passes
   `iso15693_poller_write_flags(instance)`.** The builder takes its flags byte from 01 so 02 changes
@@ -156,8 +166,8 @@ Measured by multiset against the tip: every line a sync point adds that is gone 
 - **05's progress-frame comment says the frame follows the re-read; 06 adds the survey, which it
   follows too**, so two of its three lines gain the survey there. Written in its 06 form at 05 it
   named code that did not exist yet.
-- **09 puts the OPTION sentence into the per-block cost paragraph; 10 drops "bench" from the line
-  it shares**, one of 10's history items. Two changes to one line, neither correcting the other.
+- **10 puts the OPTION sentence into the per-block cost paragraph; 11 drops "bench" from the line
+  it shares**, one of 11's history items. Two changes to one line, neither correcting the other.
 
 None is error-then-fix. **Check it rather than believing it** -- the measurement is a few lines of
 Python over `git diff -U0` between consecutive anchors, and `git log <round base>..<tip> --

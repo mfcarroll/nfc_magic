@@ -95,13 +95,17 @@ custom writer software, so it may be a proprietary variant. Not worth worrying a
   reaches rather than to an armed one. At block 62 addressing is what makes the NXP parts answer at
   all. Unlock and commit are addressed on the safety argument alone: no gen1 card here has accepted
   either, in any form, and the cards that would show them necessary are ones I have never had.
-- **08 — the gen2 backdoor cannot be addressed**: on all four gen2 cards it takes only the unaddressed
+- **08 — a SLIX save from the stock NFC app is a clone source.** The stock app saves NXP ICODE tags
+  as SLIX, and file select took only plain ISO15693-3 dumps, so an ordinary save was refused as the
+  wrong card. It now takes any protocol built on ISO15693-3; the clone already reads the ISO15693-3
+  data underneath, and the SLIX-only settings are not written.
+- **09 — the gen2 backdoor cannot be addressed**: on all four gen2 cards it takes only the unaddressed
   form, while each takes an addressed ordinary write and filters a wrong address. Another gen2 magic
   card in the field takes these frames, and nothing in the app can stop that; the release notes say
-  so. 08 is also the 2.3 notes.
-- **09, 10 — comments from earlier rounds** that had gone false (among them the gen1 opt-in string,
+  so. 09 is also the 2.3 notes.
+- **10, 11 — comments from earlier rounds** that had gone false (among them the gen1 opt-in string,
   which said the UID goes to all four blocks), or that told their own history.
-- **11, 12 — hardening.** The failure bitmap checks the index it is given, and both switches on the
+- **12, 13 — hardening.** The failure bitmap checks the index it is given, and both switches on the
   write-fail reason list every reason with no default, the shape you gave the poller's write-state
   switch — so a reason added without an answer is a build error, and a screen entered before any
   reason is set crashes instead of saying "Not a magic tag".
@@ -151,7 +155,7 @@ That closes the list at the end of my reply to your round 9: the cut, the simpli
 release-notes trim, the addressed writes and the re-test on hardware are all in, which was the
 condition I put on the squash message, since it has to describe the final state.
 
-**A question about the release notes.** The 2.3 entry is now 160 lines, about half the file, and
+**A question about the release notes.** The 2.3 entry is now 162 lines, about half the file, and
 most of it describes how the ISO15693 support behaves and what it was tested on, rather than what
 changed. As fixes and gen3 support land, later entries would have to correct it. Would you rather
 have a short 2.3 entry in the style of 2.0, keeping the limits a user needs before a wipe, with the

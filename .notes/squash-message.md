@@ -34,10 +34,10 @@ every trace of process.
 NFC Magic: ISO15693 / NfcV support (#250)
 
 Adds magic ISO15693 / NfcV to the app's existing magic-card framework: detection
-in the "Check Magic Tag" scan, Info, clone from a .nfc, wipe, and manual UID
-write. The UID writes are ported from proxmark3 armsrc/iso15693.c
-(SetTag15693Uid / _v2), also GPLv3; the clone flow, capacity handling and
-warnings are built on top.
+in the "Check Magic Tag" scan, Info, clone from a .nfc (the stock NFC app's SLIX
+saves included), wipe, and manual UID write. The UID writes are ported from
+proxmark3 armsrc/iso15693.c (SetTag15693Uid / _v2), also GPLv3; the clone flow,
+capacity handling and warnings are built on top.
 
 Detection cannot be non-destructive here: magic status on ISO15693 is only
 confirmable by writing, so any activating NfcV tag is treated as a candidate and

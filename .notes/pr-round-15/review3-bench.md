@@ -251,6 +251,26 @@ which is host-tested. No need to repeat it.
 - **Also noticed: "The card has UID only." (1a)** understates a gen2 card, which also took the file's
   geometry and IC ref. The text dates from 2026-08-04 (`6f85395`).
 
+## SLIX saves as a source
+
+A new build (fold 9, sync point 08): file select takes a save whose protocol is built on ISO15693-3,
+so the stock NFC app's SLIX saves are clone sources. The source is mfcarroll's own save of
+`slix-1k-50x28`, made with the stock NFC app before 1a (type SLIX), which this app refused with "This is
+wrong card".
+
+**S1. That save onto `slix-1k-50x28`, the tag it came from.** Predicted:
+
+- File select accepts it: no "This is wrong card".
+- The card already wears the file's UID, so the gen2 verify passes on it, and the file's 28 blocks end
+  below block 56, so the data pass never reaches the registers.
+- A plain success popup: 28 blocks against a card of 28, IC ref 01 on both sides, nothing above.
+- Wrong if the wrong-card screen appears, or the run ends anything but a success.
+
+**S2 (optional). The same save onto `gen-2-card`.** Predicted: the gen2 path programs 28 blocks and IC
+ref 01, the data pass writes all 28, and the survey finds the card answering reads up to its 64
+physical blocks: "Clone finished" with "Card reports 28 blocks, / but holds 64." Restore `gen-2-card`
+afterwards as in the S5 section.
+
 ## Not benched, and why
 
 - **The lift halves of E**: a lift during the survey, and the 100% frame waiting for the re-read.

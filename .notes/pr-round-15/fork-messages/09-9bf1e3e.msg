@@ -45,8 +45,9 @@ does; a card that needs the OPTION flag gets it; a clone onto a gen1 card keeps
 the card's identity whichever path it took, and reads it back before reporting;
 a clone says what it left behind; a gen1 clone that lost no data at 56/57/62/63
 is not Partial on that account, and one whose file reached them with nothing
-there finishes with a note; and the addressed-write validation, seven cards over
-four identified chips.
+there finishes with a note; a SLIX save from the stock NFC app is a clone
+source; and the addressed-write validation, seven cards over four identified
+chips.
 
 WHAT IS CORRECTED: the clone bullet claimed a copy advertises the same chip
 without qualification, when only a gen2 card is programmed with the source's IC
