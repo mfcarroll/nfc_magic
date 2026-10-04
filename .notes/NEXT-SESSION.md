@@ -66,6 +66,14 @@ on the message and the anchor. It changes no behaviour, so no bench.
 - **The squash message**, re-read against round 16's tree: unchanged, with the line to add if
   ISO15693.md goes in.
 
+- **Checked 2026-10-03, while waiting.** Upstream `dev` is 59 commits past the PR's merge base
+  `a6fc8dea`, none touching `base_pack/nfc_magic`, and the PR touches nothing outside it: no rebase
+  needed (GitHub: MERGEABLE, both checks pass). `ISO15693.md` checked against the tree: every quoted
+  screen string, the thirteen result titles and the conditions behind them, the menu, the E0 rule and
+  the Info claims hold. One fix: its dead-stretch limit now says a wipe drops such a stretch only where
+  nothing above it answers, which is what the sweep's tail-drop rule does; as written it read as
+  contradicting the Wipe section's "reported rather than written off".
+
 **Then:** round 16's signed replay and push, a short reply, and the squash message at merge.
 
 **The dev push is done**, 2026-09-30: `4b848b7a..13120668`, a fast-forward. The rewrite had already
