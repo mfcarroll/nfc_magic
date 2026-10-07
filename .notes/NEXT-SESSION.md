@@ -1,4 +1,13 @@
-# Next session — ROUND 15 IS PUSHED AND POSTED. ROUND 16 (S4) IS PREPARED, NOT PUSHED, and ISO15693.md is drafted (below).
+# Next session — ROUND 16 IS THE RELEASE-NOTES MOVE: replayed to the fork LOCALLY, NOT PUSHED. S4 is HELD.
+
+**2026-10-07.** The maintainer took the ISO15693.md question. Round 16 is now one fork commit, a
+14-line 2.3 entry (mfcarroll's 2026-09-29 draft, two corrections) and `ISO15693.md` beside it:
+[pr-round-16/docs-messages/](pr-round-16/docs-messages/README.md), anchor `2235a9e`, replayed, signed,
+a fast-forward. **S4 is held** until round 15's code is reviewed (mfcarroll), rebased above the docs as
+`992138b`. `iso15693-dev` was rebuilt so (force-pushed on go-ahead); `wip-pre-docs-reorder` = old tip
+`c9c0d198`. Still to do before the push: the squash message's ISO15693.md line, a short reply.
+
+# Earlier — ROUND 15 IS PUSHED AND POSTED. ROUND 16 (S4) WAS PREPARED, and ISO15693.md drafted (below).
 
 **⚠️ CORRECTED 2026-09-26: force-pushed `dbc11980` -> `1d411dec`**, our seven rebuilt as intended plus
 an eighth, 8 of 8 signed, lease on `dbc11980`; posted as
