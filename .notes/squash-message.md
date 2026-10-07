@@ -23,11 +23,9 @@ Details carries, the progress figure after a conversion at 57, and one struct fo
 change nothing it says. Its title matches the PR's, and its credits were checked against proxmark3's
 `armsrc/iso15693.c` (`SetTag15693Uid`, `SetTag15693Uid_v2`, GPLv3).
 
-**If `ISO15693.md` goes in** (draft: [pr-round-16/ISO15693.md](pr-round-16/ISO15693.md)), add after the
-payload's first paragraph:
-
-    How it behaves, the magic types it knows and what it was tested on are in
-    ISO15693.md, beside the changelog.
+**`ISO15693.md` went in with round 16** (2026-10-07), so the payload now says where it is, after its
+first paragraph. The rest was re-read against it: the KNOWN LIMITS stay here as well, because a
+squash message is read in `git log`, where the reference file is one more step away.
 
 **House style, measured not assumed:** `<PR title> (#NNN)` as the first line, body wrapped at **~79-80
 columns** (#258's longest line is 79; our own dev messages run to 80), short paragraphs, trailers last.
@@ -50,6 +48,9 @@ in the "Check Magic Tag" scan, Info, clone from a .nfc (the stock NFC app's SLIX
 saves included), wipe, and manual UID write. The UID writes are ported from
 proxmark3 armsrc/iso15693.c (SetTag15693Uid / _v2), also GPLv3; the clone flow,
 capacity handling and warnings are built on top.
+
+How it behaves, the magic types it knows and what it was tested on are in
+ISO15693.md, beside the changelog.
 
 Detection cannot be non-destructive here: magic status on ISO15693 is only
 confirmable by writing, so any activating NfcV tag is treated as a candidate and
@@ -119,9 +120,9 @@ contents -- and a gen2 clone reprograms the advertised count down to the file's,
 so an ordinary dump shows a clean copy over data that is still readable. The
 clone reads above the file's last block and reports data left up there, a card
 answering past the count it reports, and a block count or IC reference the file
-did not ask for; and a gen1 clone whose file reached 56/57/62/63 with nothing there
-is noted as carrying registers where the file had blocks. None is a failure;
-they are notes on a success.
+did not ask for; and a gen1 clone whose file reached 56/57/62/63 with nothing
+there is noted as carrying registers where the file had blocks. None is a
+failure; they are notes on a success.
 
 KNOWN LIMITS, in the order they matter:
 
