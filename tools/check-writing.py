@@ -7,7 +7,8 @@ Prose rules nobody runs are documentation, not a gate. This runs the greppable s
 
     check-writing.py comments <path>...     shipped source: history, dev SHAs, nicknames, long blocks;
                                             a CHANGELOG.md is read as its TOP section only, and also
-                                            checked for pointers into the source
+                                            checked for pointers into the source; ISO15693.md the
+                                            same way, in full
     check-writing.py comments-new <base> <root>   only what <root>'s tree ADDS over <base>'s
     check-writing.py forkmsg <dir>          fork messages: dev SHAs, tools/ paths, test claims
     check-writing.py headings <file>...     a heading whose own section contradicts it
@@ -145,12 +146,27 @@ def release_notes(p, lines):
     return out
 
 
+def reference(p, lines):
+    """A shipped reference page, ISO15693.md, read in full: unlike a changelog it has no older
+    sections that belong to someone else, and the same reader cannot act on the source."""
+    out = []
+    for i, line in enumerate(lines, 1):
+        out += prose(p, i, line) + nickname(p, i, line)
+        m = INTERNAL.search(line)
+        if m:
+            out.append((p, i, "internal", f"{m.group()!r} -- a user cannot act on the source"))
+    return out
+
+
 def comments(paths):
     bad, warn = [], []
     for p in paths:
         lines = Path(p).read_text().split("\n")
-        if str(p).endswith(".md"):
+        if Path(p).name == "CHANGELOG.md":
             bad += release_notes(p, lines)
+            continue
+        if str(p).endswith(".md"):
+            bad += reference(p, lines)
             continue
         run, start = 0, 0
         for i, line in enumerate(lines, 1):
@@ -184,8 +200,9 @@ def comments_new(args):
 
     def scan(root):
         files = sorted(str(p) for p in Path(root).rglob("*.[ch]"))
-        if (Path(root) / "CHANGELOG.md").exists():
-            files.append(str(Path(root) / "CHANGELOG.md"))
+        for doc in ("CHANGELOG.md", "ISO15693.md"):
+            if (Path(root) / doc).exists():
+                files.append(str(Path(root) / doc))
         found, _ = comments(files)
         return [(str(Path(p).relative_to(root)), i, k, t) for p, i, k, t in found]
 

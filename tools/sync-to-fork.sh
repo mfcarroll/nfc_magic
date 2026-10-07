@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Sync the ISO15693 app code + CHANGELOG from THIS dev repo (the source of truth) into an
-# all-the-plugins checkout's base_pack/nfc_magic, applying the dev -> upstream transform. Run this
+# Sync the ISO15693 app code, CHANGELOG and ISO15693.md from THIS dev repo (the source of truth)
+# into an all-the-plugins checkout's base_pack/nfc_magic, applying the dev -> upstream transform. Run this
 # whenever the PR needs refreshing, so you only ever edit here.
 #
 # Usage:  tools/sync-to-fork.sh [path-to-all-the-plugins]     (default: ../all-the-plugins)
@@ -9,7 +9,7 @@
 #
 # It:
 #   - overlays the app files (magic/ scenes/ views/ helpers/ assets/ nfc_magic_app*.{c,h}
-#     CHANGELOG.md) from the committed SRC ref into base_pack/nfc_magic
+#     CHANGELOG.md ISO15693.md) from the committed SRC ref into base_pack/nfc_magic
 #   - rewrites the dev icon-header include (nfc_magic_dev_icons.h -> nfc_magic_icons.h), the only
 #     code reference to the dev appid
 #   - keeps the target's fap_version in step with dev (leaves its appid / name / description alone,
@@ -34,13 +34,16 @@ git rev-parse --verify "$SRC" >/dev/null 2>&1 || { echo "error: source ref '$SRC
 # portable in-place sed (GNU vs BSD/macOS)
 sedi() { if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi; }
 
-APP_PATHS="magic scenes views helpers assets nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md"
+APP_PATHS="magic scenes views helpers assets nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md ISO15693.md"
 
 echo "Syncing '$SRC' -> $DEST"
 
-# overlay the app files from the committed source ref
+# overlay the app files from the committed source ref -- only those it has: an older ref predates
+# ISO15693.md, and git archive refuses a path the ref lacks
+PRESENT=""
+for p in $APP_PATHS; do git cat-file -e "$SRC:$p" 2>/dev/null && PRESENT="$PRESENT $p"; done
 # shellcheck disable=SC2086
-git archive "$SRC" -- $APP_PATHS | tar -x -C "$DEST"
+git archive "$SRC" -- $PRESENT | tar -x -C "$DEST"
 
 # the dev appid generates nfc_magic_dev_icons.h; the upstream appid (nfc_magic) generates
 # nfc_magic_icons.h -- rewrite it back in every file that includes it

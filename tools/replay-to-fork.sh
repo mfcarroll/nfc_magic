@@ -74,10 +74,16 @@ fi
 # The path set is the one sync-to-fork.sh overlays from, filtered to source files and the release
 # notes: a gate whose file set is narrower than the thing it gates reports clean for the files it
 # never opened. The notes were exactly that until 2026-09-28 -- the gate had never read them.
-SRC_PATHS=(magic scenes views helpers nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md)
+SRC_PATHS=(magic scenes views helpers nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md ISO15693.md)
 GATE_TMP="$(mktemp -d)"
 trap 'rm -rf "$GATE_TMP"' EXIT
-tree_of() { mkdir -p "$GATE_TMP/$2"; git -C "$DEV" archive "$1" -- "${SRC_PATHS[@]}" | tar -x -C "$GATE_TMP/$2"; }
+# only the paths the ref has: a tree from before ISO15693.md existed would fail git archive
+tree_of() {
+  local p present=()
+  mkdir -p "$GATE_TMP/$2"
+  for p in "${SRC_PATHS[@]}"; do git -C "$DEV" cat-file -e "$1:$p" 2>/dev/null && present+=("$p"); done
+  git -C "$DEV" archive "$1" -- "${present[@]}" | tar -x -C "$GATE_TMP/$2"
+}
 tree_of "$FIRST_ANCHOR^" base
 prev=base
 gate_failed=0
@@ -86,7 +92,7 @@ for i in "${!ANCHORS[@]}"; do
   tree_of "$sha" "t$i"
   if [ "$i" -eq $((${#ANCHORS[@]} - 1)) ]; then
     files=()
-    while IFS= read -r f; do files+=("$f"); done < <(find "$GATE_TMP/t$i" \( -name '*.[ch]' -o -name CHANGELOG.md \) | sort)
+    while IFS= read -r f; do files+=("$f"); done < <(find "$GATE_TMP/t$i" \( -name '*.[ch]' -o -name CHANGELOG.md -o -name ISO15693.md \) | sort)
     out="$(python3 "$DEV/tools/check-writing.py" comments "${files[@]}")" || gate_failed=1
     echo "$out" | { grep -v ' warn ' || true; } | sed "s|$GATE_TMP/t$i/||; s|^|  $sha (last, in full): |"
   else
@@ -113,7 +119,7 @@ echo
 UNCOVERED=""
 for c in $(git -C "$DEV" rev-list --reverse "$LAST_ANCHOR..HEAD"); do
   if git -C "$DEV" show --name-only --format= "$c" \
-     | grep -qE '^(magic/|scenes/|views/|helpers/|assets/|nfc_magic_app|application\.fam|CHANGELOG\.md)'; then
+     | grep -qE '^(magic/|scenes/|views/|helpers/|assets/|nfc_magic_app|application\.fam|CHANGELOG\.md|ISO15693\.md)'; then
     UNCOVERED="$UNCOVERED  $(git -C "$DEV" log -1 --format='%h %s' "$c")
 "
   fi
@@ -137,7 +143,7 @@ fi
 BADMARK=""
 for sha in "${ANCHORS[@]}"; do
   for f in $(git -C "$DEV" ls-tree -r --name-only "$sha" -- magic scenes views helpers \
-             nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md); do
+             nfc_magic_app.c nfc_magic_app.h nfc_magic_app_i.h CHANGELOG.md ISO15693.md); do
     if git -C "$DEV" show "$sha:$f" 2>/dev/null | grep -qE '^(<<<<<<< |=======$|>>>>>>> )'; then
       BADMARK="$BADMARK  $sha $f
 "

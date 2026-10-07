@@ -18,7 +18,7 @@ import tempfile
 
 PACK = [
     "magic", "scenes", "views", "helpers", "assets", "nfc_magic_app.c", "nfc_magic_app.h",
-    "nfc_magic_app_i.h", "CHANGELOG.md", "application.fam",
+    "nfc_magic_app_i.h", "CHANGELOG.md", "ISO15693.md", "application.fam",
 ]
 
 
