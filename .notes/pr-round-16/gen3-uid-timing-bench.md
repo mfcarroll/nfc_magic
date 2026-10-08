@@ -154,3 +154,7 @@ carries the old UID and this card ignores it.
   different configuration states.
 
 One card, one chip. Not tried: the app's Wipe itself on a gen3 card (the never-do list stands).
+
+**Decision, 2026-10-07 (mfcarroll):** the gen3 wipe warning stays as written in ISO15693.md, the
+changelog, the squash message and the confirm screen. One card; a gen3 variant that behaved
+differently would still be at risk. mfcarroll will note this result in a follow-up comment on #250.
