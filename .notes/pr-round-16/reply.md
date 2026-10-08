@@ -1,4 +1,4 @@
-# Round 16 — reply on #250 (DRAFT, not posted; mfcarroll will likely reword it)
+# Round 16 — reply on #250 (POSTED 2026-10-08 in mfcarroll's own wording as [issuecomment-6051389961](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-6051389961); the draft below was the starting point)
 
 Post between the `~~~~` markers, with the push of the release-notes commit. No internal process in
 the payload.

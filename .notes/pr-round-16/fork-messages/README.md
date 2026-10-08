@@ -20,3 +20,7 @@ release-notes move ([../docs-messages/](../docs-messages/README.md)), rebased fr
 identical patch; 207 host tests and 71 units under -Werror pass there. **Its base** is the docs
 commit `ae3faf1`, so it can only be replayed once that fork commit is on origin: the replay resets
 the fork to origin and its base check would otherwise fail.
+
+**Replayed 2026-10-08, NOT PUSHED:** `76ffe64d` on `f9a30516` (round 16's docs, live), signed, five
+files, +92/-108; the fork's tree equals a full sync of `a01fa26` and the push is a fast-forward.
+Waiting on the maintainer, per mfcarroll's reply. A re-replay is needed only if dev changes below it.

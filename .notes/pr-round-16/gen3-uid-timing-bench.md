@@ -158,3 +158,5 @@ One card, one chip. Not tried: the app's Wipe itself on a gen3 card (the never-d
 **Decision, 2026-10-07 (mfcarroll):** the gen3 wipe warning stays as written in ISO15693.md, the
 changelog, the squash message and the confirm screen. One card; a gen3 variant that behaved
 differently would still be at risk. mfcarroll will note this result in a follow-up comment on #250.
+
+**Reported 2026-10-08** in mfcarroll's round-16 reply, [issuecomment-6051389961](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-6051389961). ISO15693.md says a wipe "can zero" the UID and configuration blocks, which holds for a gen3 card that does not move at once.

@@ -23,3 +23,6 @@ since round 15's last anchor.
 **Folded again 2026-10-07** (`wip-pre-docs-fold2` = the tip before): mfcarroll's rework of
 ISO15693.md -- the Important list, the ISO15693 primer, gen1 first, plainer wording -- plus the
 review against the old 2.3 entry and the gen2 tested-on fix, all into the docs commit `ae3faf1`.
+
+**PUSHED 2026-10-08:** `c8eeaade..f9a30516`, a fast-forward, signed, by mfcarroll. Reply posted as
+[issuecomment-6051389961](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-6051389961).

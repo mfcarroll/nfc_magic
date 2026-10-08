@@ -1,11 +1,20 @@
-# Next session — ROUND 16 IS THE RELEASE-NOTES MOVE: replayed to the fork LOCALLY, NOT PUSHED. S4 is HELD.
+# Next session — ROUND 16 IS PUSHED AND POSTED. S4 IS ON THE FORK LOCALLY (`76ffe64d`), NOT PUSHED: waiting on the maintainer.
 
-**2026-10-07.** The maintainer took the ISO15693.md question. Round 16 is now one fork commit, a
-14-line 2.3 entry (mfcarroll's 2026-09-29 draft, two corrections) and `ISO15693.md` beside it:
-[pr-round-16/docs-messages/](pr-round-16/docs-messages/README.md), anchor `ae3faf1`, replayed, signed,
-a fast-forward. **S4 is held** until round 15's code is reviewed (mfcarroll), rebased above the docs as
-`a01fa26`. `iso15693-dev` was rebuilt so (force-pushed on go-ahead); `wip-pre-docs-reorder` = old tip
-`c9c0d198`. Still to do before the push: the squash message's ISO15693.md line, a short reply.
+**2026-10-08.** Round 16 is live: `c8eeaade..f9a30516`, one commit, the short 2.3 entry and
+`ISO15693.md` (anchor `ae3faf1`, [pr-round-16/docs-messages/](pr-round-16/docs-messages/README.md)).
+mishamyte asked for it before merge (2026-10-07 17:19); mfcarroll's reply is
+[issuecomment-6051389961](https://github.com/xMasterX/all-the-plugins/pull/250#issuecomment-6051389961),
+which also reports the gen3 block-16 result ([pr-round-16/gen3-uid-timing-bench.md](pr-round-16/gen3-uid-timing-bench.md))
+and says S4 is held until he has reviewed round 15's code, offered sooner if he wants it.
+
+**S4 is replayed onto the fork, not pushed:** `76ffe64d` on `f9a30516`, signed, a fast-forward, its
+tree a full sync of `a01fa26` ([pr-round-16/fork-messages/](pr-round-16/fork-messages/README.md)).
+Push it only on mfcarroll's go-ahead, after the maintainer's review or his request. If round 15's
+review asks for changes, those fold into dev BELOW S4 and S4 is re-replayed on top.
+
+**Then:** the squash message at merge ([squash-message.md](squash-message.md), with the ISO15693.md
+line). Safety branches `wip-pre-docs-reorder`, `wip-pre-docs-fold`, `wip-pre-docs-fold2` can go once
+S4 is pushed.
 
 # Earlier — ROUND 15 IS PUSHED AND POSTED. ROUND 16 (S4) WAS PREPARED, and ISO15693.md drafted (below).
 
