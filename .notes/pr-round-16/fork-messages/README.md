@@ -13,10 +13,10 @@ Round 16 may also carry whatever his review of round 15 asks for, and the releas
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `17de0a8` | the survey's results are one struct |
+| 01 | `a01fa26` | the survey's results are one struct |
 
 **Held, 2026-10-07** (mfcarroll: not while round 15's code is unreviewed). It now sits ABOVE the
 release-notes move ([../docs-messages/](../docs-messages/README.md)), rebased from `571e41f` with an
 identical patch; 207 host tests and 71 units under -Werror pass there. **Its base** is the docs
-commit `ab86aa1`, so it can only be replayed once that fork commit is on origin: the replay resets
+commit `ae3faf1`, so it can only be replayed once that fork commit is on origin: the replay resets
 the fork to origin and its base check would otherwise fail.

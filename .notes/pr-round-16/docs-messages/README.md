@@ -15,7 +15,11 @@ commit on 2026-10-07 (`wip-pre-docs-fold` = the tip before the fold). The workin
 
 | # | sync at | one decision |
 |---|---|---|
-| 01 | `ab86aa1` | a short 2.3 entry, and ISO15693.md as the reference |
+| 01 | `ae3faf1` | a short 2.3 entry, and ISO15693.md as the reference |
 
-**Its base** is `c8eeaade`, round 15 as pushed: the tree before `ab86aa1` carries no shipped change
+**Its base** is `c8eeaade`, round 15 as pushed: the tree before `ae3faf1` carries no shipped change
 since round 15's last anchor.
+
+**Folded again 2026-10-07** (`wip-pre-docs-fold2` = the tip before): mfcarroll's rework of
+ISO15693.md -- the Important list, the ISO15693 primer, gen1 first, plainer wording -- plus the
+review against the old 2.3 entry and the gen2 tested-on fix, all into the docs commit `ae3faf1`.
