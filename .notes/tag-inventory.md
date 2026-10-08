@@ -14,6 +14,7 @@ Labels live on paper, UIDs live on silicon. Check the label, and remember a magi
 
 ## ⚠️ Read this before touching hardware
 
+- **`slix-1k-50mm`** — ⚠️ LOST, CONFIRMED 2026-09-26: blocks 0 and 1 now read 00 00 00 00. The baseline recorded that they were NON-ZERO but never captured the bytes, because the decode bug above stopped it -- so what this tag held is gone and cannot be recovered. It happened between 2026-09-08 and 2026-09-26, and nothing here records which run did it; the card is gen1_write true and has been cloned and wiped repeatedly since. Do not re-baseline it as 'blank': it was not, and this sentence is the only record that it was not.
 - **`slix2-gold-30mm`** — ⚠️ DO NOT WIPE -- POSSIBLE GEN3, NOT ESTABLISHED, 2026-09-26. Blocks 0x10/0x11 READ as this card's UID in the reversed gen3 layout, and 0x14 reads A5 3B 44 2C against the V3 config-mode constant A5 2B 44 2C -- three bytes exact, the fourth one bit away. 0x15 matches only on 21 and 00 and carries little. ALL OF THAT IS READS: gen3 is defined by writing 0x10/0x11 CHANGING THE UID, which has not been tested, and memory holding a UID copy is not unusual. The probe's gen3_signature:false came from an exact == against two constants of unrecorded provenance, so it does not settle it either way. The hazard does NOT depend on the classification: zeroing 0x14/0x15 is reported to brick an un-finalized V3 card permanently, those are blocks 20 and 21, any wipe reaches them at once, and this card never refuses a write so the sweep has no early stop. It also takes writes above its advertised 79 (80 and 100 written, read back), though that shows persistence and not that they are distinct cells. See .notes/gen3-candidate-slix2-gold.md.
 - **`v1-coin-green18`** — ⚠️ READ BEFORE SPENDING THIS CARD, 2026-09-26. It is here to answer whether unlock+commit do anything on a card that has never had them run. NOTE the 'locked' framing is unsourced -- it came from this project's own notes, not from the sender, who said nothing on record about the card's state. It was a gift from another developer, not a purchase, so its arrival state is his. A REFUSED write to block 56 is informative; an ACCEPTED one is AMBIGUOUS, reading equally as 'V1 needs no unlock' and as 'he unlocked it before posting it', and taking the first at face value is the over-scoping this project keeps paying for. The cheapest measurement is not a frame: ask him whether he wrote to it or ran an unlock. Unlock+commit is IRREVERSIBLE and can only be spent once. Plan and predictions in .notes/pr-round-15/v1-coin-bench.md.
 
@@ -35,8 +36,9 @@ one above it is the phantom tail. Neither side gets corrected.
 | SL2S5302 | gen1 magic | `E0 04 02 50 03 00 35 F8` | MATCH NXP (Philips); ICS5302/ICS5402 ( SLIX-S ) | 40 adv / 40 phys | 0x02 / 0x00 / 0x00 | blank | yes | matches listing |
 | black-tag | gen2 magic | `E0 07 81 B8 AF 14 42 07` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
 | gen-2-card \* | gen2 magic | `?` | no pre-write read | ? adv / 64 phys | ? / ? / ? | unknown | no | no claim recorded |
+| gen3-a | gen3 (V3) magic, un-finalized -- config-mode signature matches | `E0 48 03 00 12 85 5F 76` | ? | 80 adv | 0x01 / 0x00 / 0x00 | unknown | no | no claim recorded |
 | lri2k-keychain | gen1 magic | `E0 02 22 24 50 00 83 03` | MATCH ST Microelectronics SA France | 56 adv / 56 phys | 0x22 / 0x00 / 0x00 | blank | yes | matches listing |
-| slix-1k-50mm | gen1 magic | `E0 04 01 50 20 26 08 63` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv | 0x01 / 0x00 / 0x00 | [0, 1] | yes | matches so far — physical capacity not tested |
+| ⚠️ slix-1k-50mm | gen1 magic | `E0 04 01 50 20 26 08 63` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [0, 1] | yes | matches listing |
 | slix-1k-50x28 | gen1 magic | `E0 04 01 50 20 26 06 8C` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches listing |
 | slix-1k-coin18 | gen1 magic | `E0 04 01 50 20 22 00 E2` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | yes | matches listing |
 | slix-black-38x25 | unclassified (no write probe run) | `E0 04 01 12 D2 D7 20 38` | MATCH NXP (Philips); IC SL2 ICS2002/ICS2102 ( SLIX ) | 28 adv / 28 phys | 0x21 / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
@@ -44,6 +46,7 @@ one above it is the phantom tail. Neither side gets corrected.
 | ti-2k-silver-1 | unclassified (no write probe run) | `E0 53 01 10 BB F3 38 1A` | no tag-info available | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
 | ti-2k-silver-2 | unclassified (no write probe run) | `E0 53 01 10 AC F3 62 1A` | no tag-info available | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches so far — magic not tested |
 | ⚠️ v1-coin-green18 | unclassified (no write probe run) | `E0 11 22 33 44 55 66 91` | MATCH Emosyn-EM Microelectronics USA | 28 adv | 0x01 / 0x00 / 0x00 | blank | no | matches so far — magic not tested |
+| v2-sticker-50x28 | gen2 magic | `E0 11 22 33 44 55 66 99` | MATCH Emosyn-EM Microelectronics USA -- decoded from a placeholder UID, NOT the silicon | 64 adv | 0x8B / 0x00 / 0x00 | blank | no | no claim recorded |
 | white-card | not gen2; gen1 untested | `00 00 00 00 00 00 00 00` | no tag-info available | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | blank | no | no claim recorded |
 | white-coin | gen2 magic | `E0 07 80 3D E2 E7 3A 29` | MATCH Texas Instrument; Tag-it HF-I Plus (RF-HDT-DVBB tag or Third Party Products) | 64 adv / 64 phys | 0x8B / 0x00 / 0x00 | blank | yes | matches listing |
 | white-tag-1 | no gen1/gen2/gen3 | `E0 04 01 00 84 AB E2 16` | MATCH NXP (Philips); IC SL2 ICS20/ICS21 ( SLI ) | 28 adv / 28 phys | 0x01 / 0x00 / 0x00 | [27] | yes | matches listing |
@@ -67,7 +70,7 @@ A listing is a claim, not a result -- see **vs listing** above.
   https://www.aliexpress.com/item/32808113402.html
 - `SL2S5302`, `lri2k-keychain`, `slix-1k-50mm`, `slix-1k-50x28`, `slix-1k-coin18`, `slix-black-38x25`, `slix2-gold-30mm`, `ti-2k-silver-1`, `ti-2k-silver-2`
   https://www.aliexpress.com/store/1112214
-- `v1-coin-green18`
+- `gen3-a`, `v1-coin-green18`, `v2-sticker-50x28`
   _(not recorded)_
 
-Updated 2026-09-15
+Updated 2026-10-07T18:02:34
