@@ -13,8 +13,8 @@ Push it only on mfcarroll's go-ahead, after the maintainer's review or his reque
 review asks for changes, those fold into dev BELOW S4 and S4 is re-replayed on top.
 
 **Then:** the squash message at merge ([squash-message.md](squash-message.md), with the ISO15693.md
-line). Safety branches `wip-pre-docs-reorder`, `wip-pre-docs-fold`, `wip-pre-docs-fold2` can go once
-S4 is pushed.
+line). The round-16 safety branches (`wip-pre-docs-reorder`, `wip-pre-docs-fold`,
+`wip-pre-docs-fold2`) were deleted 2026-10-08 on mfcarroll's call; they were local only.
 
 # Earlier — ROUND 15 IS PUSHED AND POSTED. ROUND 16 (S4) WAS PREPARED, and ISO15693.md drafted (below).
 
