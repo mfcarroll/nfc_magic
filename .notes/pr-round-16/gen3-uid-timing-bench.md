@@ -113,6 +113,44 @@ restore used, then `hf 15 reader` again.
   clone is a second route to the brick that the doc should name.
 - **(a) refused:** as the row above -- the brick route is open, and both warnings stand.
 
-## RESULTS
+## RESULTS — 2026-10-07, run by mfcarroll: THE UID MOVES AT ONCE
 
-(to be filled in, verbatim, after the run)
+Step 1, baseline: UID `E0 48 03 00 12 85 5F 76`, DSFID `00`; block 16 `76 5F 85 12`, 17
+`00 03 48 E0`, 20 `A5 2B 44 2C`, 21 `21 AE 93 00`, none locked. As 2026-09-29.
+
+Step 2, one field session, verbatim:
+
+    hf 15 raw -ackw -d 2221765F8512000348E010AABBCCDD   -> (3) 00 78 F0
+    hf 15 raw -ckw  -d 260100                           -> (12) 00 00 AA BB CC DD 00 03 48 E0 64 2B
+    hf 15 raw -ckw  -d 2220765F8512000348E011           -> command failed
+    hf 15 raw -c    -d 2220AABBCCDD000348E011           -> (7) 00 00 03 48 E0 BB 4F
+
+Step 3: `hf 15 reader` -> `E0 48 03 00 DD CC BB AA`.
+
+Step 4: `hf 15 raw -ackw -d 2221AABBCCDD000348E010765F8512` -> `00 78 F0`; `hf 15 reader` ->
+`E0 48 03 00 12 85 5F 76`. Restored.
+
+Step 5 was not run. Block 16's restore is shown by the UID, which 16/17 drive, and nothing in the
+session wrote 17, 20 or 21.
+
+**Every prediction in the "moves at once" column, exactly.** (a) the addressed write is accepted;
+(b) the inventory in the same session already returns the new UID; (c) a frame addressed to the old
+UID meets silence; (d) the same frame addressed to the new UID is answered. (c) and (d) are each
+other's control: the card is present and answering throughout, and it matches the NEW address only.
+
+**What it means for the app** (code read, not benched): the app re-takes its address only after a
+write to 56/57 (`iso15693_poller_is_uid_block`), so after its write to block 16 every later frame
+carries the old UID and this card ignores it.
+
+- **Wipe:** zeroes 0-15, then 16, which moves the UID tail to `00 00 00 00`; 17-255 are then
+  ignored, so **20/21 are not reached**. The sweep reads unaddressed, and this card answers a read
+  at every address, so expect a long run that ends Partial or Stopped, then "UID changed" printing
+  `E0 48 03 00 00 00 00 00`. Recoverable with proxmark (write the original block 16 back), but only
+  from a record of the original UID: the card no longer holds it.
+- **Clone with a file whose UID matches the card:** the file's block 16 moves the UID unless it
+  holds exactly what the card's block 16 already holds; either way nothing after the move is
+  written. 20/21 are reached only if the file's 16 AND 17 match the card's (a save of a gen3 card
+  wearing this same UID) while its 20/21 differ from this card's -- two gen3 cards with one UID in
+  different configuration states.
+
+One card, one chip. Not tried: the app's Wipe itself on a gen3 card (the never-do list stands).
