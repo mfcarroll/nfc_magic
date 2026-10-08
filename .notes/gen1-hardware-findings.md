@@ -301,3 +301,50 @@ rather than trusting this list once anything moves.
 **Note the direction of travel:** eight of the ten replace a hedge with a measurement, which is
 shorter. That is the evidence for the sequencing argument above — this round shrinks the surface
 before C runs.
+
+## SESSION 3, 2026-10-07 — THE DATA SENT TO 62/63 MAKES NO DIFFERENCE, AND 63 IS NOW PROBED DIRECTLY
+
+The last open question about the registers, and the cheapest one left: the refusals were always
+measured with proxmark's own values -- `00000000` at 62, `69960000` at 63 -- so nothing ruled out a
+card that answers differently to some other payload. mfcarroll ran it on the LRi2K first, then the
+four NXP cards.
+
+Nothing is written by this bench. A refusal leaves the card as it was, so no restore was needed and
+none of the five moved. **Block 63 had never been probed on its own before** -- "62/63 are refused"
+rested on the full four-frame sequence, with 62 the only address ever sent alone.
+
+### The LRi2K, unaddressed, three runs
+
+Varying both registers across the sequence: `3E` with `00000000` then `11111111`, `3F` with
+`00000000`, `69960000`, then the byte-swapped `00006996`. **Every run: `01 10 1E 06` at both
+registers, `00 78 F0` at both UID blocks, and the UID moved to exactly what 56/57 implied** -- the
+third run's `BBAA5544` into 56 printing as `... 55 AA BB`.
+
+### The four NXP cards, addressed
+
+The NXP parts answer only the addressed form here, so the address carries each card's own UID. Four
+frames per card: `3E` with `00000000` and `11111111`, `3F` with `69960000` and `11111111`.
+
+| card | chip | all four frames |
+|---|---|---|
+| `SL2S5302` | NXP ICODE SLIX-S | `01 0F 68 EE` |
+| `slix-1k-50x28` | NXP ICODE SLIX | `01 0F 68 EE` |
+| `slix-1k-coin18` | NXP ICODE SLIX | `01 0F 68 EE` |
+| `slix-1k-50mm` | NXP ICODE SLIX | `01 0F 68 EE` |
+
+**Three chips, five cards, and the answer never depends on the data.** `0x10` is "block not
+available" and `0x0F` is the generic error; both are decided by the block number, before the payload
+is looked at. There is no payload that makes 62 or 63 writable on any card here.
+
+**An incidental address control.** `coin18` is wearing the `iso15693_slix_28.nfc` fixture UID `E0 04
+01 10 A1 A2 A3 A4`, not the `E0 04 01 50 20 22 00 E2` the inventory records, so its first run went
+out addressed to a card that was not in the field: silence on all four frames, bracketed by a reader
+showing the card present and answering. The address filter, demonstrated for free -- and the exact
+failure `tools/gen1-addressed-frames.py` exists to prevent, which reads identically to a refusal.
+Re-run against the UID it actually has, it answered `01 0F` like the rest.
+
+### What is still open, and this cannot close it
+
+No card here has ever needed unlock or commit, and now no payload makes either land. But none of
+these five has a known history, so a factory-fresh gen1 card may still differ. That is what the
+round-15 reply told the maintainer, and it stands.
